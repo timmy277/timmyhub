@@ -19,10 +19,13 @@ related: [docs/06-quality/coding-standards.md, docs/06-quality/quality-gates.md,
 
 | Bước | Công cụ | Chặn cái gì | Thời gian mục tiêu |
 |---|---|---|---|
-| `pre-commit` | `lint-staged`: Prettier → ESLint `--fix` | Định dạng, lỗi lint trên **file đã stage** | < 5 giây |
+| `pre-commit` | `lint-staged`: ESLint `--fix` theo từng app, Prettier cho file cấu hình ở gốc | Định dạng, lỗi lint trên **file đã stage** | < 5 giây |
 | `commit-msg` | `commitlint` | Thông điệp commit sai Conventional Commits | < 1 giây |
 | `pre-push` | `tsc --noEmit` trên package bị ảnh hưởng | Lỗi kiểu | < 60 giây |
 | CI | Toàn bộ lint, typecheck, test, build, cổng chất lượng | Mọi thứ, kể cả khi hook bị bỏ qua | Xem `docs/05-infra/cicd.md` |
+
+> **Trạng thái hiện tại của repo:** `pre-commit` và `commit-msg` đã bật. `pre-push` **chưa bật** vì Turborepo chưa
+> được cài ở gốc — chỉ thêm hook này sau khi `turbo` chạy được, hook gọi lệnh không tồn tại còn tệ hơn không có hook.
 
 Cố ý **không** đưa vào hook: chạy test toàn bộ, build, Lighthouse, axe, `size-limit`. Chúng thuộc về CI.
 Cố ý **không** để `tsc` trong `pre-commit`: trên monorepo 18 đơn vị, typecheck mất hàng chục giây, người ta sẽ
@@ -32,12 +35,14 @@ Cố ý **không** để `tsc` trong `pre-commit`: trên monorepo 18 đơn vị,
 
 ## 2. Cài đặt
 
+Công cụ hook nằm ở **gốc workspace**, không nằm trong `frontend/` hay `backend/`:
+
 ```bash
-pnpm add -D -w husky lint-staged @commitlint/cli @commitlint/config-conventional
+pnpm add -D -w husky lint-staged @commitlint/cli @commitlint/config-conventional prettier
 pnpm exec husky init
 ```
 
-`package.json` ở gốc workspace:
+`package.json` ở gốc:
 
 ```json
 {
@@ -47,7 +52,12 @@ pnpm exec husky init
 }
 ```
 
-`prepare` chạy tự động sau `pnpm install`, nên người mới clone về không phải nhớ bước nào.
+`prepare` chạy tự động sau `pnpm install`; nó đặt `core.hooksPath=.husky/_`. Kiểm bằng:
+
+```bash
+git config core.hooksPath      # phải in ra .husky/_
+```
+
 Trong CI đặt `HUSKY=0` để không cài hook trên runner.
 
 ---
@@ -57,56 +67,64 @@ Trong CI đặt `HUSKY=0` để không cài hook trên runner.
 `.husky/pre-commit`
 
 ```sh
-pnpm exec lint-staged
+npx --no -- lint-staged
 ```
 
 `.husky/commit-msg`
 
 ```sh
-pnpm exec commitlint --edit "$1"
+npx --no -- commitlint --edit "$1"
 ```
 
-`.husky/pre-push`
+Husky 9 **không** cần dòng shebang và **không** cần `source .husky/_/husky.sh` — hai thứ đó là cú pháp Husky 4–8, để lại
+sẽ gây cảnh báo khai tử.
+
+Dùng `npx --no --` chứ không dùng `pnpm exec`: `pnpm exec` kiểm tra trạng thái phụ thuộc trước mỗi lần chạy, một
+cảnh báo cài đặt nhỏ ở gốc cũng làm hỏng mọi commit.
+
+`pre-push` sẽ là (khi bật Turborepo):
 
 ```sh
-pnpm turbo run typecheck --filter='...[origin/main]'
+npx --no -- turbo run typecheck --filter='...[origin/main]'
 ```
 
 ---
 
 ## 4. `lint-staged`
 
-`.lintstagedrc.json`
+Cấu hình đặt **trong `package.json` ở gốc** (một nguồn duy nhất, không thêm `.lintstagedrc`):
 
 ```json
 {
-    "*.{ts,tsx,js,jsx}": [
-        "prettier --write",
-        "eslint --fix --max-warnings=0"
-    ],
-    "*.{json,md,yml,yaml,css}": [
-        "prettier --write"
-    ],
-    "*.prisma": [
-        "prisma format"
-    ]
+    "lint-staged": {
+        "frontend/**/*.{ts,tsx,js,jsx,mjs}": ["pnpm -C frontend exec eslint --fix --max-warnings=0"],
+        "backend/**/*.ts": ["pnpm -C backend exec eslint --fix --max-warnings=0"],
+        "*.{json,yml,yaml,mjs,cjs}": ["prettier --write"]
+    }
 }
 ```
 
-Ba điều dễ sai:
+Bốn điều dễ sai:
 
-1. **`--max-warnings=0`** là bắt buộc. Không có nó, cảnh báo tích tụ đến mức không ai đọc log lint nữa.
-2. Chỉ chạy trên file đã stage — đó là lý do dùng `lint-staged` thay vì `eslint .`.
-3. Không thêm `git add` vào lệnh; `lint-staged` tự lo, thêm vào sẽ nuốt mất thay đổi chưa stage.
+1. **Lint phải chạy bằng ESLint của chính app đó** (`pnpm -C <app> exec`), không phải một ESLint ở gốc. Mỗi app có
+   `eslint.config.mjs` và bộ plugin riêng (`eslint-config-next` cho frontend, `eslint-plugin-prettier` cho backend);
+   ép chúng chạy qua một ESLint phiên bản khác ở gốc sẽ vỡ ngay khi tải rule.
+2. **`--max-warnings=0`** là bắt buộc. Không có nó, cảnh báo tích tụ đến mức không ai đọc log lint nữa.
+3. Chỉ chạy trên file đã stage — đó là lý do dùng `lint-staged` thay vì `eslint .`.
+4. Không thêm `git add` vào lệnh; `lint-staged` tự lo, thêm vào sẽ nuốt mất thay đổi chưa stage.
+
+`docs/**` nằm trong `.prettierignore`: tài liệu theo quy ước định dạng riêng (bảng căn tay, 4 space), để Prettier
+chạy lên sẽ sinh diff hàng chục file không liên quan tới commit đang làm.
 
 ---
 
 ## 5. Quy ước commit
 
-Theo **Conventional Commits**. `commitlint.config.js`:
+Theo **Conventional Commits**. `commitlint.config.mjs` (ESM — gốc workspace là `type: module` theo mặc định của
+ESLint flat config; dùng `.js` với `module.exports` sẽ bị chính lint chặn):
 
 ```js
-module.exports = {
+export default {
     extends: ['@commitlint/config-conventional'],
     rules: {
         'type-enum': [2, 'always', [
@@ -212,3 +230,4 @@ thay CI.
 - [ ] Danh sách `scope-enum` khớp `docs/01-architecture/service-catalog.md` (18 đơn vị + 3 package dùng chung)
 - [ ] Mọi quy tắc hook đều có bản sao ở CI
 - [ ] `.gitattributes` đặt `* text=auto eol=lf` để Windows không sinh commit đổi toàn bộ dòng
+- [ ] `git config core.hooksPath` trả về `.husky/_` — nếu rỗng thì hook chỉ là file chết, chạy lại `pnpm install`

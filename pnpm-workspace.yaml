@@ -1,0 +1,10 @@
+# Gốc workspace hiện chỉ quản lý công cụ dùng chung (husky, lint-staged, commitlint, prettier).
+# `frontend/` và `backend/` đang là ứng dụng khởi tạo riêng, có node_modules và lint config riêng;
+# chúng sẽ gia nhập workspace khi tái cấu trúc theo docs/05-infra/monorepo-and-build.md.
+packages:
+  - 'backend/apps/*'
+  - 'backend/libs/*'
+  - 'shared/*'
+
+minimumReleaseAgeExclude:
+  - prettier@3.9.7

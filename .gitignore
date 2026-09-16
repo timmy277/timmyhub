@@ -1,0 +1,31 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# test & cache
+coverage/
+.turbo/
+.cache/
+
+# env — chỉ commit file mẫu
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# hệ điều hành / IDE
+.DS_Store
+Thumbs.db
+.idea/
+*.swp

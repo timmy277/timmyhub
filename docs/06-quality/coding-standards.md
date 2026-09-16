@@ -18,15 +18,18 @@ related: [docs/06-quality/git-hooks.md, docs/06-quality/definition-of-done.md, d
 | Bước | Công cụ | Chặn cái gì |
 |---|---|---|
 | Lúc gõ | ESLint + Prettier trong IDE, `.editorconfig` | Định dạng, quy tắc rõ ràng |
-| `pre-commit` | `lint-staged`: Prettier → ESLint `--fix --max-warnings=0` trên file đã stage | Định dạng và lỗi lint, dưới 5 giây |
+| `pre-commit` | `lint-staged`: ESLint `--fix --max-warnings=0` bằng ESLint **của chính app** trên file đã stage | Định dạng và lỗi lint, dưới 5 giây |
 | `commit-msg` | `commitlint` (Conventional Commits, scope bắt buộc) | Thông điệp commit sai chuẩn |
-| `pre-push` | `turbo run typecheck --filter='...[origin/main]'` | Lỗi kiểu ở package bị ảnh hưởng |
+| `pre-push` | `turbo run typecheck --filter='...[origin/main]'` (**chưa bật**, chờ Turborepo) | Lỗi kiểu ở package bị ảnh hưởng |
 | CI | Toàn bộ lint + `tsc` + test + `gitleaks` + Trivy + kiểm tra truy vết docs | Mọi thứ còn lại |
 
 Cấu hình hook, quy ước commit, tên nhánh và danh sách scope: [git-hooks.md](git-hooks.md).
 
-Cấu hình nằm **một chỗ duy nhất** ở gốc workspace (`eslint.config.mjs`, `prettier.config.mjs`, `tsconfig.base.json`);
-package con chỉ được mở rộng, không được định nghĩa lại quy tắc.
+Mục tiêu là cấu hình nằm **một chỗ duy nhất** ở gốc workspace (`eslint.config.mjs`, `prettier.config.mjs`,
+`tsconfig.base.json`), package con chỉ mở rộng chứ không định nghĩa lại quy tắc. Hiện `frontend/` và `backend/` vẫn
+giữ ESLint config riêng theo khuôn mẫu khởi tạo của Next.js và Nest; việc gộp về gốc làm cùng lúc với tái cấu trúc
+monorepo ở [monorepo-and-build.md](../05-infra/monorepo-and-build.md), **không** làm sớm bằng cách ép một ESLint duy
+nhất ở gốc chạy lên hai bộ plugin khác phiên bản.
 
 ### 1.1 Định dạng
 
