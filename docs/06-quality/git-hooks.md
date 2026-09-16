@@ -126,6 +126,27 @@ mọi commit sau đều lẫn nhiễu định dạng vào diff nghiệp vụ. Gh
 `docs/**` nằm trong `.prettierignore`: tài liệu theo quy ước định dạng riêng (bảng căn tay, 4 space), để Prettier
 chạy lên sẽ sinh diff hàng chục file không liên quan tới commit đang làm.
 
+### 4.1 Ba workspace pnpm độc lập
+
+`frontend/` và `backend/` mỗi nơi có **`pnpm-workspace.yaml` riêng** (rỗng về `packages`, chỉ khai `allowBuilds`),
+khiến chúng là gốc workspace pnpm độc lập, tách khỏi workspace ở thư mục gốc repo. **Bắt buộc phải có file này**, dù
+trông như thừa: pnpm tìm `pnpm-workspace.yaml` bằng cách trèo lên thư mục cha; không có file riêng, `pnpm install`
+chạy trong `frontend/`/`backend/` sẽ thấy workspace ở gốc repo, nhận ra thư mục đó không khớp glob nào trong
+`packages:` của gốc, và chỉ cài đúng package `timmyhub` ở gốc — **bỏ qua toàn bộ dependency của app**, không báo lỗi
+gì cả ngoài việc `node_modules/` app rỗng.
+
+Vì vậy repo có 3 workspace pnpm tách biệt, không lồng nhau:
+
+| Workspace | `pnpm-workspace.yaml` | Quản lý gì |
+|---|---|---|
+| gốc repo | `packages: [backend/apps/*, backend/libs/*, shared/*]` (glob chưa khớp gì) | husky, lint-staged, commitlint, prettier |
+| `frontend/` | `packages: []` (mặc định) | Next.js app, cài bằng `pnpm install` trong chính thư mục đó |
+| `backend/` | `packages: []` (mặc định) | NestJS app, cài bằng `pnpm install` trong chính thư mục đó |
+
+Ba workspace sẽ gộp về một khi tái cấu trúc thành `backend/apps/*` theo
+[monorepo-and-build.md](../05-infra/monorepo-and-build.md) — lúc đó `frontend/pnpm-workspace.yaml` và
+`backend/pnpm-workspace.yaml` mới bị xoá.
+
 ---
 
 ## 5. Quy ước commit
