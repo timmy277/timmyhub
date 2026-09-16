@@ -25,11 +25,11 @@ related: [docs/06-quality/git-hooks.md, docs/06-quality/definition-of-done.md, d
 
 Cấu hình hook, quy ước commit, tên nhánh và danh sách scope: [git-hooks.md](git-hooks.md).
 
-Mục tiêu là cấu hình nằm **một chỗ duy nhất** ở gốc workspace (`eslint.config.mjs`, `prettier.config.mjs`,
-`tsconfig.base.json`), package con chỉ mở rộng chứ không định nghĩa lại quy tắc. Hiện `frontend/` và `backend/` vẫn
-giữ ESLint config riêng theo khuôn mẫu khởi tạo của Next.js và Nest; việc gộp về gốc làm cùng lúc với tái cấu trúc
-monorepo ở [monorepo-and-build.md](../05-infra/monorepo-and-build.md), **không** làm sớm bằng cách ép một ESLint duy
-nhất ở gốc chạy lên hai bộ plugin khác phiên bản.
+Định dạng dùng **một `prettier.config.mjs` duy nhất ở gốc workspace**, không có `.prettierrc` trong `frontend/` hay
+`backend/`; `pre-commit` tự định dạng lại file đã stage nên không ai phải chỉnh tay. ESLint thì tạm thời vẫn là hai
+config riêng theo khuôn mẫu khởi tạo của Next.js và Nest — gộp về gốc làm cùng lúc với tái cấu trúc monorepo ở
+[monorepo-and-build.md](../05-infra/monorepo-and-build.md), **không** ép một ESLint duy nhất ở gốc chạy lên hai bộ
+plugin khác phiên bản.
 
 ### 1.1 Định dạng
 

@@ -97,21 +97,31 @@ Cấu hình đặt **trong `package.json` ở gốc** (một nguồn duy nhất,
 ```json
 {
     "lint-staged": {
-        "frontend/**/*.{ts,tsx,js,jsx,mjs}": ["pnpm -C frontend exec eslint --fix --max-warnings=0"],
-        "backend/**/*.ts": ["pnpm -C backend exec eslint --fix --max-warnings=0"],
-        "*.{json,yml,yaml,mjs,cjs}": ["prettier --write"]
+        "frontend/**/*.{ts,tsx,js,jsx,mjs}": ["pnpm -C frontend exec eslint --fix --max-warnings=0", "prettier --write"],
+        "backend/**/*.ts": ["pnpm -C backend exec eslint --fix --max-warnings=0", "prettier --write"],
+        "*.{ts,js,mjs,cjs,json,yml,yaml}": ["prettier --write"]
     }
 }
 ```
 
-Bốn điều dễ sai:
+Nghĩa là **commit tự động được định dạng lại**: thụt lề 4 space, 120 cột, không chấm phẩy, nháy đơn — đúng bảng ở
+[coding-standards.md](coding-standards.md) §1.1. Người viết không phải chỉnh tay, và không ai review về định dạng nữa.
 
-1. **Lint phải chạy bằng ESLint của chính app đó** (`pnpm -C <app> exec`), không phải một ESLint ở gốc. Mỗi app có
+Năm điều dễ sai:
+
+1. **Chỉ một `prettier.config.mjs` ở gốc.** Không để `.prettierrc` trong `frontend/` hay `backend/` — Prettier tìm
+   cấu hình gần file nhất, một file con là hai app lệch nhau ngay. `eslint-plugin-prettier` của backend cũng đọc đúng
+   cấu hình gốc này, nên `eslint --fix` và `prettier --write` không đánh nhau.
+2. `.editorconfig` chỉ dạy IDE lúc gõ; **Prettier mới là thứ quyết định**, vì nó chạy trong hook và trong CI.
+3. **Lint phải chạy bằng ESLint của chính app đó** (`pnpm -C <app> exec`), không phải một ESLint ở gốc. Mỗi app có
    `eslint.config.mjs` và bộ plugin riêng (`eslint-config-next` cho frontend, `eslint-plugin-prettier` cho backend);
    ép chúng chạy qua một ESLint phiên bản khác ở gốc sẽ vỡ ngay khi tải rule.
-2. **`--max-warnings=0`** là bắt buộc. Không có nó, cảnh báo tích tụ đến mức không ai đọc log lint nữa.
-3. Chỉ chạy trên file đã stage — đó là lý do dùng `lint-staged` thay vì `eslint .`.
-4. Không thêm `git add` vào lệnh; `lint-staged` tự lo, thêm vào sẽ nuốt mất thay đổi chưa stage.
+4. **`--max-warnings=0`** là bắt buộc. Không có nó, cảnh báo tích tụ đến mức không ai đọc log lint nữa.
+5. Không thêm `git add` vào lệnh; `lint-staged` tự lo, thêm vào sẽ nuốt mất thay đổi chưa stage.
+
+Đổi quy tắc định dạng thì **định dạng lại toàn bộ trong một commit riêng**, đừng để hook sửa dần từng file — nếu không
+mọi commit sau đều lẫn nhiễu định dạng vào diff nghiệp vụ. Ghi hash commit đó vào `.git-blame-ignore-revs` để
+`git blame` bỏ qua.
 
 `docs/**` nằm trong `.prettierignore`: tài liệu theo quy ước định dạng riêng (bảng căn tay, 4 space), để Prettier
 chạy lên sẽ sinh diff hàng chục file không liên quan tới commit đang làm.

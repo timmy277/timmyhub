@@ -13,12 +13,14 @@
   },
   "lint-staged": {
     "frontend/**/*.{ts,tsx,js,jsx,mjs}": [
-      "pnpm -C frontend exec eslint --fix --max-warnings=0"
+      "pnpm -C frontend exec eslint --fix --max-warnings=0",
+      "prettier --write"
     ],
     "backend/**/*.ts": [
-      "pnpm -C backend exec eslint --fix --max-warnings=0"
+      "pnpm -C backend exec eslint --fix --max-warnings=0",
+      "prettier --write"
     ],
-    "*.{json,yml,yaml,mjs,cjs}": [
+    "*.{ts,js,mjs,cjs,json,yml,yaml}": [
       "prettier --write"
     ]
   },
