@@ -2,14 +2,15 @@
 title: Danh mục service
 status: approved
 owner: Backend Lead
-updated: 2026-09-15
+updated: 2026-09-16
 related: [docs/01-architecture/system-architecture.md, docs/01-architecture/event-catalog.md, docs/02-domain/domain-model.md, docs/08-handoff/migration-from-legacy.md]
 ---
 
 # Danh mục service
 
-17 đơn vị triển khai: 1 gateway + 16 service nghiệp vụ. Mỗi service là một ứng dụng NestJS độc lập, có **database
-riêng**, **pipeline riêng**, **image riêng**.
+17 service (1 gateway + 16 service nghiệp vụ) và **18 đơn vị triển khai** — đơn vị thứ 18 là `media-transcode-worker`,
+một deployment riêng của `media-service` chạy ffmpeg ([media-video-pipeline.md](media-video-pipeline.md)). Mỗi service
+là một ứng dụng NestJS độc lập, có **database riêng**, **pipeline riêng**, **image riêng**.
 
 ## 1. Bảng tổng hợp
 
@@ -32,6 +33,7 @@ riêng**, **pipeline riêng**, **image riêng**.
 | 14 | `analytics-service` | `analytics_db` | 3114 | `DailyRollup`, `FunnelEvent`, `ReportJob` | `dashboard/` (mở rộng) |
 | 15 | `audit-service` | `audit_db` + Elasticsearch | 3115 | `AuditLog`, `SystemLog` | `system-logs/`, `AuditLogInterceptor` |
 | 16 | `master-data-service` | `masterdata_db` | 3116 | `Province`, `District`, `Ward`, `SystemConfig`, `FeatureFlag`, `ShippingRate`, `ReasonCode` | `location/` |
+| 17 | `media-transcode-worker` (worker của `media-service`) | dùng `media_db` | — | Không sở hữu bảng riêng; xử lý hàng đợi `media.transcode` | **mới** |
 
 ## 2. Chi tiết từng service
 

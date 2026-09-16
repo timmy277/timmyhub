@@ -2,7 +2,7 @@
 title: Danh mục tính năng (Feature Inventory)
 status: approved
 owner: Product Owner
-updated: 2026-09-15
+updated: 2026-09-16
 related: [docs/00-overview/product-overview.md, docs/01-architecture/service-catalog.md, docs/03-specs, docs/08-handoff/migration-from-legacy.md]
 ---
 
@@ -31,18 +31,18 @@ Mã domain: `IDN` identity-auth · `RBAC` rbac-permission · `USR` user-profile 
 
 | Nguồn | Số tính năng |
 |---|---|
-| kế thừa | 74 |
-| kế thừa+ (mở rộng) | 31 |
-| kế thừa* (phải sửa lỗi bản cũ) | 14 |
-| mới | 57 |
-| loại bỏ | 6 |
-| **Tổng đặc tả** | **176** |
+| kế thừa | 76 |
+| kế thừa+ (mở rộng) | 27 |
+| kế thừa* (phải sửa lỗi bản cũ) | 18 |
+| mới | 130 |
+| **Tổng đặc tả** | **251** |
+| loại bỏ (không đặc tả) | 6 |
 
 | Ưu tiên | Số tính năng |
 |---|---|
-| P0 (MVP) | 71 |
-| P1 (v1) | 76 |
-| P2 (v1.5) | 29 |
+| P0 (MVP) | 79 |
+| P1 (v1) | 119 |
+| P2 (v1.5) | 53 |
 
 ---
 
@@ -352,13 +352,19 @@ Mã domain: `IDN` identity-auth · `RBAC` rbac-permission · `USR` user-profile 
 | ID | Tính năng | Nguồn | Ưu tiên | Vai | Service |
 |---|---|---|---|---|---|
 | FEAT-MED-001 | Upload ảnh lên Supabase Storage (≤ 5 MB) | kế thừa | P0 | Seller | media |
-| FEAT-MED-002 | Upload video (≤ 50 MB) | kế thừa+ | P1 | Seller | media |
+| FEAT-MED-002 | Upload video (≤ 200 MB, ≤ 10 phút) | kế thừa+ | P1 | Seller | media |
 | FEAT-MED-003 | Kiểm tra MIME thật, không tin phần mở rộng tệp | kế thừa* | P0 | — | media |
 | FEAT-MED-004 | Sinh thumbnail và nhiều kích thước ảnh (job) | mới | P1 | System | media |
-| FEAT-MED-005 | Chuyển mã video sang HLS (job) | mới | P2 | System | media |
+| FEAT-MED-005 | Chuyển mã video sang HLS ladder 360p/720p(/1080p) bằng ffmpeg worker | mới | P1 | System | media |
 | FEAT-MED-006 | Upload trực tiếp bằng signed URL, không đi qua gateway | mới | P1 | Seller | media |
 | FEAT-MED-007 | Dọn tệp mồ côi theo lịch | mới | P2 | System | media |
 | FEAT-MED-008 | Quét nội dung không phù hợp trước khi công khai | mới | P2 | System | media |
+| FEAT-MED-009 | Upload nối lại được bằng tus (chunk 6 MB), tiếp tục sau khi mất mạng | mới | P0 | Seller | media |
+| FEAT-MED-010 | Cấp token upload có hạn 30 phút; client không cầm khoá dịch vụ storage | mới | P0 | System | media |
+| FEAT-MED-011 | Quét mã độc (ClamAV) trên tệp gốc trước khi chuyển mã | mới | P1 | System | media |
+| FEAT-MED-012 | Sinh poster, sprite xem trước khi tua và ảnh động cho feed | mới | P1 | System | media |
+| FEAT-MED-013 | Theo dõi tiến trình xử lý video theo thời gian thực (WebSocket) | mới | P1 | Seller | media |
+| FEAT-MED-014 | Thử lại tác vụ chuyển mã thất bại (tự động có backoff + thủ công từ admin) | mới | P2 | Admin | media |
 
 ## 20. `analytics-sales` — Doanh số & báo cáo
 

@@ -2,7 +2,7 @@
 title: TimmyHub — Mục lục tài liệu
 status: approved
 owner: Tech Lead
-updated: 2026-09-15
+updated: 2026-09-16
 related: [docs/00-overview/product-overview.md, docs/07-plan/implementation-plan.md, docs/08-handoff/handoff.md]
 ---
 
@@ -44,7 +44,9 @@ Chi tiết đầy đủ các mẫu câu EARS và định dạng ID: [docs/06-qua
 4. [01-architecture/event-catalog.md](01-architecture/event-catalog.md) — hợp đồng sự kiện giữa các service
 5. [02-domain/domain-model.md](02-domain/domain-model.md) + [02-domain/schemas/](02-domain/schemas/)
 6. [03-specs/](03-specs/) — spec từng domain
-7. [01-architecture/adr/](01-architecture/adr/) — vì sao chọn như vậy
+7. [01-architecture/concurrency-and-consistency.md](01-architecture/concurrency-and-consistency.md) — chống oversell, tranh chấp đồng thời
+8. [01-architecture/rbac-advanced.md](01-architecture/rbac-advanced.md) — phân quyền 4 lớp, phạm vi dữ liệu
+9. [01-architecture/adr/](01-architecture/adr/) — vì sao chọn như vậy
 
 ### Frontend lead
 1. [04-frontend/fe-architecture.md](04-frontend/fe-architecture.md)
@@ -53,6 +55,7 @@ Chi tiết đầy đủ các mẫu câu EARS và định dạng ID: [docs/06-qua
 4. [04-frontend/design-system.md](04-frontend/design-system.md) + [04-frontend/component-inventory.md](04-frontend/component-inventory.md)
 5. [04-frontend/state-and-data.md](04-frontend/state-and-data.md)
 6. [01-architecture/api-conventions.md](01-architecture/api-conventions.md) — hợp đồng với backend
+7. [04-frontend/seo.md](04-frontend/seo.md) + [04-frontend/motion-and-effects.md](04-frontend/motion-and-effects.md) — ràng buộc render và hiệu ứng
 
 ### DevOps
 1. [05-infra/local-dev.md](05-infra/local-dev.md)
@@ -68,17 +71,56 @@ Chi tiết đầy đủ các mẫu câu EARS và định dạng ID: [docs/06-qua
 3. [07-plan/milestones.md](07-plan/milestones.md) + [07-plan/implementation-plan.md](07-plan/implementation-plan.md)
 4. [07-plan/risks.md](07-plan/risks.md)
 
+## Tài liệu chuyên đề (đọc khi chạm tới)
+
+Các tài liệu cắt ngang nhiều domain, không thuộc lối đọc nào ở trên nhưng **bắt buộc** đọc trước khi làm phần tương ứng:
+
+| Tài liệu | Đọc khi |
+|---|---|
+| [01-architecture/technology-radar.md](01-architecture/technology-radar.md) | Định thêm thư viện/công cụ vào stack — có mục ADOPT/TRIAL/ASSESS/HOLD kèm lý do |
+| [01-architecture/concurrency-and-consistency.md](01-architecture/concurrency-and-consistency.md) | Code chạm tồn kho, tiền, voucher, flash sale |
+| [01-architecture/rbac-advanced.md](01-architecture/rbac-advanced.md) | Thêm quyền, phạm vi dữ liệu, uỷ quyền, mạo danh, break-glass |
+| [01-architecture/i18n-backend.md](01-architecture/i18n-backend.md) | Sinh thông điệp lỗi, nội dung gửi ra, tìm kiếm đa ngôn ngữ |
+| [02-domain/product-variant.md](02-domain/product-variant.md) | Làm sản phẩm, biến thể, giá, tồn kho, snapshot đơn hàng |
+| [02-domain/order-dispute.md](02-domain/order-dispute.md) | Làm tranh chấp đơn, hoàn tiền, ký quỹ, hạn xử lý |
+| [04-frontend/seo.md](04-frontend/seo.md) | Thêm loại trang mới hoặc đổi cách render |
+| [04-frontend/motion-and-effects.md](04-frontend/motion-and-effects.md) | Làm hiệu ứng, chuyển cảnh, parallax |
+| [06-quality/coding-standards.md](06-quality/coding-standards.md) | Trước PR đầu tiên |
+| [06-quality/performance.md](06-quality/performance.md) | Trang/endpoint chậm, hoặc trước khi phát hành màn hình nặng |
+| [06-quality/quality-gates.md](06-quality/quality-gates.md) | Dựng CI cho a11y, Lighthouse, ngân sách gói |
+| [01-architecture/media-video-pipeline.md](01-architecture/media-video-pipeline.md) | Làm upload, transcode, phát video (HLS, ffmpeg worker, tus) |
+| [04-frontend/editor-and-uploader.md](04-frontend/editor-and-uploader.md) | Làm trình soạn thảo TipTap, trình tải lên Uppy, trình phát video |
+| [05-infra/monorepo-and-build.md](05-infra/monorepo-and-build.md) | Đụng tới CI, Turborepo, phiên bản công cụ |
+
+## Skill cho Claude Code
+
+`.claude/skills/` chứa **10 skill** dự án; Claude tự nạp khi gặp loại việc tương ứng. Luật cứng và bản đồ tài liệu
+nằm ở [`CLAUDE.md`](../CLAUDE.md) ở gốc repo, Claude đọc tự động mỗi phiên làm việc.
+
+| Skill | Dùng cho |
+|---|---|
+| `spec-domain` | Viết/cập nhật spec một domain trong `03-specs/` |
+| `docs-audit` | Rà soát link chết, truy vết ID, số liệu lệch trong `docs/` |
+| `ui-component` | Tạo component giao diện đúng design system, đủ 7 trạng thái, đạt WCAG 2.2 AA |
+| `page-build` | Dựng một route Next.js hoàn chỉnh: RSC, SEO + JSON-LD, loading/error/not-found, ngân sách |
+| `design-review` | Rà soát UI/UX: 10 heuristic Nielsen, Laws of UX, phân cấp thị giác, WCAG 2.2 AA |
+| `nest-endpoint` | Thêm endpoint backend đúng phân quyền, audit, idempotency, outbox |
+| `prisma-schema` | Đổi mô hình dữ liệu: kiểu tiền/thời gian, index, khoá lạc quan, migration an toàn |
+| `code-review` | Rà code trước khi merge: đua tranh, tiền, phạm vi dữ liệu, ranh giới service, bảo mật |
+| `perf-audit` | Truy nguyên nhân chậm: gói JS, Core Web Vitals, N+1, index, cache, hàng đợi |
+| `i18n-strings` | Trích chuỗi cứng, đặt tên khoá, ICU plural, thêm một ngôn ngữ mới |
+
 ## Cấu trúc thư mục
 
 | Thư mục | Nội dung |
 |---|---|
 | [00-overview/](00-overview/) | Tổng quan sản phẩm, danh mục tính năng, vai trò & quyền, thuật ngữ |
 | [01-architecture/](01-architecture/) | Kiến trúc hệ thống, danh mục service, giao tiếp, dữ liệu, sự kiện, bảo mật, quan sát, ADR |
-| [02-domain/](02-domain/) | Mô hình miền, ERD, schema Prisma theo từng service |
+| [02-domain/](02-domain/) | Mô hình miền, ERD, schema Prisma theo từng service, chuyên đề biến thể & tranh chấp đơn |
 | [03-specs/](03-specs/) | 23 domain spec, mỗi domain có `requirements.md` / `design.md` / `tasks.md` |
-| [04-frontend/](04-frontend/) | Kiến trúc FE, route, design system, component, state, auth, i18n, Storybook |
+| [04-frontend/](04-frontend/) | Kiến trúc FE, route, design system, component, state, auth, i18n, Storybook, SEO, chuyển động |
 | [05-infra/](05-infra/) | Dev local, Docker, Kubernetes, CI/CD, biến môi trường, runbook |
-| [06-quality/](06-quality/) | Chuẩn code, chiến lược test, Definition of Done |
+| [06-quality/](06-quality/) | Chuẩn code, hiệu năng, chiến lược test, Definition of Done |
 | [07-plan/](07-plan/) | Kế hoạch triển khai, mốc, rủi ro |
 | [08-handoff/](08-handoff/) | Bàn giao, onboarding, di trú từ hệ thống cũ |
 
