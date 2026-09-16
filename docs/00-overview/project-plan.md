@@ -827,7 +827,7 @@ Chỉ build và deploy service **có thay đổi** — đây là điều kiện 
 
 ## 17. Bộ tài liệu `docs/`
 
-**150 file** (kể cả `docs/README.md`). Trạng thái hiện tại:
+**151 file** (kể cả `docs/README.md`). Trạng thái hiện tại:
 
 | Thư mục | Nội dung | Số file | Trạng thái |
 |---|---|---|---|
@@ -839,13 +839,13 @@ Chỉ build và deploy service **có thay đổi** — đây là điều kiện 
 | `03-specs/` | 23 domain × (`requirements.md` EARS + `design.md` + `tasks.md`) | 69 | ⏳ chờ |
 | `04-frontend/` | Kiến trúc FE, route, design system, component, state, auth, i18n, Storybook, **SEO**, **chuyển động & hiệu ứng**, **soạn thảo/tải lên/phát video** | 11 | 🔄 đang viết (3/11) |
 | `05-infra/` | Dev local, Docker, k8s, CI/CD, biến môi trường, runbook, **monorepo & build (Turborepo)** | 7 | 🔄 đang viết (1/7) |
-| `06-quality/` | **Chuẩn code**, **hiệu năng**, **cổng chất lượng tự động**, chiến lược test, Definition of Done | 5 | 🔄 đang viết (3/5) |
+| `06-quality/` | **Chuẩn code**, **git hook và quy ước commit**, **hiệu năng**, **cổng chất lượng tự động**, chiến lược test, Definition of Done | 6 | 🔄 đang viết (4/6) |
 | `07-plan/` | Kế hoạch triển khai chi tiết, cột mốc, rủi ro | 3 | ⏳ chờ |
 | `08-handoff/` | Bàn giao, onboarding, ánh xạ từ bản cũ | 3 | ⏳ chờ |
 
 ### 17.1 Tài liệu chuyên đề cắt ngang
 
-Ngoài cây trên, mười ba tài liệu sau **cắt ngang nhiều domain** và là ràng buộc kỹ thuật bắt buộc đọc trước khi làm phần
+Ngoài cây trên, mười bốn tài liệu sau **cắt ngang nhiều domain** và là ràng buộc kỹ thuật bắt buộc đọc trước khi làm phần
 tương ứng — không phải tài liệu tham khảo tuỳ chọn:
 
 | Tài liệu | Ràng buộc chính nó đặt ra |
@@ -862,6 +862,7 @@ tương ứng — không phải tài liệu tham khảo tuỳ chọn:
 | [media-video-pipeline.md](../01-architecture/media-video-pipeline.md) | Upload tus 6 MB/chunk; chỉ `PUBLISHED` mới phát ra ngoài; request không chờ ffmpeg |
 | [editor-and-uploader.md](../04-frontend/editor-and-uploader.md) | TipTap lưu JSON và backend làm sạch; TipTap/Uppy/`hls.js` đều nạp động |
 | [quality-gates.md](../06-quality/quality-gates.md) | a11y 3 lớp, Lighthouse CI, `size-limit` là điều kiện merge; có lộ trình bật dần |
+| [git-hooks.md](../06-quality/git-hooks.md) | `pre-commit` < 5 giây, commit phải có scope trong danh sách, mọi hook đều được CI chạy lại |
 | [monorepo-and-build.md](../05-infra/monorepo-and-build.md) | CI chỉ chạy phần đã đổi; task chạm DB/mạng không được cache |
 
 ### 17.2 Skill cho Claude Code

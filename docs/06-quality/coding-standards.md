@@ -3,7 +3,7 @@ title: Chuẩn mã nguồn và định dạng
 status: review
 owner: Tech Lead
 updated: 2026-09-16
-related: [docs/06-quality/definition-of-done.md, docs/06-quality/performance.md, docs/01-architecture/api-conventions.md]
+related: [docs/06-quality/git-hooks.md, docs/06-quality/definition-of-done.md, docs/06-quality/performance.md, docs/01-architecture/api-conventions.md]
 ---
 
 # Chuẩn mã nguồn và định dạng
@@ -18,10 +18,12 @@ related: [docs/06-quality/definition-of-done.md, docs/06-quality/performance.md,
 | Bước | Công cụ | Chặn cái gì |
 |---|---|---|
 | Lúc gõ | ESLint + Prettier trong IDE, `.editorconfig` | Định dạng, quy tắc rõ ràng |
-| `pre-commit` | `lint-staged`: Prettier → ESLint `--fix` → `tsc --noEmit` trên file đổi | Không đẩy code lỗi cú pháp/kiểu |
-| `commit-msg` | `commitlint` (Conventional Commits) | Thông điệp commit sai chuẩn |
-| `pre-push` | test đơn vị của package bị ảnh hưởng | Gãy test hiển nhiên |
+| `pre-commit` | `lint-staged`: Prettier → ESLint `--fix --max-warnings=0` trên file đã stage | Định dạng và lỗi lint, dưới 5 giây |
+| `commit-msg` | `commitlint` (Conventional Commits, scope bắt buộc) | Thông điệp commit sai chuẩn |
+| `pre-push` | `turbo run typecheck --filter='...[origin/main]'` | Lỗi kiểu ở package bị ảnh hưởng |
 | CI | Toàn bộ lint + `tsc` + test + `gitleaks` + Trivy + kiểm tra truy vết docs | Mọi thứ còn lại |
+
+Cấu hình hook, quy ước commit, tên nhánh và danh sách scope: [git-hooks.md](git-hooks.md).
 
 Cấu hình nằm **một chỗ duy nhất** ở gốc workspace (`eslint.config.mjs`, `prettier.config.mjs`, `tsconfig.base.json`);
 package con chỉ được mở rộng, không được định nghĩa lại quy tắc.

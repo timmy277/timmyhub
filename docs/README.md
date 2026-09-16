@@ -88,6 +88,7 @@ Các tài liệu cắt ngang nhiều domain, không thuộc lối đọc nào �
 | [06-quality/coding-standards.md](06-quality/coding-standards.md) | Trước PR đầu tiên |
 | [06-quality/performance.md](06-quality/performance.md) | Trang/endpoint chậm, hoặc trước khi phát hành màn hình nặng |
 | [06-quality/quality-gates.md](06-quality/quality-gates.md) | Dựng CI cho a11y, Lighthouse, ngân sách gói |
+| [06-quality/git-hooks.md](06-quality/git-hooks.md) | Cài Husky, viết commit đúng chuẩn, thêm scope mới |
 | [01-architecture/media-video-pipeline.md](01-architecture/media-video-pipeline.md) | Làm upload, transcode, phát video (HLS, ffmpeg worker, tus) |
 | [04-frontend/editor-and-uploader.md](04-frontend/editor-and-uploader.md) | Làm trình soạn thảo TipTap, trình tải lên Uppy, trình phát video |
 | [05-infra/monorepo-and-build.md](05-infra/monorepo-and-build.md) | Đụng tới CI, Turborepo, phiên bản công cụ |
@@ -120,7 +121,7 @@ nằm ở [`CLAUDE.md`](../CLAUDE.md) ở gốc repo, Claude đọc tự động
 | [03-specs/](03-specs/) | 23 domain spec, mỗi domain có `requirements.md` / `design.md` / `tasks.md` |
 | [04-frontend/](04-frontend/) | Kiến trúc FE, route, design system, component, state, auth, i18n, Storybook, SEO, chuyển động |
 | [05-infra/](05-infra/) | Dev local, Docker, Kubernetes, CI/CD, biến môi trường, runbook |
-| [06-quality/](06-quality/) | Chuẩn code, hiệu năng, chiến lược test, Definition of Done |
+| [06-quality/](06-quality/) | Chuẩn code, git hook và quy ước commit, hiệu năng, cổng chất lượng, chiến lược test, Definition of Done |
 | [07-plan/](07-plan/) | Kế hoạch triển khai, mốc, rủi ro |
 | [08-handoff/](08-handoff/) | Bàn giao, onboarding, di trú từ hệ thống cũ |
 
