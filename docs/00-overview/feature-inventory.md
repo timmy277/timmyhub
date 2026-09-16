@@ -439,7 +439,8 @@ Mã domain: `IDN` identity-auth · `RBAC` rbac-permission · `USR` user-profile 
 
 ## 25. Đối chiếu độ phủ với bản cũ
 
-Bản cũ có **28 controller** và **45 model Prisma**. Bảng ánh xạ đầy đủ từng controller/model/route/thư viện sang
+Bản cũ có **28 controller** và **42 model Prisma** (đếm bằng `grep -c '^model ' schema.prisma`, xem
+`docs/02-domain/domain-model.md` §1). Bảng ánh xạ đầy đủ từng controller/model/route/thư viện sang
 domain và service mới nằm ở [migration-from-legacy.md](../08-handoff/migration-from-legacy.md). Quy tắc kiểm chứng:
 mỗi controller và mỗi model bản cũ phải xuất hiện ở **ít nhất một** hàng trong bảng đó, hoặc trong mục
 [§24 Tính năng loại bỏ](#24-tính-năng-loại-bỏ-so-với-bản-cũ) kèm lý do.

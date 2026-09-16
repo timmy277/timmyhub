@@ -83,7 +83,7 @@ nhất quán dữ liệu giữa các service; và việc đội chưa có kinh n
 
 ## 2. Bối cảnh: vì sao làm lại
 
-`D:\IT\2026\Projects\TimmyHub` (bản cũ) đã chạy được: ~29 module NestJS, 45 model Prisma, ~50 route Next.js.
+`D:\IT\2026\Projects\TimmyHub` (bản cũ) đã chạy được: ~29 module NestJS, 42 model Prisma, ~50 route Next.js.
 Nhưng có những vấn đề không sửa vá được:
 
 | # | Vấn đề ở bản cũ | Hệ quả | Cách xử lý ở bản mới |
@@ -833,8 +833,8 @@ Chỉ build và deploy service **có thay đổi** — đây là điều kiện 
 |---|---|---|---|
 | `docs/README.md` | Mục lục, lối đọc theo vai trò, quy ước | 1 | ✅ xong |
 | `00-overview/` | Tổng quan sản phẩm, **kế hoạch này**, danh mục 251 feature, vai trò & quyền, thuật ngữ | 5 | ✅ xong |
-| `01-architecture/` | Kiến trúc, danh mục service, giao tiếp, dữ liệu, sự kiện, API, bảo mật, realtime, observability, **radar công nghệ**, **đồng thời & nhất quán**, **RBAC nâng cao**, **i18n backend**, **đường xử lý video** | 14 | 🔄 đang viết (13/14, còn `observability.md`) |
-| `01-architecture/adr/` | 12 ADR nền + **ADR-0014 đường xử lý video** (+3 ADR ứng viên từ radar) | 13 | 🔄 đang viết (1/13) |
+| `01-architecture/` | Kiến trúc, danh mục service, giao tiếp, dữ liệu, sự kiện, API, bảo mật, realtime, observability, **radar công nghệ**, **đồng thời & nhất quán**, **RBAC nâng cao**, **i18n backend**, **đường xử lý video** | 14 | ✅ xong (14/14) |
+| `01-architecture/adr/` | 12 ADR nền + **ADR-0014 đường xử lý video** (+3 ADR ứng viên từ radar, chưa viết) | 13 | ✅ xong (13/13 ADR cơ sở; ADR-0013/0015/0016 vẫn là ứng viên chờ duyệt ở `technology-radar.md`) |
 | `02-domain/` | Mô hình miền + schema Prisma từng service + **biến thể sản phẩm** + **tranh chấp đơn hàng** | 19 | 🔄 đang viết (2/19) |
 | `03-specs/` | 23 domain × (`requirements.md` EARS + `design.md` + `tasks.md`) | 69 | ⏳ chờ |
 | `04-frontend/` | Kiến trúc FE, route, design system, component, state, auth, i18n, Storybook, **SEO**, **chuyển động & hiệu ứng**, **soạn thảo/tải lên/phát video** | 11 | 🔄 đang viết (3/11) |
@@ -890,7 +890,7 @@ mọi quy tắc code đều có cặp ❌ BAD / ✅ GOOD.
 
 Sau khi viết xong, bộ tài liệu được kiểm chứng bằng: đếm file khớp cây · truy vết hai chiều (mọi `REQ-*` có mặt
 trong một `tasks.md`, mọi `TASK-*` trỏ về `REQ-*`, mọi `FEAT-*` có ít nhất một `REQ-*`) · không có link chết ·
-28 controller + 45 model của bản cũ đều được ánh xạ hoặc ghi lý do loại bỏ · 44 biến môi trường cũ đều được phân bổ.
+28 controller + 42 model của bản cũ đều được ánh xạ hoặc ghi lý do loại bỏ · 44 biến môi trường cũ đều được phân bổ.
 
 ---
 

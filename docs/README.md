@@ -130,7 +130,7 @@ nằm ở [`CLAUDE.md`](../CLAUDE.md) ở gốc repo, Claude đọc tự động
 | Nhóm | Trạng thái | Ghi chú |
 |---|---|---|
 | 00-overview | approved | Chốt phạm vi MVP |
-| 01-architecture | approved | ADR-0001..0012 đã chốt |
+| 01-architecture | approved | ADR-0001..0012 + ADR-0014 đã chốt (ADR-0013/0015/0016 còn là ứng viên ở `technology-radar.md`) |
 | 02-domain | approved | Schema có thể điều chỉnh khi implement, phải cập nhật lại doc |
 | 03-specs | approved | 9 domain MVP ưu tiên implement trước |
 | 04-frontend | approved | |
