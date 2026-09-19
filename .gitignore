@@ -9,6 +9,9 @@ build/
 out/
 *.tsbuildinfo
 
+# Prisma client sinh ra — không commit
+backend/libs/prisma/src/generated/
+
 # test & cache
 coverage/
 .turbo/

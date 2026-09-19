@@ -1,0 +1,87 @@
+// Module engagement — đánh giá sản phẩm, phản hồi seller, bình chọn hữu ích, wishlist.
+// Giữ read model PurchasedItem dựng từ order.completed để kiểm tra "đã mua" — vẫn giữ dù cùng database, vì đây là
+// optimization tra cứu chứ không phải né RPC (data-architecture.md §3: đa số read-model-để-né-RPC đã bị loại bỏ,
+// nhưng PurchasedItem là bộ nhớ đệm hợp lệ cho một điều kiện quyền — không phải để hiển thị dữ liệu).
+// Nguồn: docs/02-domain/schemas/engagement-service.prisma.md.
+
+model Review {
+    id           String              @id @default(cuid())
+    userId       String
+    productId    String
+    variantId    String?
+    orderItemId  String?             @unique
+    rating       Int                 @default(5)
+    comment      String?
+    images       String[]            @default([])
+    videos       String[]            @default([])
+    isVerified   Boolean             @default(true)
+    helpfulCount Int                 @default(0)
+    // FEAT-REV-010: sửa trong 7 ngày, có lịch sử
+    editedAt     DateTime?
+    // ẩn do vi phạm — FEAT-REV-007
+    isHidden     Boolean             @default(false)
+    hiddenReason String?
+    createdAt    DateTime            @default(now())
+    updatedAt    DateTime            @updatedAt
+    comments     ReviewComment[]
+    helpfulVotes ReviewHelpfulVote[]
+
+    @@index([productId, createdAt])
+    @@map("reviews")
+}
+
+model ReviewComment {
+    id            String          @id @default(cuid())
+    reviewId      String
+    userId        String
+    // true nếu chính seller của sản phẩm trả lời — FEAT-REV-003
+    isSellerReply Boolean         @default(false)
+    content       String
+    parentId      String?
+    createdAt     DateTime        @default(now())
+    updatedAt     DateTime        @updatedAt
+    parent        ReviewComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+    replies       ReviewComment[] @relation("CommentReplies")
+    review        Review          @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+    @@index([reviewId])
+    @@index([parentId])
+    @@map("review_comments")
+}
+
+model ReviewHelpfulVote {
+    id        String   @id @default(cuid())
+    reviewId  String
+    userId    String
+    createdAt DateTime @default(now())
+    review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+    @@unique([reviewId, userId])
+    @@map("review_helpful_votes")
+}
+
+model WishlistItem {
+    id        String   @id @default(cuid())
+    userId    String
+    productId String
+    variantId String?
+    createdAt DateTime @default(now())
+
+    @@unique([userId, productId])
+    @@index([userId])
+    @@map("wishlist_items")
+}
+
+/// Read model dựng từ order.completed — kiểm tra "đã mua" mà không đọc trực tiếp bảng của module order
+model PurchasedItem {
+    id          String   @id @default(cuid())
+    userId      String
+    productId   String
+    variantId   String
+    orderItemId String   @unique
+    purchasedAt DateTime
+    canReview   Boolean  @default(true)
+
+    @@index([userId, productId])
+    @@map("purchased_items")
+}

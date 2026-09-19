@@ -1,0 +1,149 @@
+// Module content — bài đăng/video (kế thừa) và toàn bộ quảng cáo (domain video-ads, [MỚI] — chưa từng có ở bản cũ).
+// Sự kiện quảng cáo có khối lượng lớn nhất hệ thống: không ghi từng impression vào Postgres, đếm ở Redis, gom lô
+// mỗi 60 giây rồi mới ghi AdEvent theo lô — AdEvent lưu bản ghi đã gộp, không phải một dòng một impression.
+// Nguồn: docs/02-domain/schemas/content-service.prisma.md.
+
+enum PostStatus {
+    DRAFT
+    PUBLISHED
+    HIDDEN
+    PENDING_REVIEW
+    REJECTED
+}
+
+model Post {
+    id           String        @id @default(cuid())
+    sellerId     String
+    title        String
+    content      String?
+    videoUrl     String?
+    // tham chiếu logic sang module media
+    videoMediaId String?
+    thumbnailUrl String?
+    images       String[]      @default([])
+    hashtags     String[]      @default([])
+    status       PostStatus    @default(DRAFT)
+    reviewNote   String?
+    viewCount    Int           @default(0)
+    likeCount    Int           @default(0)
+    commentCount Int           @default(0)
+    isPinned     Boolean       @default(false)
+    // FEAT-PST-009
+    scheduledAt  DateTime?
+    createdAt    DateTime      @default(now())
+    updatedAt    DateTime      @updatedAt
+    comments     PostComment[]
+    likes        PostLike[]
+    productTags  PostProduct[]
+    boostedByAds AdCreative[]
+
+    @@index([sellerId, status, createdAt])
+    @@map("posts")
+}
+
+model PostProduct {
+    id        String  @id @default(cuid())
+    postId    String
+    // tham chiếu logic sang module catalog
+    productId String
+    variantId String?
+    position  Int     @default(0)
+    post      Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+    @@unique([postId, productId])
+    @@index([postId])
+    @@map("post_products")
+}
+
+model PostLike {
+    id        String   @id @default(cuid())
+    postId    String
+    userId    String
+    createdAt DateTime @default(now())
+    post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+    @@unique([postId, userId])
+    @@index([postId])
+    @@map("post_likes")
+}
+
+model PostComment {
+    id        String        @id @default(cuid())
+    postId    String
+    userId    String
+    content   String
+    parentId  String?
+    createdAt DateTime      @default(now())
+    post      Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+    parent    PostComment?  @relation("PostCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+    replies   PostComment[] @relation("PostCommentReplies")
+
+    @@index([postId])
+    @@index([parentId])
+    @@map("post_comments")
+}
+
+/// Chiến dịch quảng cáo — FEAT-ADS-001..010
+model AdCampaign {
+    id           String       @id @default(cuid())
+    sellerId     String
+    name         String
+    // TRAFFIC | CONVERSION | AWARENESS
+    objective    String
+    // CPM | CPC
+    billingModel String
+    budgetTotal  Decimal      @db.Decimal(14, 2)
+    budgetSpent  Decimal      @default(0) @db.Decimal(14, 2)
+    bidAmount    Decimal      @db.Decimal(14, 2)
+    startDate    DateTime
+    endDate      DateTime
+    // DRAFT | PENDING_REVIEW | APPROVED | REJECTED | RUNNING | PAUSED | ENDED | BUDGET_EXHAUSTED
+    status       String       @default("DRAFT")
+    reviewNote   String?
+    createdAt    DateTime     @default(now())
+    updatedAt    DateTime     @updatedAt
+    creatives    AdCreative[]
+
+    @@index([sellerId, status])
+    @@map("ad_campaigns")
+}
+
+/// Nội dung quảng cáo — boost một post/video có sẵn hoặc tạo creative riêng — FEAT-ADS-002
+model AdCreative {
+    id                  String     @id @default(cuid())
+    campaignId          String
+    // null nếu creative độc lập, có giá trị nếu boost một Post có sẵn — @relation nội bộ module content
+    boostedPostId       String?
+    imageUrl            String?
+    videoUrl            String?
+    headline            String
+    // vị trí hiển thị — FEAT-ADS-003
+    placements          String[]   @default([])
+    // nhắm mục tiêu — FEAT-ADS-004
+    targetCategoryIds   String[]   @default([])
+    targetProvinceCodes String[]   @default([])
+    isActive            Boolean    @default(true)
+    campaign            AdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+    boostedPost         Post?      @relation(fields: [boostedPostId], references: [id])
+
+    @@index([campaignId])
+    @@map("ad_creatives")
+}
+
+/// Impression/click đã gộp theo lô mỗi 60 giây — không phải một dòng một sự kiện
+model AdEvent {
+    id               String   @id @default(cuid())
+    campaignId       String
+    creativeId       String
+    // IMPRESSION | CLICK
+    eventType        String
+    batchWindowStart DateTime
+    batchWindowEnd   DateTime
+    count            Int
+    costCharged      Decimal  @db.Decimal(14, 2)
+    createdAt        DateTime @default(now())
+
+    @@unique([creativeId, eventType, batchWindowStart])
+    @@index([campaignId, createdAt])
+    @@map("ad_events")
+}

@@ -1,0 +1,32 @@
+// Module master-data — dữ liệu tham chiếu tĩnh, thay đổi hiếm: địa giới hành chính, tỉ giá... Không chứa
+// nghiệp vụ, không phát event — các module khác đọc thẳng bằng gọi DI trong tiến trình, không cache riêng.
+// Nguồn: docs/02-domain/schemas/master-data-service.prisma.md.
+
+model Province {
+    code      String     @id
+    name      String
+    districts District[]
+
+    @@map("provinces")
+}
+
+model District {
+    code         String   @id
+    name         String
+    provinceCode String
+    province     Province @relation(fields: [provinceCode], references: [code])
+    wards        Ward[]
+
+    @@index([provinceCode])
+    @@map("districts")
+}
+
+model Ward {
+    code         String   @id
+    name         String
+    districtCode String
+    district     District @relation(fields: [districtCode], references: [code])
+
+    @@index([districtCode])
+    @@map("wards")
+}

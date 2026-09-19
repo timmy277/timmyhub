@@ -1,0 +1,44 @@
+// Module analytics — số liệu tổng hợp (rollup) cho dashboard doanh số seller/admin. Dữ liệu đến từ event
+// (order.completed, ad_event...), không đọc trực tiếp bảng của module khác — mọi hàng ở đây là read model
+// đã tổng hợp theo ngày, tôn trọng ranh giới database-per-module (luật cứng #2).
+// Nguồn: docs/02-domain/schemas/analytics-service.prisma.md.
+
+model SellerDailyStat {
+    id              String   @id @default(cuid())
+    sellerId        String
+    date            DateTime @db.Date
+    revenue         Decimal  @default(0) @db.Decimal(14, 2)
+    orderCount      Int      @default(0)
+    cancelledCount  Int      @default(0)
+    visitorCount    Int      @default(0)
+    conversionRate  Decimal  @default(0) @db.Decimal(5, 2)
+
+    @@unique([sellerId, date])
+    @@index([sellerId, date])
+    @@map("seller_daily_stats")
+}
+
+model ProductDailyStat {
+    id         String   @id @default(cuid())
+    productId  String
+    date       DateTime @db.Date
+    viewCount  Int      @default(0)
+    orderCount Int      @default(0)
+    revenue    Decimal  @default(0) @db.Decimal(14, 2)
+
+    @@unique([productId, date])
+    @@index([productId, date])
+    @@map("product_daily_stats")
+}
+
+/// Số liệu vận hành sàn — FEAT-ANA-005 (dashboard admin)
+model PlatformDailyStat {
+    id              String   @id @default(cuid())
+    date            DateTime @db.Date @unique
+    gmv             Decimal  @default(0) @db.Decimal(14, 2)
+    orderCount      Int      @default(0)
+    newUserCount    Int      @default(0)
+    newSellerCount  Int      @default(0)
+
+    @@map("platform_daily_stats")
+}

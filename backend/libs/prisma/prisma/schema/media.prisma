@@ -1,0 +1,54 @@
+// Module media — upload (Uppy multipart) và transcode video (hls.js) chạy qua BullMQ, không nằm trên đường xử lý
+// request (luật cứng #16). MediaAsset là nguồn thật duy nhất cho URL/trạng thái file; module khác chỉ giữ
+// mediaId String, tự gọi sang module media để lấy URL đã transcode.
+// Nguồn: docs/01-architecture/media-video-pipeline.md.
+
+enum MediaType {
+    IMAGE
+    VIDEO
+}
+
+enum MediaStatus {
+    UPLOADING
+    PROCESSING
+    READY
+    FAILED
+}
+
+model MediaAsset {
+    id           String      @id @default(cuid())
+    ownerId      String
+    // POST | PRODUCT | REVIEW | AD_CREATIVE | AVATAR
+    ownerType    String
+    type         MediaType
+    status       MediaStatus @default(UPLOADING)
+    originalUrl  String?
+    // URL master .m3u8 sau transcode — chỉ có khi type = VIDEO và status = READY
+    hlsMasterUrl String?
+    thumbnailUrl String?
+    durationMs   Int?
+    sizeBytes    Int?
+    width        Int?
+    height       Int?
+    failReason   String?
+    createdAt    DateTime    @default(now())
+    updatedAt    DateTime    @updatedAt
+    variants     MediaVariant[]
+
+    @@index([ownerType, ownerId])
+    @@index([status])
+    @@map("media_assets")
+}
+
+/// Từng độ phân giải transcode ra (240p/480p/720p/1080p) — FEAT liên quan media-video-pipeline.md §3
+model MediaVariant {
+    id         String     @id @default(cuid())
+    assetId    String
+    resolution String
+    bitrateKbps Int
+    url        String
+    asset      MediaAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+    @@unique([assetId, resolution])
+    @@map("media_variants")
+}

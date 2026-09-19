@@ -1,0 +1,125 @@
+// Module payment — thanh toán VNPay/COD, ví seller/buyer, sổ giao dịch ví, yêu cầu rút tiền.
+// Rủi ro cao nhất hệ thống: IPN phải xác minh chữ ký → khoá theo vnpayTxnRef → kiểm ProcessedEvent →
+// ghi + outbox trong một transaction (service-catalog.md, luật cứng #4/#5). Hoàn tiền đi qua sổ cái kép
+// (WalletTransaction), không bao giờ UPDATE balance trực tiếp.
+// Nguồn: docs/02-domain/schemas/payment-service.prisma.md.
+
+enum PaymentStatus {
+    PENDING
+    PROCESSING
+    COMPLETED
+    FAILED
+    REFUNDED
+    PARTIALLY_REFUNDED
+}
+
+enum TransactionType {
+    DEPOSIT
+    WITHDRAWAL
+    PAYMENT
+    REFUND
+    SALE_INCOME
+    COMMISSION
+    REWARD
+    FEE
+}
+
+model Payment {
+    id           String           @id @default(cuid())
+    orderId      String           @unique
+    method       String
+    status       PaymentStatus    @default(PENDING)
+    amount       Decimal          @db.Decimal(14, 2)
+    currency     String           @default("VND")
+    vnpayTxnRef  String?          @unique
+    vnpayTransNo String?
+    paidAt       DateTime?
+    expiresAt    DateTime?
+    metadata     Json?
+    createdAt    DateTime         @default(now())
+    updatedAt    DateTime         @updatedAt
+    attempts     PaymentAttempt[]
+
+    @@index([orderId])
+    @@index([vnpayTxnRef])
+    @@map("payments")
+}
+
+/// Mỗi lần thử thanh toán riêng khỏi Payment cuối cùng — FEAT-PAY-011 (thử lại), theo dõi IPN đến nhiều lần
+model PaymentAttempt {
+    id            String        @id @default(cuid())
+    paymentId     String
+    // VNPAY | COD | WALLET
+    provider      String
+    // vnp_TxnRef của lần này — khoá idempotent cho IPN
+    txnRef        String        @unique
+    status        PaymentStatus @default(PENDING)
+    ipnPayload    Json?
+    ipnReceivedAt DateTime?
+    createdAt     DateTime      @default(now())
+    payment       Payment       @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+    @@index([paymentId])
+    @@map("payment_attempts")
+}
+
+model Wallet {
+    id               String              @id @default(cuid())
+    // sở hữu bởi seller HOẶC buyer — chỉ một trong hai khác null
+    sellerId         String?             @unique
+    buyerId          String?             @unique
+    availableBalance Decimal             @default(0) @db.Decimal(14, 2)
+    // tiền đang giữ (hold), chưa khả dụng — FEAT-WAL-004
+    holdBalance      Decimal             @default(0) @db.Decimal(14, 2)
+    currency         String              @default("VND")
+    createdAt        DateTime            @default(now())
+    updatedAt        DateTime            @updatedAt
+    transactions     WalletTransaction[]
+    withdrawals      Withdrawal[]
+
+    @@index([sellerId])
+    @@index([buyerId])
+    @@map("wallets")
+}
+
+model WalletTransaction {
+    id           String          @id @default(cuid())
+    walletId     String
+    type         TransactionType
+    amount       Decimal         @db.Decimal(14, 2)
+    balanceAfter Decimal         @db.Decimal(14, 2)
+    description  String?
+    // idempotency: orderId, disputeId:attempt, withdrawalId...
+    referenceKey String
+    createdAt    DateTime        @default(now())
+    wallet       Wallet          @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+    @@unique([walletId, referenceKey, type])
+    @@index([walletId])
+    @@index([type])
+    @@index([createdAt])
+    @@map("wallet_transactions")
+}
+
+/// Yêu cầu rút tiền + luồng duyệt admin — FEAT-WAL-005
+model Withdrawal {
+    id                String    @id @default(cuid())
+    walletId          String
+    amount            Decimal   @db.Decimal(14, 2)
+    bankName          String
+    bankAccountNumber String
+    bankAccountName   String
+    // REQUESTED | APPROVED | REJECTED | PAID
+    status            String    @default("REQUESTED")
+    rejectReason      String?
+    approvedById      String?
+    approvedAt        DateTime?
+    paidAt            DateTime?
+    createdAt         DateTime  @default(now())
+    updatedAt         DateTime  @updatedAt
+    wallet            Wallet    @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+    @@index([walletId])
+    @@index([status])
+    @@map("withdrawals")
+}

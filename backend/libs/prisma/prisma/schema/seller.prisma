@@ -1,0 +1,98 @@
+// Module seller — hồ sơ shop đã duyệt, đơn đăng ký bán hàng, thương hiệu, theo dõi shop.
+// Nguồn: docs/02-domain/schemas/seller-service.prisma.md. Không lưu sản phẩm/đơn hàng — catalog/order chỉ giữ
+// sellerId (= SellerProfile.id) dạng String trần.
+
+enum ResourceStatus {
+    PENDING
+    APPROVED
+    REJECTED
+    DELETED
+}
+
+model SellerProfile {
+    id                   String             @id @default(cuid())
+    // tham chiếu logic sang module identity, không @relation
+    userId               String             @unique
+    shopName             String
+    shopSlug             String             @unique
+    shopLogo             String?
+    shopBanner           String?
+    description          String?
+    warehouseAddressLine String?
+    provinceCode         String?
+    districtCode         String?
+    wardCode             String?
+    status               ResourceStatus     @default(PENDING)
+    isVerified           Boolean            @default(false)
+    verifiedAt           DateTime?
+    isSuspended          Boolean            @default(false)
+    suspendedReason      String?
+    rating               Float              @default(0)
+    // chỉ số uy tín — FEAT-SEL-008, cập nhật qua event order.completed / review.created
+    cancelRate           Float              @default(0)
+    avgResponseHours     Float              @default(0)
+    // FEAT-SEL-009
+    returnPolicyDays     Int                @default(7)
+    prepTimeHours        Int                @default(24)
+    createdAt            DateTime           @default(now())
+    updatedAt            DateTime           @updatedAt
+    application          SellerApplication?
+    brandProfile         BrandProfile?
+    followers            ShopFollow[]
+
+    @@index([shopSlug])
+    @@index([status])
+    @@map("seller_profiles")
+}
+
+/// Đơn đăng ký bán hàng — tách khỏi SellerProfile đã duyệt (FEAT-SEL-001/002)
+model SellerApplication {
+    id              String         @id @default(cuid())
+    userId          String
+    sellerProfileId String?        @unique
+    shopName        String
+    shopDescription String?
+    idDocumentUrl   String
+    taxCode         String?
+    status          ResourceStatus @default(PENDING)
+    reviewNote      String?
+    reviewedById    String?
+    reviewedAt      DateTime?
+    createdAt       DateTime       @default(now())
+    updatedAt       DateTime       @updatedAt
+    sellerProfile   SellerProfile? @relation(fields: [sellerProfileId], references: [id])
+
+    @@index([userId])
+    @@index([status])
+    @@map("seller_applications")
+}
+
+model BrandProfile {
+    id              String        @id @default(cuid())
+    sellerProfileId String        @unique
+    userId          String
+    brandName       String        @unique
+    brandSlug       String        @unique
+    brandLogo       String?
+    description     String?
+    isVerified      Boolean       @default(false)
+    createdAt       DateTime      @default(now())
+    updatedAt       DateTime      @updatedAt
+    sellerProfile   SellerProfile @relation(fields: [sellerProfileId], references: [id], onDelete: Cascade)
+
+    @@index([brandSlug])
+    @@map("brand_profiles")
+}
+
+/// Theo dõi shop — FEAT-USR-010
+model ShopFollow {
+    id              String        @id @default(cuid())
+    userId          String
+    sellerProfileId String
+    createdAt       DateTime      @default(now())
+    sellerProfile   SellerProfile @relation(fields: [sellerProfileId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, sellerProfileId])
+    @@index([sellerProfileId])
+    @@map("shop_follows")
+}

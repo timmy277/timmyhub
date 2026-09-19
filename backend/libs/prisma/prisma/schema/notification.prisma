@@ -1,0 +1,57 @@
+// Module notification — thông báo trong app, tuỳ chọn kênh, mẫu nội dung đa ngôn ngữ.
+// Nội dung hiển thị không hardcode ở BE — Notification lưu templateKey + params (Json), FE/worker tra catalog
+// thông điệp theo locale khi render, đúng luật CLAUDE.md §1 (chuỗi hiển thị luôn qua catalog, không hardcode).
+// Nguồn: docs/02-domain/schemas/notification-service.prisma.md.
+
+enum NotificationChannel {
+    IN_APP
+    EMAIL
+    PUSH
+    SMS
+}
+
+model Notification {
+    id          String              @id @default(cuid())
+    userId      String
+    // ORDER_STATUS | PROMOTION | CHAT | REVIEW | SYSTEM | WALLET | DISPUTE
+    type        String
+    templateKey String
+    // tham số nội suy cho template — không lưu chuỗi đã dịch sẵn
+    params      Json                @default("{}")
+    channel     NotificationChannel @default(IN_APP)
+    isRead      Boolean             @default(false)
+    readAt      DateTime?
+    // deep-link vào app khi bấm thông báo
+    actionUrl   String?
+    createdAt   DateTime            @default(now())
+
+    @@index([userId, isRead, createdAt])
+    @@map("notifications")
+}
+
+/// Tuỳ chọn nhận thông báo theo loại + kênh — FEAT-NOT-006
+model NotificationPreference {
+    id      String              @id @default(cuid())
+    userId  String
+    type    String
+    channel NotificationChannel
+    enabled Boolean             @default(true)
+
+    @@unique([userId, type, channel])
+    @@index([userId])
+    @@map("notification_preferences")
+}
+
+/// Thiết bị nhận push — liên kết tới Device của module identity qua deviceId (String trần, không @relation)
+model PushSubscription {
+    id        String   @id @default(cuid())
+    userId    String
+    deviceId  String
+    provider  String
+    token     String
+    createdAt DateTime @default(now())
+
+    @@unique([deviceId, provider])
+    @@index([userId])
+    @@map("push_subscriptions")
+}

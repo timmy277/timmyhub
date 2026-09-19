@@ -1,4 +1,7 @@
 // @ts-check
+// Cấu hình ESLint dùng chung cho mọi package backend (apps/api, apps/worker, libs/prisma).
+// backend/libs/modules có thêm eslint.config.mjs riêng (import mảng này rồi bổ sung rule boundaries)
+// vì đó là package duy nhất cần chặn import chéo giữa các module domain.
 import eslint from '@eslint/js'
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
 import globals from 'globals'
@@ -6,7 +9,7 @@ import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
     {
-        ignores: ['eslint.config.mjs'],
+        ignores: ['**/dist/**', '**/node_modules/**', '**/generated/**'],
     },
     eslint.configs.recommended,
     ...tseslint.configs.recommendedTypeChecked,
@@ -26,9 +29,10 @@ export default tseslint.config(
     },
     {
         rules: {
-            '@typescript-eslint/no-explicit-any': 'off',
-            '@typescript-eslint/no-floating-promises': 'warn',
-            '@typescript-eslint/no-unsafe-argument': 'warn',
+            '@typescript-eslint/no-explicit-any': 'error',
+            '@typescript-eslint/no-floating-promises': 'error',
+            '@typescript-eslint/consistent-type-imports': 'error',
+            'no-console': 'error',
             'prettier/prettier': ['error', { endOfLine: 'auto' }],
         },
     },

@@ -1,0 +1,178 @@
+// Module identity — danh tính, phiên đăng nhập, thiết bị, hai lớp RBAC đầu (role trên User, permission động).
+// Nguồn: docs/02-domain/schemas/identity-service.prisma.md, quy ước id/tiền/map theo docs/01-architecture/data-architecture.md.
+// Không lưu dữ liệu nghiệp vụ của module khác — module khác chỉ giữ userId dạng String trần.
+
+enum UserRole {
+    CUSTOMER
+    SELLER
+    BRAND
+    SHIPPER
+    ADMIN
+    SUPER_ADMIN
+}
+
+model User {
+    id                  String                @id @default(cuid())
+    email               String                @unique
+    phone               String?               @unique
+    passwordHash        String?
+    googleId            String?               @unique
+    facebookId          String?               @unique
+    roles               UserRole[]            @default([CUSTOMER])
+    isEmailVerified     Boolean               @default(false)
+    isPhoneVerified     Boolean               @default(false)
+    isActive            Boolean               @default(true)
+    isBanned            Boolean               @default(false)
+    banReason           String?
+    twoFactorEnabled    Boolean               @default(false)
+    twoFactorSecret     String?
+    failedLoginCount    Int                   @default(0)
+    lockedUntil         DateTime?
+    lastLoginAt         DateTime?
+    lastLoginIp         String?
+    createdAt           DateTime              @default(now())
+    updatedAt           DateTime              @updatedAt
+    deletedAt           DateTime?
+    profile             Profile?
+    devices             Device[]
+    refreshTokens       RefreshToken[]
+    userRoles           UserSystemRole[]
+    userPermissions     UserPermission[]
+    passwordResetTokens PasswordResetToken[]
+
+    @@index([email])
+    @@index([phone])
+    @@index([deletedAt])
+    @@map("users")
+}
+
+model Profile {
+    id          String    @id @default(cuid())
+    userId      String    @unique
+    firstName   String
+    lastName    String
+    displayName String?
+    avatar      String?
+    dateOfBirth DateTime?
+    gender      String?
+    bio         String?
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+    user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@map("profiles")
+}
+
+model Device {
+    id            String         @id @default(cuid())
+    userId        String
+    userAgent     String?
+    ip            String?
+    deviceName    String?
+    isActive      Boolean        @default(true)
+    lastActiveAt  DateTime       @updatedAt
+    createdAt     DateTime       @default(now())
+    user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+    refreshTokens RefreshToken[]
+
+    @@index([userId])
+    @@map("devices")
+}
+
+model RefreshToken {
+    id         String    @id @default(cuid())
+    userId     String
+    deviceId   String?
+    token      String    @unique
+    // token trước đó trong chuỗi rotation — phát hiện tái sử dụng (FEAT-IDN-003)
+    replacedBy String?
+    expiresAt  DateTime
+    isRevoked  Boolean   @default(false)
+    revokedAt  DateTime?
+    createdAt  DateTime  @default(now())
+    device     Device?   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+    user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId])
+    @@index([token])
+    @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+    id        String   @id @default(cuid())
+    userId    String
+    token     String   @unique
+    expiresAt DateTime
+    used      Boolean  @default(false)
+    createdAt DateTime @default(now())
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([token])
+    @@index([userId])
+    @@map("password_reset_tokens")
+}
+
+model SystemRole {
+    id          String           @id @default(cuid())
+    name        String           @unique
+    displayName String
+    description String?
+    isSystem    Boolean          @default(false)
+    createdAt   DateTime         @default(now())
+    updatedAt   DateTime         @updatedAt
+    permissions RolePermission[]
+    users       UserSystemRole[]
+
+    @@map("system_roles")
+}
+
+model UserSystemRole {
+    userId String
+    roleId String
+    role   SystemRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+    user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@id([userId, roleId])
+    @@map("user_system_roles")
+}
+
+model Permission {
+    id              String           @id @default(cuid())
+    name            String           @unique
+    displayName     String
+    description     String?
+    module          String
+    resource        String
+    action          String
+    createdAt       DateTime         @default(now())
+    rolePermissions RolePermission[]
+    userPermissions UserPermission[]
+
+    @@index([module, resource, action])
+    @@map("permissions")
+}
+
+model RolePermission {
+    id           String     @id @default(cuid())
+    roleId       String
+    permissionId String
+    permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+    role         SystemRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+    @@unique([roleId, permissionId])
+    @@map("role_permissions")
+}
+
+model UserPermission {
+    id           String     @id @default(cuid())
+    userId       String
+    permissionId String
+    // true = cấp thêm ngoài role, false = khước từ dù role có quyền này (lớp 2b — rbac-advanced.md)
+    isGranted    Boolean    @default(true)
+    grantedAt    DateTime   @default(now())
+    permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+    user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, permissionId])
+    @@map("user_permissions")
+}

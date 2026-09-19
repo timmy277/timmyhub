@@ -1,7 +1,0 @@
-# File này đánh dấu backend/ là GỐC workspace pnpm riêng, tách khỏi workspace ở D:\...\timmy-hub.
-# Không có file này, `pnpm install` chạy trong backend/ sẽ trèo lên tìm pnpm-workspace.yaml ở gốc repo,
-# thấy backend/ không khớp glob nào trong đó, và chỉ cài mỗi package "timmyhub" ở gốc — bỏ qua toàn bộ
-# dependency của backend. (Đã xảy ra thật khi thử xoá file này.)
-allowBuilds:
-  '@parcel/watcher': true
-  unrs-resolver: true

@@ -1,0 +1,181 @@
+// Module catalog — danh mục, sản phẩm, option/biến thể, tồn kho. Tồn kho nằm chung module với sản phẩm để
+// reserve/kiểm tra giá chạy trong cùng một transaction (docs/01-architecture/concurrency-and-consistency.md).
+// Nguồn: docs/02-domain/product-variant.md §2 (Product/Option/Variant/Inventory — mô hình chính, biến thể là
+// trục xương sống của giá/tồn kho/giỏ hàng/đơn hàng) + docs/02-domain/schemas/catalog-service.prisma.md (Category,
+// InventoryLedger, ProductPriceHistory).
+
+// Đặt tên riêng ProductStatus (không dùng chung ResourceStatus của module seller): trong schema Prisma nhiều
+// file, tên enum/model là một namespace toàn cục duy nhất — hai enum trùng tên nhưng khác tập giá trị
+// (ở đây có thêm DRAFT) sẽ không hợp nhất được.
+enum ProductStatus {
+    DRAFT
+    PENDING
+    APPROVED
+    REJECTED
+    DELETED
+}
+
+model Category {
+    id          String     @id @default(cuid())
+    parentId    String?
+    name        String
+    slug        String     @unique
+    image       String?
+    description String?
+    position    Int        @default(0)
+    isActive    Boolean    @default(true)
+    createdAt   DateTime   @default(now())
+    updatedAt   DateTime   @updatedAt
+    parent      Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
+    children    Category[] @relation("CategoryToCategory")
+    products    Product[]
+
+    @@index([slug])
+    @@index([parentId])
+    @@map("categories")
+}
+
+model Product {
+    id          String          @id @default(cuid())
+    // tham chiếu logic sang module seller, không @relation
+    shopId      String
+    categoryId  String
+    name        String
+    slug        String
+    description String
+    status      ProductStatus   @default(DRAFT)
+    // trường dẫn xuất — chỉ được ghi bởi ProductPriceRecalculator, không ai ghi tay
+    minPrice    Decimal?        @db.Decimal(14, 2)
+    maxPrice    Decimal?        @db.Decimal(14, 2)
+    totalStock  Int             @default(0)
+    // dẫn xuất từ order.completed — FEAT liên quan phần "Bảng field bị tham chiếu" của order-service
+    soldCount   Int             @default(0)
+    viewCount   Int             @default(0)
+    ratingAvg   Float           @default(0)
+    ratingCount Int             @default(0)
+    isFeatured  Boolean         @default(false)
+    reviewNote  String?
+    version     Int             @default(0)
+    createdAt   DateTime        @default(now())
+    updatedAt   DateTime        @updatedAt
+    category    Category        @relation(fields: [categoryId], references: [id])
+    options     ProductOption[]
+    variants    ProductVariant[]
+
+    @@unique([shopId, slug])
+    @@index([categoryId, status])
+    @@index([shopId, status, createdAt])
+    @@index([isFeatured])
+    @@map("products")
+}
+
+model ProductOption {
+    id        String               @id @default(cuid())
+    productId String
+    // "Màu sắc"
+    name      String
+    // 0, 1, 2 — quyết định thứ tự hiển thị và thứ tự khoá tổ hợp
+    position  Int
+    product   Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+    values    ProductOptionValue[]
+
+    @@unique([productId, name])
+    @@unique([productId, position])
+    @@map("product_options")
+}
+
+model ProductOptionValue {
+    id       String        @id @default(cuid())
+    optionId String
+    // "Đen"
+    value    String
+    position Int
+    // ảnh đại diện cho giá trị này (thường dùng cho màu) — trỏ MediaAsset.id ở module media, không @relation
+    imageId  String?
+    option   ProductOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+    @@unique([optionId, value])
+    @@map("product_option_values")
+}
+
+model ProductVariant {
+    id             String          @id @default(cuid())
+    productId      String
+    sku            String
+    // khoá tổ hợp đã chuẩn hoá: id các OptionValue nối bằng ":" theo position tăng dần
+    optionKey      String
+    price          Decimal         @db.Decimal(14, 2)
+    // giá gạch ngang, phải > price
+    compareAtPrice Decimal?        @db.Decimal(14, 2)
+    weightGram     Int
+    imageId        String?
+    isDefault      Boolean         @default(false)
+    isActive       Boolean         @default(true)
+    version        Int             @default(0)
+    createdAt      DateTime        @default(now())
+    updatedAt      DateTime        @updatedAt
+    product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+    inventory      InventoryItem?
+    priceHistory   ProductPriceHistory[]
+
+    @@unique([productId, optionKey])
+    @@unique([productId, sku])
+    @@index([productId, isActive])
+    @@map("product_variants")
+}
+
+model InventoryItem {
+    id                String         @id @default(cuid())
+    variantId         String         @unique
+    warehouseId       String
+    onHand            Int            @default(0)
+    reserved          Int            @default(0)
+    lowStockThreshold Int            @default(5)
+    // available = onHand - reserved, KHÔNG lưu cột riêng để không có hai nguồn sự thật
+    variant           ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+    @@map("inventory_items")
+}
+
+/// Nhật ký biến động tồn kho — bất biến, FEAT-INV-005
+model InventoryLedger {
+    id            String   @id @default(cuid())
+    variantId     String
+    // RESERVE | COMMIT | RELEASE | ADJUST_MANUAL | ADJUST_RECONCILE
+    changeType    String
+    // âm khi trừ reserved/onHand, dương khi cộng lại
+    onHandDelta   Int
+    reservedDelta Int
+    onHandAfter   Int
+    reservedAfter Int
+    // idempotency của thao tác nguồn (vd orderId:reserve, orderId:commit)
+    referenceKey  String
+    reason        String?
+    actorId       String?
+    createdAt     DateTime @default(now())
+
+    @@unique([variantId, referenceKey, changeType])
+    @@index([variantId, createdAt])
+    @@map("inventory_ledgers")
+}
+
+model ProductPriceHistory {
+    id          String         @id @default(cuid())
+    variantId   String
+    oldPrice    Decimal        @db.Decimal(14, 2)
+    newPrice    Decimal        @db.Decimal(14, 2)
+    changedById String?
+    createdAt   DateTime       @default(now())
+    variant     ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+    @@index([variantId, createdAt])
+    @@map("product_price_histories")
+}
+
+// Ràng buộc CHECK/unique-partial-index viết tay (Prisma chưa sinh được), thêm bằng migration thủ công —
+// xem docs/02-domain/product-variant.md §2:
+//   ALTER TABLE "inventory_items" ADD CONSTRAINT inv_non_negative
+//       CHECK ("onHand" >= 0 AND "reserved" >= 0 AND "reserved" <= "onHand");
+//   ALTER TABLE "product_variants" ADD CONSTRAINT variant_price_positive CHECK ("price" > 0),
+//       ADD CONSTRAINT variant_compare_price CHECK ("compareAtPrice" IS NULL OR "compareAtPrice" > "price");
+//   CREATE UNIQUE INDEX variant_one_default ON "product_variants" ("productId") WHERE "isDefault";

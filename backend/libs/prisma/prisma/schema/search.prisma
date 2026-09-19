@@ -1,0 +1,33 @@
+// Module search — chỉ lưu trạng thái vận hành của pipeline index (không lưu bản sao dữ liệu sản phẩm: nguồn thật
+// của tài liệu tìm kiếm là Elasticsearch/OpenSearch bên ngoài Postgres, đồng bộ qua event catalog.product.updated).
+// Nguồn: docs/02-domain/schemas/search-service.prisma.md.
+
+model SearchIndexJob {
+    id           String    @id @default(cuid())
+    // PRODUCT | SHOP
+    entityType   String
+    entityId     String
+    // UPSERT | DELETE
+    operation    String
+    // PENDING | PROCESSING | DONE | FAILED
+    status       String    @default("PENDING")
+    attempts     Int       @default(0)
+    lastError    String?
+    createdAt    DateTime  @default(now())
+    processedAt  DateTime?
+
+    @@index([status, createdAt])
+    @@index([entityType, entityId])
+    @@map("search_index_jobs")
+}
+
+/// Truy vấn tìm kiếm phổ biến — phục vụ gợi ý/trending, không phải log chi tiết từng lượt tìm
+model SearchQueryStat {
+    id          String   @id @default(cuid())
+    keyword     String   @unique
+    searchCount Int      @default(1)
+    lastSearchedAt DateTime @default(now())
+
+    @@index([searchCount])
+    @@map("search_query_stats")
+}

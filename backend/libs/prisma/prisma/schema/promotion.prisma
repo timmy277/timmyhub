@@ -1,0 +1,128 @@
+// Module promotion — voucher (3 loại), chiến dịch/flash sale, kho voucher người dùng, nhật ký sử dụng.
+// Lượt dùng voucher theo mô hình reserve/commit/release giống tồn kho (module catalog), tránh vượt hạn mức khi
+// đồng thời cao — UPDATE ... WHERE usedCount < usageLimit nguyên tử, không đọc-rồi-ghi (luật cứng #4).
+// Nguồn: docs/02-domain/schemas/promotion-service.prisma.md.
+
+enum VoucherType {
+    PERCENTAGE
+    FIXED_AMOUNT
+    FREE_SHIPPING
+}
+
+enum UserVoucherStatus {
+    SAVED
+    USED
+    EXPIRED
+}
+
+model PromotionCampaign {
+    id               String            @id @default(cuid())
+    name             String
+    description      String?
+    // FLASH_SALE | SEASONAL | CATEGORY_BOOST
+    type             String
+    // PLATFORM | SELLER
+    ownerType        String
+    ownerId          String?
+    startDate        DateTime
+    endDate          DateTime
+    isActive         Boolean           @default(true)
+    // duyệt sản phẩm tham gia chiến dịch — FEAT-CPG-003
+    requiresApproval Boolean           @default(false)
+    banner           String?
+    icon             String?
+    backgroundColor  String?
+    titleColor       String?
+    badgeText        String?
+    createdBy        String?
+    createdAt        DateTime          @default(now())
+    updatedAt        DateTime          @updatedAt
+    campaignProducts CampaignProduct[]
+    vouchers         Voucher[]
+
+    @@index([ownerType, ownerId])
+    @@index([isActive, startDate, endDate])
+    @@map("promotion_campaigns")
+}
+
+model CampaignProduct {
+    id              String            @id @default(cuid())
+    campaignId      String
+    // tham chiếu logic sang module catalog (ProductVariant.id) — giá campaign gắn variant, không productId trần
+    variantId       String
+    campaignPrice   Decimal?          @db.Decimal(14, 2)
+    discountPercent Int?
+    maxQuantity     Int?
+    soldQuantity    Int               @default(0)
+    // ResourceStatus dạng string để không phụ thuộc enum của module khác
+    approvalStatus  String            @default("PENDING")
+    campaign        PromotionCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+    @@unique([campaignId, variantId])
+    @@index([campaignId])
+    @@index([variantId])
+    @@map("campaign_products")
+}
+
+model Voucher {
+    id                String             @id @default(cuid())
+    code              String             @unique
+    type              VoucherType
+    value             Decimal            @db.Decimal(14, 2)
+    minOrderValue     Decimal?           @db.Decimal(14, 2)
+    maxDiscount       Decimal?           @db.Decimal(14, 2)
+    usageLimit        Int?
+    usedCount         Int                @default(0)
+    perUserLimit      Int                @default(1)
+    isActive          Boolean            @default(true)
+    startDate         DateTime
+    endDate           DateTime
+    description       String?
+    // tham chiếu logic sang module seller — null = voucher sàn
+    sellerId          String?
+    campaignId        String?
+    categoryIds       String[]           @default([])
+    productIds        String[]           @default([])
+    paymentMethods    String[]           @default([])
+    // FEAT-VCH-009: chống lạm dụng theo thiết bị/IP
+    maxUsagePerDevice Int?
+    createdAt         DateTime           @default(now())
+    updatedAt         DateTime           @updatedAt
+    userVouchers      UserVoucher[]
+    campaign          PromotionCampaign? @relation(fields: [campaignId], references: [id])
+    usageLogs         VoucherUsageLog[]
+
+    @@index([code])
+    @@index([sellerId])
+    @@index([campaignId])
+    @@index([isActive, startDate, endDate])
+    @@map("vouchers")
+}
+
+model VoucherUsageLog {
+    id        String   @id @default(cuid())
+    voucherId String
+    userId    String
+    orderId   String
+    discount  Decimal  @db.Decimal(14, 2)
+    usedAt    DateTime @default(now())
+    voucher   Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+
+    @@unique([voucherId, orderId])
+    @@index([voucherId])
+    @@index([userId])
+    @@map("voucher_usage_logs")
+}
+
+model UserVoucher {
+    id        String            @id @default(cuid())
+    userId    String
+    voucherId String
+    savedAt   DateTime          @default(now())
+    status    UserVoucherStatus @default(SAVED)
+    voucher   Voucher           @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, voucherId])
+    @@index([userId, status])
+    @@map("user_vouchers")
+}

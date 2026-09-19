@@ -1,0 +1,24 @@
+// Outbox / idempotent-consumer dùng chung cho toàn bộ module (ADR-0002, data-architecture.md §2).
+// Một bảng duy nhất cho cả app — KHÔNG khai báo lại OutboxEvent/ProcessedEvent trong từng file module.
+// aggregateType mang tên module sở hữu bản ghi (vd "order", "payment") để worker lọc/điều phối theo domain.
+
+model OutboxEvent {
+    id            String    @id @default(cuid())
+    aggregateType String
+    aggregateId   String
+    eventType     String
+    payload       Json
+    createdAt     DateTime  @default(now())
+    publishedAt   DateTime?
+
+    @@index([publishedAt])
+    @@map("outbox_events")
+}
+
+model ProcessedEvent {
+    eventId      String   @id
+    consumerName String
+    processedAt  DateTime @default(now())
+
+    @@map("processed_events")
+}

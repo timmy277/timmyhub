@@ -1,0 +1,159 @@
+// Module order — đơn hàng, dòng đơn (snapshot bất biến), sổ địa chỉ, yêu cầu trả hàng. Điều phối checkout
+// (trước đây là saga orchestrator xuyên service; nay các bước reserve/pay vẫn tuần tự qua gọi hàm trong process).
+// OrderItem snapshot đầy đủ để trang chi tiết đơn không bao giờ cần gọi module catalog (product-variant.md §4).
+// Vòng đời tranh chấp/hoàn tiền chi tiết ở docs/02-domain/order-dispute.md — ReturnRequest ở đây chỉ là bản ghi
+// trạng thái phía order, Dispute/DisputeEvent đầy đủ nằm ở module chat.
+// Nguồn: docs/02-domain/schemas/order-service.prisma.md.
+
+enum OrderStatus {
+    PENDING
+    CONFIRMED
+    PROCESSING
+    PACKED
+    SHIPPING
+    DELIVERED
+    COMPLETED
+    CANCELLED
+    RETURN_REQUESTED
+    RETURNED
+    REFUNDED
+}
+
+enum PaymentMethod {
+    COD
+    VNPAY
+    WALLET
+}
+
+enum ShipperStatus {
+    ONLINE
+    BUSY
+    OFFLINE
+}
+
+model Address {
+    id           String   @id @default(cuid())
+    userId       String
+    label        String?
+    fullName     String
+    phone        String
+    addressLine1 String
+    addressLine2 String?
+    provinceCode String
+    districtCode String
+    wardCode     String
+    provinceName String
+    districtName String
+    wardName     String
+    isDefault    Boolean  @default(false)
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+    orders       Order[]
+
+    @@index([userId])
+    @@map("addresses")
+}
+
+model Order {
+    id               String               @id @default(cuid())
+    buyerId          String
+    sellerId         String
+    status           OrderStatus          @default(PENDING)
+    totalAmount      Decimal              @db.Decimal(14, 2)
+    currency         String               @default("VND")
+    voucherId        String?
+    voucherDiscount  Decimal?             @db.Decimal(14, 2)
+    shippingFee      Decimal              @default(0) @db.Decimal(14, 2)
+    // bản sao chỉ-đọc từ module payment qua event, không phải nguồn sự thật
+    paymentStatus    String               @default("PENDING")
+    paymentMethod    PaymentMethod
+    addressId        String
+    shippingFullName String
+    shippingPhone    String
+    shippingAddress  String
+    shipperId        String?
+    shipperStatus    ShipperStatus?
+    customerNote     String?
+    cancelReason     String?
+    cancelledBy      String?
+    autoCompleteAt   DateTime?
+    idempotencyKey   String               @unique
+    createdAt        DateTime             @default(now())
+    updatedAt        DateTime             @updatedAt
+    address          Address              @relation(fields: [addressId], references: [id])
+    orderItems       OrderItem[]
+    statusHistory    OrderStatusHistory[]
+    returnRequests   ReturnRequest[]
+
+    @@index([buyerId, status, createdAt])
+    @@index([sellerId, status, createdAt])
+    @@index([addressId])
+    @@map("orders")
+}
+
+model OrderItem {
+    id           String  @id @default(cuid())
+    orderId      String
+    // tham chiếu để truy vết, KHÔNG dùng để hiển thị
+    productId    String
+    variantId    String
+    // --- Ảnh dữ liệu: ghi một lần lúc tạo đơn, KHÔNG BAO GIỜ cập nhật (data-architecture.md §3) ---
+    productName  String
+    variantLabel String
+    sku          String
+    imageUrl     String
+    unitPrice    Decimal @db.Decimal(14, 2)
+    quantity     Int
+    lineTotal    Decimal @db.Decimal(14, 2)
+    // ------------------------------------------------------------------------------------------
+    isReviewed   Boolean @default(false)
+    order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+    @@index([orderId])
+    @@map("order_items")
+}
+
+/// Lịch sử chuyển trạng thái — FEAT-ORD-003
+model OrderStatusHistory {
+    id         String       @id @default(cuid())
+    orderId    String
+    fromStatus OrderStatus?
+    toStatus   OrderStatus
+    reason     String?
+    actorId    String?
+    actorRole  String?
+    createdAt  DateTime     @default(now())
+    order      Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+    @@index([orderId, createdAt])
+    @@map("order_status_histories")
+}
+
+/// Yêu cầu trả hàng/hoàn tiền — FEAT-ORD-011, xem order-dispute.md §3 cho mã lý do và kết cục
+model ReturnRequest {
+    id              String    @id @default(cuid())
+    orderId         String
+    orderItemId     String?
+    // NOT_RECEIVED | DAMAGED | WRONG_ITEM | MISSING_PART | NOT_AS_DESCRIBED | COUNTERFEIT | CHANGED_MIND
+    reasonCode      String
+    description     String?
+    evidenceUrls    String[]  @default([])
+    // OPENED | SELLER_RESPONDED | ESCALATED | RESOLVED | CLOSED — đồng bộ dáng với Dispute state machine (module chat)
+    status          String    @default("OPENED")
+    // FULL_REFUND | PARTIAL_REFUND | SELLER_WINS | REFUND_WITH_RETURN
+    resolutionType  String?
+    refundAmount    Decimal?  @db.Decimal(14, 2)
+    disputeId       String?   @unique
+    respondDeadline DateTime?
+    createdAt       DateTime  @default(now())
+    updatedAt       DateTime  @updatedAt
+    order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+    @@index([orderId])
+    @@map("return_requests")
+}
+
+// Ràng buộc viết tay: "mỗi OrderItem chỉ có một yêu cầu trả hàng đang mở" là một unique partial index thật sự,
+// không phải @@unique tĩnh (một orderItemId có thể có nhiều ReturnRequest theo thời gian, chỉ một cái đang mở):
+//   CREATE UNIQUE INDEX return_request_open_per_item ON "return_requests" ("orderItemId")
+//       WHERE "status" NOT IN ('CLOSED', 'RESOLVED');

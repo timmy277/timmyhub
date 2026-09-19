@@ -9,7 +9,11 @@
   "scripts": {
     "prepare": "husky",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "dev": "turbo run dev"
   },
   "lint-staged": {
     "frontend/**/*.{ts,tsx,js,jsx,mjs}": [
@@ -17,7 +21,7 @@
       "prettier --write"
     ],
     "backend/**/*.ts": [
-      "pnpm -C backend exec eslint --fix --max-warnings=0",
+      "pnpm exec eslint --config backend/eslint.config.mjs --fix --max-warnings=0",
       "prettier --write"
     ],
     "*.{ts,js,mjs,cjs,json,yml,yaml}": [
@@ -27,8 +31,15 @@
   "devDependencies": {
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",
+    "@eslint/js": "^9.18.0",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.2",
+    "globals": "^16.0.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.5.1",
-    "prettier": "^3.9.7"
+    "prettier": "^3.9.7",
+    "turbo": "^2.5.0",
+    "typescript-eslint": "^8.20.0"
   }
 }
