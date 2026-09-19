@@ -2,8 +2,8 @@
 title: Tasks — rbac-permission
 status: draft
 owner: Backend Lead
-updated: 2026-09-16
-related: [docs/03-specs/rbac-permission/requirements.md, docs/03-specs/rbac-permission/design.md]
+updated: 2026-09-19
+related: [docs/03-specs/rbac-permission/requirements.md, docs/03-specs/rbac-permission/design.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
 # Tasks — `rbac-permission`
@@ -48,10 +48,10 @@ related: [docs/03-specs/rbac-permission/requirements.md, docs/03-specs/rbac-perm
     - Ước lượng: 1 ngày · Vai: BE
     - Xong khi: gán/gỡ role cập nhật `UserSystemRole` trong cùng transaction với outbox event; test chặn admin tự gán `SUPER_ADMIN` cho người khác
 
-- [ ] **TASK-RBAC-009** RPC `rbac.getEffectivePermissions(userId)` + endpoint `GET /v1/rbac/users/:id/effective-permissions`
+- [ ] **TASK-RBAC-009** Phương thức `RbacService.getEffectivePermissions(userId)` (gọi qua DI từ module khác) + endpoint `GET /v1/rbac/users/:id/effective-permissions`
     - Ref: `REQ-RBAC-011`
     - Ước lượng: 1 ngày · Vai: BE
-    - Xong khi: kết quả RPC khớp chính xác với những gì `PermissionsGuard` dùng để chặn (test đối chiếu chéo); user không tồn tại trả lỗi rõ ràng thay vì mảng rỗng
+    - Xong khi: kết quả gọi `RbacService.getEffectivePermissions` khớp chính xác với những gì `PermissionsGuard` dùng để chặn (test đối chiếu chéo); user không tồn tại trả lỗi rõ ràng thay vì mảng rỗng
 
 - [ ] **TASK-RBAC-010** Cache permission Redis `perm:{userId}` TTL 15 phút + consumer vô hiệu hoá theo `rbac.permissions.changed`/`user.role-granted`/`user.role-revoked`/`user.locked`
     - Ref: `REQ-RBAC-012`

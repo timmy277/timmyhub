@@ -2,21 +2,29 @@
 title: Danh mục sự kiện
 status: approved
 owner: Backend Lead
-updated: 2026-09-15
-related: [docs/01-architecture/communication-patterns.md, docs/01-architecture/service-catalog.md]
+updated: 2026-09-19
+related: [docs/01-architecture/communication-patterns.md, docs/01-architecture/service-catalog.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
 # Danh mục sự kiện
 
-Đây là **hợp đồng công khai** giữa các service. Mọi thay đổi payload phải theo quy trình ở
-[communication-patterns.md §8](communication-patterns.md#8-tiến-hoá-schema-sự-kiện).
+> Trước ngày 2026-09-19, event dưới đây phát qua RabbitMQ (exchange `timmyhub.events`) giữa các service độc lập.
+> Theo [ADR-0015](adr/ADR-0015-modular-monolith.md), phần lớn event này giờ phát qua `EventEmitter2` **trong process**
+> giữa các module — xem [communication-patterns.md §5](communication-patterns.md#5-event-trong-process-eventemitter2).
+> Chỉ nhóm event có hệ quả **ra ngoài process** (email, webhook, audit) mới đi qua outbox. Tên event, payload và ý
+> nghĩa nghiệp vụ dưới đây **không đổi** — chỉ cơ chế vận chuyển đổi.
 
-Định danh tài liệu: `EVT-<tên event>`. Tên event = routing key trên exchange `timmyhub.events`.
+Đây là **hợp đồng nội bộ** giữa các module (trước là hợp đồng công khai giữa các service qua mạng). Mọi thay đổi
+payload vẫn nên theo tinh thần của quy trình cũ ở
+[communication-patterns.md §5](communication-patterns.md#5-event-trong-process-eventemitter2), dù không còn bắt buộc
+phát song song nhiều version vì producer/consumer luôn cùng một lần deploy.
+
+Định danh tài liệu: `EVT-<tên event>`. Tên event = tên sự kiện truyền cho `EventEmitter2.emit()`/`@OnEvent()`.
 Schema payload nằm trong `@timmyhub/contracts`, thư mục `src/events/`.
 
-Viết tắt service trong bảng: `IDN` identity · `SEL` seller · `CAT` catalog · `CRT` cart · `ORD` order · `PAY` payment ·
+Viết tắt module trong bảng: `IDN` identity · `SEL` seller · `CAT` catalog · `CRT` cart · `ORD` order · `PAY` payment ·
 `PRM` promotion · `CNT` content · `ENG` engagement · `CHT` chat · `NTF` notification · `SRC` search · `MED` media ·
-`ANA` analytics · `AUD` audit · `MDT` masterdata · `GW` gateway.
+`ANA` analytics · `AUD` audit · `MDT` master-data · `GW` platform (gateway cũ).
 
 ## 1. Bảng tổng hợp
 
@@ -262,7 +270,8 @@ export const productApprovedPayloadSchema = z.object({
 })
 ```
 
-Payload cố ý mang đủ trường để `search-service` đánh chỉ mục **mà không cần gọi ngược** `catalog-service`.
+Payload vẫn cố ý mang đủ trường để module `search` đánh chỉ mục mà không cần gọi lại `catalog` — dù giờ gọi lại cũng
+rẻ (cùng process), giữ payload đủ tự thân giúp `search` không cần biết `catalog` có đang bận transaction khác không.
 
 ### EVT-ad.impression.batched
 
@@ -357,7 +366,7 @@ Mọi kênh đều kiểm tra `NotificationPreference` trước khi gửi, **tr�
 
 ```mermaid
 flowchart LR
-    IDN[identity] -->|user.*, rbac.*| BUS{{timmyhub.events}}
+    IDN[identity] -->|user.*, rbac.*| BUS{{"EventEmitter2<br/>(trong process)"}}
     SEL[seller] -->|seller.*| BUS
     CAT[catalog] -->|product.*, inventory.*| BUS
     ORD[order] -->|order.*| BUS
@@ -380,8 +389,9 @@ flowchart LR
     BUS --> CNT
 ```
 
-`notification`, `analytics`, `audit` là ba consumer "toàn cục" — chúng nghe rất rộng nhưng **không** service nào phụ
-thuộc ngược lại chúng. Đây là điều kiện giữ cho đồ thị phụ thuộc không có chu trình.
+`notification`, `analytics`, `audit` là ba listener "toàn cục" — chúng nghe rất rộng nhưng **không** module nào phụ
+thuộc ngược lại chúng. Đây vẫn là điều kiện giữ cho đồ thị phụ thuộc không có chu trình, dù giờ chu trình phát hiện
+được ngay lúc biên dịch/lint thay vì phải suy luận qua topology RabbitMQ.
 
 ## 5. Quy tắc đặt event
 
@@ -398,11 +408,13 @@ thuộc ngược lại chúng. Đây là điều kiện giữ cho đồ thị ph
 ## 6. Checklist khi thêm event mới
 
 - [ ] Tên theo `<domain>.<entity>.<hành động quá khứ>`
-- [ ] Schema zod trong `@timmyhub/contracts/src/events/`, có `version`
-- [ ] Đăng ký trong bảng §1 của tài liệu này, ghi rõ producer và consumer
-- [ ] Producer phát **qua outbox**, không publish trực tiếp
-- [ ] Mỗi consumer có queue riêng và xử lý idempotent
+- [ ] Schema zod trong `@timmyhub/contracts/src/events/`
+- [ ] Đăng ký trong bảng §1 của tài liệu này, ghi rõ producer và listener
+- [ ] Nếu hệ quả phải sống sót qua crash và đi ra ngoài process (email, webhook, audit): phát qua outbox —
+      xem [communication-patterns.md §3](communication-patterns.md#3-outbox--chỉ-cho-hệ-quả-bất-đồng-bộ-ra-ngoài-process).
+      Nếu chỉ có listener trong process: dùng `EventEmitter2`, không cần outbox
+- [ ] Mỗi listener tự bắt lỗi của mình (`try/catch` trong handler), không làm hỏng luồng phát event
 - [ ] Payload không chứa dữ liệu cá nhân ngoài phạm vi cần thiết
-- [ ] Có test hợp đồng (contract test) hai chiều producer ↔ consumer
+- [ ] Có test khẳng định listener chạy đúng khi event được emit
 - [ ] Nếu sinh thông báo: bổ sung hàng vào bảng §3 và seed template
-- [ ] Nếu ảnh hưởng báo cáo: cập nhật handler của `analytics-service`
+- [ ] Nếu ảnh hưởng báo cáo: cập nhật handler của module `analytics`

@@ -2,8 +2,8 @@
 title: Đường xử lý media và video (upload nối lại được → transcode → HLS → phát)
 status: review
 owner: Tech Lead
-updated: 2026-09-16
-related: [docs/01-architecture/technology-radar.md, docs/01-architecture/adr/ADR-0014-video-pipeline.md, docs/04-frontend/editor-and-uploader.md, docs/06-quality/performance.md, docs/01-architecture/service-catalog.md]
+updated: 2026-09-19
+related: [docs/01-architecture/technology-radar.md, docs/01-architecture/adr/ADR-0014-video-pipeline.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md, docs/04-frontend/editor-and-uploader.md, docs/06-quality/performance.md, docs/01-architecture/service-catalog.md]
 ---
 
 # Đường xử lý media và video
@@ -91,22 +91,28 @@ Kèm theo ba ràng buộc bắt buộc:
 ```mermaid
 flowchart LR
     U[Người dùng] -->|tus, chunk 6 MB| SB[(Supabase Storage<br/>bucket: uploads)]
-    U -->|POST /media/videos| MS[media-service]
+    U -->|POST /media/videos| MS[module media]
     MS -->|job transcode| Q[[BullMQ: media.transcode]]
     W[ffmpeg worker] -->|nhận job| Q
     W -->|tải file gốc| SB
     W -->|HLS + thumbnail + poster| R2[(R2 / S3<br/>bucket: media-public)]
     W -->|cập nhật trạng thái| MS
-    MS -->|EVT-media.transcoded| BUS{{timmyhub.events}}
-    BUS --> CS[content-service]
-    BUS --> AD[video-ads]
-    BUS --> NS[notification-service]
+    MS -->|EVT-media.transcoded| EE{{EventEmitter2<br/>trong process}}
+    EE --> CS[module content]
+    EE --> AD[module video-ads]
+    EE --> NS[module notification]
     CDN[CDN] --> R2
     V[Người xem] -->|HLS| CDN
 ```
 
 Nguyên tắc: **request HTTP không bao giờ chờ ffmpeg**. `POST /media/videos` trả `202` với `status: PROCESSING`; frontend
 theo dõi trạng thái qua WebSocket (`media:{userId}`) hoặc polling nhẹ.
+
+Lưu ý riêng cho luồng này: worker ffmpeg chạy ở **process worker riêng** ([ADR-0015](adr/ADR-0015-modular-monolith.md)),
+không phải cùng process với web (`backend/apps/api`). Worker cập nhật trạng thái thẳng vào DB dùng chung, nhưng
+**không thể** gọi `EventEmitter2` của process web — hai tiến trình khác nhau không chia sẻ event bus trong bộ nhớ.
+Web nghe hoàn tất job qua `QueueEvents` của BullMQ (`job:completed` trên hàng đợi `media.transcode`), rồi mới tự phát
+`EVT-media.transcoded` bằng `EventEmitter2` của chính process web cho các module `content`/`video-ads`/`notification`.
 
 ---
 
@@ -125,8 +131,9 @@ theo dõi trạng thái qua WebSocket (`media:{userId}`) hoặc polling nhẹ.
 | Quét virus | ClamAV trên file gốc trước khi transcode |
 | Dọn rác | File gốc không được `finalize` trong 24 h → job dọn xoá |
 
-Vì sao token có thời hạn chứ không proxy qua backend: proxy 200 MB qua `api-gateway` là chiếm connection và RAM của
-gateway trong nhiều phút — đúng thứ làm sập gateway lúc cao điểm.
+Vì sao token có thời hạn chứ không proxy qua backend: proxy 200 MB qua `backend/apps/api` là chiếm connection và RAM
+của cả web process trong nhiều phút — đúng thứ làm sập toàn bộ app lúc cao điểm (nay còn nghiêm trọng hơn trước vì
+mọi module nghiệp vụ chạy chung process với module `platform`, không còn cách ly như khi `api-gateway` là service riêng).
 
 ---
 
@@ -171,7 +178,7 @@ Không có poster thì feed là lưới ô đen — đây là lỗi hiển thị
 | Hạng mục | Quy định |
 |---|---|
 | Hàng đợi | BullMQ `media.transcode`, **Upstash Redis qua TCP** (REST không chạy được BullMQ) |
-| Tách pool | Worker ffmpeg chạy **deployment riêng**, không chung pod với API — nó ăn CPU 100% |
+| Tách pool | Worker ffmpeg chạy **deployment riêng biệt** khỏi cả web (`backend/apps/api`) lẫn worker BullMQ nhẹ (mail, index, thumbnail) — nó ăn CPU 100% và cần HPA theo độ sâu hàng đợi, không theo CPU như worker nhẹ |
 | Đồng thời | 1 job / 4 vCPU; `concurrency` = số vCPU / 4 |
 | Thời hạn | Job quá `TRANSCODE_TIMEOUT_SEC` (mặc định 900) bị giết, đánh `FAILED` |
 | Retry | 3 lần, backoff mũ. Lỗi do **file hỏng** thì **không** retry — phân biệt lỗi hệ thống và lỗi dữ liệu |
@@ -224,7 +231,7 @@ mất cache CDN — mất cache là mất luôn lợi thế chi phí của R2.
 
 | Nơi | Thay đổi |
 |---|---|
-| `service-catalog.md` | `media-service` thêm trách nhiệm transcode; thêm deploy unit `media-transcode-worker` (đơn vị thứ 18) |
+| `service-catalog.md` | Module `media` thêm trách nhiệm transcode; ffmpeg chạy trên một deployment worker riêng biệt (khác cả web lẫn worker BullMQ nhẹ), cùng codebase/image `backend/apps/api` nhưng entrypoint và image build thêm ffmpeg |
 | `event-catalog.md` | **Không thêm event mới** — dùng đúng 4 event đã có: `media.uploaded` (tus hoàn tất), `media.processed` (ảnh xong), `media.transcoded` (HLS + poster xong), `media.rejected` (mã độc / sai định dạng / transcode thất bại, phân biệt bằng `reason`) |
 | `feature-inventory.md` | Thêm 6 `FEAT-MED-009…014` (tus, token upload có hạn, ClamAV, poster/sprite, theo dõi tiến trình, thử lại); sửa `FEAT-MED-002` lên 200 MB và nâng `FEAT-MED-005` từ P2 lên P1 |
 | `03-specs/media-upload/` | Viết lại toàn bộ requirements theo luồng mới |

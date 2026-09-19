@@ -2,8 +2,8 @@
 title: RBAC nâng cao — phân quyền theo bản ghi, theo trường và theo phạm vi dữ liệu
 status: review
 owner: Tech Lead
-updated: 2026-09-16
-related: [docs/00-overview/roles-and-permissions.md, docs/01-architecture/security.md, docs/03-specs/rbac-permission/design.md]
+updated: 2026-09-19
+related: [docs/00-overview/roles-and-permissions.md, docs/01-architecture/security.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md, docs/03-specs/rbac-permission/design.md]
 ---
 
 # RBAC nâng cao
@@ -55,9 +55,9 @@ async update(@Param('id') id: string, @Body() dto: UpdateProductDto, @CurrentUse
 Cặp `order:orders:read` và `order:orders:read:any` là hai permission **khác nhau**. Seller có cái đầu, nhân viên vận hành
 có cái sau. Không có `scope` nào ngầm hiểu — phải khai rõ.
 
-**Kiểm tra nhất quán lúc khởi động** (`FEAT-RBAC-011`): mỗi service quét toàn bộ metadata `@Permissions` của mình,
+**Kiểm tra nhất quán lúc khởi động** (`FEAT-RBAC-011`): app quét toàn bộ metadata `@Permissions` của mọi module,
 đối chiếu với hằng `PERMISSIONS` trong `@timmyhub/contracts` và với bảng `Permission` trong DB. Thiếu bất kỳ đâu thì
-**service từ chối khởi động** kèm danh sách cụ thể. Đây là cách chặn vĩnh viễn lớp lỗi "endpoint tồn tại nhưng không ai
+**app từ chối khởi động** kèm danh sách cụ thể. Đây là cách chặn vĩnh viễn lớp lỗi "endpoint tồn tại nhưng không ai
 gọi được" của bản cũ.
 
 ---
@@ -153,7 +153,7 @@ Permission **không** nằm trong JWT — nếu nằm trong đó thì thu hồi 
 |---|---|
 | Nơi lưu | Redis `perm:{userId}` — tập permission đã tính sẵn, TTL 15 phút |
 | Cache cục bộ trong pod | LRU 30 giây, để chịu được lúc Redis chậm |
-| Vô hiệu hoá | Consumer của `EVT-rbac.permissions.changed`, `EVT-user.role-granted/revoked`, `EVT-user.locked` xoá khoá tương ứng |
+| Vô hiệu hoá | Listener (`EventEmitter2`) của `EVT-rbac.permissions.changed`, `EVT-user.role-granted/revoked`, `EVT-user.locked` xoá khoá tương ứng |
 | Đổi định nghĩa vai | Xoá theo mẫu `perm:*` của mọi user mang vai đó — làm theo lô, không `KEYS` trên Redis sản xuất |
 | Khi Redis hỏng | Đọc thẳng DB, **không** mặc định cho qua |
 

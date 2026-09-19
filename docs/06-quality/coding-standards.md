@@ -2,8 +2,8 @@
 title: Chuẩn mã nguồn và định dạng
 status: review
 owner: Tech Lead
-updated: 2026-09-16
-related: [docs/06-quality/git-hooks.md, docs/06-quality/definition-of-done.md, docs/06-quality/performance.md, docs/01-architecture/api-conventions.md]
+updated: 2026-09-19
+related: [docs/06-quality/git-hooks.md, docs/06-quality/definition-of-done.md, docs/06-quality/performance.md, docs/01-architecture/api-conventions.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
 # Chuẩn mã nguồn và định dạng
@@ -95,8 +95,8 @@ Quy ước đặt tên:
 | Controller **không** chứa logic nghiệp vụ — chỉ nhận, uỷ quyền, trả | Review + giới hạn độ dài hàm |
 | Mọi input đi qua zod (`nestjs-zod`); **không** dùng class-validator | ESLint cấm import `class-validator` |
 | Không truy cập `PrismaService` từ controller | ESLint `no-restricted-imports` theo thư mục |
-| Mỗi service chỉ chạm database của chính nó | Kiểm tra `DATABASE_URL` lúc khởi động + network policy |
-| Không gọi mạng trong transaction | Review + lint tự viết bắt `await fetch|axios|client.send` trong `$transaction` |
+| Module không import trực tiếp file nội bộ của module khác, chỉ qua `index.ts` | ESLint boundaries theo `src/modules/<domain>` |
+| Không gọi mạng ngoài (HTTP bên thứ ba, SMTP, webhook) trong `$transaction` — gọi module khác qua DI thì được | Review + lint tự viết bắt `await fetch\|axios\|client.send` trong `$transaction` |
 | Lỗi nghiệp vụ ném exception có mã, không trả `null` mập mờ | Review |
 | Mọi thao tác ghi có `@AuditAction` | Test quét metadata |
 | Không `console.log` | ESLint `no-console` (dùng `pino`) |
@@ -131,6 +131,12 @@ Việc index Elasticsearch thuộc về consumer của `EVT-product.created`, kh
 - Không truy vấn trong vòng lặp; gộp bằng `in` hoặc `groupBy`. Lint tự viết bắt `await prisma` bên trong `for`/`map`.
 - Migration phải có tên mô tả được việc (`20260916_add_variant_option_key`), không để tên tự sinh vô nghĩa.
 - Không `db push` trên bất kỳ môi trường nào ngoài máy cá nhân.
+- **Xung đột migration khi rebase**: chỉ có một thư mục `migrations/` cho toàn app
+  ([data-architecture.md](../01-architecture/data-architecture.md)). Hai PR cùng đổi schema (kể cả ở hai module khác
+  nhau) mà merge lệch thứ tự sẽ tạo hai migration cùng base — `prisma migrate dev` không tự dàn xếp được thứ tự này.
+  Quy tắc: trước khi mở PR, `rebase` lên `main` mới nhất rồi chạy lại `prisma migrate dev` để migration của mình luôn
+  là migration **cuối cùng** trong lịch sử; nếu CI báo lệch (`prisma migrate diff --exit-code`), xoá migration vừa
+  sinh, rebase lại, sinh lại — không sửa tay file migration đã tồn tại trên `main`.
 
 ---
 
@@ -217,14 +223,17 @@ Quy tắc kèm theo:
 ## 6. Cấu trúc thư mục
 
 ```
-backend/apps/<service>/src/
-    modules/<domain>/
-        <domain>.controller.ts      # chỉ HTTP/RPC
-        <domain>.service.ts         # nghiệp vụ
-        <domain>.repository.ts      # truy cập dữ liệu
-        dto/                        # zod schema + type suy ra
-        events/                     # publisher + consumer
-    main.ts
+backend/
+    apps/
+        api/src/main.ts              # web process — bootstrap mọi module domain + module platform
+        worker/src/main.ts           # process BullMQ — entrypoint mặc định và entrypoint --queue=media (ffmpeg)
+    src/modules/<domain>/
+        <domain>.controller.ts       # chỉ HTTP, dùng chung bởi apps/api
+        <domain>.service.ts          # nghiệp vụ, export qua index.ts cho module khác gọi bằng DI
+        <domain>.repository.ts       # truy cập dữ liệu
+        dto/                         # zod schema + type suy ra
+        events/                      # emit (EventEmitter2) + @OnEvent listener + outbox writer (nếu có effect ra ngoài)
+        index.ts                     # barrel export — chỗ duy nhất module khác được import
 frontend/src/
     app/[locale]/(public|auth|account|seller|admin)/…
     components/ui/                  # shadcn nguyên bản, không sửa tay

@@ -2,13 +2,15 @@
 title: Quy ước API
 status: approved
 owner: Backend Lead
-updated: 2026-09-15
-related: [docs/01-architecture/security.md, docs/00-overview/glossary.md, docs/04-frontend/state-and-data.md]
+updated: 2026-09-19
+related: [docs/01-architecture/security.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md, docs/00-overview/glossary.md, docs/04-frontend/state-and-data.md]
 ---
 
 # Quy ước API
 
-Áp dụng cho **mọi** endpoint HTTP do `api-gateway` phơi ra. Frontend chỉ được gọi các endpoint tuân thủ tài liệu này.
+Áp dụng cho **mọi** endpoint HTTP do module `platform` của `backend/apps/api` phơi ra
+([ADR-0015](adr/ADR-0015-modular-monolith.md) — trước đây là `api-gateway`, một service riêng). Frontend chỉ được
+gọi các endpoint tuân thủ tài liệu này.
 
 ## 1. URL và phiên bản
 
@@ -302,7 +304,7 @@ export type CreateProductInput = z.infer<typeof createProductSchema>
 ```
 
 ```ts
-// api-gateway
+// backend/apps/api/src/modules/catalog
 export class CreateProductDto extends createZodDto(createProductSchema) {}
 
 @Post()
@@ -312,8 +314,8 @@ create(@Body() dto: CreateProductDto) { /* … */ }
 | Tầng | Trách nhiệm |
 |---|---|
 | Frontend | `zodResolver` trong react-hook-form — phản hồi tức thì cho người dùng |
-| Gateway | `ZodValidationPipe` toàn cục — chặn dữ liệu bẩn ở biên |
-| Service | Parse lại payload RPC — **không tin caller**, kể cả gateway |
+| Module `platform` (biên HTTP) | `ZodValidationPipe` toàn cục — chặn dữ liệu bẩn ở biên |
+| Service của module nghiệp vụ | Parse lại input khi được gọi trực tiếp bởi module khác trong process — **không tin caller** dù cùng process, vì input có thể đến từ nhiều điểm gọi khác nhau theo thời gian |
 
 Lỗi validate được ánh xạ sang `VALIDATION_FAILED` với `details` là mảng `{ field, message, code }`.
 
@@ -323,7 +325,8 @@ Lỗi validate được ánh xạ sang `VALIDATION_FAILED` với `details` là m
 
 ## 10. Swagger
 
-Mỗi service tự sinh tài liệu OpenAPI, gateway tổng hợp thành một trang duy nhất.
+Một app, một tài liệu OpenAPI — `backend/apps/api` sinh trực tiếp từ decorator của mọi module, không cần bước tổng
+hợp từ nhiều service như trước [ADR-0015](adr/ADR-0015-modular-monolith.md).
 
 | Môi trường | Đường dẫn | Bảo vệ |
 |---|---|---|

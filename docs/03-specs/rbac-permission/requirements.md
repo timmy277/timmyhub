@@ -2,13 +2,13 @@
 title: Requirements — rbac-permission
 status: draft
 owner: Backend Lead
-updated: 2026-09-16
-related: [docs/00-overview/feature-inventory.md, docs/00-overview/roles-and-permissions.md, docs/01-architecture/rbac-advanced.md, docs/01-architecture/service-catalog.md, docs/02-domain/schemas/identity-service.prisma.md, docs/03-specs/rbac-permission/design.md, docs/03-specs/rbac-permission/tasks.md]
+updated: 2026-09-19
+related: [docs/00-overview/feature-inventory.md, docs/00-overview/roles-and-permissions.md, docs/01-architecture/rbac-advanced.md, docs/01-architecture/service-catalog.md, docs/02-domain/schemas/identity-service.prisma.md, docs/03-specs/rbac-permission/design.md, docs/03-specs/rbac-permission/tasks.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
 # Requirements — `rbac-permission`
 
-Domain `RBAC`, sở hữu bởi `identity-service` (`identity_db`). Bốn lớp kiểm quyền — xác thực → role → permission
+Domain `RBAC`, sở hữu bởi `identity-service` (phần schema module `identity`). Bốn lớp kiểm quyền — xác thực → role → permission
 `module:resource:action` → phạm vi dữ liệu — được định nghĩa chi tiết ở
 [rbac-advanced.md](../../01-architecture/rbac-advanced.md) và danh mục permission chuẩn tắc ở
 [roles-and-permissions.md](../../00-overview/roles-and-permissions.md). Tài liệu này chỉ đặc tả **hành vi** cần có;
@@ -191,14 +191,15 @@ KHI Admin gán hoặc gỡ role cho một user, HỆ THỐNG PHẢI cập nhật
 **Nguồn:** `FEAT-RBAC-009`
 **Ưu tiên:** P1
 
-HỆ THỐNG PHẢI cung cấp RPC `rbac.getEffectivePermissions(userId)` trả về tập permission hiệu lực sau khi hợp permission
-theo role và áp `UserPermission` (lớp 2b), dùng cho gateway lúc cache miss và cho admin console lúc tra cứu.
+HỆ THỐNG PHẢI cung cấp phương thức `RbacService.getEffectivePermissions(userId)` (gọi trực tiếp qua NestJS DI từ module
+khác, không qua network) trả về tập permission hiệu lực sau khi hợp permission theo role và áp `UserPermission`
+(lớp 2b), dùng cho module `platform` lúc cache miss và cho admin console lúc tra cứu.
 
 | # | Given | When | Then |
 |---|---|---|---|
-| 1 | User có role `SELLER` và một `UserPermission(isGranted: false)` khước từ một quyền của role | Gọi `rbac.getEffectivePermissions(userId)` | Danh sách trả về **không** chứa quyền bị khước từ |
-| 2 | User không tồn tại | Gọi RPC với `userId` không có thật | Trả lỗi RPC rõ ràng (không trả mảng rỗng lẫn lộn với "user hợp lệ nhưng không có quyền nào") |
-| 3 | Admin console gọi RPC để hiển thị màn hình tra cứu quyền | — | Kết quả nhất quán với những gì `PermissionsGuard` thực sự dùng để chặn/cho qua |
+| 1 | User có role `SELLER` và một `UserPermission(isGranted: false)` khước từ một quyền của role | Gọi `RbacService.getEffectivePermissions(userId)` | Danh sách trả về **không** chứa quyền bị khước từ |
+| 2 | User không tồn tại | Gọi phương thức với `userId` không có thật | Trả lỗi rõ ràng (không trả mảng rỗng lẫn lộn với "user hợp lệ nhưng không có quyền nào") |
+| 3 | Admin console gọi để hiển thị màn hình tra cứu quyền | — | Kết quả nhất quán với những gì `PermissionsGuard` thực sự dùng để chặn/cho qua |
 
 ---
 
@@ -225,12 +226,13 @@ xoá khoá cache tương ứng ngay lập tức.
 **Ưu tiên:** P0
 
 NẾU Redis không phản hồi hoặc trả lỗi khi tra cứu cache permission, THÌ HỆ THỐNG PHẢI đọc thẳng từ DB qua
-`rbac.getEffectivePermissions` (đường chậm) để đánh giá quyền, **không** được coi cache miss/lỗi là "cho qua". Nếu cả
-DB cũng không truy vấn được trong ngưỡng timeout, HỆ THỐNG PHẢI từ chối request (`503`), không mặc định `allow()`.
+`RbacService.getEffectivePermissions()` (gọi DI trong process, đường chậm) để đánh giá quyền, **không** được coi cache
+miss/lỗi là "cho qua". Nếu cả DB cũng không truy vấn được trong ngưỡng timeout, HỆ THỐNG PHẢI từ chối request (`503`),
+không mặc định `allow()`.
 
 | # | Given | When | Then |
 |---|---|---|---|
-| 1 | Redis timeout khi tra `perm:{userId}` | Request tới `PermissionsGuard` | Guard gọi RPC đọc DB, request vẫn được đánh giá đúng quyền, có tăng độ trễ |
+| 1 | Redis timeout khi tra `perm:{userId}` | Request tới `PermissionsGuard` | Guard gọi `RbacService.getEffectivePermissions()` đọc DB, request vẫn được đánh giá đúng quyền, có tăng độ trễ |
 | 2 | Redis và DB đều không phản hồi trong timeout | Request tới `PermissionsGuard` | `503`, request bị từ chối, **không** có nhánh nào trả `allow()` khi thiếu dữ liệu |
 | 3 | Cache cục bộ LRU trong pod còn dữ liệu 20 giây tuổi | Redis vừa mới lỗi | Guard dùng cache cục bộ đó tạm thời (theo rbac-advanced §6), không gọi thẳng "cho qua" |
 

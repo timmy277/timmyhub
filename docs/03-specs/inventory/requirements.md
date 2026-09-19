@@ -2,14 +2,15 @@
 title: Requirements — inventory
 status: draft
 owner: Backend Lead
-updated: 2026-09-16
-related: [docs/00-overview/feature-inventory.md, docs/01-architecture/concurrency-and-consistency.md, docs/02-domain/product-variant.md, docs/02-domain/schemas/catalog-service.prisma.md, docs/01-architecture/event-catalog.md, docs/03-specs/inventory/design.md]
+updated: 2026-09-19
+related: [docs/00-overview/feature-inventory.md, docs/01-architecture/concurrency-and-consistency.md, docs/02-domain/product-variant.md, docs/02-domain/schemas/catalog-service.prisma.md, docs/01-architecture/event-catalog.md, docs/03-specs/inventory/design.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
 # Requirements — `inventory`
 
-> Domain **mới hoàn toàn**, nằm trong `catalog-service` (`catalog_db`) — không tách service riêng vì reserve tồn
-> kho và kiểm giá phải chạy trong cùng một transaction ([ADR-0002](../../01-architecture/adr/ADR-0002-database-per-service.md)).
+> Domain **mới hoàn toàn**, là module `catalog` trong `backend/apps/api`, dùng chung một database Postgres với
+> mọi module khác — không tách module riêng vì reserve tồn kho và kiểm giá phải chạy trong cùng một
+> `$transaction` Prisma với việc tạo đơn ([ADR-0015](../../01-architecture/adr/ADR-0015-modular-monolith.md)).
 > Mục tiêu chính: chặn oversell khi flash sale, thứ mà mô hình trừ kho trực tiếp của bản cũ không làm được.
 
 Mã domain: `INV`. Nguồn feature: [feature-inventory.md §6](../../00-overview/feature-inventory.md).
@@ -41,15 +42,16 @@ và tính `available = onHand - reserved` khi trả về API, không lưu `avail
 **Nguồn:** `FEAT-INV-002`
 **Ưu tiên:** P0
 
-KHI `order-service` gọi RPC `inventory.reserve` với danh sách `(variantId, quantity)` và `orderId`, HỆ THỐNG PHẢI
-tạo một `StockReservation` trạng thái `HELD` với `expiresAt = now() + 15 phút`, tăng `reserved` của từng variant
-bằng đúng một câu `UPDATE … WHERE` nguyên tử cho mỗi dòng, và phát `EVT-inventory.reserved`.
+KHI module `order` gọi `InventoryService.reserve()` qua DI (trong cùng `$transaction` Prisma với việc tạo đơn) với
+danh sách `(variantId, quantity)` và `orderId`, HỆ THỐNG PHẢI tạo một `StockReservation` trạng thái `HELD` với
+`expiresAt = now() + 15 phút`, tăng `reserved` của từng variant bằng đúng một câu `UPDATE … WHERE` nguyên tử cho
+mỗi dòng, và phát `EVT-inventory.reserved`.
 
 | # | Given | When | Then |
 |---|---|---|---|
 | 1 | Variant `available = 10` | Reserve `quantity = 3` | `reserved` tăng thêm 3, tạo `StockReservation(HELD, expiresAt = +15p)`, phát `inventory.reserved` |
 | 2 | Đơn có 3 variant, đủ hàng cả ba | Reserve cả 3 dòng | Cả 3 `UPDATE` thành công trong cùng transaction, một `StockReservation` cha chứa 3 `StockReservationItem` |
-| 3 | RPC `inventory.reserve` gọi lại với cùng `orderId` (retry mạng) | Reserve lần 2 | Không tạo `StockReservation` thứ hai — nhận diện qua `StockReservation.orderId` unique, trả lại reservation đã có |
+| 3 | `InventoryService.reserve()` được gọi lại với cùng `orderId` (client gửi lại request tạo đơn, ví dụ do timeout) | Reserve lần 2 | Không tạo `StockReservation` thứ hai — nhận diện qua `StockReservation.orderId` unique, trả lại reservation đã có |
 
 ### REQ-INV-003 — Unwanted: tồn kho không đủ khi reserve
 
@@ -109,8 +111,8 @@ NẾU job hết hạn quét tới một `StockReservation` đã chuyển sang `C
 
 | # | Given | When | Then |
 |---|---|---|---|
-| 1 | `StockReservation` chuyển `HELD → COMMITTED` đúng lúc job hết hạn quét tới | Job chạy cùng lúc RPC `inventory.commit` | Job không release — `UPDATE StockReservation SET status = 'RELEASED' WHERE id = ? AND status = 'HELD'` trả `rowCount = 0` |
-| 2 | `inventory.release` được gọi hai lần cho cùng `orderId` (huỷ đơn + job hết hạn cùng chạy) | Cả hai đường gọi tới | Chỉ lần đầu làm giảm `reserved`; lần sau kiểm `status` đã là `RELEASED`, trả về thành công không đổi gì thêm |
+| 1 | `StockReservation` chuyển `HELD → COMMITTED` đúng lúc job hết hạn quét tới | Job chạy cùng lúc lời gọi `InventoryService.commit()` | Job không release — `UPDATE StockReservation SET status = 'RELEASED' WHERE id = ? AND status = 'HELD'` trả `rowCount = 0` |
+| 2 | `InventoryService.release()` được gọi hai lần cho cùng `orderId` (huỷ đơn + job hết hạn cùng chạy) | Cả hai đường gọi tới | Chỉ lần đầu làm giảm `reserved`; lần sau kiểm `status` đã là `RELEASED`, trả về thành công không đổi gì thêm |
 | 3 | `StockReservation` đã `RELEASED` | Đơn bị huỷ lại lần nữa (webhook lặp) | Không giảm `reserved` thêm lần nữa, không ghi `InventoryLedger` trùng |
 
 ---
@@ -122,10 +124,10 @@ NẾU job hết hạn quét tới một `StockReservation` đã chuyển sang `C
 **Nguồn:** `FEAT-INV-003`
 **Ưu tiên:** P0
 
-KHI `order-service` gọi RPC `inventory.commit` với `orderId` sau khi nhận `EVT-payment.succeeded`, HỆ THỐNG PHẢI
-trừ vĩnh viễn: `onHand -= qty`, `reserved -= qty` cho từng dòng bằng `UPDATE … WHERE` nguyên tử, chuyển
-`StockReservation` từ `HELD` sang `COMMITTED`, ghi `InventoryLedger` (`changeType = COMMIT`), và phát
-`EVT-inventory.committed`.
+KHI module `order` gọi `InventoryService.commit()` qua DI với `orderId` sau khi nhận `EVT-payment.succeeded` (từ
+module `payment-vnpay`, qua `EventEmitter2` hoặc lời gọi trực tiếp), HỆ THỐNG PHẢI trừ vĩnh viễn: `onHand -= qty`,
+`reserved -= qty` cho từng dòng bằng `UPDATE … WHERE` nguyên tử, chuyển `StockReservation` từ `HELD` sang
+`COMMITTED`, ghi `InventoryLedger` (`changeType = COMMIT`), và phát `EVT-inventory.committed`.
 
 | # | Given | When | Then |
 |---|---|---|---|
@@ -137,8 +139,9 @@ trừ vĩnh viễn: `onHand -= qty`, `reserved -= qty` cho từng dòng bằng `
 **Nguồn:** `FEAT-INV-003`
 **Ưu tiên:** P0
 
-NẾU RPC `inventory.commit` hoặc consumer nhận trùng `EVT-payment.succeeded` cho cùng `orderId` (retry mạng, gửi
-lại IPN), THÌ HỆ THỐNG PHẢI không trừ `onHand` thêm lần nữa — kiểm `StockReservation.status` trước khi commit,
+NẾU `InventoryService.commit()` được gọi trùng, hoặc listener của `EVT-payment.succeeded` chạy lại cho cùng
+`orderId` (VNPay gửi lại IPN nhiều lần), THÌ HỆ THỐNG PHẢI không trừ `onHand` thêm lần nữa — kiểm
+`StockReservation.status` trước khi commit,
 `status != 'HELD'` thì trả kết quả cũ, ghi vào `InventoryLedger` bằng `referenceKey = orderId:commit` unique.
 
 | # | Given | When | Then |
@@ -155,8 +158,8 @@ lại IPN), THÌ HỆ THỐNG PHẢI không trừ `onHand` thêm lần nữa —
 **Nguồn:** `FEAT-INV-004`
 **Ưu tiên:** P0
 
-KHI `order-service` gọi RPC `inventory.release` do đơn bị huỷ trước khi thanh toán, hoặc do `EVT-payment.refunded`
-sau khi đã commit, HỆ THỐNG PHẢI cộng lại đúng số lượng đã giữ/đã trừ: nếu `StockReservation` đang `HELD` thì giảm
+KHI module `order` gọi `InventoryService.release()` qua DI do đơn bị huỷ trước khi thanh toán, hoặc do
+`EVT-payment.refunded` sau khi đã commit, HỆ THỐNG PHẢI cộng lại đúng số lượng đã giữ/đã trừ: nếu `StockReservation` đang `HELD` thì giảm
 `reserved`; nếu đã `COMMITTED` (hoàn hàng) thì cộng lại `onHand`, ghi `InventoryLedger` (`changeType = RELEASE`),
 và phát `EVT-inventory.released`.
 
@@ -171,8 +174,8 @@ và phát `EVT-inventory.released`.
 **Nguồn:** `FEAT-INV-004`
 **Ưu tiên:** P0
 
-NẾU RPC `inventory.release` được gọi nhiều lần cho cùng `orderId` (webhook `order.cancelled` gửi lại, job hết hạn
-và huỷ tay trùng thời điểm), THÌ HỆ THỐNG PHẢI chỉ cộng lại tồn kho đúng một lần — điều kiện `UPDATE` kiểm
+NẾU `InventoryService.release()` được gọi nhiều lần cho cùng `orderId` (xử lý lại sự kiện `order.cancelled`, job
+hết hạn và huỷ tay trùng thời điểm), THÌ HỆ THỐNG PHẢI chỉ cộng lại tồn kho đúng một lần — điều kiện `UPDATE` kiểm
 `status IN ('HELD', 'COMMITTED')` trước khi chuyển `RELEASED`, lần gọi sau trả `rowCount = 0` và coi là thành công
 không đổi gì thêm.
 
@@ -299,15 +302,15 @@ DB vẫn từ chối trạng thái tồn kho âm hoặc `reserved` vượt `onHa
 **Nguồn:** `FEAT-INV-009`
 **Ưu tiên:** P2
 
-HỆ THỐNG PHẢI cung cấp RPC `inventory.getSnapshot` (tồn hiện tại theo variant/shop) và phát đủ
+HỆ THỐNG PHẢI cung cấp `InventoryService.getSnapshot()` (gọi qua DI, tồn hiện tại theo variant/shop) và phát đủ
 `EVT-inventory.adjusted` / `EVT-inventory.committed` / `EVT-inventory.released` mang giá trị `variantId`,
 `onHandAfter`, `reservedAfter` để `analytics-service` tổng hợp báo cáo tồn kho và giá trị tồn (`onHand × price`)
-mà không cần query chéo `catalog_db`.
+mà không cần query chéo phần schema module `catalog`.
 
 | # | Given | When | Then |
 |---|---|---|---|
-| 1 | `analytics-service` cần tồn kho hiện tại của một shop | Gọi RPC `inventory.getSnapshot(shopId)` | Nhận danh sách `(variantId, onHand, reserved, available)`, không truy vấn thẳng `catalog_db` |
-| 2 | Biến động tồn kho xảy ra | Sự kiện phát ra | `analytics-service` cập nhật `DailyRollup` từ `onHandAfter` trong payload, không cần gọi lại RPC |
+| 1 | `analytics-service` cần tồn kho hiện tại của một shop | Gọi `InventoryService.getSnapshot(shopId)` qua DI | Nhận danh sách `(variantId, onHand, reserved, available)`, không tự ý query chéo bảng của module `catalog` |
+| 2 | Biến động tồn kho xảy ra | Sự kiện phát ra | `analytics-service` cập nhật `DailyRollup` từ `onHandAfter` trong payload, không cần gọi lại `getSnapshot()` |
 
 ---
 

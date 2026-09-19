@@ -2,15 +2,16 @@
 title: Design — inventory
 status: draft
 owner: Backend Lead
-updated: 2026-09-16
-related: [docs/03-specs/inventory/requirements.md, docs/01-architecture/concurrency-and-consistency.md, docs/02-domain/product-variant.md, docs/02-domain/schemas/catalog-service.prisma.md, docs/01-architecture/event-catalog.md, docs/01-architecture/service-catalog.md, docs/00-overview/roles-and-permissions.md]
+updated: 2026-09-19
+related: [docs/03-specs/inventory/requirements.md, docs/01-architecture/concurrency-and-consistency.md, docs/02-domain/product-variant.md, docs/02-domain/schemas/catalog-service.prisma.md, docs/01-architecture/event-catalog.md, docs/01-architecture/service-catalog.md, docs/00-overview/roles-and-permissions.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
 # Design — `inventory`
 
-> Domain nằm trong `catalog-service` (`catalog_db`). Không có service riêng — xem lý do ở
-> [ADR-0002](../../01-architecture/adr/ADR-0002-database-per-service.md) và
-> [service-catalog.md §3](../../01-architecture/service-catalog.md#3-catalog-service).
+> Domain là module `catalog` trong `backend/apps/api`, dùng chung một database Postgres với mọi module khác —
+> xem [ADR-0015](../../01-architecture/adr/ADR-0015-modular-monolith.md). Không tách module riêng vì reserve tồn
+> kho và kiểm giá phải chạy trong cùng một `$transaction` Prisma với việc tạo đơn — xem
+> [service-catalog.md §3](../../01-architecture/service-catalog.md#3-catalog-service) cho danh mục field/API đầy đủ.
 > Nguyên tắc bắt buộc xuyên suốt tài liệu này: **mọi phép trừ tồn kho là `UPDATE … WHERE` nguyên tử + ràng buộc
 > `CHECK`, không dùng khoá Redis cho tồn kho** — xem
 > [concurrency-and-consistency.md §2.1](../../01-architecture/concurrency-and-consistency.md#21-vì-sao-không-dựa-vào-khoá-redis-cho-tồn-kho).
@@ -121,15 +122,22 @@ stateDiagram-v2
 
 ## 2. API
 
-Reserve/commit/release là **RPC nội bộ** do `order-service` gọi, xác thực bằng service-to-service auth (mTLS/service
-token nội bộ), không đi qua permission người dùng. Các endpoint còn lại là HTTP, có `@Permissions`.
+Reserve/commit/release/getSnapshot **không phải endpoint HTTP** — module `order` (và `analytics` cho
+`getSnapshot`) gọi trực tiếp các phương thức của `InventoryService` qua NestJS DI, import qua barrel export
+`index.ts` của module `catalog` ([ADR-0015 §Ranh giới module](../../01-architecture/adr/ADR-0015-modular-monolith.md)).
+`reserve` chạy **trong cùng `$transaction` Prisma** với việc tạo đơn (đồng bộ, cùng request — xem
+[concurrency-and-consistency.md §3](../../01-architecture/concurrency-and-consistency.md#3-giữ-tồn-kho-khi-đặt-hàng)).
+`commit` và `release` là lời gọi DI đồng bộ nhưng diễn ra ở transaction riêng, sau khi module `order` đã xử lý xong
+sự kiện thanh toán/huỷ đơn — không cần network semantics hay xác thực service-to-service vì cùng process; tham số
+truyền vào (`actor`, `sellerId`…) vẫn phải là giá trị đã được guard xác thực ở `platform` kiểm tra trước đó
+(security.md §13). Các endpoint còn lại là HTTP, có `@Permissions`.
 
-| Method & path | Mô tả | Permission | Phạm vi |
+| Phương thức / path | Mô tả | Permission | Phạm vi |
 |---|---|---|---|
-| RPC `inventory.reserve` | Giữ chỗ tồn kho khi tạo đơn | *(service-to-service)* | — |
-| RPC `inventory.commit` | Trừ vĩnh viễn khi thanh toán thành công | *(service-to-service)* | — |
-| RPC `inventory.release` | Giải phóng khi huỷ/hết hạn/hoàn tiền | *(service-to-service)* | — |
-| RPC `inventory.getSnapshot` | Tồn hiện tại theo shop, phục vụ báo cáo | *(service-to-service)* | — |
+| `InventoryService.reserve()` (DI, trong `$transaction` tạo đơn) | Giữ chỗ tồn kho khi tạo đơn | *(nội bộ, không qua permission người dùng)* | — |
+| `InventoryService.commit()` (DI) | Trừ vĩnh viễn khi thanh toán thành công | *(nội bộ, không qua permission người dùng)* | — |
+| `InventoryService.release()` (DI) | Giải phóng khi huỷ/hết hạn/hoàn tiền | *(nội bộ, không qua permission người dùng)* | — |
+| `InventoryService.getSnapshot()` (DI) | Tồn hiện tại theo shop, phục vụ báo cáo | *(nội bộ, không qua permission người dùng)* | — |
 | `GET /inventory/:variantId` | Xem tồn kho một variant | `catalog:inventory:read` | Variant thuộc shop của seller (`whereForScope: variant.product.shopId = ctx.shopId`) |
 | `GET /inventory` | Danh sách tồn kho của shop, lọc sắp hết hàng | `catalog:inventory:read` | Theo `shopId` |
 | `GET /admin/inventory` | Danh sách tồn kho toàn sàn | `catalog:inventory:read:any` | Không giới hạn |
@@ -235,9 +243,9 @@ export const inventoryLowStockPayloadSchema = z.object({
 | `order.completed` | Tăng `Product.soldCount` (không đụng `InventoryItem` — đã commit từ trước) | `ProcessedEvent` |
 | `campaign.activated` | Gắn giá chiến dịch, không tự tạo giữ chỗ tồn kho riêng | `ProcessedEvent` |
 
-`catalog-service` **không** nghe trực tiếp `order.cancelled` hay `payment.refunded` — `order-service` là nơi
-điều phối vòng đời đơn, gọi RPC `inventory.release` tường minh sau khi đã xử lý xong logic huỷ/hoàn tiền của
-chính nó. Cách này tránh hai service cùng suy luận trạng thái đơn từ hai nguồn khác nhau.
+Module `catalog` **không** nghe trực tiếp `order.cancelled` hay `payment.refunded` — module `order` là nơi
+điều phối vòng đời đơn, gọi trực tiếp `InventoryService.release()` qua DI tường minh sau khi đã xử lý xong logic
+huỷ/hoàn tiền của chính nó. Cách này tránh hai module cùng suy luận trạng thái đơn từ hai nguồn khác nhau.
 
 ---
 
@@ -247,35 +255,35 @@ chính nó. Cách này tránh hai service cùng suy luận trạng thái đơn t
 sequenceDiagram
     participant U1 as Người mua A
     participant U2 as Người mua B
-    participant O as order-service
-    participant C as catalog-service (RPC inventory.reserve)
-    participant DB as catalog_db
+    participant O as OrderService (module order)
+    participant Inv as InventoryService (module catalog, gọi qua DI)
+    participant DB as Postgres ($transaction)
 
     Note over DB: InventoryItem(variantId=X): onHand=1, reserved=0 → available=1
 
     par Hai đơn tạo gần như cùng lúc
         U1->>O: Đặt hàng variant X, qty=1
-        O->>C: RPC inventory.reserve(orderId=A, items=[{X,1}])
+        O->>DB: BEGIN (transaction A)
+        O->>Inv: reserve(tx, orderId=A, items=[{X,1}])
     and
         U2->>O: Đặt hàng variant X, qty=1
-        O->>C: RPC inventory.reserve(orderId=B, items=[{X,1}])
+        O->>DB: BEGIN (transaction B)
+        O->>Inv: reserve(tx, orderId=B, items=[{X,1}])
     end
 
-    C->>DB: BEGIN (transaction A)
-    C->>DB: UPDATE "InventoryItem" SET reserved = reserved + 1 WHERE variantId = X AND onHand - reserved >= 1
-    DB-->>C: rowCount = 1 (A thắng, available: 1 → 0)
-    C->>DB: INSERT StockReservation(orderId=A, status=HELD, expiresAt=+15p)
-    C->>DB: INSERT InventoryLedger(changeType=RESERVE, referenceKey=A:reserve)
-    C->>DB: COMMIT
-    C-->>O: reserved OK (reservationId, expiresAt)
+    Inv->>DB: (trong tx A) UPDATE "InventoryItem" SET reserved = reserved + 1 WHERE variantId = X AND onHand - reserved >= 1
+    DB-->>Inv: rowCount = 1 (A thắng, available: 1 → 0)
+    Inv->>DB: INSERT StockReservation(orderId=A, status=HELD, expiresAt=+15p)
+    Inv->>DB: INSERT InventoryLedger(changeType=RESERVE, referenceKey=A:reserve)
+    Inv-->>O: reserve OK (reservationId, expiresAt)
+    O->>DB: COMMIT (transaction A, cùng transaction tạo Order)
     O-->>U1: Đơn A: chờ thanh toán trong 15 phút
 
-    C->>DB: BEGIN (transaction B)
-    C->>DB: UPDATE "InventoryItem" SET reserved = reserved + 1 WHERE variantId = X AND onHand - reserved >= 1
-    DB-->>C: rowCount = 0 (available đã về 0, điều kiện WHERE không khớp)
-    C->>DB: ROLLBACK
-    C-->>O: EVT inventory.reserve-failed (variantId=X, requested=1, available=0)
-    O-->>U2: Đơn B: hết hàng, chuyển CANCELLED
+    Inv->>DB: (trong tx B) UPDATE "InventoryItem" SET reserved = reserved + 1 WHERE variantId = X AND onHand - reserved >= 1
+    DB-->>Inv: rowCount = 0 (available đã về 0, điều kiện WHERE không khớp)
+    Inv-->>O: throw ConflictException('OUT_OF_STOCK') + phát EventEmitter2 inventory.reserve-failed (cho ANA)
+    O->>DB: ROLLBACK (transaction B, không đơn nào được tạo)
+    O-->>U2: Đơn B: hết hàng, trả 409 ngay trong response
 ```
 
 Một transaction, một câu `UPDATE`, không có khoảng trống giữa đọc và ghi — quyết định "ai thắng" hoàn toàn nằm ở
@@ -363,8 +371,9 @@ migration là lớp chặn cuối nếu logic ứng dụng có sai sót.
 - **Job hết hạn chạy trên nhiều pod** → dùng BullMQ repeatable job với `jobId` cố định (`inventory:expire-reservations`),
   tránh hai pod cùng release một reservation — dù có chạy trùng thì `UPDATE … WHERE status = 'HELD'` vẫn chỉ khớp
   một lần.
-- **Thời gian sống transaction reserve/commit/release ≤ 3 giây**, không gọi HTTP/RPC/mail bên trong transaction —
-  đúng quy tắc chung ở §9 của concurrency-and-consistency.md.
+- **Thời gian sống transaction reserve/commit/release ≤ 3 giây**, không gọi ra ngoài process (HTTP bên thứ ba,
+  SMTP, webhook) bên trong transaction — đúng quy tắc chung ở §9 của concurrency-and-consistency.md. Gọi DI tới
+  service của module khác trong cùng process (nhận cùng `tx`) là được phép và là cách làm chuẩn.
 
 ---
 
@@ -372,10 +381,10 @@ migration là lớp chặn cuối nếu logic ứng dụng có sai sót.
 
 | Domain | Quan hệ |
 |---|---|
-| `order` (`order-service`) | Gọi RPC `inventory.reserve` khi tạo đơn, `inventory.commit` sau `payment.succeeded`, `inventory.release` khi huỷ/hoàn tiền — điều phối trạng thái đơn dựa trên kết quả RPC và `EVT-inventory.reserve-failed` |
-| `cart` (`cart-service`) | Chỉ đọc `available` để hiển thị/kiểm tra trước checkout (không reserve ở bước thêm giỏ hàng), qua RPC `catalog.getVariantSnapshot`, không gọi `inventory.reserve` |
-| `promotion` (`promotion-service`) | Sở hữu hạn mức flash sale (`Campaign.soldQty`) — lớp lọc đứng trước `inventory.reserve` (REQ-INV-015), không chia sẻ database |
+| `order` (`order-service`) | Gọi `InventoryService.reserve()` qua DI khi tạo đơn (trong cùng `$transaction`), `.commit()` sau `payment.succeeded`, `.release()` khi huỷ/hoàn tiền — điều phối trạng thái đơn dựa trên kết quả trả về (exception hoặc giá trị) và `EVT-inventory.reserve-failed` |
+| `cart` (`cart-service`) | Chỉ đọc `available` để hiển thị/kiểm tra trước checkout (không reserve ở bước thêm giỏ hàng), gọi `CatalogService.getVariantSnapshot()` qua DI, không gọi `InventoryService.reserve()` |
+| `promotion` (`promotion-service`) | Sở hữu hạn mức flash sale (`Campaign.soldQty`) — lớp lọc đứng trước `inventory.reserve` (REQ-INV-015); cùng database Postgres với module `catalog` nhưng không tự query chéo bảng — chỉ gọi qua service đã export |
 | `search` (`search-service`) | Nghe `inventory.committed` để cập nhật cờ "còn hàng"/số lượng đã bán trong chỉ mục |
 | `notification` (`notification-service`) | Nghe `inventory.low-stock`, gửi template `low-stock-alert` cho seller |
-| `analytics` (`analytics-service`) | Nghe `inventory.committed` / `inventory.released` / `inventory.adjusted`, gọi RPC `inventory.getSnapshot` cho báo cáo tồn kho (REQ-INV-017), không query chéo `catalog_db` |
+| `analytics` (`analytics-service`) | Nghe `inventory.committed` / `inventory.released` / `inventory.adjusted`, gọi `InventoryService.getSnapshot()` qua DI cho báo cáo tồn kho (REQ-INV-017), không tự ý query chéo bảng của module `catalog` |
 | `audit` (`audit-service`) | Nghe `inventory.adjusted` để ghi log điều chỉnh tồn thủ công (ai, khi nào, lý do) |

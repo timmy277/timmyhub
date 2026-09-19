@@ -2,15 +2,18 @@
 title: Design — identity-auth
 status: draft
 owner: Backend Lead
-updated: 2026-09-16
-related: [docs/03-specs/identity-auth/requirements.md, docs/02-domain/schemas/identity-service.prisma.md, docs/01-architecture/security.md, docs/01-architecture/adr/ADR-0005-nextauth.md, docs/01-architecture/event-catalog.md, docs/01-architecture/service-catalog.md, docs/01-architecture/api-conventions.md]
+updated: 2026-09-19
+related: [docs/03-specs/identity-auth/requirements.md, docs/02-domain/schemas/identity-service.prisma.md, docs/01-architecture/security.md, docs/01-architecture/adr/ADR-0005-nextauth.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md, docs/01-architecture/event-catalog.md, docs/01-architecture/service-catalog.md, docs/01-architecture/api-conventions.md]
 ---
 
 # Design — identity-auth (`IDN`)
 
-Toàn bộ logic nghiệp vụ nằm trong `identity-service` (`identity_db`, port `3101`, module `auth/`, `users/`, `rbac/`,
-`casl/` — theo `docs/01-architecture/service-catalog.md`). `api-gateway` chỉ xác thực JWT + RBAC lớp 1–2 và định
-tuyến RPC; Next.js (NextAuth) là lớp quản lý phiên phía FE, không tự giữ nguồn sự thật về user/role.
+Từ [ADR-0015](../../01-architecture/adr/ADR-0015-modular-monolith.md), toàn bộ logic nghiệp vụ nằm trong module
+`identity` (`backend/apps/api/src/modules/identity/`, thư mục con `auth/`, `users/`, `rbac/`, `casl/` — theo
+`docs/01-architecture/service-catalog.md`, đọc như bản đồ module chứ không còn là bản đồ service riêng), cùng một
+database Postgres với các module khác. Module `platform` chỉ xác thực JWT + RBAC lớp 1–2 rồi gọi trực tiếp (DI) vào
+module `identity` tương ứng — không còn "định tuyến" theo nghĩa network; Next.js (NextAuth) là lớp quản lý phiên phía
+FE, không tự giữ nguồn sự thật về user/role.
 
 ## 1. Mô hình dữ liệu
 
@@ -132,9 +135,10 @@ ghi cách lọc dữ liệu theo chủ sở hữu — không có nghĩa là bỏ
 | `POST` | `/v1/auth/2fa/verify` | Public (cầm `challengeId` tạm) | `challengeId` tự mang danh tính | Không |
 | `GET` | `/v1/admin/auth/sessions/stats` | `identity:sessions:stats` | Toàn hệ thống (dữ liệu tổng hợp, không gắn chủ sở hữu → `403` khi thiếu quyền, không phải `404`) | — |
 
-RPC nội bộ (gọi qua `api-gateway` hoặc trực tiếp giữa service, không qua HTTP công khai):
-`identity.register`, `identity.login`, `identity.refresh`, `identity.logout`, `identity.getEffectivePermissions`,
-`identity.getUserSummary` (theo `service-catalog.md`).
+Gọi trực tiếp qua NestJS DI giữa module (module khác import service đã export của module `identity` qua `index.ts`,
+không qua HTTP): `identity.register`, `identity.login`, `identity.refresh`, `identity.logout`,
+`identity.getEffectivePermissions`, `identity.getUserSummary` (theo `service-catalog.md`) — các tên này vẫn là tên
+method/API logic, chỉ đổi khung giao tiếp so với bản RPC network cũ.
 
 ## 3. Event
 
@@ -164,27 +168,27 @@ Không có event nào của domain khác ảnh hưởng trực tiếp tới đă
 sequenceDiagram
     participant B as Trình duyệt
     participant N as Next.js (NextAuth)
-    participant G as api-gateway
-    participant I as identity-service
+    participant Api as backend/apps/api (module platform)
+    participant Auth as AuthService (module identity)
 
     B->>N: POST /api/auth/callback/credentials { email, password }
-    N->>G: POST /v1/auth/login
-    G->>I: RPC identity.login
-    I->>I: user = findByEmail(email); hash = user?.passwordHash ?? DUMMY_HASH
-    I->>I: bcrypt.compare(password, hash)
+    N->>Api: POST /v1/auth/login
+    Api->>Auth: authService.login(...) (gọi trực tiếp qua DI, không phải RPC)
+    Auth->>Auth: user = findByEmail(email); hash = user?.passwordHash ?? DUMMY_HASH
+    Auth->>Auth: bcrypt.compare(password, hash)
     alt sai thông tin / khoá / banned
-        I-->>G: 401 INVALID_CREDENTIALS | 423 ACCOUNT_LOCKED | 403 ACCOUNT_BANNED
-        G-->>N: lỗi tương ứng
+        Auth-->>Api: 401 INVALID_CREDENTIALS | 423 ACCOUNT_LOCKED | 403 ACCOUNT_BANNED
+        Api-->>N: lỗi tương ứng
         N-->>B: hiển thị lỗi chung, không phân biệt "sai email" hay "sai mật khẩu"
     else hợp lệ, twoFactorEnabled = true
-        I-->>G: 202 TWO_FACTOR_REQUIRED { challengeId }
-        G-->>N: 202
+        Auth-->>Api: 202 TWO_FACTOR_REQUIRED { challengeId }
+        Api-->>N: 202
         N-->>B: yêu cầu nhập mã TOTP → POST /v1/auth/2fa/verify (không vẽ lại ở đây)
     else hợp lệ, không 2FA
-        I->>I: upsert Device, tạo RefreshToken (hash), ký access token RS256
-        I->>I: failedLoginCount = 0, lastLoginAt = now
-        I-->>G: { user, roles, accessToken, refreshToken }
-        G-->>N: 200
+        Auth->>Auth: upsert Device, tạo RefreshToken (hash), ký access token RS256
+        Auth->>Auth: failedLoginCount = 0, lastLoginAt = now
+        Auth-->>Api: { user, roles, accessToken, refreshToken }
+        Api-->>N: 200
         N->>N: mã hoá session JWE (AUTH_SECRET)
         N-->>B: Set-Cookie __Secure-authjs.session-token (HttpOnly) + __Host-refresh-token
     end
@@ -197,7 +201,7 @@ sequenceDiagram
     participant B as Trình duyệt
     participant N as Next.js (NextAuth)
     participant I as identity-service
-    participant DB as identity_db
+    participant DB as Postgres (schema identity)
 
     B->>N: Access token sắp hết hạn
     N->>I: POST /v1/auth/refresh { refreshToken }
@@ -237,12 +241,12 @@ thua đọc lại trạng thái mới nhất thay vì tự ý cấp token thứ 
 
 | Domain/service | Cách phụ thuộc |
 |---|---|
-| `api-gateway` | `JwtAuthGuard` xác minh access token bằng public key (JWKS), tra cache permission Redis; không tự xử lý login/refresh |
-| `rbac-permission` | Dùng chung `User.roles`, nghe `user.role-granted`/`user.role-revoked` (không thuộc domain này) để đồng bộ CASL ability |
-| `seller-service` | Nghe `user.registered`/`user.role-granted` gián tiếp qua `identity-service` nghe `seller.application.approved` (chiều ngược) |
-| Mọi service khác (`seller`, `order`, `cart`, `payment`, `promotion`, `content`, `engagement`, `chat`, `notification`, `media`) | Chỉ giữ `userId` dạng tham chiếu logic, gọi RPC `identity.getUserSummary` khi cần hiển thị tên/avatar — **không** query trực tiếp `identity_db` (luật cứng #2, CLAUDE.md) |
-| `notification-service` | Nghe `user.registered` (mail `welcome`), tự gửi mail xác minh/quên mật khẩu do chính `identity-service` enqueue qua BullMQ (không phải qua event bus vì là hành động của chính service phát sinh, theo `service-catalog.md` mục Job) |
-| `audit-service` | Nghe `user.locked`, ghi `AuditLog` cho mọi thao tác khoá/mở khoá/gán role admin |
+| Module `platform` | `JwtAuthGuard` xác minh access token bằng public key (JWKS), tra cache permission Redis; không tự xử lý login/refresh — gọi trực tiếp `AuthService`/`IdentityService` (DI) khi cần |
+| `rbac-permission` | Dùng chung `User.roles`, nghe `user.role-granted`/`user.role-revoked` (`EventEmitter2` trong process, không thuộc domain này) để đồng bộ CASL ability |
+| Module `seller` | Nghe `user.registered`/`user.role-granted` gián tiếp qua module `identity` nghe `seller.application.approved` (chiều ngược) |
+| Mọi module khác (`seller`, `order`, `cart`, `payment`, `promotion`, `content`, `engagement`, `chat`, `notification`, `media`) | Chỉ giữ `userId` dạng tham chiếu logic, gọi trực tiếp `IdentityService.getUserSummary()` qua DI khi cần hiển thị tên/avatar — **không** tự import Prisma model của module `identity` (ranh giới ép bằng ESLint boundary rule, luật cứng #2 CLAUDE.md) |
+| Module `notification` | Nghe `user.registered` (mail `welcome`), tự gửi mail xác minh/quên mật khẩu do chính module `identity` enqueue qua BullMQ (chạy ở worker process, không phải qua event bus vì là hành động của chính module phát sinh, theo `service-catalog.md` mục Job) |
+| Module `audit` | Nghe `user.locked`, ghi `AuditLog` cho mọi thao tác khoá/mở khoá/gán role admin |
 
 ## 8. ❌ BAD / ✅ GOOD
 

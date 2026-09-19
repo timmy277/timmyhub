@@ -2,8 +2,8 @@
 title: Tranh chấp đồng thời và nhất quán dữ liệu
 status: review
 owner: Tech Lead
-updated: 2026-09-16
-related: [docs/01-architecture/data-architecture.md, docs/01-architecture/communication-patterns.md, docs/02-domain/product-variant.md, docs/03-specs/inventory/design.md]
+updated: 2026-09-19
+related: [docs/01-architecture/data-architecture.md, docs/01-architecture/communication-patterns.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md, docs/02-domain/product-variant.md, docs/03-specs/inventory/design.md]
 ---
 
 # Tranh chấp đồng thời (race condition) và nhất quán dữ liệu
@@ -11,6 +11,11 @@ related: [docs/01-architecture/data-architecture.md, docs/01-architecture/commun
 > Sàn thương mại điện tử hỏng ở đúng những chỗ có hai người bấm cùng một giây. Tài liệu này liệt kê **mọi điểm tranh
 > chấp đã biết** của TimmyHub, chọn **một** biện pháp cho mỗi điểm, và nói rõ vì sao không chọn biện pháp khác.
 > Nguyên tắc xuyên suốt: **ràng buộc ở tầng cơ sở dữ liệu là lớp chặn cuối cùng** — logic ứng dụng có thể sai, ràng buộc thì không.
+>
+> Phần lớn nội dung dưới đây là ràng buộc ở tầng Postgres, không phụ thuộc vào việc backend là microservices hay
+> modular monolith — vẫn giữ nguyên giá trị sau [ADR-0015](adr/ADR-0015-modular-monolith.md). Chỗ duy nhất đổi: các
+> bước trước đây là lời gọi RPC riêng biệt giữa service (reserve rồi commit ở một service khác) giờ nằm trong
+> **cùng một `$transaction` Prisma** vì cùng module hoặc cùng database — xem §3.
 
 ---
 
@@ -24,7 +29,7 @@ related: [docs/01-architecture/data-architecture.md, docs/01-architecture/commun
 | 4 | Bấm đúp nút "Đặt hàng" | Hai đơn giống hệt | `Idempotency-Key` + unique index |
 | 5 | IPN VNPay gửi lại nhiều lần | Cộng tiền nhiều lần vào ví | Unique `vnp_TxnRef` + `processed_events` |
 | 6 | Rút tiền hai lần khi số dư chỉ đủ một | Số dư âm | `UPDATE … WHERE availableBalance >= amount` + `CHECK balance >= 0` |
-| 7 | Consumer RabbitMQ nhận trùng event | Ghi trùng, trạng thái sai | Bảng `processed_events(eventId)` |
+| 7 | Worker BullMQ dispatch trùng một outbox event ra hệ thống ngoài | Gửi mail/webhook trùng, trạng thái phía ngoài sai | Bảng `processed_events(eventId)` |
 | 8 | Hai admin cùng duyệt một sản phẩm | Ghi đè quyết định của nhau | Optimistic lock theo `version` |
 | 9 | Seller sửa giá đúng lúc người mua đặt | Giá hiển thị khác giá tính tiền | Snapshot giá vào `OrderItem`, kiểm lại ở bước xác nhận |
 | 10 | Job định kỳ chạy trên nhiều pod | Gửi mail trùng, tổng hợp trùng | BullMQ repeatable job + `jobId` cố định |
@@ -90,27 +95,32 @@ ALTER TABLE "InventoryItem"
 
 ## 3. Giữ tồn kho khi đặt hàng
 
-Chuỗi `reserve → commit → release` nằm **trong `catalog-service`** để việc giữ chỗ và kiểm giá dùng chung một
-transaction ([ADR-0002](adr/ADR-0002-database-per-service.md)).
+Từ [ADR-0015](adr/ADR-0015-modular-monolith.md), `order`, `catalog` (tồn kho) và `promotion` (voucher) là các module
+trong cùng một app, cùng một database — nên bước giữ chỗ và tạo đơn nằm **trong cùng một `$transaction` Prisma**,
+không còn là hai lời gọi RPC cách nhau giữa hai service. Chỉ bước chờ VNPay xác nhận thanh toán là còn thật sự
+bất đồng bộ, vì nó phụ thuộc hệ thống ngoài. Xem thêm `communication-patterns.md §2` và `§4`.
 
 ```mermaid
 sequenceDiagram
-    participant O as order-service
-    participant C as catalog-service
-    participant P as payment-service
-    O->>C: RPC inventory.reserve (orderId, items[], ttl=15p)
-    Note over C: một transaction:<br/>UPDATE reserved WHERE available >= qty<br/>INSERT StockReservation(HELD)
-    alt đủ hàng
-        C-->>O: reserved (reservationId)
-        O->>P: tạo giao dịch thanh toán
-        P-->>O: EVT payment.succeeded
-        O->>C: RPC inventory.commit
-        Note over C: onHand -= qty, reserved -= qty, HELD → COMMITTED
-    else thiếu hàng
-        C-->>O: EVT inventory.reserve-failed (variantId nào thiếu)
-        O->>O: đơn chuyển CANCELLED
+    participant Api as OrderService (module order)
+    participant Db as Postgres ($transaction)
+    participant Vnp as VNPay
+    Api->>Db: BEGIN
+    Note over Db: cartService.validate(tx)<br/>inventoryService.reserve(tx): UPDATE reserved WHERE onHand-reserved >= qty<br/>promotionService.reserveVoucher(tx)<br/>INSERT Order(AWAITING_PAYMENT) + OutboxEvent
+    alt đủ hàng và voucher hợp lệ
+        Db-->>Api: COMMIT
+        Api->>Vnp: tạo URL thanh toán
+        Vnp-->>Api: IPN payment.succeeded
+        Api->>Db: UPDATE Order SET status = CONFIRMED
+    else thiếu hàng hoặc voucher không hợp lệ
+        Db-->>Api: ROLLBACK (toàn bộ transaction, không đơn nào được tạo)
+        Api-->>Api: trả lỗi 409 ngay trong response, không cần EVT bất đồng bộ
     end
 ```
+
+Vì reserve và tạo đơn nằm chung một transaction, không còn trạng thái `MANUAL_REVIEW` như thiết kế cũ (khi phải
+"commit" tồn kho sau khi thanh toán thành công ở một service khác) — hết hàng hoặc voucher sai bị chặn ngay bằng
+rollback trước khi đơn tồn tại.
 
 Ba quy tắc bắt buộc:
 
@@ -182,7 +192,8 @@ model VoucherRedemption {
 Thứ tự trong transaction: `INSERT VoucherRedemption` **trước**, cập nhật bộ đếm sau. Nếu unique index bắn lỗi
 `P2002` thì người dùng đã dùng rồi — trả `409 VOUCHER_ALREADY_USED`, không cần đọc trước để kiểm.
 
-Khi đơn bị huỷ, phát `EVT-voucher.released`; consumer xoá `VoucherRedemption` và giảm bộ đếm — cũng trong một transaction.
+Khi đơn bị huỷ, phát `EVT-voucher.released`; listener của module `promotion` xoá `VoucherRedemption` và giảm bộ đếm —
+cũng trong một transaction.
 
 ---
 
@@ -239,8 +250,10 @@ create(@Body() dto: CreateOrderDto, @CurrentUser() user: AuthUser) { … }
 | Key đã có, body khác | `422 IDEMPOTENCY_KEY_REUSED` |
 | Key đang xử lý | `409 REQUEST_IN_PROGRESS`, client thử lại sau |
 
-Consumer event thì dùng bảng `processed_events(eventId PRIMARY KEY, processedAt)`: chèn trước, xử lý sau, chèn trùng
-thì `ack` và bỏ qua.
+Hiệu ứng gọi ra ngoài process qua outbox (mail, webhook, audit sink) thì dùng bảng
+`processed_events(eventId PRIMARY KEY, processedAt)` ở phía worker BullMQ: chèn trước, xử lý sau, chèn trùng thì bỏ
+qua. Listener `EventEmitter2` trong process không cần bảng này — nó chạy trong cùng transaction/process đã tạo ra
+sự kiện, không có nguy cơ nhận trùng do broker gửi lại.
 
 ---
 
@@ -272,7 +285,10 @@ so sánh khác biệt. Ghi đè ngầm là mất dữ liệu của đồng nghi�
 Quy tắc chung cho mọi transaction:
 
 - Thời gian sống **≤ 3 giây**; đặt `statement_timeout` và `idle_in_transaction_session_timeout`.
-- **Không** gọi HTTP, RPC, RabbitMQ, hay gửi mail bên trong transaction — dùng outbox.
+- Gọi service của module khác trong cùng process (DI, cùng nhận `tx`) là **được phép** và là cách làm chuẩn cho
+  giao dịch xuyên module — xem `communication-patterns.md §2`.
+- **Không** gọi ra hệ thống thật sự ở ngoài process (HTTP tới bên thứ ba, SMTP, webhook) bên trong transaction —
+  những việc đó đi qua outbox, dispatch sau khi transaction đã commit.
 - Không mở transaction bao quanh vòng lặp qua danh sách do người dùng gửi lên mà chưa giới hạn số phần tử.
 
 ---
@@ -298,8 +314,8 @@ Mỗi hạng mục ở bảng này là một `TASK-*` thật trong `03-specs/*/t
 
 - [ ] Phép trừ số lượng/số dư viết dạng `UPDATE … WHERE` nguyên tử, **không** đọc-rồi-ghi
 - [ ] Có ràng buộc DB tương ứng (`CHECK`, `UNIQUE`) trong migration, không chỉ kiểm ở ứng dụng
-- [ ] Endpoint ghi public có `Idempotency-Key`; consumer event có `processed_events`
-- [ ] Không có lời gọi mạng nào bên trong transaction
+- [ ] Endpoint ghi public có `Idempotency-Key`; worker dispatch outbox có `processed_events`
+- [ ] Không có lời gọi ra ngoài process (HTTP bên thứ ba, SMTP, webhook) bên trong transaction
 - [ ] Khoá nhiều dòng theo thứ tự xác định
 - [ ] Có ít nhất một test chạy song song chứng minh chỉ một bên thắng
 - [ ] Lỗi tranh chấp trả mã rõ nghĩa (`409` kèm `errorCode`), không phải `500`

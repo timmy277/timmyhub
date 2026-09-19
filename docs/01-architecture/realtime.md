@@ -2,11 +2,16 @@
 title: Realtime (WebSocket)
 status: approved
 owner: Backend Lead
-updated: 2026-09-15
-related: [docs/01-architecture/communication-patterns.md, docs/01-architecture/event-catalog.md, docs/01-architecture/security.md]
+updated: 2026-09-19
+related: [docs/01-architecture/communication-patterns.md, docs/01-architecture/event-catalog.md, docs/01-architecture/security.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
 # Realtime (WebSocket)
+
+> Từ [ADR-0015](adr/ADR-0015-modular-monolith.md), `api-gateway` đổi tên thành module `platform` trong app
+> `backend/apps/api`, và domain event không còn đi qua RabbitMQ mà phát trong process qua `EventEmitter2`. Vẫn giữ
+> nguyên tắc "chỉ một nơi giữ kết nối WS"; Redis pub/sub giờ chỉ cần khi web process chạy nhiều pod của **cùng một
+> app** (trước đây là đồng bộ giữa các pod của `api-gateway` — một service riêng).
 
 ## 1. Tổng quan
 
@@ -16,36 +21,38 @@ flowchart LR
         B1[Trình duyệt A]
         B2[Trình duyệt B]
     end
-    subgraph Gateway["api-gateway (n pod)"]
-        WS1[Socket.IO pod 1]
-        WS2[Socket.IO pod 2]
+    subgraph Api["backend/apps/api (n pod)"]
+        WS1[Socket.IO pod 1 — module platform]
+        WS2[Socket.IO pod 2 — module platform]
+        subgraph Modules["Module nghiệp vụ (trong cùng process)"]
+            CH[chat]
+            NT[notification]
+            CT[content]
+            EN[engagement]
+        end
+        EE[[EventEmitter2<br/>trong process]]
+        CH --> EE
+        NT --> EE
+        CT --> EE
+        EN --> EE
+        EE --> WS1
+        EE --> WS2
     end
     R[(Upstash Redis<br/>pub/sub)]
-    subgraph Services
-        CH[chat-service]
-        NT[notification-service]
-        CT[content-service]
-        EN[engagement-service]
-    end
-    MQ[[RabbitMQ<br/>timmyhub.events]]
 
     B1 <-->|wss| WS1
     B2 <-->|wss| WS2
     WS1 <--> R
     WS2 <--> R
-    CH --> MQ
-    NT --> MQ
-    CT --> MQ
-    EN --> MQ
-    MQ --> WS1
-    MQ --> WS2
 ```
 
 Nguyên tắc:
 
-1. **Chỉ `api-gateway` giữ kết nối WebSocket.** Service nghiệp vụ không mở cổng WS riêng.
-2. Service muốn đẩy dữ liệu realtime thì **phát domain event**; gateway là một consumer như mọi consumer khác.
-3. Nhiều pod gateway đồng bộ qua `@socket.io/redis-adapter` trên Upstash Redis (kết nối TCP).
+1. **Chỉ module `platform` giữ kết nối WebSocket.** Module nghiệp vụ khác không mở cổng WS riêng.
+2. Module muốn đẩy dữ liệu realtime thì **phát domain event** qua `EventEmitter2`; `platform` lắng nghe bằng
+   `@OnEvent()` như mọi listener khác — không có gì đặc quyền ở đây.
+3. Nhiều pod của app (khi scale ngang) đồng bộ qua `@socket.io/redis-adapter` trên Upstash Redis (kết nối TCP) —
+   vì `EventEmitter2` chỉ phát trong process của chính pod đó, không tự fan-out sang pod khác.
 4. WebSocket là kênh **bổ trợ**. Mọi dữ liệu đẩy realtime đều phải lấy được qua REST; mất kết nối không làm hỏng nghiệp vụ.
 
 > **Khác bản cũ:** bản cũ có 4 gateway rời rạc (`chat`, `notifications`, `posts`, `reviews`) nằm trong monolith,
@@ -191,8 +198,8 @@ bot trả lời tự động; khi nhân viên nhận (`chat:conversation:assigne
 ```mermaid
 sequenceDiagram
     participant C as Client
-    participant G as api-gateway (WS)
-    participant I as identity-service
+    participant G as module platform (WS)
+    participant I as module identity
 
     C->>G: connect(wss://…/notifications, auth: { token })
     G->>G: Xác minh JWT bằng khoá công khai (JWKS cache)
@@ -200,7 +207,7 @@ sequenceDiagram
         G-->>C: disconnect(4401 UNAUTHENTICATED)
     end
     G->>G: Kiểm tra sessionId trong revoked:sessions
-    G->>I: (cache miss) identity.getUserSummary
+    G->>I: (cache miss) identityService.getUserSummary(...)
     G->>G: socket.join(user:<id>) [+ seller:<id> nếu có]
     G-->>C: connection:ready
 ```
@@ -242,22 +249,26 @@ const socket = io(`${WS_URL}/notifications`, {
 
 ```mermaid
 sequenceDiagram
-    participant S as order-service
-    participant MQ as RabbitMQ
-    participant G1 as gateway pod 1
+    participant S as module order
+    participant EE as EventEmitter2 (trong process của pod đó)
+    participant G1 as module platform, pod 1
     participant R as Redis pub/sub
-    participant G2 as gateway pod 2
+    participant G2 as module platform, pod 2
     participant C as Client (trên pod 2)
 
-    S->>MQ: order.status-changed
-    MQ->>G1: giao cho một pod bất kỳ
+    S->>EE: emit('order.status-changed', payload)
+    EE->>G1: @OnEvent('order.status-changed') (chỉ pod đã emit)
     G1->>G1: Ánh xạ event → room + sự kiện WS
     G1->>R: publish socket.io
-    R->>G2: fan-out
+    R->>G2: fan-out sang pod khác
     G2->>C: order:status:changed
 ```
 
-Gateway có một **bảng ánh xạ duy nhất** từ domain event sang sự kiện WS:
+Vì `EventEmitter2` chỉ chạy trong process của pod đã emit, một request xử lý ở pod 1 phải đi qua Redis adapter để
+tới client đang giữ kết nối ở pod 2 — đây là lý do duy nhất module `platform` vẫn cần Redis pub/sub dù backend đã là
+một app.
+
+Module `platform` có một **bảng ánh xạ duy nhất** từ domain event sang sự kiện WS:
 
 ```ts
 export const REALTIME_MAP: RealtimeMapping[] = [

@@ -2,13 +2,14 @@
 title: Design — payment-vnpay
 status: draft
 owner: Backend Lead
-updated: 2026-09-16
-related: [docs/03-specs/payment-vnpay/requirements.md, docs/03-specs/payment-vnpay/tasks.md, docs/02-domain/schemas/payment-service.prisma.md, docs/01-architecture/event-catalog.md, docs/01-architecture/concurrency-and-consistency.md, docs/01-architecture/service-catalog.md]
+updated: 2026-09-19
+related: [docs/03-specs/payment-vnpay/requirements.md, docs/03-specs/payment-vnpay/tasks.md, docs/02-domain/schemas/payment-service.prisma.md, docs/01-architecture/event-catalog.md, docs/01-architecture/concurrency-and-consistency.md, docs/01-architecture/service-catalog.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
 # Design — `payment-vnpay` (mã `PAY`)
 
-Service sở hữu: `payment-service` (`payment_db`, port `3106`). Phạm vi tài liệu này chỉ gồm luồng VNPay
+Module sở hữu: `payment` (`payment-service` trong `backend/apps/api`, dùng chung một database Postgres với mọi
+module khác — [ADR-0015](../../01-architecture/adr/ADR-0015-modular-monolith.md)). Phạm vi tài liệu này chỉ gồm luồng VNPay
 (`create-url` → `return` → `ipn`), COD, hoàn tiền và đối soát. Ví seller/buyer, sổ giao dịch ví
 (`WalletTransaction`), rút tiền (`Withdrawal`) và hoa hồng thuộc domain `wallet-settlement` (mã `WAL`) —
 xem `docs/00-overview/feature-inventory.md` §10, spec riêng sau. Model `Wallet`/`WalletTransaction`/`Withdrawal`
@@ -79,8 +80,8 @@ Hai unique quan trọng nhất của domain này:
 |---|---|---|---|---|
 | `/payments/vnpay/create-url` | `POST` | `payment:payment:create` | Chỉ đơn của chính `userId` gọi (`whereForScope: { order.userId = currentUser.id }`) | Bắt buộc `Idempotency-Key` (REQ-PAY-013) |
 | `/payments/vnpay/return` | `GET` | Public (không cần JWT, nhưng verify `vnp_SecureHash`) | — | Chỉ đọc + hiển thị, không ghi (REQ-PAY-002) |
-| `/payments/vnpay/ipn` | `GET`/`POST` (theo cấu hình VNPay) | Public, xác thực bằng `vnp_SecureHash`, không qua JWT | — | Không đi qua `api-gateway` RBAC lớp 1–3 — tự xác thực bằng chữ ký (REQ-PAY-003, REQ-PAY-004) |
-| `/payments/cod/confirm` | `POST` | `payment:payment:update` (nội bộ, gọi khi `order-service` xác nhận đã thu COD) | RPC nội bộ hoặc consumer event, không phải endpoint public | REQ-PAY-008 |
+| `/payments/vnpay/ipn` | `GET`/`POST` (theo cấu hình VNPay) | Public, xác thực bằng `vnp_SecureHash`, không qua JWT | — | Không đi qua guard RBAC lớp 1–3 của module `platform` — tự xác thực bằng chữ ký (REQ-PAY-003, REQ-PAY-004) |
+| `/payments/cod/confirm` | `POST` | `payment:payment:update` (nội bộ, gọi khi module `order` xác nhận đã thu COD) | Gọi trực tiếp `PaymentService.confirmCod()` qua NestJS DI từ module `order`, hoặc lắng nghe qua `EventEmitter2` — không phải endpoint public | REQ-PAY-008 |
 | `/payments/:paymentId/refund` | `POST` | `payment:payment:refund` | Chỉ admin, không giới hạn theo chủ sở hữu (`:any` ngầm định vì admin xử lý mọi đơn) | Bắt buộc `Idempotency-Key`, REQ-PAY-009 |
 | `/payments/attempts` | `GET` | `payment:attempt:read:any` | Admin xem mọi `PaymentAttempt` | REQ-PAY-011 |
 | `/payments/:paymentId/retry` | `POST` | `payment:payment:create` | Chỉ chủ đơn | Bắt buộc `Idempotency-Key`, REQ-PAY-012 |
@@ -138,8 +139,8 @@ sequenceDiagram
         V->>P: GET/POST /payments/vnpay/ipn?vnp_TxnRef=...&vnp_SecureHash=...
         Note over P: transaction:<br/>1) verify vnp_SecureHash<br/>2) SELECT ... WHERE txnRef = X FOR UPDATE<br/>3) nếu đã COMPLETED → trả 00, dừng<br/>4) UPDATE Payment.status, PaymentAttempt<br/>5) INSERT OutboxEvent(payment.succeeded)
         P-->>V: { RspCode: "00", Message: "Confirm Success" }
-        P--)O: (qua bus) EVT-payment.succeeded
-        O->>O: Đơn chuyển sang trạng thái đã thanh toán, gọi inventory.commit
+        P--)O: EventEmitter2.emit('payment.succeeded') (trong process, module order lắng nghe qua @OnEvent)
+        O->>O: Đơn chuyển sang trạng thái đã thanh toán, gọi InventoryService.commit() qua DI (module catalog)
     end
 
     FE->>P: Poll GET /payments/:orderId (trạng thái thật)
@@ -217,7 +218,7 @@ async handleIpn(@Body() body: VnpayIpnDto) {
 
 | Domain | Ảnh hưởng |
 |---|---|
-| `order-fulfillment` (`ORD`) | Nghe `payment.succeeded`/`payment.failed`/`payment.expired` để chuyển trạng thái đơn và gọi `inventory.commit`/`inventory.release` qua `catalog-service` |
+| `order-fulfillment` (`ORD`) | Nghe `payment.succeeded`/`payment.failed`/`payment.expired` để chuyển trạng thái đơn và gọi `InventoryService.commit()`/`.release()` qua DI (module `catalog`) |
 | `inventory` (trong `catalog-service`) | Gián tiếp qua `order-service`: hết hạn thanh toán (REQ-PAY-007) là một trong các lý do `inventory.release` được gọi |
 | `notification` (`NTF`) | Nghe `payment.succeeded`/`payment.failed` để gửi in-app + email theo `event-catalog.md` §3 |
 | `analytics-sales` (`ANA`) | Nghe toàn bộ `payment.*` cho báo cáo doanh thu/GMV |

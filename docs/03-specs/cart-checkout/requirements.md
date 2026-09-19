@@ -2,7 +2,7 @@
 title: Requirements — cart-checkout
 status: draft
 owner: Backend Lead
-updated: 2026-09-16
+updated: 2026-09-19
 related:
     - docs/00-overview/feature-inventory.md
     - docs/01-architecture/service-catalog.md
@@ -10,13 +10,17 @@ related:
     - docs/01-architecture/event-catalog.md
     - docs/02-domain/schemas/cart-service.prisma.md
     - docs/03-specs/cart-checkout/design.md
+    - docs/01-architecture/adr/ADR-0015-modular-monolith.md
 ---
 
 # Requirements — `cart-checkout` (`CRT`)
 
-Phạm vi: giỏ hàng bền vững của user (`cart-service`), giỏ khách vãng lai, kiểm tra lại giỏ trước khi tạo đơn, và
-bước khởi tạo checkout gọi sang `order-service`. **Không** phủ toàn bộ saga tạo đơn (giữ tồn, giữ voucher, chờ
-thanh toán, chốt/bù trừ) — phần đó thuộc `docs/03-specs/order-fulfillment/`.
+Phạm vi: giỏ hàng bền vững của user (module `cart`), giỏ khách vãng lai, kiểm tra lại giỏ trước khi tạo đơn, và
+bước khởi tạo checkout gọi tới module `order`. Theo [ADR-0015](../../01-architecture/adr/ADR-0015-modular-monolith.md)
+và `concurrency-and-consistency.md §3`, `cart`, `catalog`, `order` và `promotion` là các module trong cùng một
+database — bước validate giỏ, kiểm tồn, kiểm voucher và tạo đơn chạy trong **một `$transaction` Prisma**, trừ bước
+chờ VNPay xác nhận thanh toán vẫn bất đồng bộ. **Không** phủ toàn bộ luồng tạo đơn trong `$transaction` đó (giữ tồn,
+giữ voucher, chờ thanh toán, rollback) — phần đó thuộc `docs/03-specs/order-fulfillment/`.
 
 Mọi feature nguồn: `docs/00-overview/feature-inventory.md` mục 7 `cart-checkout`.
 
@@ -27,7 +31,7 @@ Mọi feature nguồn: `docs/00-overview/feature-inventory.md` mục 7 `cart-che
 **Nguồn:** `FEAT-CRT-001`
 **Ưu tiên:** P0
 
-HỆ THỐNG PHẢI lưu giỏ hàng của user đã đăng nhập bền vững (Postgres `cart_db`, cache Redis 30 phút), gắn theo
+HỆ THỐNG PHẢI lưu giỏ hàng của user đã đăng nhập bền vững (một Postgres chung, phần schema module `cart`, cache Redis 30 phút), gắn theo
 đúng một `Cart` trên mỗi `userId`, và chỉ trả về giỏ của chính user đang gọi.
 
 | # | Given | When | Then |
@@ -55,8 +59,9 @@ KHI user gọi `POST /v1/cart/items` với `variantId` và `quantity` hợp lệ
 **Nguồn:** `FEAT-CRT-002`
 **Ưu tiên:** P1
 
-NẾU `quantity` sau khi cộng dồn vượt quá `available` mà `catalog-service` báo qua RPC `catalog.getVariantSnapshot`,
-THÌ HỆ THỐNG PHẢI từ chối thao tác, trả về `available` hiện tại, và không sửa `CartItem`.
+NẾU `quantity` sau khi cộng dồn vượt quá `available` mà module `catalog` báo qua gọi trực tiếp
+`CatalogService.getVariantSnapshot()` (DI), THÌ HỆ THỐNG PHẢI từ chối thao tác, trả về `available` hiện tại, và
+không sửa `CartItem`. Đây là lời gọi DI đồng bộ bình thường, độc lập với `$transaction` tạo đơn (chưa vào checkout).
 
 | # | Given | When | Then |
 |---|---|---|---|
@@ -98,7 +103,7 @@ KHI user gọi `DELETE /v1/cart/items/:itemId` cho item thuộc giỏ của chí
 **Ưu tiên:** P1
 
 NƠI CÓ khách chưa đăng nhập, HỆ THỐNG PHẢI cho phép thêm/sửa/xoá item vào giỏ tạm lưu **chỉ ở Redis**, khoá theo
-`guestId` (cookie/token ẩn danh), TTL 7 ngày, không ghi vào `cart_db`.
+`guestId` (cookie/token ẩn danh), TTL 7 ngày, không ghi vào phần schema module `cart`.
 
 | # | Given | When | Then |
 |---|---|---|---|
@@ -111,8 +116,8 @@ NƠI CÓ khách chưa đăng nhập, HỆ THỐNG PHẢI cho phép thêm/sửa/x
 **Ưu tiên:** P1
 
 KHI khách vãng lai có giỏ Redis đăng nhập thành công, HỆ THỐNG PHẢI gộp item từ giỏ khách vào `Cart` bền vững
-của user qua RPC `cart.merge`: cộng dồn số lượng theo `variantId` trùng, giữ nguyên item không trùng, rồi xoá
-giỏ Redis của khách.
+của user qua gọi trực tiếp `CartService.merge()` (DI): cộng dồn số lượng theo `variantId` trùng, giữ nguyên item
+không trùng, rồi xoá giỏ Redis của khách.
 
 | # | Given | When | Then |
 |---|---|---|---|
@@ -127,8 +132,8 @@ giỏ Redis của khách.
 **Nguồn:** `FEAT-CRT-004`
 **Ưu tiên:** P0
 
-HỆ THỐNG PHẢI nhóm `CartItem` theo shop sở hữu `productId` (tra qua `catalog-service`) khi trả `GET /v1/cart`
-và khi kiểm tra lại giỏ, để mỗi nhóm shop tương ứng đúng một đơn con khi tạo đơn.
+HỆ THỐNG PHẢI nhóm `CartItem` theo shop sở hữu `productId` (tra qua gọi trực tiếp `CatalogService` (DI)) khi trả
+`GET /v1/cart` và khi kiểm tra lại giỏ, để mỗi nhóm shop tương ứng đúng một đơn con khi tạo đơn.
 
 | # | Given | When | Then |
 |---|---|---|---|
@@ -139,9 +144,10 @@ và khi kiểm tra lại giỏ, để mỗi nhóm shop tương ứng đúng mộ
 **Nguồn:** `FEAT-CRT-005`
 **Ưu tiên:** P0
 
-KHI user gọi `POST /v1/cart/validate` (bắt đầu checkout), HỆ THỐNG PHẢI gọi RPC `catalog.getVariantSnapshot`
-cho từng `variantId` trong giỏ để lấy lại giá thật, trạng thái sản phẩm, và `available`, rồi trả về danh sách
-item hợp lệ/không hợp lệ — **không** dùng `cachedPriceSnapshot` để tính tổng tiền cuối cùng.
+KHI user gọi `POST /v1/cart/validate` (bắt đầu checkout), HỆ THỐNG PHẢI gọi trực tiếp
+`CatalogService.getVariantSnapshot()` (DI) cho từng `variantId` trong giỏ để lấy lại giá thật, trạng thái sản
+phẩm, và `available`, rồi trả về danh sách item hợp lệ/không hợp lệ — **không** dùng `cachedPriceSnapshot` để tính
+tổng tiền cuối cùng. Đây là bước validate độc lập trước khi vào `$transaction` tạo đơn.
 
 | # | Given | When | Then |
 |---|---|---|---|
@@ -169,7 +175,8 @@ cho tới khi user tự xoá hoặc sửa số lượng item đó.
 **Nguồn:** `FEAT-CRT-005`
 **Ưu tiên:** P0
 
-NẾU giá thật lấy qua RPC lúc `POST /v1/cart/validate` khác với `cachedPriceSnapshot` đã lưu, THÌ HỆ THỐNG PHẢI
+NẾU giá thật lấy qua gọi trực tiếp `CatalogService.getVariantSnapshot()` (DI) lúc `POST /v1/cart/validate` khác với
+`cachedPriceSnapshot` đã lưu, THÌ HỆ THỐNG PHẢI
 báo cho user biết giá đã đổi (giá cũ, giá mới), cập nhật lại `cachedPriceSnapshot`, và yêu cầu user xác nhận lại
 trước khi cho phép gọi `POST /v1/orders/from-cart`.
 
@@ -183,14 +190,15 @@ trước khi cho phép gọi `POST /v1/orders/from-cart`.
 **Nguồn:** `FEAT-CRT-006`
 **Ưu tiên:** P0
 
-HỆ THỐNG PHẢI chốt giá cuối cùng (price snapshot) vào `OrderItem` tại đúng thời điểm `order-service` tạo đơn từ
-giỏ đã validate — không phải tại thời điểm thêm vào giỏ. `cachedPriceSnapshot` trong `CartItem` chỉ để hiển thị
-nhanh, không tự động đồng bộ theo giá catalog và không được dùng làm giá chốt của đơn.
+HỆ THỐNG PHẢI chốt giá cuối cùng (price snapshot) vào `OrderItem` tại đúng thời điểm `OrderService.createOrder()`
+tạo đơn từ giỏ đã validate, chạy trong cùng `$transaction` Prisma bao cart/inventory/promotion/order — không phải
+tại thời điểm thêm vào giỏ. `cachedPriceSnapshot` trong `CartItem` chỉ để hiển thị nhanh, không tự động đồng bộ
+theo giá catalog và không được dùng làm giá chốt của đơn.
 
 | # | Given | When | Then |
 |---|---|---|---|
-| 1 | Giỏ đã validate thành công, giá xác nhận 120.000 | `order-service` tạo `Order` | `OrderItem.priceSnapshot = 120.000`, không đọc lại `cachedPriceSnapshot` cũ |
-| 2 | Giữa lúc validate và lúc thực sự tạo đơn, giá đổi lần nữa | `order-service` gọi lại RPC lúc tạo đơn | Dùng giá mới nhất tại thời điểm tạo đơn, không dùng giá đã validate trước đó nếu lệch |
+| 1 | Giỏ đã validate thành công, giá xác nhận 120.000 | `OrderService.createOrder()` tạo `Order` (trong `$transaction`) | `OrderItem.priceSnapshot = 120.000`, không đọc lại `cachedPriceSnapshot` cũ |
+| 2 | Giữa lúc validate và lúc thực sự tạo đơn, giá đổi lần nữa | `OrderService.createOrder()` gọi lại `CatalogService.getVariantSnapshot()` (DI, trong cùng `$transaction`) lúc tạo đơn | Dùng giá mới nhất tại thời điểm tạo đơn, không dùng giá đã validate trước đó nếu lệch |
 
 ## 4. Voucher và phương thức thanh toán
 
@@ -199,9 +207,10 @@ nhanh, không tự động đồng bộ theo giá catalog và không được d�
 **Nguồn:** `FEAT-CRT-007`
 **Ưu tiên:** P0
 
-KHI user gọi `POST /v1/cart/vouchers/preview` với mã voucher, HỆ THỐNG PHẢI gọi RPC sang `promotion-service` để
-kiểm tra điều kiện áp dụng và trả về số tiền giảm dự kiến trên tổng giỏ hàng đã validate, không trừ lượt dùng
-voucher ở bước này.
+KHI user gọi `POST /v1/cart/vouchers/preview` với mã voucher, HỆ THỐNG PHẢI gọi trực tiếp
+`PromotionService.previewVoucher()` (DI) để kiểm tra điều kiện áp dụng và trả về số tiền giảm dự kiến trên tổng
+giỏ hàng đã validate, không trừ lượt dùng voucher ở bước này. Đây là lời gọi DI đồng bộ độc lập trước khi vào
+`$transaction` tạo đơn.
 
 | # | Given | When | Then |
 |---|---|---|---|
@@ -226,7 +235,7 @@ THÌ HỆ THỐNG PHẢI từ chối khởi tạo đơn với lý do rõ ràng, 
 **Ưu tiên:** P0
 
 KHI user khởi tạo checkout, HỆ THỐNG PHẢI yêu cầu chọn đúng một phương thức thanh toán trong tập
-`{VNPAY, COD}` và truyền kèm sang `order-service`; thiếu phương thức thì không cho tiếp tục.
+`{VNPAY, COD}` và truyền kèm sang `OrderService.createOrder()` (DI); thiếu phương thức thì không cho tiếp tục.
 
 | # | Given | When | Then |
 |---|---|---|---|
@@ -242,7 +251,8 @@ KHI user khởi tạo checkout, HỆ THỐNG PHẢI yêu cầu chọn đúng m�
 
 KHI user đã có giỏ hợp lệ (không còn `invalidItems`, giá đã xác nhận lại), gọi `POST /v1/orders/from-cart` với
 header `Idempotency-Key`, HỆ THỐNG PHẢI dùng key đó để đảm bảo bấm lặp lại (double-submit) không tạo đơn trùng,
-trước khi chuyển sang phần saga tạo đơn của `order-fulfillment`.
+trước khi chuyển sang giao dịch tạo đơn (một `$transaction` Prisma bao cart/inventory/promotion/order) của
+`order-fulfillment`.
 
 | # | Given | When | Then |
 |---|---|---|---|
@@ -250,18 +260,19 @@ trước khi chuyển sang phần saga tạo đơn của `order-fulfillment`.
 | 2 | Gửi `Idempotency-Key` đã dùng nhưng thân bài request khác | Gọi lại | Từ chối `409` — key trùng nhưng payload khác |
 | 3 | Không có header `Idempotency-Key` | Gọi `POST /v1/orders/from-cart` | Từ chối `400` |
 
-### REQ-CRT-017 — Order-service từ chối hoặc lỗi khi khởi tạo saga
+### REQ-CRT-017 — Order-service từ chối hoặc lỗi khi khởi tạo giao dịch tạo đơn
 
 **Nguồn:** `FEAT-CRT-009`
 **Ưu tiên:** P0
 
-NẾU `order-service` trả lỗi (giỏ không hợp lệ, RPC `cart.validate` timeout, hoặc từ chối nghiệp vụ) khi khởi tạo
-checkout, THÌ HỆ THỐNG PHẢI giữ nguyên giỏ hàng của user (không xoá item), trả lỗi rõ nguyên nhân cho FE, và
-không phát bất kỳ event nào coi như đơn đã được tạo.
+NẾU khởi tạo giao dịch tạo đơn (gọi `OrderService.createOrder()` qua DI, chạy trong `$transaction`) trả lỗi
+(giỏ không hợp lệ, lỗi hoặc timeout nội bộ khi `CartService.validate()` thực thi — ví dụ do truy vấn DB chậm —
+hoặc từ chối nghiệp vụ) khi khởi tạo checkout, THÌ HỆ THỐNG PHẢI giữ nguyên giỏ hàng của user (không xoá item, toàn
+bộ transaction rollback), trả lỗi rõ nguyên nhân cho FE, và không phát bất kỳ event nào coi như đơn đã được tạo.
 
 | # | Given | When | Then |
 |---|---|---|---|
-| 1 | RPC `cart.validate` timeout (> 3.000 ms, đã retry 2 lần đọc) | `order-service` gọi `cart.validate` | Trả `503` kèm `retryAfter`, giỏ hàng không đổi |
+| 1 | Lỗi hoặc timeout nội bộ khi thực thi `CartService.validate()` (> 3.000 ms, đã retry 2 lần đọc, có thể do truy vấn DB chậm) | `OrderService.createOrder()` gọi `CartService.validate()` (DI, trong `$transaction`) | Trả `503` kèm `retryAfter`, giỏ hàng không đổi |
 | 2 | Giỏ hợp lệ nhưng `order-service` từ chối vì lý do nghiệp vụ khác | Gọi `POST /v1/orders/from-cart` | Giỏ hàng giữ nguyên toàn bộ item, user có thể thử lại |
 
 ## 6. Lưu để mua sau và nhắc giỏ bỏ quên

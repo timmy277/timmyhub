@@ -2,12 +2,17 @@
 title: Technology radar — nên thêm công nghệ gì vào TimmyHub
 status: review
 owner: Tech Lead
-updated: 2026-09-16
-related: [docs/00-overview/project-plan.md, docs/01-architecture/system-architecture.md, docs/01-architecture/observability.md, docs/01-architecture/security.md, docs/05-infra/cicd.md]
+updated: 2026-09-19
+related: [docs/00-overview/project-plan.md, docs/01-architecture/system-architecture.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md, docs/01-architecture/observability.md, docs/01-architecture/security.md, docs/05-infra/cicd.md]
 ---
 
 # Technology radar — nên thêm gì vào stack
 
+> Sau [ADR-0015](adr/ADR-0015-modular-monolith.md) (2026-09-19), backend là một app NestJS module hoá, không phải
+> 17 service qua RabbitMQ. Các mục dưới đây viết ở thời điểm còn kiến trúc microservices; những chỗ không còn đúng
+> đã được cập nhật trực tiếp (đánh dấu vòng lại nếu đổi), phần còn lại (frontend, hạ tầng chung, tuân thủ) không phụ
+> thuộc vào lựa chọn microservices hay monolith nên giữ nguyên.
+>
 > Tài liệu này **không** thay §7 của [project-plan.md](../00-overview/project-plan.md). §7 là stack đã chốt.
 > Đây là kết quả rà soát stack đó theo mặt bằng công nghệ web quý 3/2026, chỉ ra **lỗ hổng** và **đề xuất bổ sung**,
 > mỗi mục kèm lý do, chi phí phải trả và mốc quyết định. Mục nào được duyệt thì mới chuyển thành ADR + feature `FEAT-*`.
@@ -33,12 +38,12 @@ Xếp theo mức độ chặn nghiệp vụ, không theo độ thú vị kỹ th
 | 2 | **Ví seller không có sổ cái kép** | Số dư lệch là không truy được nguyên nhân, không đối soát được với sao kê ngân hàng | Double-entry ledger append-only trong `payment-service` | ADOPT |
 | 3 | **Không có đường transcode video** | `video-ads` và post video không chạy được: file 50 MB phát thẳng, không HLS, không thumbnail | ffmpeg worker (BullMQ) → HLS, hoặc Cloudflare Stream/Mux nếu chấp nhận dịch vụ ngoài | ADOPT |
 | 4 | **Impression/click quảng cáo đổ thẳng vào Postgres** | Bảng vài trăm triệu dòng/tháng, analytics và OLTP tranh nhau I/O | ClickHouse cho event lượng lớn; Postgres chỉ giữ số liệu đã tổng hợp | TRIAL |
-| 5 | **Không có sinh client từ API** | 17 service × hàng trăm endpoint, FE gõ tay type → lệch hợp đồng lúc chạy mới biết | `openapi-typescript` + `orval` sinh axios client từ Swagger; AsyncAPI cho event | ADOPT |
-| 6 | **Không có contract test giữa service** | Đổi payload một service làm gãy service khác, CI vẫn xanh | Pact + Pact Broker, chặn deploy khi contract chưa verify | TRIAL |
+| 5 | **Không có sinh client từ API** | Hàng trăm endpoint của `backend/apps/api`, FE gõ tay type → lệch hợp đồng lúc chạy mới biết | `openapi-typescript` + `orval` sinh axios client từ Swagger; AsyncAPI cho event | ADOPT |
+| 6 | **Không có contract test cho tích hợp bên ngoài** | Đổi payload/response của VNPay, GHN/GHTK, Elasticsearch làm gãy luồng mà CI vẫn xanh (module-tới-module trong process thì TypeScript đã bắt lỗi biên dịch, không cần Pact) | Pact chỉ cho **ranh giới thật ra ngoài process** (cổng thanh toán, vận chuyển) | TRIAL |
 | 7 | **CI không quét bí mật / lỗ hổng** | Chính repo cũ đã lộ 4 bộ credential — không có gì ngăn tái diễn | `gitleaks` + Trivy (fs + image) + Renovate + SBOM | ADOPT |
 | 8 | **Không có kiểm thử tải** | NFR "5.000 kết nối WS, p95 < 300 ms" chỉ là câu chữ, không ai chứng minh | k6 chạy theo lịch trên staging, gắn ngưỡng vào CI | ADOPT |
 | 9 | **Không có chống bot ở điểm nhạy cảm** | Đăng ký ảo, cày voucher, review rác, click tặc quảng cáo | Cloudflare Turnstile + rate limit theo thiết bị + luật phát hiện click gian lận | ADOPT |
-| 10 | **Không có lớp pooling kết nối DB** | 17 service × N pod × pool 10 vượt `max_connections` của Postgres | PgBouncer (hoặc Supabase pooler) ở chế độ transaction | ADOPT |
+| 10 | **Không có lớp pooling kết nối DB** | N pod của app duy nhất × pool mặc định vượt `max_connections` của Postgres khi scale ngang | PgBouncer (hoặc Supabase pooler) ở chế độ transaction | ADOPT |
 
 ---
 
@@ -57,7 +62,7 @@ Xếp theo mức độ chặn nghiệp vụ, không theo độ thú vị kỹ th
 | **`@axe-core/playwright` + `eslint-plugin-jsx-a11y` + Storybook a11y addon** ✅ đã chốt | Cam kết WCAG 2.2 AA hiện không có gì kiểm chứng tự động | Đợt đầu sẽ ra nhiều lỗi; cần thời gian dọn |
 | **Lighthouse CI + `size-limit`** ✅ đã chốt | Ngân sách hiệu năng phải là điều kiện merge, không phải lời hứa | Phải chốt ngưỡng thật, không đặt cho có |
 | **`dinero.js` (hoặc lớp `Money` tự viết)** ✅ đã chốt | Tiền truyền qua API dạng **chuỗi decimal**; FE tính bằng `number` sẽ sai số ở đơn nhiều dòng | Lập trình viên phải bỏ thói quen `price * qty` |
-| **Turborepo** (trên pnpm workspace) ✅ đã chốt | 18 đơn vị triển khai + FE: cache tác vụ theo nội dung, CI chỉ build phần đổi | Thêm một lớp cấu hình; cần remote cache để có lợi thật |
+| **Turborepo** (trên pnpm workspace) ✅ đã chốt | `backend/apps/api` + FE + các gói chia sẻ trong monorepo: cache tác vụ theo nội dung, CI chỉ build phần đổi | Thêm một lớp cấu hình; cần remote cache để có lợi thật |
 | **Storybook 9** thay vì 8 ✅ đã chốt | Bản đang chốt trong §7 đã cũ một thế hệ; 9 nhẹ hơn và test runner tốt hơn | Nâng addon |
 
 ### 2.2 TRIAL
@@ -87,17 +92,17 @@ Xếp theo mức độ chặn nghiệp vụ, không theo độ thú vị kỹ th
 
 | Bổ sung | Vì sao | Chi phí phải trả |
 |---|---|---|
-| **`@nestjs/terminus`** | Chưa chốt cách làm `/health/live` và `/health/ready`; k8s cần cả hai khác nhau | Phải định nghĩa "ready" đúng: DB + RabbitMQ, **không** kiểm tra service khác (tránh sập dây chuyền) |
+| **`@nestjs/terminus`** | Chưa chốt cách làm `/health/live` và `/health/ready`; k8s cần cả hai khác nhau | Phải định nghĩa "ready" đúng: Postgres + Redis (BullMQ), **không** kiểm tra dịch vụ ngoài (VNPay, Elasticsearch) — tránh coi web process không sẵn sàng chỉ vì một tích hợp ngoài đang chậm |
 | **Xác thực config lúc khởi động bằng zod** | Thiếu một biến môi trường hiện chỉ lộ ra khi gọi tới chức năng đó | Không được phép có giá trị mặc định ngầm cho biến bí mật |
-| **`cockatiel`** (retry + circuit breaker + bulkhead) | `communication-patterns.md` nói có circuit breaker nhưng chưa chỉ định thư viện | Phải chỉnh ngưỡng theo từng cặp service |
+| **`cockatiel`** (retry + circuit breaker + bulkhead) | Module-tới-module trong process không cần circuit breaker (lỗi là exception TypeScript bắt được lúc build); cần cho lời gọi ra hệ thống **thật sự ngoài process**: VNPay, GHN/GHTK, Elasticsearch, Supabase Storage | Phải chỉnh ngưỡng theo từng tích hợp ngoài |
 | **Idempotency-Key middleware** cho mọi POST public | Người dùng bấm đúp "Đặt hàng" tạo hai đơn; hiện chỉ IPN thanh toán là idempotent | Cần bảng/Redis lưu key 24 giờ |
 | **Double-entry ledger** cho ví và đối soát | Sổ cái append-only, mỗi bút toán cân bằng về 0, có tài khoản treo cho tiền đang giữ; đối soát chạy định kỳ chứng minh sổ khớp | Mô hình phức tạp hơn `balance += x`; phải đào tạo đội |
 | **`gitleaks` + Trivy + Renovate + SBOM (Syft)** trong CI | Repo cũ đã lộ Sentry token, Supabase connection string, Vercel token, Google API key | PR sẽ bị chặn nhiều hơn ở giai đoạn đầu |
 | **k6** kiểm thử tải theo lịch | Không đo thì NFR chỉ là nguyện vọng | Cần môi trường staging giống prod về cấu hình |
 | **Cloudflare Turnstile** + WAF/rate limit ở biên | Đăng ký ảo, cày voucher, click tặc quảng cáo | Thêm một phụ thuộc bên ngoài ở đường đăng nhập |
 | **ClamAV** quét file tải lên | `media-service` mới kiểm magic byte, chưa quét mã độc | Thêm một sidecar, làm job upload chậm hơn |
-| **PgBouncer / Supabase pooler** (transaction mode) | 17 service nhân số pod nhân pool sẽ vượt `max_connections` | Prisma phải dùng `pgbouncer=true`, mất prepared statement |
-| **AsyncAPI** cho 86 domain event | Event hiện chỉ được mô tả bằng văn xuôi; AsyncAPI cho phép sinh type và kiểm tra tương thích | Phải giữ file spec đồng bộ với `@timmyhub/contracts` |
+| **PgBouncer / Supabase pooler** (transaction mode) | Một app duy nhất nhưng scale ngang nhiều pod (mỗi pod một `PrismaClient` pool `max: 20`) vẫn có thể vượt `max_connections` khi HPA scale mạnh | Prisma phải dùng `pgbouncer=true`, mất prepared statement |
+| **AsyncAPI** cho domain event | Event hiện chỉ được mô tả bằng văn xuôi; dù transport giờ là `EventEmitter2` trong process, AsyncAPI vẫn cho phép sinh type và kiểm tra payload nhất quán ở `@timmyhub/contracts` | Phải giữ file spec đồng bộ với `@timmyhub/contracts` |
 | **Bộ phân tích tiếng Việt cho Elasticsearch** | Tìm "áo thun nam" mà không tách từ tiếng Việt thì kết quả rất kém | Cần ảnh ES tự dựng có plugin, không dùng được bản managed trần |
 | **`react-email` + nhà cung cấp gửi mail chuyên dụng (Resend / Amazon SES) + SPF/DKIM/DMARC** | SMTP trần của Nodemailer rơi vào spam; email xác thực và hoá đơn là đường sống | Chi phí theo lượng gửi; phải cấu hình DNS |
 
@@ -105,7 +110,7 @@ Xếp theo mức độ chặn nghiệp vụ, không theo độ thú vị kỹ th
 
 | Bổ sung | Phạm vi thử | Điều kiện mở rộng |
 |---|---|---|
-| **Pact + Pact Broker** | Cặp `api-gateway` ↔ `order-service` và `order-service` ↔ `payment-service` | Bắt được ≥ 1 breaking change thật trước khi lên staging |
+| **Pact + Pact Broker** | Tích hợp VNPay (IPN/return) và GHN/GHTK/Viettel Post — ranh giới thật sự ngoài process | Bắt được ≥ 1 breaking change thật trước khi lên staging |
 | **ClickHouse** cho `ad_impression`, `ad_click`, `page_view` | Domain `video-ads` | > 5 triệu bản ghi/ngày hoặc truy vấn báo cáo > 3 giây trên Postgres |
 | **OpenFeature** (giao diện chuẩn) + **GO Feature Flag** (một binary, không cần DB) | Cờ tính năng của `master-data` | Sau khi rollout dần được 2 tính năng thật. Lưu ý: bản mã nguồn mở của Unleash Edge ngừng hỗ trợ 31/12/2026 |
 | **Grafana Alloy** (bản phân phối OpenTelemetry Collector) + **Tempo** + **Loki** | Gom trace/log của 3 service lõi | Truy được một sự cố thật từ log → trace → metric. LGTM đầy đủ tốn người vận hành; nếu đội < 8 người thì dùng Grafana Cloud |
@@ -116,7 +121,7 @@ Xếp theo mức độ chặn nghiệp vụ, không theo độ thú vị kỹ th
 
 | Mục | Điều kiện kích hoạt |
 |---|---|
-| **Temporal** (durable execution) thay saga tự viết | Khi có > 3 saga, hoặc có luồng chạy dài nhiều ngày (khiếu nại, hoàn tiền qua ngân hàng). Hiện chỉ một saga checkout nên chưa đáng đổi |
+| **Temporal** (durable execution) | Từ [ADR-0015](adr/ADR-0015-modular-monolith.md), checkout không còn là saga — reserve tồn kho/voucher và tạo đơn nằm trong một `$transaction`. Chỉ đáng cân nhắc nếu xuất hiện luồng thật sự chạy dài nhiều ngày và cần retry/tạm dừng bền (khiếu nại, hoàn tiền qua ngân hàng, workflow duyệt seller nhiều bước) |
 | **Debezium CDC** thay outbox tự viết | Khi outbox publisher trở thành nút thắt hoặc lệch dữ liệu nhiều lần |
 | **Cổng thanh toán thứ hai** (MoMo, ZaloPay, VietQR) | Ngay từ đầu phải trừu tượng hoá `PaymentProvider` để không phải sửa lõi sau này |
 | **Hoá đơn điện tử** (Nghị định 123/2020) | Khi có seller là doanh nghiệp xuất hoá đơn |
@@ -127,9 +132,9 @@ Xếp theo mức độ chặn nghiệp vụ, không theo độ thú vị kỹ th
 
 | Mục | Lý do |
 |---|---|
-| **Kafka** | RabbitMQ đủ cho lưu lượng dự kiến và nhẹ hơn nhiều về vận hành ([ADR-0003](adr/ADR-0003-rabbitmq-event-bus.md)). Xem lại nếu cần replay toàn bộ lịch sử event |
-| **Service mesh (Istio/Linkerd)** | Với 17 service và một đội nhỏ, chi phí vận hành lớn hơn lợi ích; mTLS làm ở tầng network policy |
-| **gRPC giữa các service** | Đã chọn RabbitMQ RPC; thêm giao thức thứ hai là thêm một bộ công cụ phải nuôi |
+| **Kafka / RabbitMQ (message broker)** | Không cần message broker: event trong process qua `EventEmitter2`, việc cần bền qua crash đi qua outbox + BullMQ trên Postgres/Redis đã có sẵn ([ADR-0015](adr/ADR-0015-modular-monolith.md), thay cho lựa chọn RabbitMQ cũ ở [ADR-0003](adr/ADR-0003-rabbitmq-event-bus.md), nay đã superseded). Xem lại nếu một module thật sự cần tách thành service riêng và cần replay lịch sử event |
+| **Service mesh (Istio/Linkerd)** | Một app duy nhất (2 process: web, worker) không có lưu lượng giữa-service để mesh quản lý; mTLS/network policy chỉ còn cần ở biên (Postgres, Redis, hệ thống ngoài) |
+| **gRPC giữa các module** | Gọi giữa module là lời gọi hàm trong process (DI), không phải giao thức mạng — gRPC chỉ đáng cân nhắc lại nếu một module được tách thành service riêng theo điều kiện ở ADR-0015 |
 | **Typesense / Meilisearch thay Elasticsearch** | Nhanh và dễ vận hành hơn, nhưng sàn cần facet phức tạp, nhiều điều kiện xếp hạng và tổng hợp — đúng chỗ mạnh của ES. Ghi lại để nếu ES thành gánh nặng vận hành thì có đường lùi |
 | **GraphQL** | Client là web nội bộ của chính ta, OpenAPI + sinh client đã đủ; GraphQL thêm bài toán N+1 và phân quyền theo field |
 | **Drizzle thay Prisma** | Prisma 7 đã có driver adapter và client extension — chính là thứ chiến lược audit log dựa vào |
@@ -142,7 +147,7 @@ Xếp theo mức độ chặn nghiệp vụ, không theo độ thú vị kỹ th
 |---|---|---|
 | **Diễn tập khôi phục dữ liệu** (PITR + khôi phục thật mỗi quý) | ADOPT | Có backup mà chưa từng khôi phục thì coi như chưa có backup |
 | **External Secrets Operator + Sealed Secrets** | ADOPT | Đã nêu trong §7.3, cần nâng lên thành việc cụ thể ở sprint hạ tầng |
-| **Network policy mặc định deny** giữa các namespace | ADOPT | 16 database, không service nào được chạm DB của service khác — chặn ở tầng mạng, không chỉ bằng thoả thuận |
+| **Network policy mặc định deny** giữa các namespace | ADOPT | Một database dùng chung cho toàn app; ranh giới giữa module là quy ước code + ESLint boundary rule (xem `security.md §13`), network policy chỉ còn chặn truy cập Postgres/Redis từ ngoài namespace, không chặn được module-tới-module vì chúng ở cùng process |
 | **SLO + error budget** (Sloth hoặc Grafana SLO) | TRIAL | Gắn với NFR-001…NFR-012 để cảnh báo có ý nghĩa thay vì cảnh báo CPU |
 | **Tuân thủ Nghị định 13/2023/NĐ-CP về bảo vệ dữ liệu cá nhân** | ADOPT | Cần: bản ghi đồng ý, xuất dữ liệu cá nhân theo yêu cầu, xoá/ẩn danh khi đóng tài khoản, nhật ký truy cập dữ liệu cá nhân. Hiện `docs/` mới có phần redaction, chưa có quyền của chủ thể dữ liệu |
 | **Cookie consent + phân loại cookie** | ADOPT | Kéo theo việc nạp PostHog/analytics có điều kiện |
@@ -157,10 +162,10 @@ Bốn đề xuất dưới đây **không phải là thêm thư viện** mà là
 
 | Đề xuất | Thay đổi phạm vi | Ước lượng thêm |
 |---|---|---|
-| Domain mới **`shipping-logistics`** (service thứ 17, đơn vị triển khai thứ 19) | +1 service, +1 database, +3 file spec, ~14 `FEAT-*`, 4 event mới | ~3 sprint |
-| **Double-entry ledger** trong `wallet-settlement` | Viết lại mô hình dữ liệu ví, +6 `FEAT-*` | ~1 sprint |
-| ✅ **Đường xử lý video** — **đã duyệt 16/09/2026**, chọn ffmpeg tự host ([ADR-0014](adr/ADR-0014-video-pipeline.md)) | +1 hàng đợi, +1 worker (đơn vị triển khai thứ 18), +6 `FEAT-MED-*`, dùng lại 4 event `media.*` đã có | ~1,5 sprint |
-| **ClickHouse** cho event quảng cáo | +1 kho dữ liệu phải vận hành, đổi đường ghi của `video-ads` | ~1 sprint |
+| Domain mới **`shipping-logistics`** (module thứ 17 trong `backend/apps/api`, không phải service/database riêng) | +1 module, +1 file schema Prisma, +3 file spec, ~14 `FEAT-*`, 4 event mới | ~3 sprint |
+| **Double-entry ledger** trong module `payment` (ví) | Viết lại mô hình dữ liệu ví, +6 `FEAT-*` | ~1 sprint |
+| ✅ **Đường xử lý video** — **đã duyệt 16/09/2026**, chọn ffmpeg tự host ([ADR-0014](adr/ADR-0014-video-pipeline.md)) | +1 hàng đợi BullMQ chạy trên worker process, +6 `FEAT-MED-*`, dùng lại 4 event `media.*` đã có | ~1,5 sprint |
+| **ClickHouse** cho event quảng cáo | +1 kho dữ liệu phải vận hành, đổi đường ghi của module `video-ads` | ~1 sprint |
 
 **Đã chốt:** đường xử lý video — tự transcode bằng ffmpeg worker, lưu HLS trên object storage tương thích S3, phát qua
 CDN egress bằng 0; chi tiết ở [media-video-pipeline.md](media-video-pipeline.md), lý do và phương án bị loại ở
@@ -175,7 +180,7 @@ thực tế chứng minh Postgres không chịu nổi.
 ## 6. Việc cần làm tiếp theo
 
 1. Chốt 4 mục ở §5 — đây là quyết định phạm vi, thuộc về PO và Tech Lead.
-2. Mục nào được duyệt thì viết ADR tương ứng: `ADR-0013` tìm kiếm, `ADR-0014` đường xử lý video, `ADR-0015` sổ cái kép, `ADR-0016` tích hợp vận chuyển.
+2. Mục nào được duyệt thì viết ADR tương ứng: `ADR-0013` tìm kiếm, `ADR-0014` đường xử lý video, `ADR-0015` modular monolith (đã duyệt), `ADR-0016` sổ cái kép, `ADR-0017` tích hợp vận chuyển.
 3. Cập nhật [feature-inventory.md](../00-overview/feature-inventory.md) với các `FEAT-*` mới và cập nhật lại tổng số.
 4. Bổ sung công cụ đã ADOPT ở §2–§4 vào [cicd.md](../05-infra/cicd.md) và [testing-strategy.md](../06-quality/testing-strategy.md).
 

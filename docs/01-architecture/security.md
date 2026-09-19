@@ -2,11 +2,16 @@
 title: Bảo mật
 status: approved
 owner: Backend Lead
-updated: 2026-09-15
-related: [docs/00-overview/roles-and-permissions.md, docs/01-architecture/api-conventions.md, docs/04-frontend/auth-nextauth.md, docs/08-handoff/migration-from-legacy.md]
+updated: 2026-09-19
+related: [docs/00-overview/roles-and-permissions.md, docs/01-architecture/api-conventions.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md, docs/04-frontend/auth-nextauth.md, docs/08-handoff/migration-from-legacy.md]
 ---
 
 # Bảo mật
+
+> Từ [ADR-0015](adr/ADR-0015-modular-monolith.md), backend là một app NestJS (`backend/apps/api`) với nhiều module,
+> không phải nhiều service độc lập. Các sơ đồ dưới đây đổi lời gọi RPC qua `api-gateway`/service riêng thành lời
+> gọi module trực tiếp trong cùng process (module `platform` vẫn là điểm vào HTTP/WebSocket duy nhất). §13 đổi từ
+> "bảo mật giữa các service" sang "bảo mật giữa các module trong cùng process".
 
 ## 1. Mô hình mối đe doạ
 
@@ -31,15 +36,15 @@ related: [docs/00-overview/roles-and-permissions.md, docs/01-architecture/api-co
 sequenceDiagram
     participant B as Trình duyệt
     participant N as Next.js (NextAuth)
-    participant G as api-gateway
-    participant I as identity-service
+    participant Api as backend/apps/api (module platform)
+    participant Id as module identity
 
     B->>N: POST /api/auth/callback/credentials
-    N->>G: POST /v1/auth/login
-    G->>I: RPC identity.login
-    I->>I: bcrypt.compare, kiểm tra trạng thái tài khoản
-    I-->>G: { user, roles, accessToken, refreshToken }
-    G-->>N: 200
+    N->>Api: POST /v1/auth/login
+    Api->>Id: identityService.login(...)
+    Id->>Id: bcrypt.compare, kiểm tra trạng thái tài khoản
+    Id-->>Api: { user, roles, accessToken, refreshToken }
+    Api-->>N: 200
     N->>N: Mã hoá session JWE (AUTH_SECRET)
     N-->>B: Set-Cookie: __Secure-authjs.session-token (HttpOnly)
 
@@ -48,10 +53,10 @@ sequenceDiagram
     N-->>B: 200 hoặc 302 /vi/login?callbackUrl=...
 
     B->>N: fetch /api/proxy/v1/seller/products
-    N->>G: Authorization: Bearer <accessToken>
-    G->>G: JwtAuthGuard → RolesGuard → PermissionsGuard → PoliciesGuard
-    G->>I: (chỉ khi cache miss) identity.getUserSummary
-    G-->>N: 200
+    N->>Api: Authorization: Bearer <accessToken>
+    Api->>Api: JwtAuthGuard → RolesGuard → PermissionsGuard → PoliciesGuard
+    Api->>Id: (chỉ khi cache miss) identityService.getUserSummary(...)
+    Api-->>N: 200
 ```
 
 Trình duyệt **không bao giờ** cầm `accessToken` dưới dạng JavaScript đọc được. Token backend nằm trong session
@@ -71,13 +76,13 @@ NextAuth đã mã hoá; route handler của Next.js gắn nó vào header khi g�
 | Email verification | 24 giờ | DB (đã hash) | Dùng một lần |
 | Password reset | 1 giờ | DB (đã hash) | Dùng một lần, huỷ mọi phiên khi dùng xong |
 
-JWT ký bằng **RS256**. `identity-service` giữ khoá riêng; các service khác xác minh bằng khoá công khai lấy từ
-endpoint JWKS (cache 1 giờ). Đổi khoá theo kiểu chồng lấn: phát hành bằng khoá mới, vẫn chấp nhận khoá cũ đến khi
-mọi access token cũ hết hạn.
+JWT ký bằng **RS256**, khoá riêng và endpoint JWKS vẫn giữ dù chỉ một process xác minh — vì token còn phải xác thực
+với các bên ngoài process (app mobile tương lai, webhook nội bộ, job chạy ở worker riêng). Đổi khoá theo kiểu chồng
+lấn: phát hành bằng khoá mới, vẫn chấp nhận khoá cũ đến khi mọi access token cũ hết hạn.
 
 **Payload JWT không chứa `permissions[]`.** Danh sách permission thay đổi thường xuyên; đưa vào token khiến việc
-thu hồi chỉ có hiệu lực sau khi token hết hạn, và làm token phình to. Gateway tra permission từ cache Redis
-(TTL 15 phút, xoá ngay khi `rbac.permissions-changed` hoặc `user.locked` được phát).
+thu hồi chỉ có hiệu lực sau khi token hết hạn, và làm token phình to. `PermissionsGuard` tra permission từ cache
+Redis (TTL 15 phút, xoá ngay khi `rbac.permissions-changed` hoặc `user.locked` được phát trong process).
 
 ### Xoay refresh token
 
@@ -248,21 +253,21 @@ const products = await prisma.$queryRaw(Prisma.sql`SELECT * FROM products WHERE 
 ```mermaid
 sequenceDiagram
     participant FE as Frontend
-    participant G as api-gateway
-    participant M as media-service
+    participant Api as backend/apps/api (module platform)
+    participant Md as module media
     participant S as Supabase Storage
 
-    FE->>G: POST /v1/media/upload-url { fileName, mimeType, size }
-    G->>M: RPC media.createUploadUrl
-    M->>M: Kiểm tra MIME, dung lượng, quota người dùng
-    M->>S: Tạo signed upload URL (TTL 10 phút)
-    M-->>G: { uploadUrl, mediaId }
-    G-->>FE: 201
+    FE->>Api: POST /v1/media/upload-url { fileName, mimeType, size }
+    Api->>Md: mediaService.createUploadUrl(...)
+    Md->>Md: Kiểm tra MIME, dung lượng, quota người dùng
+    Md->>S: Tạo signed upload URL (TTL 10 phút)
+    Md-->>Api: { uploadUrl, mediaId }
+    Api-->>FE: 201
     FE->>S: PUT tệp trực tiếp
-    FE->>G: POST /v1/media/:mediaId/complete
-    G->>M: RPC media.complete
-    M->>M: Đối chiếu dung lượng thật, kiểm tra magic bytes
-    M->>M: Enqueue job thumbnail / transcode
+    FE->>Api: POST /v1/media/:mediaId/complete
+    Api->>Md: mediaService.complete(...)
+    Md->>Md: Đối chiếu dung lượng thật, kiểm tra magic bytes
+    Md->>Md: Enqueue job thumbnail / transcode (BullMQ, chạy ở worker process)
 ```
 
 | Loại | MIME cho phép | Tối đa |
@@ -328,16 +333,19 @@ Xoá tài khoản: ẩn danh hoá `User`/`Profile` (email → `deleted-<cuid>@ti
 **giữ nguyên** `Order`, `Payment`, `AuditLog` vì nghĩa vụ kế toán và chống gian lận. Chi tiết ở
 [data-architecture.md](data-architecture.md).
 
-## 13. Bảo mật nội bộ giữa các service
+## 13. Bảo mật nội bộ giữa các module
+
+Với [ADR-0015](adr/ADR-0015-modular-monolith.md), các module chạy trong cùng process, cùng quyền hệ điều hành —
+không còn network boundary giữa chúng, nên ranh giới phải được ép ở tầng code/CI thay vì tầng hạ tầng.
 
 | Hạng mục | Quy tắc |
 |---|---|
-| Truy cập | Service **chỉ** phơi ra qua RabbitMQ, không có Ingress công khai; NetworkPolicy chặn lưu lượng ngoài namespace |
-| Tin cậy | Service **không** tin gateway vô điều kiện — vẫn parse lại payload và kiểm tra `actor` trong metadata |
-| RabbitMQ | Mỗi service một user riêng, cấp quyền tối thiểu trên đúng exchange/queue của mình |
-| Postgres | Mỗi service một user riêng, chỉ được truy cập database của chính nó |
-| Redis | Tiền tố khoá theo service, giới hạn lệnh nguy hiểm (`FLUSHDB`, `KEYS`) |
-| Ảnh container | Chạy non-root, filesystem chỉ đọc, quét lỗ hổng (Trivy) trong CI, chặn merge nếu có lỗ hổng HIGH |
+| Truy cập ra ngoài | Chỉ module `platform` phơi HTTP/WebSocket ra Ingress; các module khác không tự expose route |
+| Ranh giới module | ESLint boundary rule chặn import chéo giữa `src/modules/<a>` và `src/modules/<b>` ngoại trừ qua `index.ts` (barrel export các service công khai) — chặn merge nếu vi phạm |
+| Tin cậy nội bộ | Một module gọi service của module khác vẫn phải qua tham số đã được guard xác thực ở tầng `platform` kiểm tra trước đó (`actor`, `sellerId` từ token), không tự suy diễn lại danh tính |
+| Postgres | Một database, một Prisma Client dùng chung; **không** cấp quyền truy cập bảng theo module ở tầng DB — ranh giới là quy ước code (không import Prisma model của module khác), kiểm bằng code review + `prisma-schema` skill |
+| Redis | Tiền tố khoá theo module, giới hạn lệnh nguy hiểm (`FLUSHDB`, `KEYS`) |
+| Ảnh container | Hai ảnh (web, worker) cùng build từ một codebase, chạy non-root, filesystem chỉ đọc, quét lỗ hổng (Trivy) trong CI, chặn merge nếu có lỗ hổng HIGH |
 
 ## 14. Checklist bảo mật trước khi phát hành
 

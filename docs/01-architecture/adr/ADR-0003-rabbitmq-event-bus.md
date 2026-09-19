@@ -1,14 +1,18 @@
 ---
 title: ADR-0003 — RabbitMQ làm event bus, BullMQ cho job nội bộ
-status: accepted
+status: superseded
 owner: Tech Lead
-updated: 2026-09-16
-related: [docs/01-architecture/communication-patterns.md, docs/01-architecture/adr/ADR-0002-database-per-service.md, docs/01-architecture/adr/ADR-0004-upstash-redis.md]
+updated: 2026-09-19
+related: [docs/01-architecture/communication-patterns.md, docs/01-architecture/adr/ADR-0002-database-per-service.md, docs/01-architecture/adr/ADR-0004-upstash-redis.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
 # ADR-0003 — RabbitMQ làm event bus, BullMQ cho job nội bộ
 
-**Trạng thái:** accepted · **Ngày:** 2026-09-16 · **Người quyết:** Tech Lead
+> **Superseded bởi [ADR-0015](ADR-0015-modular-monolith.md) (2026-09-19).** Modular monolith không còn nhiều service
+> cần một event bus phân tán — domain event dùng event emitter trong process. Phần BullMQ cho job nội bộ **vẫn còn
+> hiệu lực**, xem ADR-0015 §"Giao tiếp module-to-module". Nội dung RabbitMQ dưới đây giữ lại để tham chiếu lịch sử.
+
+**Trạng thái:** superseded (phần RabbitMQ) · **Ngày:** 2026-09-16 · **Người quyết:** Tech Lead
 
 ## Bối cảnh
 

@@ -2,19 +2,19 @@
 title: Yêu cầu — seller-onboarding
 status: draft
 owner: Backend Lead
-updated: 2026-09-16
-related: [docs/00-overview/feature-inventory.md, docs/01-architecture/service-catalog.md, docs/01-architecture/event-catalog.md, docs/01-architecture/rbac-advanced.md, docs/02-domain/schemas/seller-service.prisma.md, docs/03-specs/seller-onboarding/design.md]
+updated: 2026-09-19
+related: [docs/00-overview/feature-inventory.md, docs/01-architecture/service-catalog.md, docs/01-architecture/event-catalog.md, docs/01-architecture/rbac-advanced.md, docs/02-domain/schemas/seller-service.prisma.md, docs/03-specs/seller-onboarding/design.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
 # Yêu cầu — seller-onboarding (`SEL`)
 
 Phạm vi: toàn bộ `FEAT-SEL-*` trong [feature-inventory.md §4](../../00-overview/feature-inventory.md#4-seller-onboarding--trở-thành-người-bán) —
 nộp đơn đăng ký bán hàng, admin duyệt/từ chối, hồ sơ shop, trang shop công khai, thương hiệu, huy hiệu xác minh,
-tạm ngưng/khôi phục shop, chỉ số uy tín, cấu hình chính sách shop. Service sở hữu: `seller-service` (`seller_db`),
-xem [service-catalog.md](../../01-architecture/service-catalog.md#2-seller-service).
+tạm ngưng/khôi phục shop, chỉ số uy tín, cấu hình chính sách shop. Module sở hữu: `seller-service` (phần schema
+module `seller` trong Postgres chung), xem [service-catalog.md](../../01-architecture/service-catalog.md#2-seller-service).
 
-Ghi chú phạm vi: `ShopFollow` (theo dõi shop) thuộc `FEAT-USR-010` của domain `user-profile`, dù dùng chung
-`seller_db` — không đặc tả lại ở đây, chỉ xuất hiện trong mô hình dữ liệu của `design.md` vì cùng service.
+Ghi chú phạm vi: `ShopFollow` (theo dõi shop) thuộc `FEAT-USR-010` của domain `user-profile`, dù dùng chung phần
+schema module `seller` — không đặc tả lại ở đây, chỉ xuất hiện trong mô hình dữ liệu của `design.md` vì cùng module.
 
 ## 1. Nộp đơn đăng ký bán hàng (`FEAT-SEL-001`)
 
@@ -39,7 +39,7 @@ PHẢI tạo `SellerApplication` trạng thái `PENDING`, gắn `userId` từ to
 **Ưu tiên:** P0
 
 NẾU đơn đăng ký thiếu `shopName` hoặc `idDocumentUrl`, THÌ HỆ THỐNG PHẢI từ chối tạo đơn, trả lỗi validation theo
-schema `@timmyhub/contracts`, không ghi vào `seller_db`, và không phát event.
+schema `@timmyhub/contracts`, không ghi vào phần schema module `seller`, và không phát event.
 
 | # | Given | When | Then |
 |---|---|---|---|
@@ -278,9 +278,11 @@ KHI admin có quyền `seller:shops:restore` khôi phục một shop đang `isSu
 **Nguồn:** `FEAT-SEL-008`
 **Ưu tiên:** P2
 
-KHI `seller-service` nhận `EVT-order.completed`, HỆ THỐNG PHẢI cập nhật `cancelRate` và `avgResponseHours` của
-`SellerProfile` tương ứng bằng `UPDATE … WHERE id = :sellerProfileId` nguyên tử, và ghi `ProcessedEvent(eventId)`
-trước khi xử lý để đảm bảo idempotent khi RabbitMQ gửi lại.
+KHI module `seller` nhận `EVT-order.completed` qua `EventEmitter2` (`@OnEvent`, trong cùng process với module
+`order`), HỆ THỐNG PHẢI cập nhật `cancelRate` và `avgResponseHours` của `SellerProfile` tương ứng bằng
+`UPDATE … WHERE id = :sellerProfileId` nguyên tử, và ghi `ProcessedEvent(eventId)` trước khi xử lý để đảm bảo
+idempotent nếu sự kiện bị phát lại (retry logic nội bộ của module phát, chạy lại thủ công/backfill) — không còn vì
+lý do "at-least-once delivery" của broker như bản RabbitMQ cũ.
 
 | # | Given | When | Then |
 |---|---|---|---|

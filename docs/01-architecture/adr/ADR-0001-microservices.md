@@ -1,14 +1,19 @@
 ---
 title: ADR-0001 — Full microservices thay monolith
-status: accepted
+status: superseded
 owner: Tech Lead
-updated: 2026-09-16
-related: [docs/01-architecture/service-catalog.md, docs/01-architecture/communication-patterns.md, docs/01-architecture/adr/ADR-0002-database-per-service.md]
+updated: 2026-09-19
+related: [docs/01-architecture/service-catalog.md, docs/01-architecture/communication-patterns.md, docs/01-architecture/adr/ADR-0002-database-per-service.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
 # ADR-0001 — Full microservices thay monolith
 
-**Trạng thái:** accepted · **Ngày:** 2026-09-16 · **Người quyết:** Tech Lead (người dùng đã chốt phương án khi lên plan)
+> **Superseded bởi [ADR-0015](ADR-0015-modular-monolith.md) (2026-09-19).** Chi phí vận hành ước tính khi lên kế
+> hoạch hạ tầng (16+ database, RabbitMQ topology, tracing bắt buộc từ đầu) vượt quá lợi ích scale đo được ở quy mô
+> đội hiện tại — xem điều kiện xem lại đã ghi sẵn bên dưới. Nội dung dưới đây giữ lại để tham chiếu lịch sử, **không
+> còn là quyết định hiệu lực**.
+
+**Trạng thái:** superseded · **Ngày:** 2026-09-16 · **Người quyết:** Tech Lead (người dùng đã chốt phương án khi lên plan)
 
 ## Bối cảnh
 

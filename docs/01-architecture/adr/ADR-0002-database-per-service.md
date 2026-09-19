@@ -1,14 +1,18 @@
 ---
 title: ADR-0002 — Database-per-service + transactional outbox
-status: accepted
+status: superseded
 owner: Tech Lead
-updated: 2026-09-16
-related: [docs/01-architecture/adr/ADR-0001-microservices.md, docs/01-architecture/data-architecture.md, docs/01-architecture/communication-patterns.md]
+updated: 2026-09-19
+related: [docs/01-architecture/adr/ADR-0001-microservices.md, docs/01-architecture/data-architecture.md, docs/01-architecture/communication-patterns.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
 # ADR-0002 — Database-per-service + transactional outbox
 
-**Trạng thái:** accepted · **Ngày:** 2026-09-16 · **Người quyết:** Tech Lead
+> **Superseded bởi [ADR-0015](ADR-0015-modular-monolith.md) (2026-09-19)** cùng với ADR-0001. Modular monolith dùng
+> một database duy nhất; outbox chỉ còn giữ cho hệ quả bất đồng bộ cần đảm bảo (email, webhook, audit), không còn cho
+> mọi domain event. Nội dung dưới đây giữ lại để tham chiếu lịch sử, **không còn là quyết định hiệu lực**.
+
+**Trạng thái:** superseded · **Ngày:** 2026-09-16 · **Người quyết:** Tech Lead
 
 ## Bối cảnh
 

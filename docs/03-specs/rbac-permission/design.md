@@ -2,16 +2,17 @@
 title: Design — rbac-permission
 status: draft
 owner: Backend Lead
-updated: 2026-09-16
-related: [docs/03-specs/rbac-permission/requirements.md, docs/03-specs/rbac-permission/tasks.md, docs/01-architecture/rbac-advanced.md, docs/00-overview/roles-and-permissions.md, docs/01-architecture/service-catalog.md, docs/02-domain/schemas/identity-service.prisma.md, docs/01-architecture/event-catalog.md, docs/01-architecture/security.md]
+updated: 2026-09-19
+related: [docs/03-specs/rbac-permission/requirements.md, docs/03-specs/rbac-permission/tasks.md, docs/01-architecture/rbac-advanced.md, docs/00-overview/roles-and-permissions.md, docs/01-architecture/service-catalog.md, docs/02-domain/schemas/identity-service.prisma.md, docs/01-architecture/event-catalog.md, docs/01-architecture/security.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
 # Design — `rbac-permission`
 
-Service sở hữu: `identity-service` (`identity_db`), thư mục `rbac/`, `casl/`
-([service-catalog.md §1](../../01-architecture/service-catalog.md)). Bốn lớp kiểm quyền và cơ chế cache/vô hiệu hoá đã
-được đặc tả đầy đủ ở [rbac-advanced.md](../../01-architecture/rbac-advanced.md) — tài liệu này **không lặp lại**, chỉ
-trích và tham chiếu khi cần cho thiết kế cụ thể của domain `rbac-permission`.
+Module sở hữu: `identity` trong `backend/apps/api` (một database Postgres dùng chung, theo
+[ADR-0015](../../01-architecture/adr/ADR-0015-modular-monolith.md)), thư mục `rbac/`, `casl/`
+([service-catalog.md §1](../../01-architecture/service-catalog.md), đọc như bản đồ module). Bốn lớp kiểm quyền và cơ
+chế cache/vô hiệu hoá đã được đặc tả đầy đủ ở [rbac-advanced.md](../../01-architecture/rbac-advanced.md) — tài liệu
+này **không lặp lại**, chỉ trích và tham chiếu khi cần cho thiết kế cụ thể của domain `rbac-permission`.
 
 ---
 
@@ -116,10 +117,11 @@ roles-and-permissions.md §4.1–§4.10; `identity-service` seed **toàn bộ**,
 `Permission` là danh mục dùng chung — mỗi service chỉ tự seed các `RolePermission` liên quan tới permission của chính
 module mình khi cần, còn danh mục gốc tập trung ở đây để tránh trùng tên qua nhiều service.
 
-**Đối chiếu bắt buộc (REQ-RBAC-014):** script `check-permissions-consistency` chạy lúc bootstrap mọi service, không
-riêng `identity-service` — vì `@Permissions(...)` xuất hiện ở tất cả service, còn bảng `Permission` chỉ có ở
-`identity_db`. Mỗi service không-identity lấy snapshot permission qua RPC `rbac.listPermissions` lúc build/CI (không
-gọi runtime mỗi lần boot) và so với `PERMISSIONS` const của chính nó.
+**Đối chiếu bắt buộc (REQ-RBAC-014):** script `check-permissions-consistency` chạy lúc bootstrap của app
+`backend/apps/api`, quét metadata `@Permissions(...)` trên toàn bộ module — không riêng module `identity` — vì bảng
+`Permission` chỉ có ở database dùng chung. Mỗi module không phải `identity` lấy snapshot permission qua gọi trực tiếp
+`RbacService.listPermissions()` qua DI lúc build/CI (không gọi runtime mỗi lần boot) và so với `PERMISSIONS` const
+của chính nó.
 
 ---
 
@@ -141,9 +143,10 @@ gọi runtime mỗi lần boot) và so với `PERMISSIONS` const của chính n�
 | `PUT /v1/rbac/users/:id/permissions` | `rbac:user-permissions:assign` | `all` | REQ-RBAC-003 |
 | `GET /v1/rbac/users/:id/effective-permissions` | `identity:users:read` hoặc chính chủ | `own` \| `all` | REQ-RBAC-011 |
 
-RPC nội bộ (không qua gateway, gọi service-to-service): `rbac.getEffectivePermissions(userId)`,
-`rbac.listPermissions()`, `rbac.assignRole(userId, roleName)`, `rbac.checkPermission(userId, permission)`
-([service-catalog.md §1](../../01-architecture/service-catalog.md)).
+Gọi trực tiếp qua NestJS DI giữa module (không qua module `platform`, module khác import `RbacService` đã export qua
+`index.ts`): `rbac.getEffectivePermissions(userId)`, `rbac.listPermissions()`, `rbac.assignRole(userId, roleName)`,
+`rbac.checkPermission(userId, permission)` ([service-catalog.md §1](../../01-architecture/service-catalog.md)) — tên
+method giữ nguyên, chỉ đổi khung giao tiếp so với bản RPC network cũ.
 
 ---
 
@@ -254,32 +257,32 @@ bằng cách đưa điều kiện scope vào `findFirst`/`findUnique` kết hợ
 
 ```mermaid
 sequenceDiagram
-    participant C as Client (qua gateway)
-    participant GW as api-gateway
+    participant C as Client
+    participant Api as backend/apps/api (module platform)
     participant G1 as JwtAuthGuard
     participant G2 as RolesGuard
     participant G3 as PermissionsGuard
     participant R as Redis perm:{userId}
-    participant ID as identity-service
+    participant Rbac as RbacService (module identity)
     participant G4 as PoliciesGuard (CASL)
     participant H as Handler
 
-    C->>GW: PATCH /v1/catalog/products/:id/approve
-    GW->>G1: Xác thực JWT (RS256), kiểm sessionId chưa bị thu hồi
-    G1-->>GW: OK hoặc 401
-    GW->>G2: @Roles(ADMIN) so với User.roles
-    G2-->>GW: OK hoặc 403 (dừng, không tới lớp 2)
-    GW->>G3: @Permissions(catalog:products:approve)
+    C->>Api: PATCH /v1/catalog/products/:id/approve
+    Api->>G1: Xác thực JWT (RS256), kiểm sessionId chưa bị thu hồi
+    G1-->>Api: OK hoặc 401
+    Api->>G2: @Roles(ADMIN) so với User.roles
+    G2-->>Api: OK hoặc 403 (dừng, không tới lớp 2)
+    Api->>G3: @Permissions(catalog:products:approve)
     G3->>R: GET perm:{userId}
     alt cache hit
         R-->>G3: Set<permission>
     else cache miss hoặc Redis lỗi
-        G3->>ID: rbac.getEffectivePermissions(userId)  (REQ-RBAC-013, đường chậm)
-        ID-->>G3: Set<permission>
+        G3->>Rbac: rbacService.getEffectivePermissions(userId) (gọi DI, REQ-RBAC-013, đường chậm)
+        Rbac-->>G3: Set<permission>
         G3->>R: SET perm:{userId} TTL 15p (best-effort)
     end
-    G3-->>GW: OK hoặc 403 (dừng, không tới lớp 3)
-    GW->>G4: ab.can('approve', subject('Product', record))
+    G3-->>Api: OK hoặc 403 (dừng, không tới lớp 3)
+    Api->>G4: ab.can('approve', subject('Product', record))
     G4->>G4: mapSubject tường minh; scope theo whereForScope khi là danh sách
     alt trong phạm vi + rule cho phép
         G4-->>H: Cho phép
@@ -325,11 +328,12 @@ khoá/ràng buộc:
 
 ## 10. Ảnh hưởng tới domain khác
 
-- Mọi domain khác **đọc** permission qua RPC `rbac.getEffectivePermissions`/`rbac.checkPermission`, không truy vấn
-  trực tiếp `identity_db` (CLAUDE.md luật #2).
-- `audit-log` nghe mọi thay đổi RBAC (`rbac.permissions.changed`, `user.role-granted/revoked`) để ghi audit —
-  xem `FEAT-AUD-001`.
-- `api-gateway` là nơi thực thi guard chain thực tế cho request từ FE; `identity-service` chỉ là nguồn sự thật cho
-  dữ liệu quyền, không tự mình chặn request của service khác (mỗi service tự dựng guard, gọi RPC khi cần).
-- `seller-service` nghe `seller.application.approved` để yêu cầu `identity-service` gán role `SELLER` — quan hệ hai
+- Mọi module khác **đọc** permission bằng cách gọi trực tiếp `RbacService.getEffectivePermissions()`/
+  `RbacService.checkPermission()` qua DI, không tự import Prisma model của module `identity` (CLAUDE.md luật #2).
+- Module `audit` nghe mọi thay đổi RBAC (`rbac.permissions.changed`, `user.role-granted/revoked`) qua `EventEmitter2`
+  trong process để ghi audit — xem `FEAT-AUD-001`.
+- Module `platform` là nơi thực thi guard chain thực tế cho request từ FE; module `identity` chỉ là nguồn sự thật cho
+  dữ liệu quyền — guard trong `platform` gọi trực tiếp `RbacService` (DI) để lấy permission hiệu lực, không phải mỗi
+  module tự dựng guard gọi RPC riêng.
+- Module `seller` nghe `seller.application.approved` để yêu cầu module `identity` gán role `SELLER` — quan hệ hai
   chiều đã ghi ở [service-catalog.md §1](../../01-architecture/service-catalog.md).

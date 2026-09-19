@@ -2,7 +2,7 @@
 title: Requirements — catalog-product
 status: draft
 owner: Backend Lead
-updated: 2026-09-16
+updated: 2026-09-19
 related:
     - docs/00-overview/feature-inventory.md
     - docs/02-domain/product-variant.md
@@ -10,6 +10,7 @@ related:
     - docs/01-architecture/event-catalog.md
     - docs/03-specs/catalog-product/design.md
     - docs/03-specs/catalog-product/tasks.md
+    - docs/01-architecture/adr/ADR-0015-modular-monolith.md
 ---
 
 # Requirements — `catalog-product`
@@ -101,7 +102,7 @@ mà nó chứa nếu không có ảnh riêng.
 |---|---|---|---|
 | 1 | Sản phẩm chưa có ảnh | Seller thêm 5 ảnh vào thư viện | Cả 5 được lưu, ảnh đầu tiên là ảnh đại diện mặc định |
 | 2 | Option "Màu sắc" có giá trị "Đen" gắn `imageId` riêng | Trang chi tiết hiển thị variant "Đen / L" | Ảnh hiển thị là ảnh của giá trị "Đen", không phải ảnh thư viện chung |
-| 3 | Seller gắn `imageId` không tồn tại ở `media-service` (kiểm qua RPC `media.get`) | Gửi lưu | `422 IMAGE_NOT_FOUND`, không lưu |
+| 3 | Seller gắn `imageId` không tồn tại ở module `media` (kiểm qua gọi trực tiếp `MediaService.get()` (DI)) | Gửi lưu | `422 IMAGE_NOT_FOUND`, không lưu |
 
 ---
 
@@ -359,8 +360,9 @@ KHI Seller ngừng kinh doanh một sản phẩm đã có đơn hàng tham chi�
 **Ưu tiên:** P1
 
 NẾU Seller hoặc Admin cố xoá cứng (`DELETE`) một `Product` có bất kỳ `ProductVariant` nào đã từng được tham chiếu
-bởi `OrderItem` (kiểm qua RPC `order.hasReferences` hoặc cờ nội bộ được đồng bộ qua `EVT-order.created`), THÌ HỆ
-THỐNG PHẢI từ chối, trả `409 PRODUCT_IN_USE`, và hướng dẫn dùng "Ngừng kinh doanh" thay thế.
+bởi `OrderItem` (kiểm qua gọi trực tiếp `OrderService.hasReferences()` (DI) hoặc cờ nội bộ đồng bộ qua
+`EVT-order.created` — `EventEmitter2` listener), THÌ HỆ THỐNG PHẢI từ chối, trả `409 PRODUCT_IN_USE`, và hướng dẫn
+dùng "Ngừng kinh doanh" thay thế.
 
 | # | Given | When | Then |
 |---|---|---|---|

@@ -2,16 +2,17 @@
 title: Requirements — identity-auth
 status: draft
 owner: Backend Lead
-updated: 2026-09-16
-related: [docs/00-overview/feature-inventory.md, docs/01-architecture/service-catalog.md, docs/01-architecture/event-catalog.md, docs/01-architecture/security.md, docs/01-architecture/adr/ADR-0005-nextauth.md, docs/02-domain/schemas/identity-service.prisma.md, docs/03-specs/identity-auth/design.md]
+updated: 2026-09-19
+related: [docs/00-overview/feature-inventory.md, docs/01-architecture/service-catalog.md, docs/01-architecture/event-catalog.md, docs/01-architecture/security.md, docs/01-architecture/adr/ADR-0005-nextauth.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md, docs/02-domain/schemas/identity-service.prisma.md, docs/03-specs/identity-auth/design.md]
 ---
 
 # Requirements — identity-auth (`IDN`)
 
 Phạm vi: đăng ký, đăng nhập, phiên (access + refresh token), thiết bị, quên/đổi mật khẩu, SSO Google/Facebook,
 xác minh email, khoá tài khoản, 2FA cho admin, và các quy ước phiên phía frontend (NextAuth, cookie, `callbackUrl`).
-Sở hữu bởi `identity-service` (§ `docs/01-architecture/service-catalog.md`), ngoại trừ FEAT-IDN-012/013/019 thuộc
-`api-gateway`/`frontend` nhưng được đặc tả ở đây vì cùng một luồng nghiệp vụ xác thực.
+Sở hữu bởi module `identity` trong `backend/apps/api` (§ `docs/01-architecture/service-catalog.md`, đọc như bản đồ
+module theo [ADR-0015](../../01-architecture/adr/ADR-0015-modular-monolith.md)), ngoại trừ FEAT-IDN-012/013/019 thuộc
+module `platform`/`frontend` nhưng được đặc tả ở đây vì cùng một luồng nghiệp vụ xác thực.
 
 Mẫu EARS dùng: Ubiquitous · Event-driven · State-driven · Optional · Unwanted (xem `.claude/skills/spec-domain/SKILL.md`).
 
@@ -39,7 +40,7 @@ trong cùng transaction (outbox).
 **Nguồn:** `FEAT-IDN-001`
 **Ưu tiên:** P0
 
-NẾU `email` đã tồn tại trong `identity_db` (kể cả tài khoản chỉ có `googleId`/`facebookId`, chưa có `passwordHash`),
+NẾU `email` đã tồn tại trong phần schema module `identity` (kể cả tài khoản chỉ có `googleId`/`facebookId`, chưa có `passwordHash`),
 THÌ HỆ THỐNG PHẢI từ chối tạo tài khoản mới với `409 EMAIL_ALREADY_REGISTERED` và **không** tiết lộ tài khoản đó
 được tạo bằng phương thức nào.
 

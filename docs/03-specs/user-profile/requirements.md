@@ -2,7 +2,7 @@
 title: Requirements — user-profile
 status: draft
 owner: Backend Lead
-updated: 2026-09-16
+updated: 2026-09-19
 related:
     - docs/00-overview/feature-inventory.md
     - docs/01-architecture/service-catalog.md
@@ -11,13 +11,15 @@ related:
     - docs/02-domain/schemas/order-service.prisma.md
     - docs/03-specs/user-profile/design.md
     - docs/03-specs/user-profile/tasks.md
+    - docs/01-architecture/adr/ADR-0015-modular-monolith.md
 ---
 
 # Requirements — `user-profile`
 
 Domain hồ sơ người dùng: xem/sửa hồ sơ cá nhân, sổ địa chỉ giao hàng, trang quản lý tài khoản phía admin,
 khoá/mở khoá tài khoản, đổi mật khẩu, xoá tài khoản, xuất dữ liệu cá nhân, theo dõi shop. Dữ liệu `User`/`Profile`
-thuộc `identity-service` (`identity_db`); sổ địa chỉ (`Address`) thuộc `order-service` (`order_db`) — xem lý do ở
+thuộc `identity-service` (phần schema module `identity`); sổ địa chỉ (`Address`) thuộc `order-service` (phần schema
+module `order`) — xem lý do ở
 [design.md §1](design.md#1-mô-hình-dữ-liệu). Hai `FEAT-*` trong domain này (`FEAT-USR-006`, một phần `FEAT-USR-007`)
 là màn hình lối vào cho nghiệp vụ do domain khác sở hữu — chỉ đặc tả phần lối vào, không lặp lại toàn bộ nghiệp vụ.
 
@@ -133,9 +135,9 @@ NẾU người dùng thao tác lên một `Address` không thuộc sở hữu c�
 **Nguồn:** `FEAT-USR-003`
 **Ưu tiên:** P0
 
-KHI người dùng mở form thêm/sửa địa chỉ, HỆ THỐNG PHẢI lấy danh sách tỉnh/huyện/xã từ `master-data-service` qua RPC
-`masterdata.getProvinces` / `masterdata.getDistricts` / `masterdata.getWards`, huyện/xã lọc theo tỉnh/huyện đã chọn
-trước đó.
+KHI người dùng mở form thêm/sửa địa chỉ, HỆ THỐNG PHẢI lấy danh sách tỉnh/huyện/xã từ module `master-data` bằng cách
+gọi trực tiếp qua NestJS DI (`MasterDataService.getProvinces()` / `getDistricts()` / `getWards()`, cùng process,
+không qua network), huyện/xã lọc theo tỉnh/huyện đã chọn trước đó.
 
 | # | Given | When | Then |
 |---|---|---|---|
@@ -148,15 +150,15 @@ trước đó.
 **Nguồn:** `FEAT-USR-003`
 **Ưu tiên:** P0
 
-NẾU `provinceCode`/`districtCode`/`wardCode` gửi lên không tồn tại ở `master-data-service` hoặc không đúng quan hệ
+NẾU `provinceCode`/`districtCode`/`wardCode` gửi lên không tồn tại ở module `master-data` hoặc không đúng quan hệ
 phân cấp (`districtCode` không thuộc `provinceCode`, `wardCode` không thuộc `districtCode`), THÌ HỆ THỐNG PHẢI từ
 chối lưu địa chỉ, trả lỗi theo field, không tự "đoán" hoặc tự sửa.
 
 | # | Given | When | Then |
 |---|---|---|---|
 | 1 | `wardCode` hợp lệ nhưng thuộc huyện khác `districtCode` gửi lên | `POST`/`PATCH /api/addresses` | `422`, lỗi field `wardCode` |
-| 2 | `provinceCode` không tồn tại trong `master-data-service` | `POST`/`PATCH /api/addresses` | `422`, lỗi field `provinceCode` |
-| 3 | `master-data-service` không phản hồi (timeout RPC) | `POST`/`PATCH /api/addresses` | `503`, không lưu bản ghi một phần, client được yêu cầu thử lại |
+| 2 | `provinceCode` không tồn tại trong module `master-data` | `POST`/`PATCH /api/addresses` | `422`, lỗi field `provinceCode` |
+| 3 | Lời gọi `MasterDataService` (DI, trong process) lỗi hoặc vượt quá timeout nội bộ đã cấu hình cho lời gọi liên module (ví dụ dữ liệu chưa sẵn sàng, lỗi truy vấn) | `POST`/`PATCH /api/addresses` | `503`, không lưu bản ghi một phần, client được yêu cầu thử lại |
 
 ## 4. Quản lý tài khoản phía admin (`FEAT-USR-004`, `FEAT-USR-005`)
 
@@ -302,8 +304,8 @@ chặn.
 **Ưu tiên:** P2
 
 KHI người dùng yêu cầu xuất dữ liệu cá nhân, HỆ THỐNG PHẢI tạo job bất đồng bộ (BullMQ, theo `CLAUDE.md` luật #16 —
-không xử lý trong đường request), tổng hợp `User`, `Profile`, `Address` (và uỷ quyền các service khác đóng góp phần
-của họ qua RPC), đóng gói file, và thông báo cho người dùng khi sẵn sàng tải.
+không xử lý trong đường request), tổng hợp `User`, `Profile`, `Address` (và gọi trực tiếp qua DI các module khác để
+lấy phần dữ liệu của họ), đóng gói file, và thông báo cho người dùng khi sẵn sàng tải.
 
 | # | Given | When | Then |
 |---|---|---|---|
@@ -318,8 +320,8 @@ của họ qua RPC), đóng gói file, và thông báo cho người dùng khi s�
 **Nguồn:** `FEAT-USR-010`
 **Ưu tiên:** P1
 
-KHI người dùng theo dõi hoặc bỏ theo dõi một shop, HỆ THỐNG PHẢI ghi/xoá bản ghi `ShopFollow` (thuộc
-`seller-service`, gọi qua RPC — xem [design.md §3](design.md#3-api)) gắn đúng `userId` của người gọi.
+KHI người dùng theo dõi hoặc bỏ theo dõi một shop, HỆ THỐNG PHẢI ghi/xoá bản ghi `ShopFollow` (thuộc module `seller`,
+gọi trực tiếp qua DI — xem [design.md §3](design.md#3-api)) gắn đúng `userId` của người gọi.
 
 | # | Given | When | Then |
 |---|---|---|---|

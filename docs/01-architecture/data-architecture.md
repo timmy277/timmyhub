@@ -2,84 +2,81 @@
 title: Kiến trúc dữ liệu
 status: approved
 owner: Backend Lead
-updated: 2026-09-15
-related: [docs/01-architecture/adr/ADR-0002-database-per-service.md, docs/01-architecture/adr/ADR-0009-prisma-migrate.md, docs/02-domain/domain-model.md]
+updated: 2026-09-19
+related: [docs/01-architecture/adr/ADR-0015-modular-monolith.md, docs/01-architecture/adr/ADR-0009-prisma-migrate.md, docs/02-domain/domain-model.md]
 ---
 
 # Kiến trúc dữ liệu
+
+> Trước ngày 2026-09-19, tài liệu này mô tả 16 database riêng theo từng service. Theo
+> [ADR-0015](adr/ADR-0015-modular-monolith.md), toàn bộ dữ liệu nằm trong **một database Postgres**, tổ chức theo
+> module bằng Prisma multi-file schema. Ranh giới dữ liệu giữa các module giờ được giữ bằng **quy ước code**, không
+> phải bằng quyền kết nối DB riêng.
 
 ## 1. Nguyên tắc nền
 
 | # | Nguyên tắc | Kiểm chứng bằng |
 |---|---|---|
-| 1 | Mỗi service sở hữu **đúng một** database; không ai khác kết nối vào | Mỗi service có `DATABASE_URL` riêng với tài khoản riêng, chỉ được cấp quyền trên schema của mình |
-| 2 | Không `JOIN` xuyên service | Rà soát PR; không tồn tại chuỗi kết nối chéo trong cấu hình |
-| 3 | Khoá ngoại **chỉ trong cùng database** | Tham chiếu ra ngoài lưu dưới dạng id trần (`sellerId String`), không `@relation` |
-| 4 | Dữ liệu trùng lặp là chấp nhận được, miễn là chỉ một nơi được ghi | Read model luôn `readonly`, chỉ cập nhật bởi event handler |
-| 5 | Dữ liệu tiền bạc dùng `Decimal`, không `Float` | Lint schema |
-| 6 | Mọi thay đổi schema đi qua `prisma migrate` | CI chặn nếu `migrations/` không khớp `schema.prisma` |
-| 7 | Không xoá cứng dữ liệu nghiệp vụ có tham chiếu | `deletedAt` + lọc mặc định |
+| 1 | Một database Postgres cho toàn ứng dụng, tổ chức theo module bằng multi-file schema (`prisma/schema/<module>.prisma`) | Một `DATABASE_URL` cho `backend/apps/api` |
+| 2 | Không service của module này tự viết Prisma query trên bảng của module khác | ESLint boundary rule + rà soát PR — dù kỹ thuật có thể `JOIN` được, quy ước vẫn cấm để giữ khả năng tách sau này |
+| 3 | Khoá ngoại xuyên module lưu dưới dạng **id trần** (`sellerId String`), không dùng `@relation` của Prisma xuyên module | Chỉ `@relation` trong cùng module; tham chiếu module khác luôn là cột `String` thường |
+| 4 | Dữ liệu tiền bạc dùng `Decimal`, không `Float` | Lint schema |
+| 5 | Mọi thay đổi schema đi qua `prisma migrate` | CI chặn nếu `migrations/` không khớp `schema/` |
+| 6 | Không xoá cứng dữ liệu nghiệp vụ có tham chiếu | `deletedAt` + lọc mặc định |
+| 7 | Ảnh dữ liệu (denormalized snapshot) chỉ dùng khi giá trị **phải đóng băng** tại thời điểm giao dịch, không phải để né việc gọi service khác | Rà soát PR — xem §3 |
 
-## 2. Bản đồ database
+## 2. Bản đồ schema (multi-file, một database)
 
-| Database | Service | Nhóm model chính | Kích thước dự kiến năm 1 |
+| File schema | Module | Nhóm model chính | Kích thước dự kiến năm 1 |
 |---|---|---|---|
-| `identity_db` | identity | `User`, `Profile`, `Device`, `RefreshToken`, `SystemRole`, `Permission`, `RolePermission`, `UserPermission`, `PasswordResetToken` | ~50 K user, ~500 K token |
-| `seller_db` | seller | `SellerProfile`, `SellerApplication`, `BrandProfile`, `ShopFollow`, `ShopPolicy` | ~5 K shop |
-| `catalog_db` | catalog | `Category`, `Product`, `ProductVariant`, `ProductImage`, `ProductAttribute`, `Inventory`, `InventoryReservation`, `InventoryLedger` | ~200 K sản phẩm, ~800 K biến thể, ledger ~5 M dòng |
-| `cart_db` | cart | `Cart`, `CartItem`, `SavedItem` | ~50 K giỏ |
-| `order_db` | order | `Order`, `OrderItem`, `OrderStatusHistory`, `Address`, `ReturnRequest`, `SagaState` | ~700 K đơn |
-| `payment_db` | payment | `Payment`, `PaymentAttempt`, `Refund`, `Wallet`, `WalletTransaction`, `Withdrawal`, `Reconciliation` | ~700 K giao dịch |
-| `promotion_db` | promotion | `Voucher`, `UserVoucher`, `VoucherUsageLog`, `PromotionCampaign`, `CampaignProduct`, `FlashSaleSlot` | ~2 M `UserVoucher` |
-| `content_db` | content | `Post`, `PostProduct`, `PostLike`, `PostComment`, `AdCampaign`, `AdCreative`, `AdPlacement`, `AdEventRollup`, `ContentReport` | ~100 K bài, rollup ~10 M dòng |
-| `engagement_db` | engagement | `Review`, `ReviewComment`, `ReviewHelpfulVote`, `WishlistItem`, `PurchasedItem` (read model) | ~500 K đánh giá |
-| `chat_db` | chat | `Conversation`, `ConversationParticipant`, `ChatMessage`, `SupportTicket`, `Dispute` | ~10 M tin nhắn |
-| `notification_db` | notification | `Notification`, `NotificationPreference`, `NotificationTemplate`, `DeliveryLog` | ~20 M thông báo |
-| `search_db` | search | `IndexJob`, `SearchKeyword`, `SyncCheckpoint` | nhỏ |
-| `media_db` | media | `MediaAsset`, `MediaVariant`, `UploadSession` | ~2 M tệp |
-| `analytics_db` | analytics | `DailyRollup`, `HourlyRollup`, `FunnelEvent`, `CohortSnapshot`, `ReportJob` | rollup ~20 M dòng |
-| `audit_db` | audit | `AuditLog` (phân vùng), `SystemLog` (phân vùng) | ~100 M dòng/năm |
-| `masterdata_db` | masterdata | `Province`, `District`, `Ward`, `SystemConfig`, `FeatureFlag`, `ShippingRate`, `ReasonCode` | ~11 K bản ghi địa giới |
+| `identity.prisma` | identity | `User`, `Profile`, `Device`, `RefreshToken`, `SystemRole`, `Permission`, `RolePermission`, `UserPermission`, `PasswordResetToken` | ~50 K user, ~500 K token |
+| `seller.prisma` | seller | `SellerProfile`, `SellerApplication`, `BrandProfile`, `ShopFollow`, `ShopPolicy` | ~5 K shop |
+| `catalog.prisma` | catalog | `Category`, `Product`, `ProductVariant`, `ProductImage`, `ProductAttribute`, `Inventory`, `InventoryReservation`, `InventoryLedger` | ~200 K sản phẩm, ~800 K biến thể, ledger ~5 M dòng |
+| `cart.prisma` | cart | `Cart`, `CartItem`, `SavedItem` | ~50 K giỏ |
+| `order.prisma` | order | `Order`, `OrderItem`, `OrderStatusHistory`, `Address`, `ReturnRequest` | ~700 K đơn |
+| `payment.prisma` | payment | `Payment`, `PaymentAttempt`, `Refund`, `Wallet`, `WalletTransaction`, `Withdrawal`, `Reconciliation` | ~700 K giao dịch |
+| `promotion.prisma` | promotion | `Voucher`, `UserVoucher`, `VoucherUsageLog`, `PromotionCampaign`, `CampaignProduct`, `FlashSaleSlot` | ~2 M `UserVoucher` |
+| `content.prisma` | content | `Post`, `PostProduct`, `PostLike`, `PostComment`, `AdCampaign`, `AdCreative`, `AdPlacement`, `AdEventRollup`, `ContentReport` | ~100 K bài, rollup ~10 M dòng |
+| `engagement.prisma` | engagement | `Review`, `ReviewComment`, `ReviewHelpfulVote`, `WishlistItem` | ~500 K đánh giá |
+| `chat.prisma` | chat | `Conversation`, `ConversationParticipant`, `ChatMessage`, `SupportTicket`, `Dispute` | ~10 M tin nhắn |
+| `notification.prisma` | notification | `Notification`, `NotificationPreference`, `NotificationTemplate`, `DeliveryLog` | ~20 M thông báo |
+| `search.prisma` | search | `IndexJob`, `SearchKeyword`, `SyncCheckpoint` | nhỏ |
+| `media.prisma` | media | `MediaAsset`, `MediaVariant`, `UploadSession` | ~2 M tệp |
+| `analytics.prisma` | analytics | `DailyRollup`, `HourlyRollup`, `FunnelEvent`, `CohortSnapshot`, `ReportJob` | rollup ~20 M dòng |
+| `audit.prisma` | audit | `AuditLog` (phân vùng), `SystemLog` (phân vùng) | ~100 M dòng/năm |
+| `master-data.prisma` | master-data | `Province`, `District`, `Ward`, `SystemConfig`, `FeatureFlag`, `ShippingRate`, `ReasonCode` | ~11 K bản ghi địa giới |
+| `outbox.prisma` | dùng chung | `OutboxEvent`, `ProcessedEvent` | Xoay vòng nhanh, dọn sau 7–30 ngày |
 
-Ở môi trường dev: **một** instance PostgreSQL, 16 database logic. Ở production: tách theo nhóm tải — `catalog_db`,
-`order_db`, `audit_db`, `analytics_db` nằm trên instance riêng; phần còn lại dùng chung.
+Một database cho mọi môi trường (dev, staging, production) — không còn khác biệt "dev 1 instance nhiều DB logic, prod
+tách theo nhóm tải" như bản cũ. Nếu một domain (ví dụ `payment`) sau này cần tách ra database riêng vì lý do đo được
+(§9 của [ADR-0015](adr/ADR-0015-modular-monolith.md)), việc tách chỉ cần đổi datasource của schema đó, vì code đã
+không phụ thuộc ngầm vào việc "cùng DB nên join được" (§1 nguyên tắc 2).
 
-## 3. Dữ liệu tham chiếu xuyên service
+## 3. Tham chiếu dữ liệu xuyên module
 
-```mermaid
-flowchart LR
-    subgraph identity_db
-        U["User<br/>(nguồn sự thật)"]
-    end
-    subgraph catalog_db
-        P["Product<br/>sellerId: String"]
-        CU["UserRef (read model)<br/>id, displayName, avatarUrl"]
-    end
-    subgraph order_db
-        O["Order<br/>userId: String"]
-        OU["UserRef (read model)"]
-    end
-
-    U -->|"EVT-user.registered<br/>EVT-user.profile-updated"| CU
-    U -->|"cùng event"| OU
-```
-
-Ba cách tham chiếu dữ liệu của service khác, chọn theo nhu cầu:
+Vì cùng một database, module **kỹ thuật có thể** đọc thẳng bảng của module khác — nhưng quy ước vẫn giữ nguyên như
+kiến trúc cũ để không đánh mất khả năng tách sau này. Chọn cách tham chiếu theo nhu cầu:
 
 | Cách | Khi nào | Ví dụ | Đánh đổi |
 |---|---|---|---|
-| **Id trần** | Chỉ cần liên kết, hiển thị lấy sau | `Order.userId` | Cần một lần gọi thêm khi hiển thị |
+| **Id trần** | Chỉ cần liên kết, hiển thị lấy sau qua gọi service | `Order.userId` | Cần một lời gọi hàm thêm khi hiển thị (rẻ — cùng process, không phải network) |
 | **Ảnh dữ liệu (denormalized snapshot)** | Giá trị **phải** đóng băng tại thời điểm giao dịch | `OrderItem.productName`, `unitPrice` | Không bao giờ cập nhật — đó là mục đích |
-| **Read model** | Đọc nhiều, hiển thị kèm, chấp nhận trễ vài giây | `UserRef` trong `catalog_db` | Phải có event handler và cơ chế dựng lại |
+| **Gọi service trực tiếp lúc đọc** | Đọc nhiều, hiển thị kèm, luôn cần dữ liệu mới nhất | Trang chi tiết đơn hiển thị tên shop hiện tại | Không cần "dựng lại" như read model cũ — luôn đọc trực tiếp, có thể cache ở tầng gọi nếu cần |
 
-❌ **BAD** — ảnh giá và read model lẫn lộn:
+Điểm khác biệt lớn nhất so với bản database-per-service: **read model dựng từ event để tránh gọi RPC đã không còn cần
+thiết cho phần lớn trường hợp** — vì gọi service của module khác giờ là một lời gọi hàm trong process, không có chi
+phí mạng để né. `UserRef`, `SyncCheckpoint`, "dựng lại read model" ở bản cũ được **loại bỏ** trừ khi có lý do khác
+(ví dụ `search` vẫn cần chỉ mục Elasticsearch dựng từ event, vì đó là dữ liệu dẫn xuất sang hệ thống khác, không phải
+để né gọi hàm).
+
+❌ **BAD** — ảnh giá và việc gọi lại service lẫn lộn:
 
 ```prisma
 model OrderItem {
     productId   String
-    // Cập nhật theo product.updated → hoá đơn cũ đổi giá theo giá hiện tại
-    productName String   // ❌ nếu bị event handler ghi đè
-    unitPrice   Decimal  // ❌ nếu bị event handler ghi đè
+    // Cập nhật theo event product.updated → hoá đơn cũ đổi giá theo giá hiện tại
+    productName String   // ❌ nếu bị ghi đè sau khi tạo
+    unitPrice   Decimal  // ❌ nếu bị ghi đè sau khi tạo
 }
 ```
 
@@ -108,18 +105,13 @@ model OrderItem {
 }
 ```
 
-Quy tắc: **bất cứ thứ gì in ra hoá đơn đều là ảnh dữ liệu.** Read model chỉ dùng cho hiển thị phụ trợ
-(tên shop trong danh sách, avatar người bình luận) — nơi dữ liệu cũ vài giây không gây hại.
-
-### Dựng lại read model
-
-Mỗi read model phải có: ①`SyncCheckpoint` ghi event cuối đã xử lý, ② lệnh dựng lại từ đầu
-(`pnpm --filter <service> rebuild:read-model`), ③ test khẳng định dựng lại cho ra cùng kết quả.
-Read model không có cách dựng lại là **nợ kỹ thuật chặn phát hành**.
+Quy tắc: **bất cứ thứ gì in ra hoá đơn đều là ảnh dữ liệu.** Mọi thứ khác (tên shop hiện tại, avatar người bình luận)
+đọc trực tiếp qua gọi service của module sở hữu tại thời điểm hiển thị.
 
 ## 4. Quy ước schema Prisma
 
 ```prisma
+// prisma/schema/order.prisma — một trong nhiều file, cùng generator/datasource khai báo ở base.prisma
 generator client {
     provider        = "prisma-client"
     output          = "../src/generated/prisma"
@@ -148,15 +140,18 @@ datasource db {
 **Bắt buộc `@db.Decimal` cho tiền.** `Float` gây sai số tích luỹ; `Int` theo đơn vị nhỏ nhất cũng được nhưng phải nhất
 quán toàn hệ thống — dự án chọn `Decimal`.
 
-Mọi service dùng `@prisma/adapter-pg` với connection pool:
+Một `PrismaClient` dùng chung cho toàn app, với `@prisma/adapter-pg` và connection pool:
 
 ```ts
 const adapter = new PrismaPg({
     connectionString: process.env.DATABASE_URL,
-    max: Number(process.env.DB_POOL_MAX ?? 10),
+    max: Number(process.env.DB_POOL_MAX ?? 20),   // pool lớn hơn bản cũ vì gộp tải của 16 module vào một pool
 })
 export const prisma = new PrismaClient({ adapter }).$extends(auditExtension)
 ```
+
+Mỗi module inject cùng một `PrismaService` (wrapper của `PrismaClient`) qua DI — không mỗi module tự mở connection
+pool riêng như khi còn là database riêng.
 
 ## 5. Chỉ mục
 
@@ -187,28 +182,31 @@ Nguyên tắc: **mỗi truy vấn trên đường nóng phải có chỉ mục t
 | `notifications` | `(userId, readAt, createdAt DESC)` | Danh sách chưa đọc |
 | `audit_logs` | `(entityType, entityId, createdAt DESC)` | Lịch sử một thực thể |
 | `audit_logs` | `(actorId, createdAt DESC)` | Hoạt động của một người |
-| `outbox_events` | `(status, createdAt)` | Relay quét |
+| `outbox_events` | `(status, createdAt)` | Worker BullMQ quét |
 | Mọi bảng có xoá mềm | Index một phần `WHERE deleted_at IS NULL` | Danh sách mặc định |
 
 ## 6. Migration
 
 Dùng `prisma migrate`, **không** dùng `prisma db push` ngoài môi trường cá nhân —
-xem [ADR-0009](adr/ADR-0009-prisma-migrate.md). (Bản cũ chạy `db push --accept-data-loss` nên không có lịch sử migration
-và từng có nguy cơ mất dữ liệu.)
+xem [ADR-0009](adr/ADR-0009-prisma-migrate.md).
 
 ```bash
-# Phát triển
-pnpm --filter catalog-service exec prisma migrate dev --name add_inventory_reservation
+# Phát triển — multi-file schema, migrate đọc toàn bộ thư mục prisma/schema/
+pnpm --filter api exec prisma migrate dev --name add_inventory_reservation
 
 # CI: chặn nếu schema và migration lệch nhau
-pnpm --filter catalog-service exec prisma migrate diff \
+pnpm --filter api exec prisma migrate diff \
     --from-migrations ./prisma/migrations \
-    --to-schema-datamodel ./prisma/schema.prisma \
+    --to-schema-datamodel ./prisma/schema \
     --exit-code
 
 # Production: chạy bằng Kubernetes Job trước khi rollout
-pnpm --filter catalog-service exec prisma migrate deploy
+pnpm --filter api exec prisma migrate deploy
 ```
+
+Vì chỉ còn **một** thư mục `migrations/` cho toàn app (thay vì 16), một PR đổi schema của module `catalog` sinh ra
+đúng một migration mới trong lịch sử chung — cần chú ý thứ tự merge để tránh xung đột migration khi nhiều PR đổi
+schema song song (xem quy tắc rebase migration ở [coding-standards.md](../06-quality/coding-standards.md)).
 
 ### Thay đổi phá vỡ — mẫu bốn bước
 
@@ -229,27 +227,28 @@ Mỗi bước là **một lần phát hành riêng**, có thể quay lui độc 
 2. Thêm cột `NOT NULL` vào bảng có dữ liệu thì phải có `DEFAULT`, hoặc tách thành ba bước.
 3. Tạo index trên bảng lớn dùng `CREATE INDEX CONCURRENTLY` (Prisma: viết SQL thủ công trong migration).
 4. Migration dữ liệu lớn chạy theo lô, không khoá bảng.
-5. Mọi migration production chạy bằng Kubernetes Job **trước** khi rollout pod mới.
+5. Mọi migration production chạy bằng Kubernetes Job **trước** khi rollout pod mới — cùng một database nên downtime
+   migration ảnh hưởng **toàn app**, không chỉ một module; ưu tiên migration không khoá bảng dài.
 
 ## 7. Phân vùng bảng lớn
 
-Bốn bảng tăng trưởng không giới hạn được phân vùng theo tháng (`RANGE` trên `created_at`):
+Bốn bảng tăng trưởng không giới hạn được phân vùng theo tháng (`RANGE` trên `created_at`), tất cả trong cùng database:
 
-| Bảng | Database | Lưu nóng | Sau đó |
+| Bảng | Module | Lưu nóng | Sau đó |
 |---|---|---|---|
-| `audit_logs` | `audit_db` | 12 tháng | Lưu trữ lạnh (object storage), giữ 7 năm |
-| `system_logs` | `audit_db` | 3 tháng | Xoá |
-| `ad_event_rollups` | `content_db` | 6 tháng | Tổng hợp theo tháng rồi xoá chi tiết |
-| `chat_messages` | `chat_db` | 24 tháng | Lưu trữ lạnh |
+| `audit_logs` | audit | 12 tháng | Lưu trữ lạnh (object storage), giữ 7 năm |
+| `system_logs` | audit | 3 tháng | Xoá |
+| `ad_event_rollups` | content | 6 tháng | Tổng hợp theo tháng rồi xoá chi tiết |
+| `chat_messages` | chat | 24 tháng | Lưu trữ lạnh |
 
-Job `partition-maintenance` tạo trước phân vùng của **3 tháng kế tiếp** và tách phân vùng quá hạn. Thiếu phân vùng là
-lỗi nghiêm trọng (mọi `INSERT` thất bại) → có cảnh báo riêng.
+Job `partition-maintenance` (BullMQ, chạy trên worker process) tạo trước phân vùng của **3 tháng kế tiếp** và tách
+phân vùng quá hạn. Thiếu phân vùng là lỗi nghiêm trọng (mọi `INSERT` thất bại) → có cảnh báo riêng.
 
 ## 8. Cache
 
 | Tầng | Công nghệ | TTL | Vô hiệu hoá bằng |
 |---|---|---|---|
-| Kết quả RPC đọc nhiều | Upstash Redis (REST) | 5 phút | Event tương ứng |
+| Kết quả gọi service đọc nhiều | Upstash Redis (REST) | 5 phút | Event tương ứng |
 | Quyền hiệu lực của user | Redis | 15 phút | `rbac.permissions.changed`, `user.role-*` |
 | Chi tiết sản phẩm theo slug | Redis | 10 phút | `product.updated`, `product.deactivated` |
 | Cây danh mục | Redis | 1 giờ | `category.updated` |
@@ -260,18 +259,21 @@ lỗi nghiêm trọng (mọi `INSERT` thất bại) → có cảnh báo riêng.
 | Trang tĩnh (ISR) | Next.js | 60 giây | Tag revalidation |
 
 **Quy tắc:** cache luôn có TTL; vô hiệu hoá chủ động là để giảm độ trễ, **không phải** cơ chế đúng đắn duy nhất.
-Hệ thống phải chạy đúng cả khi mọi thứ chỉ hết hạn theo TTL.
+Hệ thống phải chạy đúng cả khi mọi thứ chỉ hết hạn theo TTL. Vì gọi giữa module giờ rẻ hơn nhiều (không qua mạng),
+cache ở đây chủ yếu để giảm tải Postgres, không phải để né chi phí RPC như bản cũ.
 
-Mẫu khoá: `<service>:<mục đích>:<định danh>` — ví dụ `catalog:product:slug:ao-thun-nam`.
+Mẫu khoá: `<module>:<mục đích>:<định danh>` — ví dụ `catalog:product:slug:ao-thun-nam`.
 
 ## 9. Sao lưu và khôi phục
 
-| Database | Tần suất | Cách | Giữ | Khôi phục theo thời điểm |
+Một database duy nhất đơn giản hoá đáng kể so với bản cũ (16 database cần backup/restore riêng):
+
+| Đối tượng | Tần suất | Cách | Giữ | Khôi phục theo thời điểm |
 |---|---|---|---|---|
-| Toàn bộ 16 DB | Liên tục (WAL) | PITR của nhà cung cấp | 7 ngày | Có |
-| Toàn bộ 16 DB | Hằng ngày 02:00 | Snapshot đầy đủ | 30 ngày | Không |
-| `payment_db`, `order_db`, `audit_db` | Hằng ngày | Bản sao thêm ở vùng khác | 90 ngày | Không |
-| Elasticsearch | — | **Không sao lưu** — dựng lại từ `catalog_db` | — | — |
+| Database Postgres (toàn bộ) | Liên tục (WAL) | PITR của nhà cung cấp | 7 ngày | Có |
+| Database Postgres (toàn bộ) | Hằng ngày 02:00 | Snapshot đầy đủ | 30 ngày | Không |
+| Database Postgres | Hằng ngày | Bản sao thêm ở vùng khác | 90 ngày | Không |
+| Elasticsearch | — | **Không sao lưu** — dựng lại từ module `catalog` | — | — |
 | Supabase Storage | Hằng ngày | Bản sao bucket | 30 ngày | Không |
 
 | Chỉ tiêu | Mục tiêu |
@@ -280,9 +282,9 @@ Mẫu khoá: `<service>:<mục đích>:<định danh>` — ví dụ `catalog:pro
 | RTO | ≤ 60 phút (NFR-007) |
 | Diễn tập khôi phục | Hằng quý, có biên bản |
 
-**Khôi phục từng phần rất phức tạp** trong kiến trúc này: khôi phục `order_db` về thời điểm T mà `payment_db` vẫn ở
-hiện tại sẽ tạo trạng thái không nhất quán. Quy trình xử lý (khôi phục theo nhóm, phát lại event từ outbox, đối soát
-thủ công) ghi trong [runbook.md](../05-infra/runbook.md).
+**Khôi phục giờ đơn giản hơn hẳn bản database-per-service**: khôi phục về thời điểm T khôi phục **toàn bộ** dữ liệu
+(order, payment, catalog...) về cùng một thời điểm nhất quán — không còn nguy cơ "khôi phục `order` mà `payment` vẫn
+ở hiện tại" như kiến trúc cũ. Quy trình chi tiết: [runbook.md](../05-infra/runbook.md).
 
 ## 10. Dữ liệu cá nhân
 
@@ -296,7 +298,9 @@ thủ công) ghi trong [runbook.md](../05-infra/runbook.md).
 
 Khi người dùng yêu cầu xoá tài khoản (FEAT-USR-008): ẩn danh hoá `User` và `Profile` (email → `deleted-<hash>@…`),
 **giữ nguyên** `Order`, `Payment`, `AuditLog` vì nghĩa vụ kế toán và kiểm toán; xoá `Cart`, `WishlistItem`,
-`ChatMessage` do người dùng tạo, lịch sử tìm kiếm.
+`ChatMessage` do người dùng tạo, lịch sử tìm kiếm. Vì cùng một database, thao tác này chạy trong **một
+`$transaction`** xuyên bảng của nhiều module — đơn giản hơn hẳn việc phải phát event xoá tài khoản tới 16 service
+riêng như kiến trúc cũ.
 
 Danh sách trường bị che trong log nằm trong cấu hình `pino` redact — xem [observability.md](observability.md).
 
@@ -308,4 +312,5 @@ Danh sách trường bị che trong log nằm trong cấu hình `pino` redact �
 | `seed:demo` | Chỉ dev và staging | Shop mẫu, sản phẩm mẫu, đơn mẫu, người dùng mẫu | Có |
 
 `seed:essential` chạy như một Kubernetes Job sau `migrate deploy`, trước khi rollout. Nếu seed thất bại ở production,
-việc phát hành **dừng lại** — không rollout pod mới với dữ liệu nền thiếu.
+việc phát hành **dừng lại** — không rollout pod mới với dữ liệu nền thiếu. Vì một database duy nhất, seed chạy đúng
+một lần cho toàn app thay vì lặp lại cho từng service như bản cũ.

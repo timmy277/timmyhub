@@ -2,8 +2,8 @@
 title: TimmyHub — Tổng quan kế hoạch dự án
 status: approved
 owner: Tech Lead
-updated: 2026-09-15
-related: [docs/README.md, docs/00-overview/product-overview.md, docs/00-overview/feature-inventory.md, docs/07-plan/implementation-plan.md, docs/08-handoff/handoff.md]
+updated: 2026-09-19
+related: [docs/README.md, docs/00-overview/product-overview.md, docs/00-overview/feature-inventory.md, docs/07-plan/implementation-plan.md, docs/08-handoff/handoff.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
 # TimmyHub — Tổng quan kế hoạch dự án
@@ -11,6 +11,14 @@ related: [docs/README.md, docs/00-overview/product-overview.md, docs/00-overview
 > **Tài liệu này là bản tổng quan đứng độc lập.** Đọc hết file này là nắm được: làm cái gì, cho ai, bằng công nghệ gì,
 > kiến trúc ra sao, chia bao nhiêu giai đoạn, ai làm, mất bao lâu, rủi ro ở đâu, và đọc tiếp file nào để đi sâu.
 > Mọi con số và bảng ở đây đều trỏ tới tài liệu chi tiết tương ứng.
+>
+> Cập nhật theo [ADR-0015](../01-architecture/adr/ADR-0015-modular-monolith.md): backend không còn là 17 đơn vị
+> triển khai microservices mà là **một app NestJS** (`backend/apps/api`) chứa 16 module domain + module `platform`,
+> cộng **hai process worker** (`backend/apps/worker` cho job nhẹ, và `worker-media` cùng codebase khác entrypoint
+> cho ffmpeg), cộng **một** database Postgres chung. Tên gọi `<domain>-service` được giữ nguyên xuyên suốt tài liệu
+> này (khớp tên file `docs/02-domain/schemas/*.prisma.md` đã tồn tại) nhưng đọc là **tên module trong một process**,
+> không phải một service/deployment riêng — xem [domain-model.md §2](../02-domain/domain-model.md) và
+> [service-catalog.md](../01-architecture/service-catalog.md).
 
 ---
 
@@ -23,7 +31,7 @@ related: [docs/README.md, docs/00-overview/product-overview.md, docs/00-overview
 | 3 | Mục tiêu và phi mục tiêu |
 | 4 | Người dùng và vai trò |
 | 5 | Phạm vi tính năng — 23 domain, 251 feature |
-| 6 | Kiến trúc tổng thể — 18 đơn vị triển khai |
+| 6 | Kiến trúc tổng thể — modular monolith, 3 đơn vị triển khai |
 | 7 | Công nghệ sử dụng (đầy đủ, kèm lý do) + đề xuất bổ sung |
 | 8 | Dữ liệu và sự kiện |
 | 9 | Yêu cầu phi chức năng (NFR) |
@@ -64,20 +72,22 @@ kiểm duyệt thống nhất, và một bộ thông báo chung.
 | Trong đó kế thừa từ bản cũ | 76 giữ nguyên + 27 mở rộng + 18 kế thừa nhưng **phải sửa lỗi** |
 | Tính năng mới | **130** |
 | Tính năng loại bỏ có chủ đích | 6 |
-| Đơn vị triển khai | **17** (1 gateway + 16 service), database-per-service |
+| Đơn vị triển khai | **3** (`api` + `worker` + `worker-media`), **16 module domain** trong một app NestJS, một Postgres chung ([ADR-0015](../01-architecture/adr/ADR-0015-modular-monolith.md)) |
 | Domain event | **86** (`EVT-*`) |
-| Quyết định kiến trúc ghi nhận | **12** ADR |
+| Quyết định kiến trúc ghi nhận | **14** ADR |
 | Thời gian dự kiến | **36 tuần** (18 sprint × 2 tuần) |
 | Quy mô đội | **~9 FTE** (chi tiết §13) |
 | Mốc GA (v1.0) | Tuần **26** |
 
 **Điểm khác biệt lớn nhất so với bản cũ:** bản cũ là monolith NestJS + Mantine đã chạy được nhưng có lỗ hổng phân
-quyền và không có lịch sử migration. Bản này là **viết lại** theo kiến trúc microservices, đổi toàn bộ tầng UI,
+quyền và không có lịch sử migration. Bản này là **viết lại**, đổi toàn bộ tầng UI, tổ chức lại backend thành
+**modular monolith** có ranh giới module rõ ràng ngay từ đầu ([ADR-0015](../01-architecture/adr/ADR-0015-modular-monolith.md)),
 và bổ sung ba mảng nghiệp vụ mà bản cũ thiếu hẳn: **tồn kho có reserve**, **ví & đối soát cho seller**,
 **quảng cáo trả phí có đo lường**.
 
-**Bốn rủi ro lớn nhất** (chi tiết §14): chi phí vận hành microservices; tính đúng đắn của luồng thanh toán VNPay IPN;
-nhất quán dữ liệu giữa các service; và việc đội chưa có kinh nghiệm vận hành k8s + RabbitMQ ở production.
+**Bốn rủi ro lớn nhất** (chi tiết §14): xói mòn ranh giới module theo thời gian nếu không thực thi bằng lint;
+tính đúng đắn của luồng thanh toán VNPay IPN; nhất quán dữ liệu giữa các module trong cùng transaction; và việc
+`worker-media` (ffmpeg) trở thành điểm nghẽn CPU nếu không tách deployment kịp thời.
 
 ---
 
@@ -123,8 +133,8 @@ dữ liệu sạch (xem giả định A4 ở §19).
 
 | # | Mục tiêu |
 |---|---|
-| T1 | Mỗi service triển khai độc lập, không cần dừng service khác |
-| T2 | Không mất dữ liệu nghiệp vụ khi RabbitMQ hoặc một service phụ trợ chết (outbox + đường suy giảm) |
+| T1 | Ranh giới module rõ ràng, thực thi bằng lint (`@nx/enforce-module-boundaries`), để tách deployment sau này nếu cần mà không phải viết lại |
+| T2 | Không mất dữ liệu nghiệp vụ khi Redis/BullMQ hoặc `worker`/`worker-media` chết (outbox cho hiệu ứng phụ ra ngoài process + đường suy giảm) |
 | T3 | Không oversell trong mọi kịch bản, kể cả flash sale |
 | T4 | Không sai tiền: 0 chênh lệch khi đối soát với VNPay |
 | T5 | Mọi thao tác ghi đều có audit log truy vết được tới actor và request |
@@ -179,6 +189,9 @@ Phân quyền dùng **3 tầng ghép bằng AND**: `UserRole` (vai) → `Permiss
 
 Nguồn sự thật đầy đủ: [feature-inventory.md](feature-inventory.md) — 251 feature có ID `FEAT-<DOMAIN>-<nnn>`.
 Bảng dưới là bản tóm tắt theo domain.
+
+> Cột **Service chứa** giữ tên `<domain>-service` như tài liệu domain đã dùng, nhưng từ ADR-0015 đây là **tên
+> module trong `backend/apps/api`**, không phải một service triển khai riêng — xem §6.
 
 | # | Domain | Mã | Feature | P0 | P1 | P2 | Trạng thái | Service chứa |
 |---|---|---|---|---|---|---|---|---|
@@ -264,6 +277,13 @@ giữ tồn (reserve) khi checkout và tự nhả sau 15 phút nếu không than
 
 ## 6. Kiến trúc tổng thể
 
+> Theo [ADR-0015](../01-architecture/adr/ADR-0015-modular-monolith.md): backend là **một** app NestJS
+> (`backend/apps/api`) chứa 16 module domain dưới `src/modules/<domain>/` + module `platform` (biên HTTP/WS,
+> trước gọi là `api-gateway`), gọi nhau bằng **dependency injection trực tiếp** trong cùng process — không RPC.
+> Sự kiện nội bộ dùng **EventEmitter2** trong process; outbox + BullMQ chỉ còn phục vụ hiệu ứng phụ đi ra **ngoài**
+> process (mail, webhook, audit sink bất biến). Có **hai** process worker riêng: `backend/apps/worker` (BullMQ,
+> job nhẹ) và `worker-media` (cùng codebase, entrypoint ffmpeg riêng, deployment tách vì ăn CPU 100%).
+
 ### 6.1 Bức tranh chung
 
 ```mermaid
@@ -271,95 +291,110 @@ flowchart TB
     subgraph Client
         WEB[Next.js 16<br/>App Router]
     end
-    subgraph Edge
-        GW[api-gateway<br/>REST + WebSocket<br/>auth, rate limit, Swagger]
+    subgraph API["backend/apps/api — một process"]
+        PLAT[module platform<br/>REST + WebSocket<br/>auth, rate limit, Swagger]
+        EE{{EventEmitter2<br/>trong process}}
+        subgraph Core["Module lõi thương mại"]
+            IDN[identity]
+            SEL[seller]
+            CAT[catalog + inventory]
+            CRT[cart]
+            ORD[order]
+            PAY[payment + wallet]
+            PRM[promotion]
+        end
+        subgraph Ext["Module mở rộng"]
+            CNT[content + ads]
+            ENG[engagement]
+            CHT[chat]
+            NTF[notification]
+            SRC[search]
+            MED[media]
+            ANA[analytics]
+            AUD[audit]
+            MDT[master-data]
+        end
     end
-    subgraph Bus
-        MQ[[RabbitMQ<br/>timmyhub.events / timmyhub.rpc]]
-    end
-    subgraph Core["Service lõi thương mại"]
-        IDN[identity-service]
-        SEL[seller-service]
-        CAT[catalog-service + inventory]
-        CRT[cart-service]
-        ORD[order-service]
-        PAY[payment-service + wallet]
-        PRM[promotion-service]
-    end
-    subgraph Ext["Service mở rộng"]
-        CNT[content-service + ads]
-        ENG[engagement-service]
-        CHT[chat-service]
-        NTF[notification-service]
-        SRC[search-service]
-        MED[media-service]
-        ANA[analytics-service]
-        AUD[audit-service]
-        MDT[master-data-service]
+    subgraph Workers["Process worker (BullMQ)"]
+        WRK[worker<br/>mail, index, thumbnail]
+        WMD[worker-media<br/>ffmpeg — deployment riêng]
     end
     subgraph Data
-        PG[(PostgreSQL 16<br/>16 database)]
+        PG[(PostgreSQL 16<br/>một database chung)]
         ES[(Elasticsearch 8)]
-        RD[(Upstash Redis)]
+        RD[(Upstash Redis<br/>BullMQ + cache + Socket.IO adapter)]
         ST[(Supabase Storage)]
     end
     VNP[VNPay]
 
-    WEB --> GW
-    GW <--> MQ
-    MQ <--> Core
-    MQ <--> Ext
+    WEB --> PLAT
+    PLAT -->|inject qua DI| Core
+    PLAT -->|inject qua DI| Ext
+    Core <-.->|emit/on trong process| EE
+    Ext <-.->|emit/on trong process| EE
     Core --> PG
     Ext --> PG
+    AUD -->|outbox: mail/webhook/audit sink| RD
+    RD --> WRK
+    RD --> WMD
     SRC --> ES
     AUD --> ES
-    GW --> RD
+    PLAT --> RD
     NTF --> RD
+    WMD --> ST
     MED --> ST
     PAY <--> VNP
 ```
 
-### 6.2 18 đơn vị triển khai
+### 6.2 3 đơn vị triển khai, 16 module domain
 
-| # | Service | Port dev | Database | Trách nhiệm chính |
+| # | Module (`src/modules/<domain>/`) | Trong process nào | Trách nhiệm chính |
+|---|---|---|---|
+| — | `platform` | `api` | Điểm vào HTTP/WS duy nhất (trước là `api-gateway`), guard, rate limit, gộp Swagger |
+| 1 | `identity` | `api` | Auth, user, device, RBAC, permission, CASL, SSO |
+| 2 | `seller` | `api` | Hồ sơ shop, đơn đăng ký bán, thương hiệu |
+| 3 | `catalog` | `api` | Danh mục, sản phẩm, biến thể, **tồn kho**, kiểm duyệt sản phẩm |
+| 4 | `cart` | `api` | Giỏ hàng, kiểm tra tính hợp lệ của giỏ |
+| 5 | `order` | `api` | Đơn hàng, state machine, địa chỉ giao, phí ship |
+| 6 | `payment` | `api` | VNPay, ví, giao dịch ví, đối soát, rút tiền |
+| 7 | `promotion` | `api` | Voucher, chiến dịch, flash sale |
+| 8 | `content` | `api` | Post, video, **chiến dịch quảng cáo**, kiểm duyệt nội dung |
+| 9 | `engagement` | `api` | Đánh giá, bình luận, wishlist, like |
+| 10 | `chat` | `api` | Hội thoại đa bên, ticket, khiếu nại |
+| 11 | `notification` | `api` (phát job) + `worker` (gửi mail/push) | In-app, email, web push, template, tuỳ chọn nhận |
+| 12 | `search` | `api` | Index Elasticsearch, truy vấn, gợi ý, reindex |
+| 13 | `media` | `api` (upload, điều phối) + `worker-media` (transcode) | Upload nối lại được (tus), quét mã độc, điều phối transcode |
+| 14 | `analytics` | `api` | Doanh số, dashboard, báo cáo, xuất dữ liệu |
+| 15 | `audit` | `api` | Audit log, system log, tra cứu |
+| 16 | `master-data` | `api` | Tỉnh/huyện/xã, cấu hình hệ thống, feature flag |
+
+Ba đơn vị triển khai thật sự (đóng image, scale độc lập):
+
+| # | Đơn vị | Port dev | Database | Ghi chú |
 |---|---|---|---|---|
-| 0 | `api-gateway` | 3000 | — | Điểm vào HTTP/WS duy nhất, guard, rate limit, gộp Swagger |
-| 1 | `identity-service` | 3101 | `identity_db` | Auth, user, device, RBAC, permission, CASL, SSO |
-| 2 | `seller-service` | 3102 | `seller_db` | Hồ sơ shop, đơn đăng ký bán, thương hiệu |
-| 3 | `catalog-service` | 3103 | `catalog_db` | Danh mục, sản phẩm, biến thể, **tồn kho**, kiểm duyệt sản phẩm |
-| 4 | `cart-service` | 3104 | `cart_db` | Giỏ hàng, kiểm tra tính hợp lệ của giỏ |
-| 5 | `order-service` | 3105 | `order_db` | Đơn hàng, state machine, địa chỉ giao, phí ship |
-| 6 | `payment-service` | 3106 | `payment_db` | VNPay, ví, giao dịch ví, đối soát, rút tiền |
-| 7 | `promotion-service` | 3107 | `promotion_db` | Voucher, chiến dịch, flash sale |
-| 8 | `content-service` | 3108 | `content_db` | Post, video, **chiến dịch quảng cáo**, kiểm duyệt nội dung |
-| 9 | `engagement-service` | 3109 | `engagement_db` | Đánh giá, bình luận, wishlist, like |
-| 10 | `chat-service` | 3110 | `chat_db` | Hội thoại đa bên, ticket, khiếu nại |
-| 11 | `notification-service` | 3111 | `notification_db` | In-app, email, web push, template, tuỳ chọn nhận |
-| 12 | `search-service` | 3112 | `search_db` + ES | Index Elasticsearch, truy vấn, gợi ý, reindex |
-| 13 | `media-service` | 3113 | `media_db` | Upload nối lại được (tus), quét mã độc, điều phối transcode |
-| 14 | `analytics-service` | 3114 | `analytics_db` | Doanh số, dashboard, báo cáo, xuất dữ liệu |
-| 15 | `audit-service` | 3115 | `audit_db` + ES | Audit log, system log, tra cứu |
-| 16 | `master-data-service` | 3116 | `masterdata_db` | Tỉnh/huyện/xã, cấu hình hệ thống, feature flag |
-| 17 | `media-transcode-worker` | — | (dùng `media_db`) | Worker ffmpeg: HLS ladder, poster, sprite — deployment riêng vì ăn CPU 100% |
+| 1 | `backend/apps/api` | 3000 | Postgres 16 (1 database chung) | Web process, mọi module ở trên trừ phần chạy trong worker |
+| 2 | `backend/apps/worker` | — | dùng chung Postgres | BullMQ, entrypoint mặc định: mail, index, thumbnail, dispatch outbox |
+| 3 | `worker-media` | — | dùng chung Postgres | Cùng codebase với `worker`, entrypoint/image riêng chạy ffmpeg; scale theo độ sâu hàng đợi, không theo CPU trung bình |
 
-Chi tiết từng service (RPC cung cấp, event phát/nhận, job nền, rủi ro):
-[service-catalog.md](../01-architecture/service-catalog.md). Đường xử lý video của đơn vị thứ 18:
-[media-video-pipeline.md](../01-architecture/media-video-pipeline.md).
+Chi tiết từng module (hàm export qua `index.ts`, event phát/nhận, job nền, rủi ro):
+[service-catalog.md](../01-architecture/service-catalog.md). Đường xử lý video:
+[media-video-pipeline.md](../01-architecture/media-video-pipeline.md). Quyết định và đánh đổi đầy đủ:
+[ADR-0015](../01-architecture/adr/ADR-0015-modular-monolith.md).
 
 ### 6.3 Mười quy tắc kiến trúc bắt buộc
 
 | # | Quy tắc |
 |---|---|
-| 1 | Một service **chỉ** truy cập database của chính nó; muốn dữ liệu service khác thì gọi RPC hoặc nghe event |
-| 2 | Không có giao dịch phân tán 2PC; nhất quán cuối cùng qua event + saga có bù trừ |
-| 3 | Mọi thay đổi nghiệp vụ + event tương ứng được ghi **trong cùng một transaction** qua bảng `outbox_events` |
-| 4 | Mọi consumer phải **idempotent** (bảng `processed_events`), vì giao hàng là at-least-once |
-| 5 | Đồ thị phụ thuộc RPC đồng bộ **không được có chu trình** |
-| 6 | `notification`, `analytics`, `audit` là **sink toàn cục** — không service nào được phụ thuộc ngược vào chúng |
-| 7 | Dữ liệu tham chiếu chéo service: hoặc **snapshot bất biến** (ghi một lần, không cập nhật), hoặc **read model** cập nhật bằng event và **tái dựng được** |
-| 8 | Tiền luôn là `Decimal(14,2)`, truyền trong event dưới dạng **chuỗi** |
-| 9 | Mỗi service phải khai báo **đường suy giảm** khi phụ thuộc chết (trừ `identity-service` — không có đường suy giảm) |
-| 10 | Thêm service mới phải trả lời được 5 câu hỏi cổng ở [service-catalog.md](../01-architecture/service-catalog.md) |
+| 1 | Một module **chỉ** đụng bảng Prisma của chính nó; muốn dữ liệu module khác thì gọi hàm qua DI (`index.ts` export) hoặc nghe event `EventEmitter2` — không import thẳng service/repository nội bộ của module khác |
+| 2 | Giao dịch nghiệp vụ chạm nhiều module dùng `Prisma.$transaction` thật trong cùng process; không saga, không bù trừ — chỉ luồng thanh toán VNPay còn cần xử lý bất đồng bộ (IPN) |
+| 3 | Outbox (`outbox_events`) **chỉ** áp dụng cho hiệu ứng phụ đi ra **ngoài** process (mail, webhook, audit sink bất biến), ghi trong cùng transaction với thay đổi nghiệp vụ, dispatch bằng BullMQ ở `worker` |
+| 4 | Consumer đọc từ outbox/BullMQ phải **idempotent** (bảng `processed_events`); listener `EventEmitter2` trong process **không cần** vì cùng transaction/process, không giao at-least-once |
+| 5 | Đồ thị phụ thuộc gọi hàm đồng bộ giữa module **không được có chu trình**, thực thi bằng ESLint chặn import chéo module |
+| 6 | `notification`, `analytics`, `audit` là **sink toàn cục** — không module nào được phụ thuộc ngược vào chúng |
+| 7 | Dữ liệu tham chiếu chéo module: hoặc **snapshot bất biến** (ghi một lần, không cập nhật) trong cùng transaction, hoặc **read model** cập nhật bằng event và **tái dựng được** |
+| 8 | Tiền luôn là `Decimal(14,2)` qua `Prisma.Decimal`; truyền qua API là **chuỗi** |
+| 9 | `worker-media` phải khai báo **đường suy giảm** khi hàng đợi đầy (backpressure, thông báo "đang xử lý"); `api` chịu được `worker`/`worker-media` chậm hoặc chết vì hiệu ứng phụ đã nằm an toàn trong outbox |
+| 10 | Thêm module mới phải trả lời được 5 câu hỏi cổng ở [service-catalog.md](../01-architecture/service-catalog.md), gồm cả câu "module này có nên tách deployment ngay từ đầu không" |
 
 ---
 
@@ -391,12 +426,12 @@ Chi tiết từng service (RPC cung cấp, event phát/nhận, job nền, rủi 
 | Hạng mục | Lựa chọn | Vì sao |
 |---|---|---|
 | Runtime | **Node.js 22 LTS** | Ổn định, hỗ trợ dài hạn |
-| Framework | **NestJS 11** (microservices) | DI, module hoá, transport RabbitMQ sẵn có |
-| ORM | **Prisma 7** + `@prisma/adapter-pg` | Kiểu an toàn, migration có lịch sử, client extension cho audit |
-| CSDL | **PostgreSQL 16** | 16 database riêng, partition cho bảng log |
+| Framework | **NestJS 11** (modular monolith, một app) | DI xuyên module trong cùng process, không cần transport RPC ([ADR-0015](../01-architecture/adr/ADR-0015-modular-monolith.md)) |
+| ORM | **Prisma 7** + `@prisma/adapter-pg` | Kiểu an toàn, migration có lịch sử, client extension cho audit; schema multi-file `prisma/schema/<domain>.prisma`, mỗi module chỉ đụng bảng của mình |
+| CSDL | **PostgreSQL 16** | **Một** database chung cho `api`/`worker`/`worker-media`, ranh giới dữ liệu giữa module thực thi bằng quy ước + lint, không bằng database riêng |
 | Nền tảng bổ trợ | **Supabase** (Postgres quản lý + Storage) | Giảm việc vận hành, Storage cho media |
-| Event bus | **RabbitMQ** (topic + direct + DLX) | Định tuyến linh hoạt, vận hành nhẹ hơn Kafka ([ADR-0003](../01-architecture/adr/ADR-0003-rabbitmq-event-bus.md)) |
-| Job queue | **BullMQ** trên **Upstash Redis (TCP)** | 10 hàng đợi: mail, media, index, báo cáo, tính phí quảng cáo… |
+| Event nội bộ | **EventEmitter2** (`@nestjs/event-emitter`) trong process | Domain event giữa module, cùng process nên không cần broker, không cần idempotency riêng ([ADR-0015](../01-architecture/adr/ADR-0015-modular-monolith.md), thay cho [ADR-0003](../01-architecture/adr/ADR-0003-rabbitmq-event-bus.md) đã superseded) |
+| Job queue | **BullMQ** trên **Upstash Redis (TCP)** | Hàng đợi cho `worker`/`worker-media` (mail, media, index, báo cáo, tính phí quảng cáo…) và dispatch outbox cho hiệu ứng phụ ra ngoài process |
 | Cache / rate limit | **Upstash Redis (REST)** | Không giữ kết nối, hợp môi trường serverless ([ADR-0004](../01-architecture/adr/ADR-0004-upstash-redis.md)) |
 | Realtime | **Socket.IO** + `@socket.io/redis-adapter` | Nhiều pod gateway đồng bộ qua Redis pub/sub |
 | Tìm kiếm | **Elasticsearch 8** | Full-text tiếng Việt, facet, gợi ý |
@@ -407,23 +442,23 @@ Chi tiết từng service (RPC cung cấp, event phát/nhận, job nền, rủi 
 | API docs | **Swagger** (`@nestjs/swagger` + `patchNestJsSwagger`) | Sinh từ chính schema zod |
 | Thanh toán | **VNPay** (create URL, return, IPN) | Yêu cầu nghiệp vụ |
 | Log ứng dụng | **pino** + `pino-http`, redact trường nhạy cảm | JSON có cấu trúc |
-| Audit log | **`nestjs-cls`** + **Prisma Client Extension** → `EVT-audit.recorded` → `audit-service` | Xem §7.4 |
-| Trace | **OpenTelemetry** | `traceId` xuyên service, nối vào audit record |
+| Audit log | **`nestjs-cls`** + **Prisma Client Extension** → emit `audit.recorded` qua EventEmitter2 → module `audit` ghi outbox (đi ES) | Xem §7.4 |
+| Trace | **OpenTelemetry** | `traceId` xuyên request (qua module, qua job BullMQ), nối vào audit record |
 | Lỗi runtime | **Sentry** (FE + BE) | Gom lỗi, source map |
 | Metrics | **Prometheus** + Grafana | RED metrics, độ sâu hàng đợi |
-| Test | Jest + Supertest + **Testcontainers** | Integration chạy với Postgres/RabbitMQ thật |
+| Test | Jest + Supertest + **Testcontainers** | Integration chạy với Postgres thật (không cần container broker vì event nội bộ là in-process) |
 
 ### 7.3 Hạ tầng và vận hành
 
 | Hạng mục | Lựa chọn |
 |---|---|
-| Đóng gói | **Docker** multi-stage, tối ưu cache pnpm workspace, ảnh chạy non-root |
-| Dev local | **docker compose** (postgres, redis, rabbitmq, elasticsearch, kibana, mailhog) |
-| Điều phối | **Kubernetes** — Deployment, Service, Ingress, HPA, PDB, probe, Secret, ConfigMap |
-| CI/CD | **GitHub Actions** — phát hiện service thay đổi → lint/test/build → build ảnh → deploy |
-| Migration | k8s Job chạy `prisma migrate deploy` **trước** khi rollout |
+| Đóng gói | **Docker** multi-stage, tối ưu cache pnpm workspace, ảnh chạy non-root — 3 image: `api`, `worker`, `worker-media` (hai cái sau chung Dockerfile, khác `CMD`) |
+| Dev local | **docker compose** (postgres, redis, elasticsearch, kibana, mailhog) — không còn RabbitMQ |
+| Điều phối | **Kubernetes** — Deployment, Service, Ingress, HPA (theo CPU cho `api`, theo độ sâu hàng đợi cho `worker-media`), PDB, probe, Secret, ConfigMap |
+| CI/CD | **GitHub Actions** — Turborepo phát hiện package thay đổi (`--filter='...[origin/main]'`) → lint/test/build → build lại đúng image nào đổi trong 3 → deploy |
+| Migration | k8s Job chạy `prisma migrate deploy` **trước** khi rollout `api` |
 | Bí mật | GitHub Secrets (CI), Kubernetes Secret + External Secrets Operator (prod) |
-| Monorepo | **pnpm workspace**: `backend/` (apps + libs), `frontend/`, `shared/` |
+| Monorepo | **pnpm workspace + Turborepo**: `backend/apps/{api,worker}`, `backend/src/modules/<domain>/`, `backend/libs/`, `frontend/`, `shared/` |
 
 ### 7.4 Chốt thư viện audit log
 
@@ -432,10 +467,10 @@ So sánh và kết luận đầy đủ ở [observability.md](../01-architecture
 
 | Hạng | Giải pháp | Đánh giá |
 |---|---|---|
-| ✅ **Chọn** | `nestjs-cls` (AsyncLocalStorage giữ actor/requestId/traceId) + **Prisma Client Extension** `$extends` sinh audit record → phát `EVT-audit.recorded` → `audit-service` ghi Postgres partition theo tháng + index Elasticsearch | Bắt được cả thay đổi ngoài controller, diff chính xác, không phụ thuộc thư viện bị bỏ rơi, tách tải khỏi service nghiệp vụ |
+| ✅ **Chọn** | `nestjs-cls` (AsyncLocalStorage giữ actor/requestId/traceId) + **Prisma Client Extension** `$extends` sinh audit record → emit `audit.recorded` qua EventEmitter2 trong process → module `audit` ghi outbox → `worker` đẩy vào Postgres partition theo tháng + index Elasticsearch | Bắt được cả thay đổi ngoài controller, diff chính xác, không phụ thuộc thư viện bị bỏ rơi, tách tải khỏi luồng xử lý request |
 | ✅ Bổ sung | `@nestjs-cls/transactional` | Gắn audit vào cùng transaction nghiệp vụ |
 | ✅ Bổ sung | `pino` + `pino-http` có redact | Log **ứng dụng**, tách bạch với audit log **nghiệp vụ** |
-| ✅ Bổ sung | `@opentelemetry/sdk-node` | Nối `traceId` xuyên service vào audit record |
+| ✅ Bổ sung | `@opentelemetry/sdk-node` | Nối `traceId` xuyên request/job vào audit record |
 | ⚪ Tuỳ chọn | `pgaudit`, hoặc bảng append-only + chuỗi hash | Khi cần bằng chứng chống sửa |
 | ❌ Không dùng | `audit-log-nestjs`, `typeorm-auditing`, `prisma-audit` | Ít bảo trì, hoặc sai stack (TypeORM) |
 
@@ -452,66 +487,76 @@ và kho dữ liệu riêng cho event quảng cáo.
 
 ### 8.1 Phân bổ dữ liệu
 
-16 database, mỗi service sở hữu độc quyền database của mình. Ước tính năm 1:
+**Một** database Postgres chung cho `api`/`worker`/`worker-media`. Ranh giới dữ liệu giữa 16 module là **quy ước
+Prisma schema multi-file** (`prisma/schema/<domain>.prisma`, mỗi module chỉ được migrate/query bảng của mình) +
+lint chặn import Prisma client xuyên module — không phải database riêng như bản kiến trúc microservices trước đó
+(xem [ADR-0015](../01-architecture/adr/ADR-0015-modular-monolith.md), [domain-model.md §2](../02-domain/domain-model.md)).
+Ước tính năm 1, theo nhóm bảng do từng module sở hữu:
 
-| Database | Bảng lớn nhất | Ước tính bản ghi năm 1 |
+| Nhóm bảng (module) | Bảng lớn nhất | Ước tính bản ghi năm 1 |
 |---|---|---|
-| `catalog_db` | `product_variants` | ~400.000 |
-| `order_db` | `order_items` | ~1.800.000 |
-| `content_db` | `ad_event_rollups` | ~30.000.000 (partition theo tháng) |
-| `audit_db` | `audit_logs` | ~20.000.000 (partition theo tháng) |
-| `chat_db` | `chat_messages` | ~5.000.000 (partition theo tháng) |
-| `engagement_db` | `reviews` | ~300.000 |
+| `catalog` | `product_variants` | ~400.000 |
+| `order` | `order_items` | ~1.800.000 |
+| `content` | `ad_event_rollups` | ~30.000.000 (partition theo tháng) |
+| `audit` | `audit_logs` | ~20.000.000 (partition theo tháng) |
+| `chat` | `chat_messages` | ~5.000.000 (partition theo tháng) |
+| `engagement` | `reviews` | ~300.000 |
 
-Chi tiết: [data-architecture.md](../01-architecture/data-architecture.md); schema từng service:
+Chi tiết: [data-architecture.md](../01-architecture/data-architecture.md); schema từng module:
 [02-domain/schemas/](../02-domain/schemas/).
 
 ### 8.2 Sự kiện
 
-**86 domain event**, tên theo `<domain>.<entity>.<hành động ở thì quá khứ>`. Những event quan trọng nhất:
+**86 domain event**, tên theo `<domain>.<entity>.<hành động ở thì quá khứ>`. Phần lớn là event **nội bộ trong
+process**, phát/nghe qua `EventEmitter2` (đồng bộ, cùng transaction đã commit, không cần outbox/idempotency).
+Chỉ event dẫn tới hiệu ứng phụ **ra ngoài process** (mail, webhook, audit sink) mới đi qua outbox + BullMQ. Những
+event quan trọng nhất:
 
-| Event | Nơi phát | Ai nghe |
-|---|---|---|
-| `order.created` | `order-service` | catalog (giữ tồn), promotion, notification, analytics |
-| `payment.succeeded` | `payment-service` — **chỉ từ IPN**, không bao giờ từ return URL | order, wallet, notification, analytics |
-| `order.completed` | `order-service` | payment (chia tiền), engagement (mở quyền đánh giá), analytics, content (attribution), notification, seller, audit |
-| `product.approved` | `catalog-service` | search (index), notification, analytics |
-| `inventory.reserved` / `inventory.reserve-failed` | `catalog-service` | order (tiếp tục hoặc huỷ saga) |
-| `ad.impression.batched` | `content-service` (gom 60 giây, tối đa 1000 mục) | analytics, payment (tính phí) |
-| `audit.recorded` | mọi service | audit-service |
+| Event | Nơi phát (module) | Ai nghe | Kênh |
+|---|---|---|---|
+| `order.created` | `order` | catalog (giữ tồn), promotion, notification, analytics | EventEmitter2 |
+| `payment.succeeded` | `payment` — **chỉ từ IPN**, không bao giờ từ return URL | order, wallet, notification, analytics | EventEmitter2 |
+| `order.completed` | `order` | payment (chia tiền), engagement (mở quyền đánh giá), analytics, content (attribution), notification, seller, audit | EventEmitter2 |
+| `product.approved` | `catalog` | search (index), notification, analytics | EventEmitter2 |
+| `inventory.reserved` / `inventory.reserve-failed` | `catalog` | order (tiếp tục hoặc rollback transaction) | gọi hàm trực tiếp trong `$transaction`, không qua event |
+| `ad.impression.batched` | `content` (gom 60 giây, tối đa 1000 mục) | analytics, payment (tính phí) | EventEmitter2 |
+| `audit.recorded` | mọi module | `audit` → outbox → `worker` ghi Postgres/ES | outbox + BullMQ (ra ngoài process) |
+| `notification.mail-requested` | `notification` | `worker` gửi mail thật | outbox + BullMQ (ra ngoài process) |
 
 Danh mục đầy đủ kèm schema zod: [event-catalog.md](../01-architecture/event-catalog.md).
 
-### 8.3 Luồng checkout (saga)
+### 8.3 Luồng checkout
+
+Không còn saga với hành động bù trừ qua RPC — checkout chạm nhiều module (`cart`, `catalog`/`inventory`, `order`,
+`promotion`) trong **một** `Prisma.$transaction`, nên hoặc tất cả cùng thành công hoặc tự động rollback. Chỉ bước
+xác nhận thanh toán VNPay là thật sự bất đồng bộ (IPN có thể đến muộn, đến nhiều lần):
 
 ```mermaid
 sequenceDiagram
     participant U as Người mua
-    participant O as order-service
-    participant C as catalog-service
-    participant P as promotion-service
-    participant Y as payment-service
+    participant O as OrderService (module order)
+    participant DB as Postgres ($transaction)
+    participant Y as PaymentService (module payment)
     participant V as VNPay
 
     U->>O: POST /v1/orders/from-cart (Idempotency-Key)
-    O->>C: RPC kiểm giá + giữ tồn (cùng transaction)
-    C-->>O: inventory.reserved
-    O->>P: RPC kiểm và giữ voucher
-    P-->>O: voucher.reserved
-    O->>O: Tạo đơn PENDING_PAYMENT + outbox order.created
+    O->>DB: BEGIN $transaction
+    O->>DB: Kiểm giá + giữ tồn (inject InventoryService qua DI)
+    O->>DB: Kiểm và giữ voucher (inject PromotionService qua DI)
+    O->>DB: Tạo đơn PENDING_PAYMENT
+    O->>DB: COMMIT (mọi bước cùng thành công hoặc cùng rollback)
     O-->>U: 201 { orderId, paymentUrl }
     U->>V: Thanh toán
     V-->>Y: IPN (có thể đến nhiều lần, có thể trước return URL)
-    Y->>Y: Xác minh chữ ký, khoá theo vnp_TxnRef, kiểm processed_events
-    Y->>Y: Ghi giao dịch + outbox payment.succeeded (1 transaction)
-    Y-->>O: payment.succeeded
-    O->>C: inventory.commit
-    O->>P: voucher.commit
-    O->>O: Đơn chuyển CONFIRMED
+    Y->>Y: Xác minh chữ ký, khoá theo vnp_TxnRef, kiểm processed_events (biên ngoài duy nhất còn cần idempotency)
+    Y->>DB: Ghi giao dịch + commit tồn/voucher + chuyển đơn CONFIRMED (1 transaction)
+    Y->>O: emit order.completed (EventEmitter2, trong process)
 ```
 
-Bù trừ: hết hạn thanh toán → nhả tồn + nhả voucher + đơn `CANCELLED`.
-Bước `commit` **không có bù trừ** (tiền đã thu) → thất bại thì đơn vào `MANUAL_REVIEW` và báo admin.
+Hết hạn thanh toán → một `$transaction` khác nhả tồn + nhả voucher + đơn `CANCELLED`, không cần bù trừ qua nhiều
+service. Bước ghi nhận thanh toán thành công **không rollback được** (tiền đã thu) → lệch số tiền với VNPay thì đơn
+vào `MANUAL_REVIEW` và báo admin (không áp dụng cho lỗi tồn/voucher — hai lỗi đó chặn ngay trong `$transaction`
+trước khi có đơn).
 
 ---
 
@@ -557,7 +602,7 @@ Chi tiết: [security.md](../01-architecture/security.md). Các quyết định 
 | Upload | Signed URL, giới hạn MIME + dung lượng, kiểm tra magic bytes, phục vụ từ domain riêng |
 | Thanh toán | Không lưu dữ liệu thẻ; xác minh `vnp_SecureHash`; đối chiếu số tiền; lệch → `MANUAL_REVIEW` |
 | Dữ liệu cá nhân | Event chỉ mang trường công khai; log redact; xoá tài khoản = ẩn danh hoá user, **giữ** đơn/giao dịch/audit |
-| Nội bộ | Mỗi service có user Postgres + user RabbitMQ riêng, quyền tối thiểu; NetworkPolicy chặn ngoài namespace |
+| Nội bộ | Ranh giới module thực thi bằng ESLint (chặn import chéo module ngoài `index.ts`), không phải bằng user Postgres/NetworkPolicy riêng cho từng module — một user Postgres cho `api`/`worker`/`worker-media`, quyền tối thiểu ở mức ứng dụng; xem [security.md §13](../01-architecture/security.md) |
 
 ---
 
@@ -569,7 +614,7 @@ Sprint = **2 tuần**. Tổng **18 sprint = 36 tuần**.
 
 | Phase | Tên | Sprint | Tuần | Nội dung chính | Kết quả kiểm chứng được |
 |---|---|---|---|---|---|
-| **P0** | Nền móng | S1–S2 | 1–4 | Monorepo pnpm, `@timmyhub/{contracts,common,rmq,prisma,testing}`, docker compose dev, CI, `api-gateway`, `identity-auth`, `rbac-permission`, `master-data` | Đăng ký → đăng nhập → gọi được một endpoint có phân quyền; dev mới dựng được trong 30 phút |
+| **P0** | Nền móng | S1–S2 | 1–4 | Monorepo pnpm + Turborepo, `@timmyhub/{contracts,common,prisma,testing}`, khung `backend/apps/api` + `backend/apps/worker`, docker compose dev, CI, module `platform`, `identity-auth`, `rbac-permission`, `master-data` | Đăng ký → đăng nhập → gọi được một endpoint có phân quyền; dev mới dựng được trong 30 phút |
 | **P1** | Bán được hàng | S3–S7 | 5–14 | `user-profile`, `seller-onboarding`, `media-upload`, `catalog-product`, `inventory`, `cart-checkout`, `order-fulfillment`, `payment-vnpay`, `notification` (in-app + email) | Một seller thật đăng sản phẩm, một user thật mua và thanh toán VNPay sandbox thành công, đơn chuyển trạng thái đúng |
 | **P2** | Vận hành sàn | S8–S10 | 15–20 | `wallet-settlement`, `promotion-voucher`, `campaign-flashsale`, `search-discovery`, `admin-console`, `analytics-sales` (cơ bản), `audit-log` | Admin duyệt được mọi thứ từ một hàng chờ; seller thấy doanh số và rút được tiền; tìm kiếm chạy trên Elasticsearch |
 | **P3** | Trao đổi & tin cậy | S11–S13 | 21–26 | `review-rating`, `chat-support`, `notification` nâng cao (preference, web push), `content-post` bản cơ bản | Ba vai trao đổi được với nhau: chat, ticket, tranh chấp, đánh giá |
@@ -617,21 +662,21 @@ flowchart LR
 
 | Sprint | Tuần | Backend | Frontend | Hạ tầng |
 |---|---|---|---|---|
-| S1 | 1–2 | Khung monorepo, shared libs, `api-gateway` skeleton, `identity-service` (đăng ký, đăng nhập, refresh) | Khung Next.js, design token, shadcn base, layout, trang đăng nhập/đăng ký | docker compose dev, CI lint + test |
-| S2 | 3–4 | RBAC, permission, CASL, seed, kiểm tra nhất quán lúc boot, `master-data-service` | NextAuth, middleware phân quyền, next-intl, Storybook, `DataTable` dùng chung | Dockerfile, registry, deploy staging thủ công |
-| S3 | 5–6 | `user-profile`, `seller-service`, `media-service` | Trang hồ sơ, địa chỉ, đăng ký bán hàng, upload ảnh | k8s manifest cơ bản, Ingress staging |
-| S4 | 7–8 | `catalog-service`: danh mục, sản phẩm, biến thể, thuộc tính, kiểm duyệt | Quản lý sản phẩm của seller, trang chi tiết sản phẩm, trang danh mục | HPA, probe, migration job |
-| S5 | 9–10 | `inventory`: reserve/commit/release, log tồn kho, cảnh báo | Quản lý tồn kho, nhập hàng loạt | Prometheus + Grafana |
-| S6 | 11–12 | `cart-service`, `order-service` state machine, outbox + saga | Giỏ hàng, luồng checkout, danh sách/chi tiết đơn (user + seller) | RabbitMQ giống production, DLQ, cảnh báo |
-| S7 | 13–14 | `payment-service`: VNPay create/return/**IPN idempotent**, đối soát; `notification-service` (in-app + email) | Trang thanh toán, trang kết quả, trung tâm thông báo | Sentry, OpenTelemetry, backup tự động |
-| S8 | 15–16 | `wallet-settlement`: ví seller, sổ giao dịch, hoa hồng, yêu cầu rút + OTP | Ví seller, lịch sử giao dịch, yêu cầu rút tiền | Runbook bản đầu, diễn tập khôi phục |
-| S9 | 17–18 | `promotion-service`: voucher, campaign, flash sale, tồn kho campaign | Áp voucher, trang flash sale có đếm ngược, quản lý khuyến mãi | Kiểm thử tải luồng flash sale |
-| S10 | 19–20 | `search-service` (index + truy vấn + gợi ý), `audit-service`, `analytics-service` (chỉ số cơ bản) | Tìm kiếm + bộ lọc, admin console (12 màn CRUD), dashboard cơ bản | CD tự động lên staging |
-| S11 | 21–22 | `engagement-service`: đánh giá, bình luận, helpful, wishlist | Đánh giá sản phẩm, wishlist, rating realtime | — |
-| S12 | 23–24 | `chat-service`: hội thoại, ticket, SLA, phân công, bot bước đầu | Chat user↔seller, hộp thư hỗ trợ, màn ticket của admin | Kiểm thử tải WebSocket (5.000 kết nối) |
-| S13 | 25–26 | Tranh chấp đơn hàng, `notification` nâng cao (preference, web push), `content-service` bản cơ bản | Trang tranh chấp, cài đặt thông báo, soạn post | **Chuẩn bị GA**: k8s production, chạy thử xanh–lam |
-| S14 | 27–28 | `content-service` nâng cao: feed, gắn sản phẩm, kiểm duyệt, attribution | Feed cuộn dọc, trình phát video, tương tác realtime | CDN cho media |
-| S15 | 29–30 | `video-ads`: chiến dịch, đặt chỗ hiển thị, đo impression/click, gom sự kiện | Trình tạo quảng cáo, báo cáo hiệu quả, vị trí quảng cáo trên FE | Tối ưu chi phí, autoscale theo độ sâu hàng đợi |
+| S1 | 1–2 | Khung monorepo, shared libs, module `platform` (khung `backend/apps/api`), module `identity` (đăng ký, đăng nhập, refresh) | Khung Next.js, design token, shadcn base, layout, trang đăng nhập/đăng ký | docker compose dev, CI lint + test |
+| S2 | 3–4 | RBAC, permission, CASL, seed, kiểm tra nhất quán lúc boot, module `master-data` | NextAuth, middleware phân quyền, next-intl, Storybook, `DataTable` dùng chung | Dockerfile, registry, deploy staging thủ công |
+| S3 | 5–6 | module `user-profile`, `seller`, `media` | Trang hồ sơ, địa chỉ, đăng ký bán hàng, upload ảnh | k8s manifest cơ bản, Ingress staging |
+| S4 | 7–8 | module `catalog`: danh mục, sản phẩm, biến thể, thuộc tính, kiểm duyệt | Quản lý sản phẩm của seller, trang chi tiết sản phẩm, trang danh mục | HPA, probe, migration job |
+| S5 | 9–10 | module `inventory`: reserve/commit/release, log tồn kho, cảnh báo | Quản lý tồn kho, nhập hàng loạt | Prometheus + Grafana |
+| S6 | 11–12 | module `cart`, `order` state machine, `Prisma.$transaction` cho checkout, outbox cho hiệu ứng phụ ra ngoài process | Giỏ hàng, luồng checkout, danh sách/chi tiết đơn (user + seller) | `backend/apps/worker` giống production, DLQ BullMQ, cảnh báo |
+| S7 | 13–14 | module `payment`: VNPay create/return/**IPN idempotent**, đối soát; module `notification` (in-app + email) | Trang thanh toán, trang kết quả, trung tâm thông báo | Sentry, OpenTelemetry, backup tự động |
+| S8 | 15–16 | module `wallet-settlement` (trong `payment`): ví seller, sổ giao dịch, hoa hồng, yêu cầu rút + OTP | Ví seller, lịch sử giao dịch, yêu cầu rút tiền | Runbook bản đầu, diễn tập khôi phục |
+| S9 | 17–18 | module `promotion`: voucher, campaign, flash sale, tồn kho campaign | Áp voucher, trang flash sale có đếm ngược, quản lý khuyến mãi | Kiểm thử tải luồng flash sale |
+| S10 | 19–20 | module `search` (index + truy vấn + gợi ý), `audit`, `analytics` (chỉ số cơ bản) | Tìm kiếm + bộ lọc, admin console (12 màn CRUD), dashboard cơ bản | CD tự động lên staging |
+| S11 | 21–22 | module `engagement`: đánh giá, bình luận, helpful, wishlist | Đánh giá sản phẩm, wishlist, rating realtime | — |
+| S12 | 23–24 | module `chat`: hội thoại, ticket, SLA, phân công, bot bước đầu | Chat user↔seller, hộp thư hỗ trợ, màn ticket của admin | Kiểm thử tải WebSocket (5.000 kết nối) |
+| S13 | 25–26 | Tranh chấp đơn hàng, module `notification` nâng cao (preference, web push), module `content` bản cơ bản | Trang tranh chấp, cài đặt thông báo, soạn post | **Chuẩn bị GA**: k8s production, chạy thử xanh–lam |
+| S14 | 27–28 | module `content` nâng cao: feed, gắn sản phẩm, kiểm duyệt, attribution | Feed cuộn dọc, trình phát video, tương tác realtime | CDN cho media |
+| S15 | 29–30 | module `video-ads` (trong `content`): chiến dịch, đặt chỗ hiển thị, đo impression/click, gom sự kiện | Trình tạo quảng cáo, báo cáo hiệu quả, vị trí quảng cáo trên FE | Tối ưu chi phí, autoscale `worker-media` theo độ sâu hàng đợi |
 | S16 | 31–32 | Tính phí quảng cáo + đối soát, `analytics` nâng cao (phễu, cohort, export CSV/Excel) | Dashboard doanh số đầy đủ, báo cáo, xuất dữ liệu | Job tổng hợp hằng ngày, giám sát chi phí |
 | S17 | 33–34 | Vá hiệu năng, index, cache, xử lý nợ kỹ thuật | Tối ưu bundle, Lighthouse, rà soát tiếp cận | Kiểm thử tải toàn hệ thống, rà soát bảo mật |
 | S18 | 35–36 | Sửa lỗi UAT, ổn định | Sửa lỗi UAT, hoàn thiện trang lỗi/rỗng | Runbook hoàn chỉnh, đào tạo vận hành, ra mắt |
@@ -643,7 +688,7 @@ flowchart LR
 | 1 | **Lát cắt dọc**: mỗi sprint kết thúc bằng một luồng người dùng chạy được đầu–cuối, không phải "xong tầng service" |
 | 2 | `requirements.md` của một domain phải ở trạng thái **approved trước** khi sprint đó bắt đầu |
 | 3 | Mỗi `TASK-*` tham chiếu ít nhất một `REQ-*`; không có task mồ côi |
-| 4 | Service mới chỉ được merge khi có đủ: migration, seed, health check, Swagger, test tích hợp, dashboard metrics |
+| 4 | Module mới chỉ được merge khi có đủ: migration Prisma, seed, khai báo trong Swagger, test tích hợp, dashboard metrics; nếu là module chạm outbox (mail/webhook/audit) thì thêm job dispatch ở `worker` |
 | 5 | Hợp đồng API và event chốt **trước** khi FE và BE làm song song (`@timmyhub/contracts` merge trước) |
 | 6 | Không có nhánh sống quá 3 ngày; trunk-based với feature flag cho tính năng chưa xong |
 | 7 | 15% quỹ thời gian mỗi sprint dành cho nợ kỹ thuật và sửa lỗi — không lấp bằng tính năng |
@@ -696,7 +741,7 @@ không ra mắt sàn có sai lệch tiền, dù mọi tính năng khác đã xon
 
 ### 13.3 Ước lượng theo domain (phần backend, để xếp việc)
 
-| Nhóm | Domain | Person-week / domain |
+| Nhóm | Domain (module trong `backend/apps/api`) | Person-week / domain |
 |---|---|---|
 | Rất lớn | `payment-vnpay`, `order-fulfillment`, `catalog-product`, `analytics-sales`, `video-ads` | 8–12 |
 | Lớn | `identity-auth`, `rbac-permission`, `inventory`, `wallet-settlement`, `content-post`, `chat-support` | 5–8 |
@@ -705,11 +750,15 @@ không ra mắt sàn có sai lệch tiền, dù mọi tính năng khác đã xon
 
 ### 13.4 Điều chỉnh nếu đội nhỏ hơn
 
+Kiến trúc modular monolith ([ADR-0015](../01-architecture/adr/ADR-0015-modular-monolith.md)) đã chọn sẵn cho mọi quy
+mô đội — không còn quyết định "có nên làm microservices hay không" phụ thuộc số người. Đội nhỏ hơn chỉ đổi **tốc độ
+làm hết phạm vi**, không đổi kiến trúc:
+
 | Đội | Hệ quả |
 |---|---|
 | 9 người (kế hoạch) | 36 tuần, đủ phạm vi |
 | 6 người | ~50 tuần, hoặc đẩy P4 (quảng cáo) sang pha sau |
-| 4 người | **Không nên làm full microservices** — xem lại [ADR-0001](../01-architecture/adr/ADR-0001-microservices.md), cân nhắc modular monolith rồi tách dần |
+| 4 người | Bắt buộc **cắt phạm vi**, không cắt kiến trúc: hoãn `video-ads` và `analytics-sales` nâng cao sang sau GA; kỷ luật ranh giới module (rule ESLint, review bắt buộc khi động tới `index.ts` của module khác) càng quan trọng hơn vì ít người sửa nhiều module cùng lúc, dễ xói mòn ranh giới nếu không thực thi |
 
 ---
 
@@ -717,15 +766,15 @@ không ra mắt sàn có sai lệch tiền, dù mọi tính năng khác đã xon
 
 | ID | Rủi ro | Khả năng | Tác động | Giảm thiểu | Dấu hiệu sớm |
 |---|---|---|---|---|---|
-| R1 | Chi phí vận hành microservices vượt năng lực đội | Cao | Cao | Bắt đầu 17 service nhưng **cho phép gộp lại**; điều kiện dừng ở [system-architecture.md](../01-architecture/system-architecture.md): sau 6 tháng nếu dưới 5 service thực sự độc lập thì gộp về modular monolith | Deploy phải làm đồng loạt nhiều service |
+| R1 | Ranh giới module xói mòn theo thời gian (import chéo module, query bảng module khác) vì không có biên deployment/database ép buộc như microservices | Cao | Cao | Rule ESLint chặn import chéo module ngoài `index.ts` chạy ở CI, không chỉ ở máy dev; review bắt buộc khi PR động tới `index.ts` của module khác; test kiến trúc (dependency-cruiser/`madge`) chặn chu trình; xem [ADR-0015 §Chi phí phải trả](../01-architecture/adr/ADR-0015-modular-monolith.md) | Import trực tiếp service/repository nội bộ của module khác lọt qua review |
 | R2 | Sai sót luồng thanh toán VNPay (IPN trùng, đến trước return URL, sai số tiền) | Trung bình | **Rất cao** | Idempotent theo `vnp_TxnRef`; khoá hàng; ghi log nguyên văn trước khi xử lý; đối soát hằng ngày; lệch → `MANUAL_REVIEW`; bộ test bao phủ 12 kịch bản IPN | Đối soát lệch dù chỉ 1 giao dịch |
-| R3 | Nhất quán dữ liệu giữa service (read model lệch) | Cao | Trung bình | Outbox + consumer idempotent; mọi read model phải **tái dựng được** và có lệnh rebuild + test; `SyncCheckpoint` giám sát độ trễ | Số liệu hai màn hình khác nhau |
-| R4 | Đội chưa có kinh nghiệm k8s + RabbitMQ production | Cao | Cao | DevOps chuyên trách từ S1; staging giống production từ S3; diễn tập sự cố ở S8; runbook viết dần, không để cuối | Sự cố staging không ai xử lý được trong 1 giờ |
+| R3 | Nhất quán dữ liệu giữa module (read model lệch) — vẫn tồn tại dù cùng database, vì `search`/`analytics` vẫn là read model tái dựng bất đồng bộ | Trung bình | Trung bình | Read model cập nhật qua `EventEmitter2` (đồng bộ, cùng transaction đã commit) và phải **tái dựng được** kèm lệnh rebuild + test; `SyncCheckpoint` giám sát độ trễ | Số liệu hai màn hình khác nhau |
+| R4 | Đội chưa có kinh nghiệm k8s + BullMQ/Redis production | Trung bình | Cao | DevOps chuyên trách từ S1; staging giống production từ S3; diễn tập sự cố ở S8; runbook viết dần, không để cuối | Sự cố staging không ai xử lý được trong 1 giờ |
 | R5 | Oversell khi flash sale | Trung bình | Cao | Reserve tồn trong cùng transaction với kiểm giá; kiểm thử tải riêng cho flash sale ở S9; tồn kho campaign tách riêng | Test đồng thời thấy tồn âm |
 | R6 | Phạm vi phình to (251 feature) | Cao | Cao | Khoá phạm vi theo `feature-inventory.md`; feature mới phải có ID và đổi lấy feature khác cùng cỡ; P2 chỉ làm sau M3 | Sprint liên tiếp không đạt cam kết |
 | R7 | Hợp đồng FE–BE lệch, hai bên chờ nhau | Trung bình | Trung bình | `@timmyhub/contracts` merge trước khi code; MSW mock ở FE dùng chính schema zod; contract test ở CI | FE phải sửa lại sau khi BE xong |
 | R8 | Elasticsearch trở thành phụ thuộc cứng | Trung bình | Trung bình | ES là index **dẫn xuất**, tái dựng được; có đường suy giảm sang `ILIKE` trên Postgres | Sàn chết khi ES restart |
-| R9 | Chi phí hạ tầng vượt ngân sách (nhiều service = nhiều pod) | Trung bình | Trung bình | HPA theo tải; service nhỏ dùng 1 replica ở staging; theo dõi chi phí hằng tuần từ S10 | Hoá đơn tăng trên 20% so với tháng liền kề |
+| R9 | `worker-media` (ffmpeg) bão hoà CPU và trở thành điểm nghẽn transcode khi lượng video tăng | Trung bình | Trung bình | HPA theo độ sâu hàng đợi (không theo CPU trung bình, vì CPU luôn ở mức cao khi đang transcode); giới hạn độ phân giải/độ dài video đầu vào; theo dõi độ trễ hàng đợi hằng tuần từ S10 | Hàng đợi media dồn ứ quá 15 phút |
 | R10 | Tính phí quảng cáo sai (đếm trùng impression) | Trung bình | Cao | Gom sự kiện có `eventId` để khử trùng; đối soát mỗi giờ; giới hạn ngân sách cứng; audit đầy đủ | Chênh lệch giữa số đếm thô và số đã tính phí |
 | R11 | Bí mật kế thừa bị lợi dụng | Thấp | **Rất cao** | Xoay toàn bộ khoá ở §18.1 **trước** khi bắt đầu; gitleaks + push protection ở S1 | Hoạt động lạ trên Sentry/Supabase/Vercel |
 | R12 | Nợ chất lượng quay lại (strict off, không test) | Trung bình | Trung bình | `strict: true` từ commit đầu tiên; Husky chặn; ngưỡng độ phủ ở CI; Definition of Done bắt buộc | PR xin miễn lint |
@@ -739,8 +788,8 @@ không ra mắt sàn có sai lệch tiền, dù mọi tính năng khác đã xon
 | Tầng | Công cụ | Phạm vi | Ngưỡng |
 |---|---|---|---|
 | Unit | Jest (BE), Vitest (FE) | Logic nghiệp vụ thuần, hàm tiện ích | Độ phủ ≥ 80% cho `*.service.ts` |
-| Integration | Jest + **Testcontainers** (Postgres, RabbitMQ, Redis) | Service + DB thật + hàng đợi thật | Mọi endpoint ghi, mọi consumer |
-| Contract | zod schema dùng chung + test đối chiếu | Hợp đồng API và event giữa service | Mọi event trong `event-catalog.md` |
+| Integration | Jest + **Testcontainers** (Postgres, Redis) | Module + DB thật + BullMQ thật; event `EventEmitter2` test trong process, không cần container | Mọi endpoint ghi, mọi consumer BullMQ |
+| Contract | zod schema dùng chung + test đối chiếu | Hợp đồng API và event giữa module | Mọi event trong `event-catalog.md` |
 | Component | Testing Library + Storybook play | Component dùng chung | Mọi component trong `component-inventory.md` |
 | E2E | Playwright | 12 luồng người dùng chính | Chạy mỗi PR vào `main` |
 | Tải | k6 | Checkout, flash sale, WebSocket, tìm kiếm | Trước M2 và M3 |
@@ -783,7 +832,9 @@ flowchart LR
     K --> L[Migration job → rollout xanh–lam]
 ```
 
-Chỉ build và deploy service **có thay đổi** — đây là điều kiện để 17 service không làm CI chậm đến mức không dùng được.
+Turborepo (`--filter='...[origin/main]'`) chỉ build lại package/module thật sự đổi, và chỉ dựng lại image nào trong
+3 (`api`/`worker`/`worker-media`) bị ảnh hưởng — đây là điều kiện để một app NestJS chứa 16 module không làm CI
+chậm đến mức không dùng được (xem [monorepo-and-build.md](../05-infra/monorepo-and-build.md)).
 
 ---
 
@@ -793,9 +844,9 @@ Chỉ build và deploy service **có thay đổi** — đây là điều kiện 
 
 | Môi trường | Mục đích | Hạ tầng |
 |---|---|---|
-| `local` | Phát triển | docker compose, 1 Postgres nhiều database, 1 RabbitMQ, ES 1 node |
-| `staging` | Nghiệm thu, e2e, kiểm thử tải | k8s namespace riêng, 1 replica/service, dữ liệu giả |
-| `production` | Vận hành thật | k8s, HPA 2–10 replica, Postgres có replica đọc, ES 3 node |
+| `local` | Phát triển | docker compose, 1 Postgres (1 database chung), Redis, ES 1 node |
+| `staging` | Nghiệm thu, e2e, kiểm thử tải | k8s namespace riêng, 1 replica mỗi đơn vị (`api`/`worker`/`worker-media`), dữ liệu giả |
+| `production` | Vận hành thật | k8s, HPA 2–10 replica cho `api` (theo CPU), 1–N cho `worker-media` (theo độ sâu hàng đợi), Postgres có replica đọc, ES 3 node |
 
 ### 16.2 Giám sát
 
@@ -803,7 +854,7 @@ Chỉ build và deploy service **có thay đổi** — đây là điều kiện 
 |---|---|---|
 | Metrics | Prometheus + Grafana | p95 độ trễ vượt NFR · tỷ lệ lỗi > 1% · độ sâu hàng đợi > 1.000 |
 | Log | pino → thu gom tập trung | Tỷ lệ log `error` tăng đột biến |
-| Trace | OpenTelemetry | Request > 3 giây xuyên service |
+| Trace | OpenTelemetry | Request > 3 giây xuyên module/job |
 | Lỗi | Sentry | Lỗi mới chưa từng thấy |
 | Nghiệp vụ | Dashboard riêng | Outbox `PENDING` > 60 giây · DLQ có tin nhắn · đối soát lệch · tỷ lệ checkout tụt |
 
@@ -811,17 +862,18 @@ Chỉ build và deploy service **có thay đổi** — đây là điều kiện 
 
 | Hạng mục | Mức tương đối |
 |---|---|
-| Kubernetes (3 node vừa) | Phần lớn chi phí |
-| PostgreSQL quản lý (Supabase) + replica | Cao |
+| Kubernetes (3 node vừa, chỉ 3 đơn vị triển khai backend) | Phần lớn chi phí |
+| PostgreSQL quản lý (Supabase) + replica (1 database chung, không nhân 16 lần) | Cao |
 | Elasticsearch 3 node | Cao |
-| RabbitMQ quản lý | Trung bình |
-| Upstash Redis | Thấp–trung bình |
+| Upstash Redis (BullMQ + cache + Socket.IO adapter) | Thấp–trung bình |
 | Supabase Storage + CDN | Theo lưu lượng media — **video là khoản tăng nhanh nhất** |
 | Sentry, giám sát | Thấp |
 
-> Microservices **đắt hơn** monolith cùng chức năng: nhiều pod, nhiều database, nhiều đường mạng, nhiều việc vận hành.
-> Cái đổi lại là khả năng triển khai độc lập và cô lập sự cố. Nếu sau 6 tháng lợi ích đó không hiện thực hoá,
-> điều kiện dừng ở R1 sẽ được kích hoạt.
+> **Đánh đổi đã chọn** ([ADR-0015](../01-architecture/adr/ADR-0015-modular-monolith.md)): modular monolith rẻ hơn
+> đáng kể so với 17 service độc lập cùng chức năng — ít pod hơn (3 thay vì 18), một database thay vì 16, không cần
+> RabbitMQ quản lý, không cần NetworkPolicy phức tạp giữa service. Cái đánh đổi lại là **không** scale độc lập theo
+> từng domain (cả `api` scale cùng nhau) và **không** cô lập sự cố ở mức process cho lỗi trong logic module — bù lại
+> bằng kỷ luật ranh giới module (R1) và tách sớm phần thực sự cần scale riêng (`worker-media`) ngay từ đầu.
 
 ---
 
@@ -834,7 +886,7 @@ Chỉ build và deploy service **có thay đổi** — đây là điều kiện 
 | `docs/README.md` | Mục lục, lối đọc theo vai trò, quy ước | 1 | ✅ xong |
 | `00-overview/` | Tổng quan sản phẩm, **kế hoạch này**, danh mục 251 feature, vai trò & quyền, thuật ngữ | 5 | ✅ xong |
 | `01-architecture/` | Kiến trúc, danh mục service, giao tiếp, dữ liệu, sự kiện, API, bảo mật, realtime, observability, **radar công nghệ**, **đồng thời & nhất quán**, **RBAC nâng cao**, **i18n backend**, **đường xử lý video** | 14 | ✅ xong (14/14) |
-| `01-architecture/adr/` | 12 ADR nền + **ADR-0014 đường xử lý video** (+3 ADR ứng viên từ radar, chưa viết) | 13 | ✅ xong (13/13 ADR cơ sở; ADR-0013/0015/0016 vẫn là ứng viên chờ duyệt ở `technology-radar.md`) |
+| `01-architecture/adr/` | 12 ADR nền + **ADR-0014 đường xử lý video** + **ADR-0015 modular monolith** (supersede ADR-0001/0002/0003) (+2 ADR ứng viên từ radar, chưa viết) | 14 | ✅ xong (14/14 ADR cơ sở; ADR-0013/0016 vẫn là ứng viên chờ duyệt ở `technology-radar.md`) |
 | `02-domain/` | Mô hình miền + schema Prisma từng service + **biến thể sản phẩm** + **tranh chấp đơn hàng** | 19 | 🔄 đang viết (2/19) |
 | `03-specs/` | 23 domain × (`requirements.md` EARS + `design.md` + `tasks.md`) | 69 | ⏳ chờ |
 | `04-frontend/` | Kiến trúc FE, route, design system, component, state, auth, i18n, Storybook, **SEO**, **chuyển động & hiệu ứng**, **soạn thảo/tải lên/phát video** | 11 | 🔄 đang viết (3/11) |
@@ -1090,7 +1142,7 @@ Nguồn: `kế thừa` giữ nguyên · `kế thừa+` mở rộng · `kế th�
 | FEAT-CRT-006 | Chốt ảnh giá (price snapshot) tại thời điểm đặt đơn | kế thừa+ | P0 |
 | FEAT-CRT-007 | Áp voucher trong checkout, xem trước số tiền giảm | kế thừa | P0 |
 | FEAT-CRT-008 | Chọn phương thức thanh toán (VNPay / COD) | kế thừa | P0 |
-| FEAT-CRT-009 | Saga checkout với hành động bù trừ | mới | P0 |
+| FEAT-CRT-009 | Checkout nguyên tử qua `Prisma.$transaction` (giữ tồn + giữ voucher + tạo đơn cùng một transaction, tự rollback nếu bất kỳ bước nào lỗi) | mới | P0 |
 | FEAT-CRT-010 | Lưu giỏ để mua sau (save for later) | mới | P2 |
 | FEAT-CRT-011 | Nhắc giỏ hàng bỏ quên qua email | mới | P2 |
 
@@ -1459,10 +1511,12 @@ Mọi route nằm dưới tiền tố locale: `/[locale]/...` với `locale ∈ 
 
 ---
 
-## Phụ lục C. Bản đồ API theo service
+## Phụ lục C. Bản đồ API theo module
 
 Quy ước đường dẫn ([api-conventions.md](../01-architecture/api-conventions.md)): `/v1/...` cho người dùng cuối,
-`/v1/seller/...` cho người bán, `/v1/admin/...` cho quản trị. Tất cả đi qua `api-gateway`.
+`/v1/seller/...` cho người bán, `/v1/admin/...` cho quản trị. Tất cả đi qua module `platform` (trước gọi là
+`api-gateway`) trong `backend/apps/api`. Cột **Service** dưới đây là tên module (`<domain>-service`), không phải
+service triển khai riêng.
 
 | Service | Nhóm endpoint |
 |---|---|
@@ -1482,40 +1536,46 @@ Quy ước đường dẫn ([api-conventions.md](../01-architecture/api-conventi
 | `analytics-service` | `GET /v1/seller/analytics/{overview,revenue,products,funnel,cohort,inventory}` · `POST /v1/seller/analytics/export` · `GET /v1/admin/analytics/{overview,revenue,sellers,categories}` · `GET /v1/exports/:jobId` |
 | `audit-service` | `GET /v1/admin/audit-logs` · `GET /v1/admin/audit-logs/:id` · `GET /v1/admin/system-logs` · `POST /v1/admin/audit-logs/export` |
 | `master-data-service` | `GET /v1/locations/{provinces,districts,wards}` · `GET /v1/shipping-rates/quote` · `GET /v1/config/public` · `GET /v1/feature-flags` · `GET\|PATCH /v1/admin/config` · `GET\|PATCH /v1/admin/feature-flags` · CRUD `/v1/admin/shipping-rates` · `GET /v1/reason-codes` |
-| `api-gateway` | `GET /health`, `GET /health/ready`, `GET /docs` (Swagger tổng hợp), `GET /metrics` (chỉ nội bộ) |
+| `platform` | `GET /health`, `GET /health/ready`, `GET /docs` (Swagger tổng hợp), `GET /metrics` (chỉ nội bộ) |
 
 **Endpoint công khai không cần token** — phải gắn `@Public()` có chủ đích và được liệt kê ở đây: trang chủ, tìm kiếm,
 danh mục, sản phẩm, shop, feed, đánh giá, master data, `POST /v1/auth/*`, và `POST /v1/payments/vnpay/ipn`.
 
 ---
 
-## Phụ lục D. Thực thể dữ liệu theo database
+## Phụ lục D. Thực thể dữ liệu theo module
 
-Một bảng chỉ thuộc **một** database. Tham chiếu chéo service lưu bằng **id + ảnh chụp dữ liệu** (snapshot) hoặc
-read model cập nhật qua event — **không** khoá ngoại xuyên service
-([data-architecture.md](../01-architecture/data-architecture.md)).
+Một database Postgres **chung** cho `api`/`worker`/`worker-media`
+([ADR-0015](../01-architecture/adr/ADR-0015-modular-monolith.md)). Ranh giới dữ liệu giữa module là quy ước:
+mỗi nhóm bảng dưới đây được định nghĩa trong **một file schema Prisma riêng**
+(`prisma/schema/<domain>.prisma`) và chỉ module tương ứng được migrate/query trực tiếp — module khác muốn dùng
+dữ liệu này phải gọi hàm qua DI, không query thẳng bảng. Tham chiếu chéo module lưu bằng **id + ảnh chụp dữ liệu**
+(snapshot) hoặc read model cập nhật qua `EventEmitter2` — **không** khoá ngoại xuyên nhóm bảng
+([data-architecture.md](../01-architecture/data-architecture.md), [domain-model.md §2](../02-domain/domain-model.md)).
 
-| Database | Bảng chính | Read model (đồng bộ bằng event) |
+| Module (nhóm bảng) | Bảng chính | Read model (đồng bộ bằng event) |
 |---|---|---|
-| `identity_db` | `User`, `Profile`, `Account`, `Device`, `RefreshToken`, `PasswordResetToken`, `SystemRole`, `Permission`, `RolePermission`, `UserPermission` | — |
-| `seller_db` | `SellerProfile`, `SellerApplication`, `BrandProfile`, `ShopFollow`, `ShopPolicy`, `ShopMetric` | `UserRef` |
-| `catalog_db` | `Category`, `Product`, `ProductVariant`, `ProductImage`, `ProductAttribute`, `SlugHistory`, `Inventory`, `InventoryLedger`, `StockReservation` | `SellerRef` |
-| `cart_db` | `Cart`, `CartItem` | `ProductSnapshot` |
-| `order_db` | `Order`, `OrderItem`, `OrderStatusHistory`, `Address`, `ReturnRequest`, `Shipment` | `UserRef`, `SellerRef` |
-| `payment_db` | `Payment`, `PaymentAttempt`, `Refund`, `Wallet`, `WalletTransaction`, `Withdrawal`, `ReconciliationRun` | `OrderRef`, `SellerRef` |
-| `promotion_db` | `Voucher`, `UserVoucher`, `VoucherUsageLog`, `PromotionCampaign`, `CampaignProduct` | `ProductRef` |
-| `content_db` | `Post`, `PostMedia`, `PostProduct`, `PostLike`, `PostComment`, `AdCampaign`, `AdCreative`, `AdPlacement`, `AdEventRollup`, `AdBillingEntry` | `SellerRef`, `ProductRef` |
-| `engagement_db` | `Review`, `ReviewMedia`, `ReviewComment`, `ReviewHelpfulVote`, `WishlistItem` | `UserRef`, `ProductRef` |
-| `chat_db` | `Conversation`, `ConversationMember`, `ChatMessage`, `MessageAttachment`, `SupportTicket`, `Dispute`, `DisputeEvidence` | `UserRef`, `OrderRef` |
-| `notification_db` | `Notification`, `NotificationPreference`, `NotificationTemplate`, `PushSubscription`, `DeliveryAttempt` | `UserRef` |
-| `search_db` | `IndexJob`, `SyncCheckpoint` *(chỉ mục thật ở Elasticsearch, dựng lại được hoàn toàn)* | — |
-| `media_db` | `MediaAsset`, `MediaVariant`, `ProcessingJob` | — |
-| `analytics_db` | `DailyRollup`, `SellerDailyRollup`, `ProductDailyRollup`, `FunnelEvent`, `CohortSnapshot`, `ReportJob` | — |
-| `audit_db` | `AuditLog`, `SystemLog` *(cả hai phân vùng theo tháng)* | — |
-| `masterdata_db` | `Province`, `District`, `Ward`, `SystemConfig`, `FeatureFlag`, `ShippingRate`, `ReasonCode` | — |
+| `identity` | `User`, `Profile`, `Account`, `Device`, `RefreshToken`, `PasswordResetToken`, `SystemRole`, `Permission`, `RolePermission`, `UserPermission` | — |
+| `seller` | `SellerProfile`, `SellerApplication`, `BrandProfile`, `ShopFollow`, `ShopPolicy`, `ShopMetric` | `UserRef` |
+| `catalog` | `Category`, `Product`, `ProductVariant`, `ProductImage`, `ProductAttribute`, `SlugHistory`, `Inventory`, `InventoryLedger`, `StockReservation` | `SellerRef` |
+| `cart` | `Cart`, `CartItem` | `ProductSnapshot` |
+| `order` | `Order`, `OrderItem`, `OrderStatusHistory`, `Address`, `ReturnRequest`, `Shipment` | `UserRef`, `SellerRef` |
+| `payment` | `Payment`, `PaymentAttempt`, `Refund`, `Wallet`, `WalletTransaction`, `Withdrawal`, `ReconciliationRun` | `OrderRef`, `SellerRef` |
+| `promotion` | `Voucher`, `UserVoucher`, `VoucherUsageLog`, `PromotionCampaign`, `CampaignProduct` | `ProductRef` |
+| `content` | `Post`, `PostMedia`, `PostProduct`, `PostLike`, `PostComment`, `AdCampaign`, `AdCreative`, `AdPlacement`, `AdEventRollup`, `AdBillingEntry` | `SellerRef`, `ProductRef` |
+| `engagement` | `Review`, `ReviewMedia`, `ReviewComment`, `ReviewHelpfulVote`, `WishlistItem` | `UserRef`, `ProductRef` |
+| `chat` | `Conversation`, `ConversationMember`, `ChatMessage`, `MessageAttachment`, `SupportTicket`, `Dispute`, `DisputeEvidence` | `UserRef`, `OrderRef` |
+| `notification` | `Notification`, `NotificationPreference`, `NotificationTemplate`, `PushSubscription`, `DeliveryAttempt` | `UserRef` |
+| `search` | `IndexJob`, `SyncCheckpoint` *(chỉ mục thật ở Elasticsearch, dựng lại được hoàn toàn)* | — |
+| `media` | `MediaAsset`, `MediaVariant`, `ProcessingJob` | — |
+| `analytics` | `DailyRollup`, `SellerDailyRollup`, `ProductDailyRollup`, `FunnelEvent`, `CohortSnapshot`, `ReportJob` | — |
+| `audit` | `AuditLog`, `SystemLog` *(cả hai phân vùng theo tháng)* | — |
+| `master-data` | `Province`, `District`, `Ward`, `SystemConfig`, `FeatureFlag`, `ShippingRate`, `ReasonCode` | — |
 
-Mỗi database nghiệp vụ còn có hai bảng hạ tầng bắt buộc: `outbox_events` (phát event không mất) và
-`processed_events` (tiêu thụ idempotent).
+Toàn database chỉ cần **một** cặp bảng hạ tầng dùng chung: `outbox_events` (hiệu ứng phụ đi ra ngoài process —
+mail, webhook, audit sink — dispatch bằng BullMQ ở `worker`) và `processed_events` (idempotency ở đúng biên đó).
+Event nội bộ giữa module (đa số domain event) đi qua `EventEmitter2` trong process, phát sinh **không cần** hai
+bảng này vì cùng transaction/process, không giao at-least-once như broker ngoài.
 
 ```mermaid
 erDiagram
@@ -1681,8 +1741,8 @@ Quy ước tên: `<domain>.<entity>.<hành động ở thì quá khứ>`.
 | `master-data` | `config.updated` · `feature-flag.changed` |
 | *(mọi service)* | `audit.recorded` · `system.log-recorded` |
 
-Ba service là **điểm cuối toàn cục** — nghe rất nhiều nhưng không ai phụ thuộc chúng, nhờ vậy đồ thị phụ thuộc
-không có chu trình: `notification-service`, `analytics-service`, `audit-service`.
+Ba module là **điểm cuối toàn cục** — nghe rất nhiều qua `EventEmitter2` nhưng không module nào phụ thuộc ngược lại
+chúng, nhờ vậy đồ thị phụ thuộc gọi hàm giữa module không có chu trình: `notification`, `analytics`, `audit`.
 
 ---
 
@@ -1691,36 +1751,37 @@ không có chu trình: `notification-service`, `analytics-service`, `audit-servi
 Chi tiết theo môi trường ở [environments.md](../05-infra/environments.md). `.env.example` chỉ chứa **tên biến**,
 tuyệt đối không có giá trị mẫu trông giống thật.
 
-### G.1 Dùng chung cho mọi service
+### G.1 Dùng chung cho `api`, `worker`, `worker-media`
 
 | Biến | Ý nghĩa |
 |---|---|
 | `NODE_ENV` | `development` / `staging` / `production` |
-| `SERVICE_NAME` | Tên service, gắn vào log và metric |
-| `PORT` | Cổng HTTP nội bộ (health/metrics) |
-| `DATABASE_URL` | Postgres của **riêng** service đó |
-| `RABBITMQ_URL` | Chuỗi kết nối RabbitMQ |
-| `UPSTASH_REDIS_TCP_URL` | Redis TCP — BullMQ và socket adapter |
+| `APP_NAME` | `api` / `worker` / `worker-media`, gắn vào log và metric |
+| `PORT` | Cổng HTTP nội bộ (health/metrics) — chỉ `api` |
+| `DATABASE_URL` | Postgres **chung** cho cả ba process |
+| `UPSTASH_REDIS_TCP_URL` | Redis TCP — BullMQ (outbox dispatch, job nền) và Socket.IO adapter |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Redis REST — cache, rate limit |
 | `JWT_PUBLIC_KEY` hoặc `JWKS_URL` | Xác minh token |
 | `LOG_LEVEL` | `debug` / `info` / `warn` / `error` |
 | `SENTRY_DSN` | Báo lỗi (tuỳ chọn ở dev) |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Trace phân tán |
 
-### G.2 Riêng theo service
+Không còn `RABBITMQ_URL` — event nội bộ dùng `EventEmitter2` trong process, không cấu hình qua biến môi trường.
 
-| Service | Biến riêng |
+### G.2 Riêng theo module (đọc trong `api`, hoặc trong `worker`/`worker-media` nếu module đó có job nền)
+
+| Module | Biến riêng |
 |---|---|
-| `api-gateway` | `CORS_ORIGINS`, `THROTTLE_TTL`, `THROTTLE_LIMIT`, `SWAGGER_ENABLED`, `WS_PATH` |
-| `identity-service` | `JWT_PRIVATE_KEY`, `JWT_ACCESS_TTL`, `JWT_REFRESH_TTL`, `BCRYPT_ROUNDS`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`, `BOOTSTRAP_SUPER_ADMIN_EMAIL`, `BOOTSTRAP_SUPER_ADMIN_PASSWORD`, `ACCOUNT_LOCK_THRESHOLD` |
-| `payment-service` | `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_URL`, `VNPAY_RETURN_URL`, `VNPAY_IPN_ALLOWED_IPS`, `PAYMENT_TIMEOUT_MINUTES`, `COMMISSION_DEFAULT_RATE`, `WITHDRAWAL_DAILY_LIMIT`, `WALLET_HOLD_DAYS` |
-| `media-service` | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_BUCKET_PUBLIC`, `SUPABASE_BUCKET_PRIVATE`, `MAX_IMAGE_SIZE_MB`, `MAX_VIDEO_SIZE_MB`, `CDN_BASE_URL` |
-| `search-service` | `ELASTICSEARCH_NODE`, `ELASTICSEARCH_USERNAME`, `ELASTICSEARCH_PASSWORD`, `ES_INDEX_PREFIX`, `ES_REINDEX_BATCH_SIZE` |
-| `notification-service` | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `APP_BASE_URL` |
-| `audit-service` | `ELASTICSEARCH_NODE`, `AUDIT_RETENTION_MONTHS`, `AUDIT_PARTITION_AHEAD_MONTHS` |
-| `content-service` | `AD_ROLLUP_WINDOW_SECONDS`, `AD_BILLING_INTERVAL_MINUTES`, `AD_ATTRIBUTION_WINDOW_DAYS` |
-| `order-service` | `ORDER_AUTO_COMPLETE_DAYS`, `RETURN_WINDOW_DAYS` |
-| `analytics-service` | `REPORT_EXPORT_TTL_HOURS`, `ROLLUP_CRON` |
+| `platform` | `CORS_ORIGINS`, `THROTTLE_TTL`, `THROTTLE_LIMIT`, `SWAGGER_ENABLED`, `WS_PATH` |
+| `identity` | `JWT_PRIVATE_KEY`, `JWT_ACCESS_TTL`, `JWT_REFRESH_TTL`, `BCRYPT_ROUNDS`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`, `BOOTSTRAP_SUPER_ADMIN_EMAIL`, `BOOTSTRAP_SUPER_ADMIN_PASSWORD`, `ACCOUNT_LOCK_THRESHOLD` |
+| `payment` | `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_URL`, `VNPAY_RETURN_URL`, `VNPAY_IPN_ALLOWED_IPS`, `PAYMENT_TIMEOUT_MINUTES`, `COMMISSION_DEFAULT_RATE`, `WITHDRAWAL_DAILY_LIMIT`, `WALLET_HOLD_DAYS` |
+| `media` | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_BUCKET_PUBLIC`, `SUPABASE_BUCKET_PRIVATE`, `MAX_IMAGE_SIZE_MB`, `MAX_VIDEO_SIZE_MB`, `CDN_BASE_URL` — biến ffmpeg (`FFMPEG_THREADS`, `HLS_RENDITIONS`) chỉ đọc trong `worker-media` |
+| `search` | `ELASTICSEARCH_NODE`, `ELASTICSEARCH_USERNAME`, `ELASTICSEARCH_PASSWORD`, `ES_INDEX_PREFIX`, `ES_REINDEX_BATCH_SIZE` |
+| `notification` | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `APP_BASE_URL` — biến SMTP chỉ cần trong `worker` (nơi gửi mail thật) |
+| `audit` | `ELASTICSEARCH_NODE`, `AUDIT_RETENTION_MONTHS`, `AUDIT_PARTITION_AHEAD_MONTHS` |
+| `content` | `AD_ROLLUP_WINDOW_SECONDS`, `AD_BILLING_INTERVAL_MINUTES`, `AD_ATTRIBUTION_WINDOW_DAYS` |
+| `order` | `ORDER_AUTO_COMPLETE_DAYS`, `RETURN_WINDOW_DAYS` |
+| `analytics` | `REPORT_EXPORT_TTL_HOURS`, `ROLLUP_CRON` |
 | Frontend | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_WS_URL`, `NEXT_PUBLIC_CDN_URL`, `AUTH_SECRET`, `AUTH_URL`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `AUTH_FACEBOOK_ID`, `AUTH_FACEBOOK_SECRET`, `NEXT_PUBLIC_SENTRY_DSN` |
 
 ### G.3 Biến của bản cũ bị loại bỏ
@@ -1820,11 +1881,11 @@ gantt
     dateFormat  YYYY-MM-DD
     axisFormat  %m/%y
     section P0 Nền móng
-    Monorepo, gateway, identity, RBAC      :p0, 2026-10-05, 4w
+    Monorepo, module platform, identity, RBAC :p0, 2026-10-05, 4w
     section P1 Bán được hàng
     Hồ sơ, seller, media                   :p1a, after p0, 2w
     Danh mục, sản phẩm, tồn kho            :p1b, after p1a, 4w
-    Giỏ hàng, đơn hàng, saga               :p1c, after p1b, 2w
+    Giỏ hàng, đơn hàng, checkout transaction :p1c, after p1b, 2w
     Thanh toán VNPay, thông báo            :p1d, after p1c, 2w
     Mốc M1 MVP nội bộ                      :milestone, m1, after p1d, 0d
     section P2 Vận hành sàn
@@ -1858,7 +1919,7 @@ Ngày bắt đầu 2026-10-05 là giả định để sơ đồ có mốc cụ t
 | 1 | **Xoay toàn bộ bí mật bị lộ ở repo cũ** (Sentry, Supabase, Vercel, Google API key) | Tech Lead | Không được dùng lại bất kỳ giá trị nào |
 | 2 | Tạo repo mới, bật secret scanning + push protection + branch protection | Tech Lead | Mọi commit |
 | 3 | Khởi tạo pnpm workspace, `.editorconfig`, ESLint, Prettier, Husky, commitlint | Tech Lead | S1 |
-| 4 | Dựng `docker-compose.dev.yml`: Postgres 16, Redis, RabbitMQ, Elasticsearch, MailHog | DevOps | S1 |
+| 4 | Dựng `docker-compose.dev.yml`: Postgres 16, Redis, Elasticsearch, MailHog | DevOps | S1 |
 | 5 | Tạo dự án Supabase (storage) và VNPay sandbox | DevOps + PO | S3, S7 |
 | 6 | Đăng ký OAuth app Google và Facebook | DevOps | S1 |
 | 7 | Chốt `requirements.md` cho `identity-auth` và `rbac-permission` ở trạng thái approved | PO + Tech Lead | S1 |

@@ -2,15 +2,23 @@
 title: Mô hình domain tổng thể
 status: review
 owner: Tech Lead
-updated: 2026-09-16
-related: [docs/01-architecture/service-catalog.md, docs/01-architecture/adr/ADR-0002-database-per-service.md, docs/02-domain/product-variant.md, docs/02-domain/order-dispute.md, docs/02-domain/schemas/identity-service.prisma.md, docs/02-domain/schemas/seller-service.prisma.md, docs/02-domain/schemas/catalog-service.prisma.md, docs/02-domain/schemas/cart-service.prisma.md, docs/02-domain/schemas/order-service.prisma.md, docs/02-domain/schemas/payment-service.prisma.md, docs/02-domain/schemas/promotion-service.prisma.md, docs/02-domain/schemas/content-service.prisma.md, docs/02-domain/schemas/engagement-service.prisma.md, docs/02-domain/schemas/chat-service.prisma.md, docs/02-domain/schemas/notification-service.prisma.md, docs/02-domain/schemas/search-service.prisma.md, docs/02-domain/schemas/media-service.prisma.md, docs/02-domain/schemas/analytics-service.prisma.md, docs/02-domain/schemas/audit-service.prisma.md, docs/02-domain/schemas/master-data-service.prisma.md]
+updated: 2026-09-19
+related: [docs/01-architecture/service-catalog.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md, docs/02-domain/product-variant.md, docs/02-domain/order-dispute.md, docs/02-domain/schemas/identity-service.prisma.md, docs/02-domain/schemas/seller-service.prisma.md, docs/02-domain/schemas/catalog-service.prisma.md, docs/02-domain/schemas/cart-service.prisma.md, docs/02-domain/schemas/order-service.prisma.md, docs/02-domain/schemas/payment-service.prisma.md, docs/02-domain/schemas/promotion-service.prisma.md, docs/02-domain/schemas/content-service.prisma.md, docs/02-domain/schemas/engagement-service.prisma.md, docs/02-domain/schemas/chat-service.prisma.md, docs/02-domain/schemas/notification-service.prisma.md, docs/02-domain/schemas/search-service.prisma.md, docs/02-domain/schemas/media-service.prisma.md, docs/02-domain/schemas/analytics-service.prisma.md, docs/02-domain/schemas/audit-service.prisma.md, docs/02-domain/schemas/master-data-service.prisma.md]
 ---
 
 # Mô hình domain tổng thể
 
-> Tài liệu này là **bản đồ dữ liệu** cấp hệ thống: mỗi service sở hữu database nào, mô hình gốc (monolith cũ) tách
-> đi đâu, và các service nói chuyện với nhau bằng ID tham chiếu (external reference) chứ không phải khoá ngoại vật
-> lý. Chi tiết field/type nằm ở 16 file `docs/02-domain/schemas/<service>.prisma.md`, mỗi file một service.
+> Cập nhật theo [ADR-0015](../01-architecture/adr/ADR-0015-modular-monolith.md): không còn 16 database riêng, chỉ
+> còn **một** Postgres database chung cho `backend/apps/api`. "Service" trong tài liệu này và trong 16 file
+> `docs/02-domain/schemas/<tên>.prisma.md` (tên file giữ nguyên để không phải đổi 16 đường link đang trỏ tới, nhưng
+> đọc là **module**) là **ranh giới sở hữu logic của một module domain** trên `src/modules/<domain>/`, không phải
+> ranh giới database vật lý. Tất cả 16 phần schema nằm trong cùng một `prisma/schema/` (multi-file schema của Prisma
+> ORM 6, một `schema.prisma` gốc + nhiều file `.prisma` theo thư mục), migrate cùng lúc bằng một
+> `prisma migrate dev` — xem [data-architecture.md](../01-architecture/data-architecture.md). Nguyên tắc **không đổi**:
+> module chỉ được đọc/ghi bảng mà nó sở hữu qua `PrismaService` của chính nó (ép bằng ESLint boundaries, không còn
+> ép được bằng `DATABASE_URL` khác nhau vì giờ là cùng một connection); muốn dữ liệu domain khác thì gọi service của
+> module đó qua DI hoặc nghe `EventEmitter2`, **không** tự `include`/`join` qua bảng của module khác dù kỹ thuật vẫn
+> làm được (cùng DB, cùng schema) — vi phạm là vi phạm luật #2 của CLAUDE.md dù không bị Postgres chặn.
 
 ---
 
@@ -28,59 +36,62 @@ theo service nằm ở mục 5.
 
 ---
 
-## 2. Bounded context map — 16 service
+## 2. Bounded context map — 16 module domain, một database
 
-Ranh giới dữ liệu đúng theo [service-catalog.md](../01-architecture/service-catalog.md). Không có FK vật lý giữa
-hai service khác nhau: mọi tham chiếu chéo service chỉ là **ID logic** (external reference) kiểu `String`, không có
-ràng buộc `REFERENCES` ở tầng Postgres, không `include`/`join` qua Prisma relation. Muốn có dữ liệu domain khác thì
-gọi RPC (đồng bộ, người dùng đang chờ) hoặc nghe event rồi dựng read model riêng (bất đồng bộ, chấp nhận trễ).
+Ranh giới sở hữu dữ liệu đúng theo [service-catalog.md](../01-architecture/service-catalog.md), nay là ranh giới
+**module** chứ không phải ranh giới database. Không có `@relation` Prisma nào trỏ giữa bảng của hai module khác
+nhau: mọi tham chiếu chéo module chỉ là **ID logic** (external reference) kiểu `String`. Muốn có dữ liệu domain
+khác thì gọi service của module đó qua DI (đồng bộ, trong cùng process, có thể gộp vào cùng `$transaction`) hoặc
+nghe `EventEmitter2` rồi dựng read model riêng (bất đồng bộ, chấp nhận trễ) — không còn RPC mạng, không còn tách
+biệt process.
 
-| # | Service | Database | Biên giới dữ liệu |
+| # | Module | File schema (`docs/02-domain/schemas/`) | Biên giới dữ liệu |
 |---|---|---|---|
-| 1 | `identity-service` | `identity_db` | Danh tính, phiên đăng nhập, RBAC lớp 1–2 |
-| 2 | `seller-service` | `seller_db` | Hồ sơ shop, thương hiệu, đơn đăng ký bán, theo dõi shop |
-| 3 | `catalog-service` | `catalog_db` | Danh mục, sản phẩm, biến thể, **tồn kho** (cùng transaction với giá) |
-| 4 | `cart-service` | `cart_db` | Giỏ hàng bền vững + giỏ khách vãng lai |
-| 5 | `order-service` | `order_db` | Đơn hàng, dòng đơn (đã snapshot), địa chỉ, yêu cầu trả hàng, saga checkout |
-| 6 | `payment-service` | `payment_db` | Thanh toán VNPay/COD, ví, sổ giao dịch, rút tiền |
-| 7 | `promotion-service` | `promotion_db` | Voucher, chiến dịch khuyến mãi, flash sale |
-| 8 | `content-service` | `content_db` | Bài đăng/video, **và quảng cáo** (chiến dịch, ngân sách, impression) |
-| 9 | `engagement-service` | `engagement_db` | Đánh giá, bình chọn hữu ích, wishlist |
-| 10 | `chat-service` | `chat_db` | Hội thoại, tin nhắn, ticket hỗ trợ, tranh chấp ba bên |
-| 11 | `notification-service` | `notification_db` | Thông báo, tuỳ chọn nhận, template |
-| 12 | `search-service` | `search_db` + Elasticsearch | Chỉ mục dẫn xuất, không phải nguồn sự thật |
-| 13 | `media-service` | `media_db` | Tệp tải lên, biến thể ảnh/video, trạng thái xử lý |
-| 14 | `analytics-service` | `analytics_db` | Bản tổng hợp dựng sẵn, không đọc thẳng dữ liệu thô service khác |
-| 15 | `audit-service` | `audit_db` + Elasticsearch | Nhật ký bất biến, phân vùng theo tháng |
-| 16 | `master-data-service` | `masterdata_db` | Địa giới hành chính, cấu hình, feature flag, phí ship, lý do |
+| 1 | `identity` | `identity-service.prisma.md` | Danh tính, phiên đăng nhập, RBAC lớp 1–2 |
+| 2 | `seller` | `seller-service.prisma.md` | Hồ sơ shop, thương hiệu, đơn đăng ký bán, theo dõi shop |
+| 3 | `catalog` | `catalog-service.prisma.md` | Danh mục, sản phẩm, biến thể, **tồn kho** (cùng transaction với giá) |
+| 4 | `cart` | `cart-service.prisma.md` | Giỏ hàng bền vững + giỏ khách vãng lai |
+| 5 | `order` | `order-service.prisma.md` | Đơn hàng, dòng đơn (đã snapshot), địa chỉ, yêu cầu trả hàng |
+| 6 | `payment` | `payment-service.prisma.md` | Thanh toán VNPay/COD, ví, sổ giao dịch, rút tiền |
+| 7 | `promotion` | `promotion-service.prisma.md` | Voucher, chiến dịch khuyến mãi, flash sale |
+| 8 | `content` | `content-service.prisma.md` | Bài đăng/video, **và quảng cáo** (chiến dịch, ngân sách, impression) |
+| 9 | `engagement` | `engagement-service.prisma.md` | Đánh giá, bình chọn hữu ích, wishlist |
+| 10 | `chat` | `chat-service.prisma.md` | Hội thoại, tin nhắn, ticket hỗ trợ, tranh chấp ba bên |
+| 11 | `notification` | `notification-service.prisma.md` | Thông báo, tuỳ chọn nhận, template |
+| 12 | `search` | `search-service.prisma.md` + Elasticsearch | Chỉ mục dẫn xuất, không phải nguồn sự thật |
+| 13 | `media` | `media-service.prisma.md` | Tệp tải lên, biến thể ảnh/video, trạng thái xử lý |
+| 14 | `analytics` | `analytics-service.prisma.md` | Bản tổng hợp dựng sẵn, không đọc thẳng bảng thô của module khác |
+| 15 | `audit` | `audit-service.prisma.md` + Elasticsearch | Nhật ký bất biến, phân vùng theo tháng |
+| 16 | `master-data` | `master-data-service.prisma.md` | Địa giới hành chính, cấu hình, feature flag, phí ship, lý do |
 
-`api-gateway` không sở hữu dữ liệu nghiệp vụ nên không có schema riêng trong tài liệu này.
+Module `platform` (biên HTTP/WS, trước là `api-gateway`) không sở hữu dữ liệu nghiệp vụ nên không có schema riêng
+trong tài liệu này.
 
 ---
 
-## 3. Sơ đồ quan hệ dữ liệu logic giữa các service
+## 3. Sơ đồ quan hệ dữ liệu logic giữa các module
 
-Mức service-to-service — **không** vẽ full ERD 42 model vào một sơ đồ. Mũi tên là ID tham chiếu (external
-reference), không phải FK.
+Mức module-to-module — **không** vẽ full ERD 42 model vào một sơ đồ. Mũi tên là ID tham chiếu (external reference)
+giữa bảng của hai module trong cùng database, không phải FK Postgres thật.
 
 ```mermaid
 flowchart LR
-    IDN[identity-service]
-    SEL[seller-service]
-    CAT[catalog-service]
-    CRT[cart-service]
-    ORD[order-service]
-    PAY[payment-service]
-    PRM[promotion-service]
-    CNT[content-service]
-    ENG[engagement-service]
-    CHT[chat-service]
-    NTF[notification-service]
-    SRC[search-service]
-    MED[media-service]
-    ANA[analytics-service]
-    AUD[audit-service]
-    MDT[master-data-service]
+    IDN[module identity]
+    SEL[module seller]
+    CAT[module catalog]
+    CRT[module cart]
+    ORD[module order]
+    PAY[module payment]
+    PRM[module promotion]
+    CNT[module content]
+    ENG[module engagement]
+    CHT[module chat]
+    NTF[module notification]
+    SRC[module search]
+    MED[module media]
+    ANA[module analytics]
+    AUD[module audit]
+    MDT[module master-data]
 
     SEL -->|userId| IDN
     CAT -->|sellerId, categoryId cha| IDN
@@ -89,7 +100,7 @@ flowchart LR
     CRT -->|variantId, productId| CAT
     ORD -->|buyerId| IDN
     ORD -->|sellerId| SEL
-    ORD -->|snapshot variant, không gọi RPC lúc hiển thị| CAT
+    ORD -->|snapshot variant, không gọi lại lúc hiển thị| CAT
     ORD -->|provinceCode/districtCode/wardCode| MDT
     PAY -->|orderId| ORD
     PAY -->|sellerId ví| SEL
@@ -103,7 +114,7 @@ flowchart LR
     CHT -->|senderId/receiverId| IDN
     CHT -->|orderId, orderItemId tranh chấp| ORD
     NTF -->|userId| IDN
-    SRC -.đồng bộ qua event, không RPC.-> CAT
+    SRC -.đồng bộ qua EventEmitter2, không gọi trực tiếp.-> CAT
     SRC -.đồng bộ qua event.-> CNT
     SRC -.đồng bộ qua event.-> SEL
     MED -->|ownerId upload| IDN
@@ -119,9 +130,9 @@ flowchart LR
 
 ---
 
-## 4. Bảng ánh xạ 42 model gốc → service mới
+## 4. Bảng ánh xạ 42 model gốc → module mới
 
-| # | Model gốc | Service mới | Ghi chú |
+| # | Model gốc | Module mới | Ghi chú |
 |---|---|---|---|
 | 1 | `User` | `identity-service` | Giữ nguyên vai trò danh tính |
 | 2 | `Profile` | `identity-service` | — |
@@ -166,12 +177,16 @@ flowchart LR
 | 41 | `PostLike` | `content-service` | — |
 | 42 | `PostComment` | `content-service` | — |
 
-Không model gốc nào bị loại bỏ hoàn toàn — toàn bộ 42/42 đã có service sở hữu. Danh sách tính năng loại bỏ (khác
+> Cột "Module mới" giữ nguyên hậu tố `-service` từ tên gọi cũ (`identity-service`, `catalog-service`, …) vì đây
+> cũng là tiền tố của tên file schema trong `docs/02-domain/schemas/`; đọc là **tên module** (`src/modules/identity/`,
+> `src/modules/catalog/`), không phải một service/deployment riêng — xem mục 2.
+
+Không model gốc nào bị loại bỏ hoàn toàn — toàn bộ 42/42 đã có module sở hữu. Danh sách tính năng loại bỏ (khác
 model) nằm ở `feature-inventory.md` §24.
 
-### 4.1 Model MỚI theo service (không có ở bản cũ)
+### 4.1 Model MỚI theo module (không có ở bản cũ)
 
-| Service | Model mới | Vì sao |
+| Module | Model mới | Vì sao |
 |---|---|---|
 | `seller-service` | `SellerApplication`, `ShopFollow` | Tách luồng đơn đăng ký khỏi `SellerProfile` đã duyệt; theo dõi shop là tính năng mới (FEAT-USR-010) |
 | `catalog-service` | `ProductOption`, `ProductOptionValue`, `InventoryItem`, `InventoryLedger` | Domain `inventory` hoàn toàn mới (FEAT-INV-*), xem product-variant.md |
@@ -188,26 +203,27 @@ model) nằm ở `feature-inventory.md` §24.
 
 ---
 
-## 5. Enum gốc → service sở hữu
+## 5. Enum gốc → module sở hữu
 
-| Enum gốc | Service sở hữu | Dùng ở |
+| Enum gốc | Module sở hữu | Dùng ở |
 |---|---|---|
-| `UserRole` | `identity-service` | `User.roles` |
-| `UserVoucherStatus` | `promotion-service` | `UserVoucher.status` |
-| `NotificationType` | `notification-service` | `Notification.type` |
-| `OrderStatus` | `order-service` | `Order.status` (mở rộng 7 → 11 trạng thái, xem feature-inventory §8) |
-| `PaymentStatus` | `payment-service` | `Payment.status` (và snapshot trên `order-service` qua event, không FK) |
-| `PaymentMethod` | `order-service` | `Order.paymentMethod` — lựa chọn tại thời điểm đặt đơn |
-| `ResourceStatus` | `catalog-service` + `seller-service` | Mỗi service định nghĩa enum riêng cùng tên (không share type qua DB, chỉ share qua `@timmyhub/contracts`) |
-| `ShipperStatus` | `order-service` | Trạng thái shipper gắn đơn |
-| `VoucherType` | `promotion-service` | `Voucher.type` |
-| `TransactionType` | `payment-service` | `WalletTransaction.type` |
-| `LogStatus` | `audit-service` | `SystemLog.status` |
-| `PostStatus` | `content-service` | `Post.status` |
+| `UserRole` | `identity` | `User.roles` |
+| `UserVoucherStatus` | `promotion` | `UserVoucher.status` |
+| `NotificationType` | `notification` | `Notification.type` |
+| `OrderStatus` | `order` | `Order.status` (mở rộng 7 → 11 trạng thái, xem feature-inventory §8) |
+| `PaymentStatus` | `payment` | `Payment.status` (và snapshot trên module `order` qua event, không FK) |
+| `PaymentMethod` | `order` | `Order.paymentMethod` — lựa chọn tại thời điểm đặt đơn |
+| `ResourceStatus` | `catalog` + `seller` | Mỗi module định nghĩa enum riêng cùng tên trong phần schema của mình (không share type qua DB, chỉ share qua `@timmyhub/contracts`) |
+| `ShipperStatus` | `order` | Trạng thái shipper gắn đơn |
+| `VoucherType` | `promotion` | `Voucher.type` |
+| `TransactionType` | `payment` | `WalletTransaction.type` |
+| `LogStatus` | `audit` | `SystemLog.status` |
+| `PostStatus` | `content` | `Post.status` |
 
-> Enum không được share bằng cách import chéo Prisma schema (vi phạm luật #2 — một service một DB). Định nghĩa
-> zod tương ứng nằm trong `@timmyhub/contracts` và được cả FE/BE dùng chung; mỗi `schema.prisma` định nghĩa lại
-> enum Postgres của riêng mình với cùng giá trị.
+> Enum không được share bằng cách một module import type Prisma sinh ra từ phần schema của module khác (vi phạm
+> luật #2 — module chỉ đụng dữ liệu của chính nó, dù giờ chung một database vật lý). Định nghĩa zod tương ứng nằm
+> trong `@timmyhub/contracts` và được cả FE/BE dùng chung; mỗi phần schema của module định nghĩa lại enum Postgres
+> của riêng mình với cùng giá trị.
 
 ---
 
@@ -220,10 +236,10 @@ model) nằm ở `feature-inventory.md` §24.
 | Soft delete | `deletedAt DateTime?` — chỉ thêm ở model có yêu cầu xoá mềm rõ ràng (vd `User`, `Product`, `Post`); model log/ledger bất biến (`AuditLog`, `WalletTransaction`, `InventoryLedger`, `DisputeEvent`) **không** có `deletedAt`, không cho xoá |
 | Khoá chính | `id String @id @default(uuid())` cho model mới; model kế thừa nguyên trạng từ bản cũ giữ `@default(cuid())` để không phải backfill khi migrate dữ liệu thật |
 | Naming | Model `PascalCase`, field `camelCase`, bảng Postgres theo tên model (Prisma mặc định, không `@@map` trừ khi cần tránh trùng từ khoá) |
-| Outbox | Service có phát event nghiệp vụ quan trọng có bảng `OutboxEvent` (`outbox_events`), ghi trong cùng transaction với thay đổi nghiệp vụ — xem [ADR-0002](../01-architecture/adr/ADR-0002-database-per-service.md) |
-| Idempotent consumer | Service có nghe event có bảng `ProcessedEvent` (`processed_events`), khoá theo `eventId` |
+| Outbox | Chỉ module nào phát **hiệu ứng phụ đi ra ngoài process** (mail, webhook, audit sink) mới cần bảng `OutboxEvent` (`outbox_events`), ghi trong cùng transaction với thay đổi nghiệp vụ, dispatch bởi `backend/apps/worker` — xem [ADR-0015](../01-architecture/adr/ADR-0015-modular-monolith.md). Event nội bộ giữa các module dùng `EventEmitter2` trong process, không cần outbox |
+| Idempotent consumer | Module có nghe event qua outbox có bảng `ProcessedEvent` (`processed_events`), khoá theo `eventId`; listener `EventEmitter2` trong process tự bảo đảm idempotent bằng try/catch, không cần bảng riêng |
 | Tiền tệ đa quốc gia | Tất cả field tiền kèm `currency String @default("VND")` dù hiện tại chỉ có VND, để không phải migrate schema khi mở rộng |
-| Tham chiếu chéo service | Luôn là `<entity>Id String`, kiểu `String`, **không** khai báo `@relation` trỏ sang model không tồn tại trong cùng schema |
+| Tham chiếu chéo module | Luôn là `<entity>Id String`, kiểu `String`, **không** khai báo `@relation` trỏ sang model của module khác dù kỹ thuật khả thi (cùng database) |
 
 ---
 

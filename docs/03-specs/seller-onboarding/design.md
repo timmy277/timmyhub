@@ -2,14 +2,16 @@
 title: Thiết kế — seller-onboarding
 status: draft
 owner: Backend Lead
-updated: 2026-09-16
-related: [docs/03-specs/seller-onboarding/requirements.md, docs/02-domain/schemas/seller-service.prisma.md, docs/01-architecture/service-catalog.md, docs/01-architecture/event-catalog.md, docs/01-architecture/rbac-advanced.md, docs/01-architecture/adr/ADR-0002-database-per-service.md]
+updated: 2026-09-19
+related: [docs/03-specs/seller-onboarding/requirements.md, docs/02-domain/schemas/seller-service.prisma.md, docs/01-architecture/service-catalog.md, docs/01-architecture/event-catalog.md, docs/01-architecture/rbac-advanced.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md, docs/01-architecture/adr/ADR-0002-database-per-service.md]
 ---
 
 # Thiết kế — seller-onboarding (`SEL`)
 
-Service sở hữu: `seller-service` (`seller_db`, cổng `3102`). Xem
-[requirements.md](requirements.md) cho danh sách `REQ-SEL-*` đầy đủ.
+Module sở hữu: `seller` (`src/modules/seller/` trong `backend/apps/api`), dùng chung một database Postgres với các
+module khác — theo [ADR-0015](../../01-architecture/adr/ADR-0015-modular-monolith.md). Tên `seller-service` chỉ còn
+giữ lại làm tên file schema/tài liệu lịch sử (`seller-service.prisma.md`), không phải một đơn vị triển khai riêng.
+Xem [requirements.md](requirements.md) cho danh sách `REQ-SEL-*` đầy đủ.
 
 ## 1. Mô hình dữ liệu
 
@@ -92,7 +94,7 @@ model BrandProfile {
     @@index([brandSlug])
 }
 
-/// FEAT-USR-010 — nằm trong cùng service (seller_db) nhưng thuộc domain user-profile, tham chiếu ở đây
+/// FEAT-USR-010 — nằm trong cùng phần schema module seller nhưng thuộc domain user-profile, tham chiếu ở đây
 /// chỉ vì SellerProfile.followers trỏ tới model này, không đặc tả lại yêu cầu ở spec này.
 model ShopFollow {
     id              String        @id @default(uuid())
@@ -133,7 +135,8 @@ sử nộp lại — `REQ-SEL-004`) nhưng tối đa **một** `SellerProfile` (
 
 ## 2. API
 
-Mọi endpoint đi qua `api-gateway`, xác thực JWT + `@Roles` + `@Permissions` + `whereForScope` (bốn lớp, xem
+Mọi endpoint đi qua module `platform` (entrypoint HTTP/WS trong `backend/apps/api`, thay cho `api-gateway` cũ),
+xác thực JWT + `@Roles` + `@Permissions` + `whereForScope` (bốn lớp, xem
 [rbac-advanced.md](../../01-architecture/rbac-advanced.md)). Quy ước tên permission `module:resource:action[:scope]`.
 Nhóm `application` giữ số ít để khớp với ví dụ đã chốt ở `rbac-advanced.md` (`seller:application:approve`); nhóm
 `shop`/`brand` dùng số nhiều theo quy ước chung.
@@ -172,9 +175,19 @@ Chỉ dùng tên đã có ở [event-catalog.md](../../01-architecture/event-cat
 | `seller.shop.updated` | Sau `PATCH` hồ sơ shop, khôi phục shop tạm ngưng | `sellerProfileId`, `shopSlug`, các trường đổi | CAT, SRC, ORD *(read model)* |
 | `seller.shop.suspended` | Sau tạm ngưng shop | `sellerProfileId`, `suspendedReason` | CAT, CNT, SRC, NTF, AUD |
 
-Tất cả phát **chỉ** qua `OutboxEvent` — ghi trong cùng transaction Prisma với thay đổi nghiệp vụ, một poller riêng
-đọc bảng, publish lên `timmyhub.events`, đánh dấu `publishedAt` (đúng pattern đã chốt ở
-[ADR-0002](../../01-architecture/adr/ADR-0002-database-per-service.md)). Không có đường phát event nào bỏ qua outbox.
+Theo [ADR-0015](../../01-architecture/adr/ADR-0015-modular-monolith.md) và
+[communication-patterns.md §3](../../01-architecture/communication-patterns.md#3-outbox--chỉ-cho-hệ-quả-bất-đồng-bộ-ra-ngoài-process),
+cách phát tách theo đích đến:
+
+- Listener nằm **trong cùng process** (`IDN` gán role, `CAT`/`SRC`/`ANA` dựng read model) nhận sự kiện qua
+  `EventEmitter2` (`@OnEvent('seller.application.approved')`, …) — gọi ngay sau khi transaction Prisma commit, không
+  cần bảng outbox vì không có rủi ro "publish rồi crash trước khi gửi" của broker riêng.
+- Hệ quả phải chắc chắn xảy ra dù process crash và đi **ra ngoài** process (`NTF` gửi email, `AUD` ghi audit log bất
+  biến) vẫn ghi qua `OutboxEvent` trong cùng transaction Prisma với thay đổi nghiệp vụ; một BullMQ worker
+  (`outbox-dispatch`, không phải RabbitMQ relay) quét bảng mỗi 500 ms và gửi đi, đánh dấu `publishedAt` sau khi
+  gửi thành công.
+
+Không có đường phát event nào bỏ qua hai cơ chế trên.
 
 ### Nghe (consumer)
 
@@ -183,35 +196,37 @@ Tất cả phát **chỉ** qua `OutboxEvent` — ghi trong cùng transaction Pri
 | `order.completed` | `UPDATE SellerProfile SET cancelRate = …, avgResponseHours = … WHERE id = :sellerProfileId` nguyên tử | `REQ-SEL-018` |
 | `review.created` | `UPDATE SellerProfile SET rating = …` nguyên tử | `REQ-SEL-019` |
 
-Cả hai consumer kiểm tra `ProcessedEvent(eventId)` trước khi xử lý — idempotent theo luật cứng #3.
+Cả hai được nghe qua `@OnEvent` trong cùng process (module `order`/`review` emit, module `seller` lắng nghe) —
+không còn nguy cơ "broker gửi lại" như bản RabbitMQ cũ. Vẫn giữ kiểm tra `ProcessedEvent(eventId)` trước khi xử lý
+như một lớp chặn phòng hờ (event bị phát lại do retry logic nội bộ của module phát, hoặc do chạy lại thủ công/backfill),
+theo tinh thần luật cứng #3.
 
 ## 4. Sequence diagram — nộp đơn → duyệt → tạo shop
 
 ```mermaid
 sequenceDiagram
     actor U as User
-    participant GW as api-gateway
-    participant SEL as seller-service
-    participant OB as Outbox poller
-    participant MQ as RabbitMQ (timmyhub.events)
+    participant PLT as platform (module, cùng process)
+    participant SEL as SellerService (module seller)
+    participant DB as Postgres (database dùng chung)
+    participant OB as BullMQ worker (outbox-dispatch)
     actor A as Admin
-    participant IDN as identity-service
+    participant IDN as IdentityService (module identity, @OnEvent)
 
-    U->>GW: POST /seller/applications (Idempotency-Key)
-    GW->>SEL: RPC tạo SellerApplication
-    SEL->>SEL: Transaction: INSERT SellerApplication (PENDING) + INSERT OutboxEvent(submitted)
-    SEL-->>GW: 201 applicationId
-    OB->>SEL: Poll outbox_events (publishedAt IS NULL)
-    OB->>MQ: publish seller.application.submitted
-    MQ-->>OB: ack, đánh dấu publishedAt
+    U->>PLT: POST /seller/applications (Idempotency-Key)
+    PLT->>SEL: gọi trực tiếp (DI) createApplication()
+    SEL->>DB: Transaction: INSERT SellerApplication (PENDING) + INSERT OutboxEvent(submitted)
+    SEL-->>PLT: 201 applicationId
+    OB->>DB: Poll outbox_events (status = PENDING)
+    OB->>OB: Gửi email xác nhận đã nộp đơn (NTF), ghi audit log (AUD)
 
-    A->>GW: POST /admin/seller/applications/:id/approve
-    GW->>SEL: Kiểm quyền seller:application:approve, RPC approve
-    SEL->>SEL: Transaction: UPDATE application WHERE status='PENDING' SET APPROVED<br/>+ INSERT SellerProfile(APPROVED)<br/>+ INSERT OutboxEvent(approved)
-    SEL-->>GW: 200 sellerProfileId
-    OB->>MQ: publish seller.application.approved
-    MQ->>IDN: consume seller.application.approved
-    IDN->>IDN: Kiểm ProcessedEvent(eventId) rồi gán role SELLER cho userId
+    A->>PLT: POST /admin/seller/applications/:id/approve
+    PLT->>SEL: Kiểm quyền seller:application:approve, gọi trực tiếp (DI) approve()
+    SEL->>DB: Transaction: UPDATE application WHERE status='PENDING' SET APPROVED<br/>+ INSERT SellerProfile(APPROVED)<br/>+ INSERT OutboxEvent(approved)
+    SEL-->>PLT: 200 sellerProfileId
+    SEL->>IDN: emit EventEmitter2('seller.application.approved') sau khi commit
+    IDN->>IDN: (phòng hờ) kiểm ProcessedEvent(eventId) rồi gán role SELLER cho userId
+    OB->>OB: Gửi email chào mừng seller (NTF), ghi audit log (AUD)
 ```
 
 ## 5. Trường hợp biên
@@ -228,8 +243,8 @@ không giả định chỉ có một bản ghi cho `userId`.
 ```mermaid
 sequenceDiagram
     actor S as Seller
-    participant SEL as seller-service
-    participant DB as seller_db
+    participant SEL as SellerService (module seller)
+    participant DB as Postgres (database dùng chung)
 
     S->>SEL: PATCH /seller/shop/me { shopName: "Cửa Hàng Việt" }
     SEL->>SEL: candidateSlug = slugify("Cửa Hàng Việt") = "cua-hang-viet"
@@ -253,15 +268,19 @@ thấy slug "trống" rồi cùng ghi, một trong hai lỗi 500 ở tầng DB t
 | Hai request đổi `shopName` cùng lúc dẫn tới cùng `shopSlug` | Ràng buộc `@unique(shopSlug)` ở DB + retry với hậu tố, xem §5.2 |
 | `userId` cố nộp hai đơn cùng lúc | Ràng buộc nghiệp vụ kiểm `PENDING`/`APPROVED` hiện có trong cùng transaction tạo đơn (`SELECT … FOR UPDATE` theo `userId` hoặc unique index có điều kiện qua ứng dụng) trước khi `INSERT` |
 
-## 7. Ảnh hưởng tới domain khác
+## 7. Ảnh hưởng tới module khác
 
-- `identity-service`: nghe `seller.application.approved` để gán role `SELLER` — không đọc thẳng `seller_db`.
-- `catalog-service`: nghe `seller.shop.suspended`/`seller.shop.updated` để ẩn/hiện sản phẩm của shop — không query
-  chéo `seller_db`.
-- `search-service`, `analytics-service`, `notification-service`: dựng read model riêng từ các event `seller.*`,
-  không JOIN qua ranh giới service (luật cứng #2, ADR-0002).
-- `order-service` dùng `seller.shop.updated` như read model không chuẩn hoá để hiển thị tên shop trên đơn hàng mà
-  không cần gọi RPC đồng bộ mỗi lần render.
+Dùng chung một database (`ADR-0015`), nhưng ranh giới vẫn giữ ở tầng code, ép bằng ESLint boundary rule — không
+module nào được import thẳng repository/Prisma model của module `seller`, chỉ gọi qua `SellerService` đã export.
+
+- Module `identity`: nghe `seller.application.approved` qua `EventEmitter2` để gán role `SELLER` — không import
+  thẳng repository của module `seller`.
+- Module `catalog`: nghe `seller.shop.suspended`/`seller.shop.updated` để ẩn/hiện sản phẩm của shop — không tự viết
+  Prisma query chéo sang bảng của module `seller`.
+- Module `search`, `analytics`, `notification`: dựng read model riêng từ các event `seller.*`, không JOIN qua ranh
+  giới module (luật cứng #2, xem ADR-0015 §"Ranh giới module").
+- Module `order` dùng `seller.shop.updated` như read model không chuẩn hoá để hiển thị tên shop trên đơn hàng mà
+  không cần gọi trực tiếp `SellerService` mỗi lần render.
 
 ## 8. ❌ BAD / ✅ GOOD
 

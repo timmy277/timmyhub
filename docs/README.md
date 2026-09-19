@@ -2,8 +2,8 @@
 title: TimmyHub — Mục lục tài liệu
 status: approved
 owner: Tech Lead
-updated: 2026-09-16
-related: [docs/00-overview/product-overview.md, docs/07-plan/implementation-plan.md, docs/08-handoff/handoff.md]
+updated: 2026-09-19
+related: [docs/00-overview/product-overview.md, docs/07-plan/implementation-plan.md, docs/08-handoff/handoff.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
 # TimmyHub — Tài liệu dự án
@@ -12,8 +12,11 @@ TimmyHub là sàn thương mại điện tử đa vai trò (kiểu Shopee) kiêm
 seller đăng bán sản phẩm, đăng bài post và video quảng cáo, quản lý doanh số; user mua hàng, tương tác nội dung;
 admin kiểm duyệt và vận hành toàn sàn.
 
-Bản này (`timmy-hub`) là **thế hệ 2** của dự án `TimmyHub` cũ: backend tách thành microservices, frontend đổi sang
-shadcn/ui + Tailwind, auth chuyển sang NextAuth, i18n chuyển sang next-intl.
+Bản này (`timmy-hub`) là **thế hệ 2** của dự án `TimmyHub` cũ: backend viết lại thành một **modular monolith** NestJS
+(`backend/apps/api`, 16+ module domain trong một app, một database — xem
+[ADR-0015](01-architecture/adr/ADR-0015-modular-monolith.md); ban đầu dự tính tách microservices, đã đổi hướng
+trước khi code, xem ADR-0001..0003 đã bị supersede), frontend đổi sang shadcn/ui + Tailwind, auth chuyển sang
+NextAuth, i18n chuyển sang next-intl.
 
 ## Quy ước tài liệu
 
@@ -33,20 +36,21 @@ Chi tiết đầy đủ các mẫu câu EARS và định dạng ID: [docs/06-qua
 1. [00-overview/product-overview.md](00-overview/product-overview.md) — hiểu sản phẩm và các actor
 2. [00-overview/glossary.md](00-overview/glossary.md) — thuật ngữ, tránh hiểu nhầm tên entity
 3. [01-architecture/system-architecture.md](01-architecture/system-architecture.md) — bức tranh tổng
-4. [01-architecture/service-catalog.md](01-architecture/service-catalog.md) — 17 service làm gì
+4. [01-architecture/service-catalog.md](01-architecture/service-catalog.md) — module `platform` + 16 module domain làm gì
 5. [08-handoff/onboarding.md](08-handoff/onboarding.md) — dựng máy và chạy được hệ thống
 6. [06-quality/coding-standards.md](06-quality/coding-standards.md) — viết code đúng chuẩn dự án
 
 ### Backend lead
-1. [01-architecture/service-catalog.md](01-architecture/service-catalog.md)
-2. [01-architecture/communication-patterns.md](01-architecture/communication-patterns.md) — RabbitMQ, saga, outbox, idempotency
-3. [01-architecture/data-architecture.md](01-architecture/data-architecture.md) — database-per-service
-4. [01-architecture/event-catalog.md](01-architecture/event-catalog.md) — hợp đồng sự kiện giữa các service
-5. [02-domain/domain-model.md](02-domain/domain-model.md) + [02-domain/schemas/](02-domain/schemas/)
-6. [03-specs/](03-specs/) — spec từng domain
-7. [01-architecture/concurrency-and-consistency.md](01-architecture/concurrency-and-consistency.md) — chống oversell, tranh chấp đồng thời
-8. [01-architecture/rbac-advanced.md](01-architecture/rbac-advanced.md) — phân quyền 4 lớp, phạm vi dữ liệu
-9. [01-architecture/adr/](01-architecture/adr/) — vì sao chọn như vậy
+1. [01-architecture/adr/ADR-0015-modular-monolith.md](01-architecture/adr/ADR-0015-modular-monolith.md) — quyết định kiến trúc nền, đọc trước tiên
+2. [01-architecture/service-catalog.md](01-architecture/service-catalog.md)
+3. [01-architecture/communication-patterns.md](01-architecture/communication-patterns.md) — DI trong process, EventEmitter2, outbox chỉ cho hiệu ứng ngoài
+4. [01-architecture/data-architecture.md](01-architecture/data-architecture.md) — một database chung, ranh giới module bằng quy ước
+5. [01-architecture/event-catalog.md](01-architecture/event-catalog.md) — hợp đồng sự kiện giữa các module
+6. [02-domain/domain-model.md](02-domain/domain-model.md) + [02-domain/schemas/](02-domain/schemas/)
+7. [03-specs/](03-specs/) — spec từng domain
+8. [01-architecture/concurrency-and-consistency.md](01-architecture/concurrency-and-consistency.md) — chống oversell, tranh chấp đồng thời
+9. [01-architecture/rbac-advanced.md](01-architecture/rbac-advanced.md) — phân quyền 4 lớp, phạm vi dữ liệu
+10. [01-architecture/adr/](01-architecture/adr/) — vì sao chọn như vậy
 
 ### Frontend lead
 1. [04-frontend/fe-architecture.md](04-frontend/fe-architecture.md)
@@ -80,6 +84,7 @@ Các tài liệu cắt ngang nhiều domain, không thuộc lối đọc nào �
 | [01-architecture/technology-radar.md](01-architecture/technology-radar.md) | Định thêm thư viện/công cụ vào stack — có mục ADOPT/TRIAL/ASSESS/HOLD kèm lý do |
 | [01-architecture/concurrency-and-consistency.md](01-architecture/concurrency-and-consistency.md) | Code chạm tồn kho, tiền, voucher, flash sale |
 | [01-architecture/rbac-advanced.md](01-architecture/rbac-advanced.md) | Thêm quyền, phạm vi dữ liệu, uỷ quyền, mạo danh, break-glass |
+| [01-architecture/adr/ADR-0015-modular-monolith.md](01-architecture/adr/ADR-0015-modular-monolith.md) | Trước khi thêm module mới, gọi chéo module, hoặc cân nhắc tách một module thành service riêng |
 | [01-architecture/i18n-backend.md](01-architecture/i18n-backend.md) | Sinh thông điệp lỗi, nội dung gửi ra, tìm kiếm đa ngôn ngữ |
 | [02-domain/product-variant.md](02-domain/product-variant.md) | Làm sản phẩm, biến thể, giá, tồn kho, snapshot đơn hàng |
 | [02-domain/order-dispute.md](02-domain/order-dispute.md) | Làm tranh chấp đơn, hoàn tiền, ký quỹ, hạn xử lý |
@@ -107,7 +112,7 @@ nằm ở [`CLAUDE.md`](../CLAUDE.md) ở gốc repo, Claude đọc tự động
 | `design-review` | Rà soát UI/UX: 10 heuristic Nielsen, Laws of UX, phân cấp thị giác, WCAG 2.2 AA |
 | `nest-endpoint` | Thêm endpoint backend đúng phân quyền, audit, idempotency, outbox |
 | `prisma-schema` | Đổi mô hình dữ liệu: kiểu tiền/thời gian, index, khoá lạc quan, migration an toàn |
-| `code-review` | Rà code trước khi merge: đua tranh, tiền, phạm vi dữ liệu, ranh giới service, bảo mật |
+| `code-review` | Rà code trước khi merge: đua tranh, tiền, phạm vi dữ liệu, ranh giới module, bảo mật |
 | `perf-audit` | Truy nguyên nhân chậm: gói JS, Core Web Vitals, N+1, index, cache, hàng đợi |
 | `i18n-strings` | Trích chuỗi cứng, đặt tên khoá, ICU plural, thêm một ngôn ngữ mới |
 
@@ -116,8 +121,8 @@ nằm ở [`CLAUDE.md`](../CLAUDE.md) ở gốc repo, Claude đọc tự động
 | Thư mục | Nội dung |
 |---|---|
 | [00-overview/](00-overview/) | Tổng quan sản phẩm, danh mục tính năng, vai trò & quyền, thuật ngữ |
-| [01-architecture/](01-architecture/) | Kiến trúc hệ thống, danh mục service, giao tiếp, dữ liệu, sự kiện, bảo mật, quan sát, ADR |
-| [02-domain/](02-domain/) | Mô hình miền, ERD, schema Prisma theo từng service, chuyên đề biến thể & tranh chấp đơn |
+| [01-architecture/](01-architecture/) | Kiến trúc hệ thống (modular monolith), danh mục module, giao tiếp, dữ liệu, sự kiện, bảo mật, quan sát, ADR |
+| [02-domain/](02-domain/) | Mô hình miền, ERD, schema Prisma theo từng module, chuyên đề biến thể & tranh chấp đơn |
 | [03-specs/](03-specs/) | 23 domain spec, mỗi domain có `requirements.md` / `design.md` / `tasks.md` |
 | [04-frontend/](04-frontend/) | Kiến trúc FE, route, design system, component, state, auth, i18n, Storybook, SEO, chuyển động |
 | [05-infra/](05-infra/) | Dev local, Docker, Kubernetes, CI/CD, biến môi trường, runbook |
@@ -130,7 +135,7 @@ nằm ở [`CLAUDE.md`](../CLAUDE.md) ở gốc repo, Claude đọc tự động
 | Nhóm | Trạng thái | Ghi chú |
 |---|---|---|
 | 00-overview | approved | Chốt phạm vi MVP |
-| 01-architecture | approved | ADR-0001..0012 + ADR-0014 đã chốt (ADR-0013/0015/0016 còn là ứng viên ở `technology-radar.md`) |
+| 01-architecture | approved | ADR-0004..0012 + ADR-0014 + ADR-0015 đã chốt; ADR-0001/0002/0003 (microservices, database-per-service, RabbitMQ) `superseded by ADR-0015`; ADR-0013/0016/0017 còn là ứng viên ở `technology-radar.md` |
 | 02-domain | approved | Schema có thể điều chỉnh khi implement, phải cập nhật lại doc |
 | 03-specs | approved | 9 domain MVP ưu tiên implement trước |
 | 04-frontend | approved | |

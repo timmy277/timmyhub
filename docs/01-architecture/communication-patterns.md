@@ -1,146 +1,162 @@
 ---
-title: Mẫu giao tiếp giữa các service
+title: Mẫu giao tiếp giữa các module
 status: approved
 owner: Backend Lead
-updated: 2026-09-15
-related: [docs/01-architecture/event-catalog.md, docs/01-architecture/service-catalog.md, docs/01-architecture/adr/ADR-0003-rabbitmq-event-bus.md]
+updated: 2026-09-19
+related: [docs/01-architecture/event-catalog.md, docs/01-architecture/service-catalog.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
-# Mẫu giao tiếp giữa các service
+# Mẫu giao tiếp giữa các module
+
+> Trước ngày 2026-09-19, tài liệu này mô tả giao tiếp qua RabbitMQ giữa các service độc lập. Theo
+> [ADR-0015](adr/ADR-0015-modular-monolith.md), toàn bộ module chạy trong **một process**: RPC trở thành gọi hàm
+> trực tiếp qua DI, event trở thành `EventEmitter2` trong process, saga checkout trở thành một `$transaction` Prisma
+> thật. RabbitMQ không còn trong tech stack bắt buộc. Outbox pattern vẫn giữ nhưng thu hẹp phạm vi — xem §3.
 
 ## 1. Chọn cách giao tiếp
 
 ```mermaid
 flowchart TD
     Q1{"Người dùng đang chờ<br/>kết quả ngay?"}
-    Q1 -->|Không| EVT["Domain event<br/>(bất đồng bộ, qua outbox)"]
-    Q1 -->|Có| Q2{"Dữ liệu có thể<br/>cũ vài giây?"}
-    Q2 -->|Có| RM["Đọc read model cục bộ<br/>(dựng từ event)"]
-    Q2 -->|Không| Q3{"Là bước bắt buộc<br/>của giao dịch?"}
-    Q3 -->|Có| RPC["RPC đồng bộ<br/>(có timeout + circuit breaker)"]
-    Q3 -->|Không| RM
+    Q1 -->|Không| EVT["Domain event<br/>(EventEmitter2, trong process)"]
+    Q1 -->|Có| Q2{"Là bước bắt buộc<br/>của giao dịch?"}
+    Q2 -->|Có| CALL["Gọi thẳng service<br/>(DI, cùng process)"]
+    Q2 -->|Không| CALL
 ```
+
+Không còn nhánh "đọc read model vì dữ liệu ở service khác" hay "RPC vì cần đồng bộ" — mọi module đều đọc được dữ liệu
+mới nhất của module khác qua service export, cùng một request, không có độ trễ mạng. Chỉ còn một câu hỏi thật sự cần
+trả lời: **việc này là một bước phải hoàn thành ngay trong luồng hiện tại (gọi hàm), hay là một phản ứng phụ mà module
+khác có thể xử lý sau, độc lập với luồng hiện tại (event)?**
 
 | Mẫu | Dùng khi | Ví dụ | Không dùng khi |
 |---|---|---|---|
-| **RPC đồng bộ** | Cần kết quả ngay, là bước bắt buộc | `inventory.reserve` trong checkout | Chỉ để thông báo cho service khác |
-| **Domain event** | Việc đã xảy ra, bên khác phản ứng | `order.completed` → ghi có ví, mở quyền đánh giá | Cần biết kết quả xử lý ngay |
-| **Read model** | Dữ liệu tham chiếu, chấp nhận trễ vài giây | `engagement-service` biết ai đã mua gì | Dữ liệu quyết định tiền bạc tại thời điểm giao dịch |
-| **Job (BullMQ)** | Việc nặng, trong phạm vi một service | Chuyển mã video, sinh báo cáo | Cần chia việc xuyên service |
+| **Gọi thẳng service (DI)** | Cần kết quả ngay, là bước bắt buộc của luồng hiện tại | `InventoryService.reserve()` trong checkout | Chỉ để thông báo cho module khác biết việc đã xảy ra |
+| **Domain event (`EventEmitter2`)** | Việc đã xảy ra, module khác phản ứng độc lập, không chặn luồng hiện tại | `order.completed` → `payment` ghi có ví, `engagement` mở quyền đánh giá | Cần kết quả xử lý ngay để quyết định bước tiếp theo |
+| **Outbox + BullMQ worker** | Hệ quả **phải** xảy ra dù process crash ngay sau đó, và không thể đồng bộ trong transaction hiện tại (gửi ra ngoài hệ thống) | Gửi email xác nhận, đẩy webhook, ghi audit log | Phản ứng chỉ cần trong process — dùng event emitter, không cần outbox |
+| **Job (BullMQ)** | Việc nặng CPU/IO, chạy nền, không chặn request | Chuyển mã video, tổng hợp báo cáo | Cần trả kết quả trong cùng request |
 
-❌ **BAD** — gọi HTTP trực tiếp giữa service:
-
-```ts
-// order-service
-const product = await this.http.get(`http://catalog-service:3103/products/${id}`)
-```
-
-Vấn đề: bỏ qua service discovery, không có retry/timeout thống nhất, ghép cứng địa chỉ mạng, không đo được.
-
-✅ **GOOD** — RPC qua RabbitMQ:
+❌ **BAD** — inject Prisma/repository của module khác:
 
 ```ts
-// order-service
-const product = await firstValueFrom(
-    this.catalogClient
-        .send<VariantSnapshot>({ cmd: 'catalog.getVariantSnapshot' }, { variantId })
-        .pipe(timeout(3000)),
-)
+// order/order.service.ts
+constructor(private readonly prisma: PrismaService) {}
+
+async createFromCart(cartId: string) {
+    // Truy cập thẳng bảng của module catalog — phá ranh giới module
+    const variant = await this.prisma.productVariant.findUnique({ where: { id: variantId } })
+}
 ```
 
-## 2. Topology RabbitMQ
+Vấn đề: xói mòn ranh giới module ngay cả khi cùng database — làm mất khả năng tách module này ra service riêng sau
+này mà không phải viết lại toàn bộ logic đọc dữ liệu.
 
-```mermaid
-flowchart LR
-    subgraph PRODUCERS[Producer]
-        P1[order-service]
-        P2[payment-service]
-        P3[catalog-service]
-    end
+✅ **GOOD** — gọi qua service đã export:
 
-    EX{{"timmyhub.events<br/>topic exchange<br/>durable"}}
+```ts
+// order/order.service.ts
+constructor(private readonly catalogService: CatalogService) {}
 
-    subgraph QUEUES[Queue theo consumer]
-        Q1["notification.order<br/>bind: order.*"]
-        Q2["search.catalog<br/>bind: product.*, category.*"]
-        Q3["analytics.all<br/>bind: #"]
-        Q4["order.payment<br/>bind: payment.*"]
-    end
-
-    DLX{{"timmyhub.dlx<br/>dead letter exchange"}}
-    DLQ["timmyhub.dlq"]
-
-    P1 --> EX
-    P2 --> EX
-    P3 --> EX
-    EX --> Q1
-    EX --> Q2
-    EX --> Q3
-    EX --> Q4
-    Q1 -.retry hết.-> DLX
-    Q2 -.retry hết.-> DLX
-    DLX --> DLQ
+async createFromCart(cartId: string) {
+    const variant = await this.catalogService.getVariantSnapshot(variantId)
+}
 ```
 
-| Thành phần | Tên | Thuộc tính |
-|---|---|---|
-| Exchange sự kiện | `timmyhub.events` | `topic`, `durable: true` |
-| Exchange RPC | `timmyhub.rpc` | `direct`, `durable: true` |
-| Dead letter exchange | `timmyhub.dlx` | `topic`, `durable: true` |
-| Dead letter queue | `timmyhub.dlq` | `durable`, không TTL, cần xử lý thủ công |
-| Queue consumer | `<service>.<nhóm>` | `durable: true`, `x-dead-letter-exchange: timmyhub.dlx` |
+```ts
+// catalog/catalog.module.ts
+@Module({
+    providers: [CatalogService, InventoryService],
+    exports: [CatalogService, InventoryService],   // chỉ những gì cố ý export mới gọi được từ module khác
+})
+export class CatalogModule {}
+```
 
-**Routing key** = tên event: `<domain>.<entity>.<hành động quá khứ>` (ví dụ `order.created`, `ad.campaign.approved`).
-Mỗi consumer có **queue riêng** — không dùng chung queue giữa các service, vì như vậy chỉ một service nhận được message.
+Ranh giới này được ép bằng ESLint boundary rule (chặn import trực tiếp `catalog/catalog.repository.ts` hoặc Prisma
+model của module khác từ ngoài module `catalog`), không phải bằng network policy như bản microservice cũ.
 
-### Cấu hình bắt buộc
+## 2. Giao dịch xuyên module
 
-| Thiết lập | Giá trị | Lý do |
-|---|---|---|
-| `prefetch` | 10 (30 cho `analytics`, `audit`) | Tránh một consumer ôm hết message |
-| `noAck` | `false` | Chỉ ack sau khi xử lý xong |
-| `persistent` | `true` | Message sống qua restart broker |
-| `publisherConfirms` | bật | Outbox chỉ đánh dấu đã phát khi broker xác nhận |
-| Số lần thử lại | 5, backoff 1s → 2s → 4s → 8s → 16s | Sau đó vào DLQ |
+Vì tất cả module dùng chung một database, giao dịch xuyên domain (ví dụ checkout chạm `cart`, `catalog`, `order`,
+`promotion`) dùng **một `$transaction` Prisma thật** thay vì saga + compensating action:
 
-## 3. Transactional outbox
+```ts
+// order/order.service.ts
+async createFromCart(userId: string, dto: CreateOrderFromCartDto) {
+    return this.prisma.$transaction(async (tx) => {
+        const cart = await this.cartService.validate(userId, tx)
+        await this.inventoryService.reserve(cart.items, tx)
+        const voucher = dto.voucherCode
+            ? await this.promotionService.reserveVoucher(dto.voucherCode, userId, tx)
+            : null
+        const order = await this.orderRepository.create(cart, voucher, tx)
+        await this.outboxService.enqueue('order.created', order, tx)   // §3 — chỉ cho hệ quả bất đồng bộ ra ngoài
+        return order
+    })
+}
+```
 
-Vấn đề: ghi DB và phát message là hai hệ thống khác nhau — không có transaction chung. Nếu ghi xong rồi mới phát mà
-process chết ở giữa, event mất vĩnh viễn.
+Mỗi service export nhận tham số `tx` tuỳ chọn (Prisma `TransactionClient`) để tham gia transaction của caller thay vì
+tự mở transaction riêng — đây là điểm khác biệt kỹ thuật chính so với gọi RPC giữa các service độc lập trước đây.
+
+Chỉ bước phụ thuộc hệ thống **bên ngoài** (chờ VNPay xác nhận thanh toán) vẫn phải bất đồng bộ, vì không thể đưa một
+lệnh gọi HTTP ra ngoài vào trong `$transaction` — xem §4.
+
+❌ **BAD** — coi mọi thứ vẫn cần saga dù đã cùng database:
+
+```ts
+async createFromCart(userId: string, dto: CreateOrderFromCartDto) {
+    await this.inventoryService.reserve(cart.items)
+    try {
+        await this.promotionService.reserveVoucher(dto.voucherCode, userId)
+    } catch {
+        await this.inventoryService.release(cart.items)   // compensating action thủ công — không cần thiết nữa
+        throw new BadRequestException()
+    }
+}
+```
+
+Vấn đề: viết lại logic bù trừ bằng tay trong khi Postgres đã có thể rollback toàn bộ transaction miễn phí.
+
+## 3. Outbox — chỉ cho hệ quả bất đồng bộ ra ngoài process
+
+Outbox **không còn dùng cho mọi domain event** như bản microservice cũ (listener giờ chạy trong cùng process, không
+có rủi ro "publish rồi crash trước khi gửi" qua broker riêng). Outbox chỉ giữ lại cho đúng một nhóm trường hợp: hệ quả
+phải chắc chắn xảy ra dù process crash ngay sau khi commit, và việc đó không thể làm trong transaction hiện tại vì đi
+ra ngoài hệ thống — gửi email, đẩy webhook, ghi audit log bất biến.
 
 ```mermaid
 sequenceDiagram
-    participant S as Service
-    participant DB as Postgres (DB của service)
-    participant R as Outbox Relay
-    participant MQ as RabbitMQ
+    participant M as Module (order, payment, ...)
+    participant DB as Postgres (một database chung)
+    participant W as BullMQ worker (outbox)
+    participant EXT as Hệ thống ngoài (SMTP, webhook, audit sink)
 
-    S->>DB: BEGIN
-    S->>DB: INSERT/UPDATE dữ liệu nghiệp vụ
-    S->>DB: INSERT outbox_events (status = PENDING)
-    S->>DB: COMMIT
-    Note over S,DB: Nghiệp vụ và ý định phát event<br/>cùng sống hoặc cùng chết
+    M->>DB: BEGIN
+    M->>DB: INSERT/UPDATE dữ liệu nghiệp vụ
+    M->>DB: INSERT outbox_events (status = PENDING)
+    M->>DB: COMMIT
+    Note over M,DB: Nghiệp vụ và ý định gửi ra ngoài<br/>cùng sống hoặc cùng chết
 
     loop mỗi 500 ms
-        R->>DB: SELECT ... WHERE status='PENDING'<br/>FOR UPDATE SKIP LOCKED LIMIT 100
-        R->>MQ: publish (persistent, confirm)
-        MQ-->>R: ack
-        R->>DB: UPDATE status='PUBLISHED', publishedAt=now()
+        W->>DB: SELECT ... WHERE status='PENDING'<br/>FOR UPDATE SKIP LOCKED LIMIT 100
+        W->>EXT: gửi (email/webhook/ghi audit)
+        EXT-->>W: xác nhận
+        W->>DB: UPDATE status='PUBLISHED', publishedAt=now()
     end
 ```
 
 ```prisma
 model OutboxEvent {
-    id            String    @id @default(cuid())
-    eventName     String                              // 'order.created'
-    aggregateType String                              // 'Order'
+    id            String       @id @default(cuid())
+    eventName     String                                 // 'order.created'
+    aggregateType String                                 // 'Order'
     aggregateId   String
     payload       Json
-    metadata      Json                                // traceId, actorId, occurredAt, version
+    metadata      Json                                   // traceId, actorId, occurredAt
     status        OutboxStatus @default(PENDING)
-    attempts      Int       @default(0)
+    attempts      Int          @default(0)
     lastError     String?
-    createdAt     DateTime  @default(now())
+    createdAt     DateTime     @default(now())
     publishedAt   DateTime?
 
     @@index([status, createdAt])
@@ -156,216 +172,109 @@ enum OutboxStatus {
 
 | Ràng buộc | Giá trị |
 |---|---|
-| Chu kỳ quét | 500 ms |
+| Chu kỳ quét | 500 ms (job BullMQ lặp, không phải RabbitMQ relay) |
 | Kích thước lô | 100 |
-| Khoá | `FOR UPDATE SKIP LOCKED` (nhiều replica chạy song song an toàn) |
+| Khoá | `FOR UPDATE SKIP LOCKED` (nhiều worker chạy song song an toàn) |
 | Dọn bản ghi `PUBLISHED` | Sau 7 ngày |
 | Cảnh báo | `PENDING` cũ hơn 60 giây, hoặc `FAILED` > 0 |
 
-> **Hệ quả:** phát event **ít nhất một lần** (at-least-once). Vì vậy mọi consumer bắt buộc idempotent — xem §4.
+> **Hệ quả:** gửi ra ngoài **ít nhất một lần** (at-least-once). Handler phía `EXT` (hoặc chính worker trước khi gọi
+> `EXT`) phải idempotent — xem §4, áp dụng nguyên lý tương tự dù không còn "consumer" theo nghĩa broker.
 
-## 4. Consumer idempotent
+**Không dùng outbox cho:** domain event mà mọi listener đều nằm trong cùng process (`order.completed` →
+`engagement` mở quyền đánh giá) — dùng `EventEmitter2` ở §5, đơn giản hơn và không có độ trễ 500ms của vòng quét.
 
-```prisma
-model ProcessedEvent {
-    eventId     String   @id          // id của OutboxEvent bên producer
-    eventName   String
-    processedAt DateTime @default(now())
+## 4. Việc bất đồng bộ chờ hệ thống ngoài — checkout chờ thanh toán
 
-    @@index([processedAt])
-    @@map("processed_events")
-}
-```
-
-✅ **GOOD**
-
-```ts
-@EventPattern('order.completed')
-async handleOrderCompleted(@Payload() msg: EventEnvelope<OrderCompletedPayload>) {
-    await this.prisma.$transaction(async (tx) => {
-        // 1. Khử trùng lặp: trùng eventId → không làm gì
-        const created = await tx.processedEvent.createMany({
-            data: { eventId: msg.id, eventName: msg.name },
-            skipDuplicates: true,
-        })
-        if (created.count === 0) return
-
-        // 2. Xử lý nghiệp vụ trong CÙNG transaction
-        await tx.wallet.update({ /* ... */ })
-    })
-}
-```
-
-❌ **BAD**
-
-```ts
-@EventPattern('order.completed')
-async handleOrderCompleted(@Payload() msg) {
-    if (await this.prisma.processedEvent.findUnique({ where: { eventId: msg.id } })) return
-    await this.walletService.credit(msg.data)          // tách transaction → xử lý hai lần khi chạy song song
-    await this.prisma.processedEvent.create({ data: { eventId: msg.id } })
-}
-```
-
-Ngoài ra, ưu tiên các thao tác **tự nhiên idempotent**: `upsert` theo khoá tự nhiên, `UPDATE ... WHERE status = 'X'`,
-cộng dồn theo `(aggregateId, eventId)` thay vì `+= value` mù quáng.
-
-Bản ghi `ProcessedEvent` giữ **30 ngày**, dọn bằng job — đủ dài so với TTL message và số lần retry.
-
-## 5. Saga checkout
-
-Checkout đi qua 4 service, không có transaction phân tán. Dùng **saga theo kiểu điều phối (orchestration)** với
-`order-service` làm điều phối viên — dễ theo dõi và dễ gỡ lỗi hơn kiểu vũ đạo (choreography).
+Duy nhất bước "chờ VNPay xác nhận" trong checkout vẫn bất đồng bộ, vì phụ thuộc một hệ thống ngoài không thể đưa vào
+transaction. Toàn bộ phần còn lại của checkout (giữ tồn, giữ voucher, tạo đơn) giờ nằm trong một `$transaction` (§2),
+không còn là các bước saga riêng biệt với compensating action.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> VALIDATING: POST /v1/orders/from-cart
-    VALIDATING --> RESERVING_STOCK: giỏ hợp lệ
-    VALIDATING --> FAILED: giỏ không hợp lệ
+    [*] --> ORDER_CREATED: $transaction commit<br/>(giữ tồn + giữ voucher + tạo đơn)
+    ORDER_CREATED --> AWAITING_PAYMENT: outbox → PaymentAttempt
 
-    RESERVING_STOCK --> RESERVING_VOUCHER: đã giữ tồn
-    RESERVING_STOCK --> FAILED: hết hàng
-
-    RESERVING_VOUCHER --> AWAITING_PAYMENT: đã giữ voucher
-    RESERVING_VOUCHER --> COMPENSATE_STOCK: voucher không hợp lệ
-
-    AWAITING_PAYMENT --> COMMITTING: payment.succeeded
-    AWAITING_PAYMENT --> COMPENSATE_VOUCHER: payment.failed / hết hạn 15'
-
-    COMMITTING --> CONFIRMED: đã chốt tồn + chốt voucher
-    COMMITTING --> MANUAL_REVIEW: chốt thất bại (đã thu tiền)
-
-    COMPENSATE_VOUCHER --> COMPENSATE_STOCK: đã trả lượt voucher
-    COMPENSATE_STOCK --> FAILED: đã nhả tồn
+    AWAITING_PAYMENT --> CONFIRMED: payment.succeeded (event nội bộ)
+    AWAITING_PAYMENT --> CANCELLED: payment.failed / hết hạn 15'<br/>($transaction: nhả tồn + trả voucher + huỷ đơn)
 
     CONFIRMED --> [*]
-    FAILED --> [*]
-    MANUAL_REVIEW --> [*]
+    CANCELLED --> [*]
 ```
 
-| Bước | Hành động thuận | Hành động bù trừ | Ghi chú |
-|---|---|---|---|
-| 1 | `cart.validate` | — | Chỉ đọc |
-| 2 | `inventory.reserve` | `inventory.release` | Reservation tự hết hạn sau 15 phút |
-| 3 | `voucher.reserve` | `voucher.release` | |
-| 4 | Ghi `Order` + outbox | Đánh dấu `CANCELLED` | Cục bộ, có transaction thật |
-| 5 | Chờ `payment.succeeded` | Huỷ `PaymentAttempt` | Hết hạn sau 15 phút |
-| 6 | `inventory.commit` + `voucher.commit` | **Không bù trừ** → `MANUAL_REVIEW` | Tiền đã thu, không được nhả tồn tự động |
+Không còn trạng thái `MANUAL_REVIEW` do "chốt tồn thất bại sau khi đã thu tiền" — vì tồn kho và voucher đã được giữ
+**trong cùng transaction** lúc tạo đơn (bước xảy ra trước khi có thanh toán), không phải "chốt" ở một bước riêng sau
+khi thanh toán thành công. Khi `payment.succeeded` đến, việc cần làm chỉ là cập nhật trạng thái đơn — không có bước
+ghi dữ liệu nào có thể thất bại theo cách cần xem xét thủ công. Trường hợp cần chú ý duy nhất còn lại: IPN đến sau khi
+đơn đã bị huỷ do hết hạn — xử lý bằng kiểm tra trạng thái hiện tại trước khi cập nhật (xem
+[concurrency-and-consistency.md](concurrency-and-consistency.md)), không cần trạng thái tường minh riêng.
 
-**Trạng thái `MANUAL_REVIEW`** là có chủ đích: khi đã thu tiền mà chốt tồn thất bại, tự động hoàn tiền hoặc tự động nhả
-tồn đều có thể sai. Hệ thống dừng lại, cảnh báo admin, ghi audit log đầy đủ. Quy trình xử lý: [runbook.md](../05-infra/runbook.md).
+| Bước | Trong `$transaction` lúc tạo đơn? | Ghi chú |
+|---|---|---|
+| Kiểm giỏ hàng | Có | Chỉ đọc |
+| Giữ tồn kho | Có | `UPDATE ... WHERE available >= qty` nguyên tử |
+| Giữ voucher | Có | Cùng nguyên lý atomic update |
+| Tạo `Order` | Có | Cùng transaction |
+| Enqueue outbox `order.created` | Có (ghi trong transaction, gửi sau bởi worker) | Kích hoạt tạo `PaymentAttempt`, gửi thông báo |
+| Chờ `payment.succeeded`/`failed` | Không — bất đồng bộ, phụ thuộc VNPay | Timeout 15 phút, xử lý ở §5 |
+| Huỷ đơn khi hết hạn/thất bại | Có (transaction riêng lúc huỷ) | Nhả tồn + trả voucher + cập nhật trạng thái cùng lúc |
 
-Trạng thái saga lưu ở bảng `SagaState` trong `order_db`, có `correlationId` = `orderId` và timeout cho từng bước.
-
-## 6. Hợp đồng RPC
-
-```ts
-// @timmyhub/contracts
-export const RPC = {
-    CATALOG: {
-        GET_VARIANT_SNAPSHOT: 'catalog.getVariantSnapshot',
-        RESERVE_INVENTORY: 'inventory.reserve',
-    },
-} as const
-```
+## 5. Event trong process (`EventEmitter2`)
 
 ```ts
-// Producer
-this.catalogClient
-    .send<VariantSnapshot, GetVariantSnapshotInput>(
-        { cmd: RPC.CATALOG.GET_VARIANT_SNAPSHOT },
-        { variantId },
-    )
-    .pipe(timeout(3000), retry({ count: 2, delay: 200 }))
-
-// Consumer
-@MessagePattern({ cmd: RPC.CATALOG.GET_VARIANT_SNAPSHOT })
-async getVariantSnapshot(@Payload() input: unknown): Promise<VariantSnapshot> {
-    const dto = getVariantSnapshotSchema.parse(input)   // validate lại, không tin caller
-    return this.service.getSnapshot(dto.variantId)
+// order/order.service.ts
+async markCompleted(orderId: string) {
+    const order = await this.prisma.order.update({ where: { id: orderId }, data: { status: 'COMPLETED' } })
+    this.eventEmitter.emit('order.completed', new OrderCompletedEvent(order))
+    return order
 }
 ```
 
-| Thiết lập | Giá trị mặc định | Ngoại lệ |
-|---|---|---|
-| Timeout | 3.000 ms | `payment.*`: 10.000 ms; `analytics.*`: 15.000 ms |
-| Thử lại | 2 lần, chỉ với thao tác **đọc** | Thao tác ghi **không tự retry** trừ khi có khoá idempotent |
-| Circuit breaker | Mở sau 5 lỗi liên tiếp, thử lại sau 30 giây | |
-| Khi mạch mở | Ném `ServiceUnavailableException` → gateway trả `503` kèm `retryAfter` | |
-
-Lỗi RPC được chuẩn hoá thành `RpcException` với `code`, `message`, `details`; gateway ánh xạ sang mã HTTP theo
-[api-conventions.md](api-conventions.md).
-
-## 7. Phong bì sự kiện
-
-Mọi message qua `timmyhub.events` dùng chung một phong bì. Định nghĩa nằm ở `@timmyhub/contracts`:
-
 ```ts
-export const eventEnvelopeSchema = z.object({
-    id: z.string().cuid(),                    // = OutboxEvent.id, dùng để khử trùng lặp
-    name: z.string(),                         // 'order.created'
-    version: z.number().int().positive(),     // phiên bản schema payload
-    occurredAt: z.string().datetime(),
-    producer: z.string(),                     // 'order-service'
-    correlationId: z.string().nullable(),     // xuyên suốt một luồng nghiệp vụ
-    causationId: z.string().nullable(),       // id event đã gây ra event này
-    traceId: z.string(),
-    actor: z.object({
-        id: z.string().nullable(),
-        type: z.enum(['USER', 'SYSTEM', 'ADMIN']),
-    }),
-    aggregate: z.object({ type: z.string(), id: z.string() }),
-    data: z.unknown(),                        // payload theo schema riêng từng event
-})
+// engagement/engagement.listener.ts
+@OnEvent('order.completed')
+async handleOrderCompleted(event: OrderCompletedEvent) {
+    await this.engagementService.unlockReviewEligibility(event.order)
+}
 ```
 
-## 8. Tiến hoá schema sự kiện
-
-| Loại thay đổi | Có phá vỡ? | Cách làm |
-|---|---|---|
-| Thêm trường **tuỳ chọn** | Không | Phát hành trực tiếp, giữ nguyên `version` |
-| Thêm trường **bắt buộc** | Có | Tăng `version`, phát **song song** hai phiên bản |
-| Xoá / đổi tên trường | Có | Tăng `version`, phát song song |
-| Đổi ngữ nghĩa cùng tên trường | Có (nguy hiểm nhất) | **Đổi tên trường**, không tái sử dụng |
-| Đổi tên event | Có | Event mới + phát cả hai trong ≥ 2 chu kỳ phát hành |
-
-Quy trình phát hành song song:
-
-1. Producer phát cả `v1` và `v2` (cùng `name`, khác `version`).
-2. Từng consumer nâng cấp sang `v2`, có kiểm chứng.
-3. Khi mọi consumer đã lên `v2` (kiểm tra bằng metric `event_consumed_total{version}`), producer ngừng phát `v1`.
-4. Xoá schema `v1` khỏi `@timmyhub/contracts` ở lần phát hành kế tiếp.
-
-Consumer **không được** dùng `strict` khi parse payload — trường lạ phải bị bỏ qua, không gây lỗi.
-
-## 9. Thứ tự và trùng lặp
-
-| Đảm bảo | Có? | Hệ quả |
-|---|---|---|
-| Giao ít nhất một lần | Có | Consumer phải idempotent |
-| Giao đúng một lần | **Không** | Đừng thiết kế dựa trên giả định này |
-| Thứ tự toàn cục | **Không** | Không giả định event của hai aggregate khác nhau đến theo thứ tự |
-| Thứ tự trong một aggregate | Chỉ khi cùng queue và `prefetch: 1` | Nếu cần, dùng số phiên bản aggregate và bỏ qua event cũ |
-
-Mẫu xử lý event đến sai thứ tự:
+✅ **GOOD** — listener tự chịu trách nhiệm lỗi của mình, không làm hỏng luồng phát event:
 
 ```ts
-// Bỏ qua event có version nhỏ hơn version hiện tại của bản ghi
-const updated = await tx.searchDocument.updateMany({
-    where: { productId, sourceVersion: { lt: msg.data.version } },
-    data: { /* ... */, sourceVersion: msg.data.version },
-})
+@OnEvent('order.completed', { async: true })
+async handleOrderCompleted(event: OrderCompletedEvent) {
+    try {
+        await this.engagementService.unlockReviewEligibility(event.order)
+    } catch (err) {
+        this.logger.error('Xử lý order.completed thất bại', err)
+        // Không throw lại — một listener lỗi không được làm rollback hay chặn listener khác
+    }
+}
 ```
 
-## 10. BullMQ cho job nội bộ
+❌ **BAD** — phát event rồi chờ kết quả xử lý của listener như thể là RPC:
 
-BullMQ **không thay thế** RabbitMQ: RabbitMQ để giao tiếp **giữa** các service, BullMQ để chạy việc nặng **trong** một
-service.
+```ts
+this.eventEmitter.emit('order.completed', event)
+const result = await someGlobalState.waitFor('review-unlocked')   // event không phải RPC, đừng giả lập request/response qua nó
+```
 
-| Hàng đợi | Service | Việc | Đồng thời | Retry |
+**Quy ước đặt tên và payload event giữ nguyên** như bản cũ (`<domain>.<entity>.<hành động quá khứ>`, payload chỉ chứa
+đủ dữ liệu consumer cần — không phình to toàn bộ entity) — xem danh mục đầy đủ ở [event-catalog.md](event-catalog.md).
+Không còn khái niệm "version phát song song" hay "phong bì sự kiện" qua message broker (không cần `traceId` bơm qua
+network vì cùng process đã có `AsyncLocalStorage`/request context); nếu một event cần lưu vết đầy đủ (audit), dùng
+outbox ở §3, không dùng `EventEmitter2`.
+
+## 6. BullMQ cho job nền
+
+Không đổi vai trò so với bản cũ — vẫn là hàng đợi việc nặng CPU/IO chạy trên **worker process riêng** trong cùng
+codebase (`backend/apps/api/src/worker`), tách khỏi web process để không chiếm CPU của request HTTP.
+
+| Hàng đợi | Module | Việc | Đồng thời | Retry |
 |---|---|---|---|---|
 | `email` | notification | Gửi SMTP | 5 | 5 lần, backoff mũ |
 | `push` | notification | Web push | 10 | 3 lần |
+| `outbox-dispatch` | dùng chung (§3) | Gửi các bản ghi `outbox_events` PENDING | 10 | Theo `attempts` trên bản ghi |
 | `media-thumbnail` | media | Sinh thumbnail | 3 | 3 lần |
 | `media-transcode` | media | Chuyển mã video | 1 | 2 lần |
 | `search-index` | search | Đồng bộ chỉ mục theo lô | 5 | 5 lần |
@@ -378,39 +287,40 @@ service.
 BullMQ cần **kết nối TCP** tới Redis (`UPSTASH_REDIS_TCP_URL`), không dùng được REST API. Cache và rate limit thì dùng
 `@upstash/redis` qua REST. Xem [ADR-0004](adr/ADR-0004-upstash-redis.md).
 
-## 11. WebSocket
+## 7. WebSocket
 
-Gateway giữ kết nối WebSocket; service phát event realtime qua Redis pub/sub để gateway đẩy xuống client.
+Module `platform` (gateway cũ) giữ kết nối WebSocket. Vì mọi module đã ở cùng process, module `chat` gọi thẳng hàm
+gửi socket thay vì publish qua Redis rồi chờ gateway nhận lại:
 
 ```mermaid
 sequenceDiagram
     participant C as Client
-    participant GW as api-gateway (WS)
-    participant R as Redis pub/sub
-    participant CHT as chat-service
+    participant GW as platform (WS gateway)
+    participant CHT as chat module
 
     C->>GW: connect (token trong handshake)
     GW->>GW: Xác thực, join room user:<id>
     C->>GW: emit chat:send
-    GW->>CHT: RPC chat.sendMessage
-    CHT->>CHT: Ghi DB + outbox
-    CHT->>R: publish ws:conversation:<id>
-    R-->>GW: (mọi instance gateway)
+    GW->>CHT: gọi thẳng ChatService.sendMessage()
+    CHT->>CHT: Ghi DB, emit event nội bộ nếu cần
+    CHT->>GW: trả kết quả (cùng lời gọi, không qua broker)
     GW-->>C: emit chat:receive
 ```
 
-Chi tiết namespace, tên room, danh mục event realtime: [realtime.md](realtime.md).
+Redis pub/sub adapter **chỉ còn cần khi app scale ngang nhiều pod** (đồng bộ giữa các instance của cùng một app), không
+còn lý do "đồng bộ giữa các service khác nhau" như bản cũ. Chi tiết namespace, tên room, danh mục event realtime:
+[realtime.md](realtime.md).
 
-## 12. Chống mẫu cần tránh
+## 8. Chống mẫu cần tránh
 
 | Chống mẫu | Vì sao sai | Thay bằng |
 |---|---|---|
-| Service A đọc trực tiếp DB của service B | Phá ranh giới, migration của B làm hỏng A | RPC hoặc read model dựng từ event |
-| Chuỗi RPC đồng bộ 3 tầng trở lên | Độ trễ cộng dồn, một mắt xích hỏng là hỏng cả chuỗi | Bất đồng bộ hoá, hoặc gộp bước |
+| Module A import thẳng Prisma model/repository của module B | Phá ranh giới module dù cùng database, khó tách sau này | Gọi qua service đã export (§1) |
+| Chuỗi gọi hàm xuyên 4-5 module trong một request | Vẫn có chi phí (dù không phải chi phí mạng): khó test, khó theo dõi lỗi | Cân nhắc gộp logic hoặc dùng event nếu không cần đồng bộ |
 | Event mang tên mệnh lệnh (`order.create`) | Event là sự việc đã xảy ra, không phải yêu cầu | `order.created` |
-| Event chứa toàn bộ entity | Payload phình to, rò rỉ mô hình nội bộ | Chỉ id + các trường consumer thực sự cần |
-| Consumer gọi ngược RPC về producer để lấy thêm dữ liệu | Tạo ghép cứng và chu trình | Đưa đủ dữ liệu vào payload |
-| Phát event ngoài transaction | Mất event khi process chết | Outbox |
-| Dùng chung một queue cho nhiều service | Chỉ một service nhận được message | Mỗi consumer một queue riêng |
-| Retry thao tác ghi không có khoá idempotent | Ghi trùng, trừ tiền hai lần | Khoá idempotent hoặc không retry |
-| `catch` rồi `ack` message lỗi | Mất dữ liệu âm thầm | `nack` để vào DLQ, có cảnh báo |
+| Event chứa toàn bộ entity | Payload phình to, rò rỉ mô hình nội bộ dù cùng process | Chỉ id + các trường listener thực sự cần |
+| Dùng outbox cho event chỉ có listener trong process | Thêm độ trễ 500ms và bảng DB không cần thiết | `EventEmitter2` (§5) |
+| Dùng `EventEmitter2` cho hệ quả phải sống sót qua crash (email, webhook) | Mất hệ quả nếu process chết trước khi listener chạy xong | Outbox (§3) |
+| Giả lập request/response qua `EventEmitter2` | Event không đảm bảo thứ tự chờ kết quả, dễ deadlock logic | Gọi thẳng service (§1) |
+| Retry thao tác ghi không có khoá idempotent | Ghi trùng, trừ tiền hai lần | Khoá idempotent hoặc không retry — xem [concurrency-and-consistency.md](concurrency-and-consistency.md) |
+| `catch` rồi bỏ qua lỗi outbox worker | Mất dữ liệu âm thầm (email/webhook không bao giờ gửi) | Đánh dấu `FAILED`, cảnh báo, cho retry thủ công |

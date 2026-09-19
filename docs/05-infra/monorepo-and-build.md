@@ -2,14 +2,22 @@
 title: Monorepo và hệ thống build — pnpm workspace + Turborepo
 status: review
 owner: DevOps
-updated: 2026-09-16
-related: [docs/05-infra/cicd.md, docs/06-quality/quality-gates.md, docs/01-architecture/service-catalog.md, docs/04-frontend/storybook.md]
+updated: 2026-09-19
+related: [docs/05-infra/cicd.md, docs/06-quality/quality-gates.md, docs/01-architecture/service-catalog.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md, docs/04-frontend/storybook.md]
 ---
 
 # Monorepo và hệ thống build
 
-> 18 đơn vị triển khai (`api-gateway` + 16 service + `media-transcode-worker`) cộng frontend cộng ba package dùng chung.
-> Nếu mỗi PR đều lint/test/build toàn bộ thì CI mất 30–40 phút và không ai chạy nữa.
+> Cập nhật theo [ADR-0015](../01-architecture/adr/ADR-0015-modular-monolith.md): backend không còn là 16+ service
+> tách rời mà là **một app NestJS** (`backend/apps/api`) chứa mọi module domain, cộng một **process worker**
+> (`backend/apps/worker`) chạy BullMQ, cộng frontend, cộng ba package dùng chung. Tổng cộng còn **3 đơn vị triển
+> khai backend**: `api` (web), `worker` (job nhẹ: mail, index, thumbnail) và `worker-media` (ffmpeg, deployment
+> riêng vì ăn CPU 100% và cần HPA theo độ sâu hàng đợi — xem
+> [media-video-pipeline.md §5.3](../01-architecture/media-video-pipeline.md#53-worker)), hai cái worker dùng chung
+> codebase `backend/apps/worker` nhưng khác entrypoint/image.
+>
+> Ngay cả với 3 đơn vị thay vì 18, Turborepo vẫn cần thiết: build/test frontend + `shared/contracts` + 3 app backend
+> mà không có cache tăng dần thì CI vẫn chậm hơn mức chấp nhận được mỗi khi chỉ một phần nhỏ thay đổi.
 >
 > Turborepo giải quyết đúng một việc: **chỉ chạy lại tác vụ có đầu vào đã đổi**, phần còn lại lấy từ cache.
 
@@ -20,16 +28,24 @@ related: [docs/05-infra/cicd.md, docs/06-quality/quality-gates.md, docs/01-archi
 ```
 timmy-hub/
 ├── backend/
-│   ├── apps/<service>/          # 18 đơn vị triển khai
-│   └── libs/                    # thư viện dùng chung phía backend
+│   ├── apps/
+│   │   ├── api/                  # web process — mọi module domain + module platform (HTTP/WS)
+│   │   └── worker/                # process BullMQ — entrypoint mặc định (job nhẹ) và entrypoint --queue=media (ffmpeg)
+│   ├── src/modules/<domain>/      # dùng chung giữa api và worker qua import trong cùng workspace package
+│   └── libs/                      # thư viện dùng chung phía backend (không phải module domain)
 ├── frontend/
 ├── shared/
 │   ├── contracts/               # @timmyhub/contracts — zod schema + kiểu + hợp đồng event
-│   ├── common/                  # @timmyhub/common — guard, decorator, filter, logger
-│   └── rmq/                     # @timmyhub/rmq — outbox, consumer idempotent
+│   └── common/                  # @timmyhub/common — guard, decorator, filter, logger
 ├── pnpm-workspace.yaml
 └── turbo.json
 ```
+
+Ranh giới giữa các module domain (`src/modules/<domain>/`) không còn là ranh giới triển khai — nó là quy ước code,
+thực thi bằng rule ESLint chặn import chéo module ngoài `index.ts` (xem
+[service-catalog.md](../01-architecture/service-catalog.md)). `@timmyhub/rmq` (outbox RabbitMQ) bị loại bỏ: outbox
+giờ chỉ phục vụ hiệu ứng phụ đi ra ngoài process (mail, webhook), dispatch bằng BullMQ trong `backend/apps/worker`,
+không cần package riêng cho consumer RabbitMQ.
 
 pnpm là trình quản lý gói duy nhất (`packageManager` trong `package.json`, `engines.node = 22`). Corepack bật trong CI
 để phiên bản pnpm giống hệt nhau ở mọi máy.
@@ -91,12 +107,12 @@ quyết định khoá cache và khoá cache thì bị chia sẻ.
 `--filter='...[origin/main]'` chọn các package đổi **và** mọi package phụ thuộc chúng — sửa `@timmyhub/contracts` thì
 toàn bộ service dùng nó đều được kiểm lại, đúng như mong muốn.
 
-Bước dựng image Docker cũng dùng danh sách đó (`turbo run build --dry=json` → danh sách package) để chỉ dựng image của
-service thật sự đổi, thay vì dựng cả 18.
+Bước dựng image Docker cũng dùng danh sách đó (`turbo run build --dry=json` → danh sách package) để chỉ dựng lại
+image nào thật sự đổi trong 3 (`api`, `worker`, `worker-media` — hai cái sau chung Dockerfile, khác `CMD`).
 
 | Chỉ số CI | Mục tiêu |
 |---|---|
-| PR chỉ sửa 1 service | < 6 phút |
+| PR chỉ sửa 1 module domain | < 6 phút |
 | PR sửa `shared/contracts` | < 15 phút |
 | Tỉ lệ trúng cache trên `main` | > 70% |
 
@@ -123,6 +139,6 @@ giữ Storybook ở bản cũ chỉ vì một addon.
 - [ ] Mọi task có `outputs` đúng; đã thử xoá `dist` rồi chạy lại để xác nhận cache khôi phục đủ file
 - [ ] Task chạm database/mạng đặt `cache: false`
 - [ ] Biến môi trường ảnh hưởng đầu ra đã khai trong `env`
-- [ ] CI dùng `--filter='...[origin/main]'`, chỉ dựng image service đã đổi
+- [ ] CI dùng `--filter='...[origin/main]'`, chỉ dựng lại image (`api`/`worker`/`worker-media`) thật sự đổi
 - [ ] Remote cache có ký chữ ký; không có bí mật trong đầu vào tác vụ
 - [ ] Node/pnpm/TS giống nhau ở dev, CI, production
