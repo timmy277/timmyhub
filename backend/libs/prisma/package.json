@@ -8,6 +8,7 @@
   "scripts": {
     "prisma:generate": "prisma generate --schema=./prisma/schema",
     "db:setup": "prisma migrate deploy --schema=./prisma/schema",
+    "db:seed": "tsx prisma/seed.ts",
     "postinstall": "node scripts/postinstall.js",
     "build": "pnpm run prisma:generate && tsc -p tsconfig.json",
     "lint": "eslint \"src/**/*.ts\"",
@@ -22,6 +23,7 @@
     "@types/node": "^22.10.7",
     "dotenv": "^16.4.7",
     "prisma": "^6.19.3",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   }
 }
