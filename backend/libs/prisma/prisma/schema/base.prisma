@@ -1,8 +1,9 @@
 // Schema chung: generator + datasource khai báo một lần, dùng cho toàn bộ file *.prisma trong thư mục này
 // (multi-file schema — prismaSchemaFolder). Theo docs/01-architecture/data-architecture.md §4.
 generator client {
-    provider = "prisma-client"
-    output   = "../../src/generated/prisma"
+    provider     = "prisma-client"
+    output       = "../../src/generated/prisma"
+    moduleFormat = "cjs"
 }
 
 datasource db {

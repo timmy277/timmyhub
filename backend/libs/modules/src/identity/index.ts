@@ -2,3 +2,4 @@
 export * from './identity.module'
 export * from './identity.service'
 export * from './dto/ping.dto'
+export * from './auth.service'

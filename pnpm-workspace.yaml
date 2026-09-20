@@ -1,15 +1,16 @@
-# Gốc workspace hiện chỉ quản lý công cụ dùng chung (husky, lint-staged, commitlint, prettier).
-# `frontend/` và `backend/` đang là ứng dụng khởi tạo riêng, có node_modules và lint config riêng;
-# chúng sẽ gia nhập workspace khi tái cấu trúc theo docs/05-infra/monorepo-and-build.md.
+# frontend/ đã gia nhập workspace gốc để dùng chung @timmyhub/contracts qua workspace:*
+# (trước đó tách riêng bằng frontend/pnpm-workspace.yaml — nay đã gỡ, xem docs/05-infra/monorepo-and-build.md).
 packages:
   - 'backend/apps/*'
   - 'backend/libs/*'
   - 'shared/*'
+  - 'frontend'
 
 allowBuilds:
   '@parcel/watcher': true
   '@prisma/client': true
   '@prisma/engines': true
+  '@scarf/scarf': false
   '@timmyhub/prisma': true
   esbuild: true
   msgpackr-extract: true

@@ -1,5 +1,0 @@
-# File này đánh dấu frontend/ là GỐC workspace pnpm riêng, tách khỏi workspace ở D:\...\timmy-hub.
-# Không có file này, `pnpm install` chạy trong frontend/ sẽ trèo lên tìm pnpm-workspace.yaml ở gốc repo,
-# thấy frontend/ không khớp glob nào trong đó, và chỉ cài mỗi package "timmyhub" ở gốc.
-allowBuilds:
-  unrs-resolver: true

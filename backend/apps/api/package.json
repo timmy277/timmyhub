@@ -7,6 +7,7 @@
     "build": "nest build",
     "start": "nest start",
     "dev": "nest start --watch",
+    "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"src/**/*.ts\" --fix --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -18,11 +19,14 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/event-emitter": "^12.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/swagger": "^11.4.7",
     "@timmyhub/common": "workspace:*",
+    "@timmyhub/contracts": "workspace:*",
     "@timmyhub/modules": "workspace:*",
     "@timmyhub/prisma": "workspace:*",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
