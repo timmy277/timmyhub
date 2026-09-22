@@ -2,7 +2,7 @@
 title: Chuẩn mã nguồn và định dạng
 status: review
 owner: Tech Lead
-updated: 2026-09-22
+updated: 2026-09-23
 related: [docs/06-quality/git-hooks.md, docs/06-quality/definition-of-done.md, docs/06-quality/performance.md, docs/01-architecture/api-conventions.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
@@ -239,11 +239,22 @@ frontend/src/
     components/ui/                  # shadcn nguyên bản, không sửa tay
     components/common/              # component dùng chung của dự án
     features/<domain>/              # component + hook + api gắn với một domain
-    lib/                            # tiện ích thuần, không phụ thuộc React
+    lib/                            # tiện ích thuần, không phụ thuộc React (giữ tên `lib` — alias cố định
+                                     # của shadcn CLI trong components.json, không đổi tên/di chuyển)
+    hooks/                          # custom hook dùng chung xuyên feature, barrel qua index.ts
+    services/                       # gọi API/BE dùng chung xuyên feature, barrel qua index.ts
+    types/                          # type/interface dùng chung xuyên feature, barrel qua index.ts
+    constants/                      # hằng số dùng chung (route, key cookie/localStorage…), barrel qua index.ts
 ```
 
 Quy tắc phụ thuộc, kiểm bằng ESLint boundaries: `features/*` được dùng `components/*` và `lib/*`; chiều ngược lại **cấm**.
 Hai feature không import chéo nhau — cần dùng chung thì nâng lên `components/common`.
+
+`hooks/`, `services/`, `types/`, `constants/` — mỗi thư mục có **duy nhất một** `index.ts` làm barrel export; nơi khác
+trong repo chỉ import qua gốc thư mục (`@/hooks`, `@/services`, `@/types`, `@/constants`), **không** import thẳng
+file con (`@/hooks/use-foo`) — cùng nguyên tắc barrel đã áp dụng cho backend ở §6.1. Hook/service/type/constant
+gắn chặt với một domain cụ thể (chỉ `features/<domain>` đó dùng) thì đặt trong `features/<domain>/`, không đưa lên
+đây — bốn thư mục này chỉ chứa cái dùng chung xuyên nhiều feature.
 
 ### 6.1 Module dùng chung (cross-cutting) trong backend
 

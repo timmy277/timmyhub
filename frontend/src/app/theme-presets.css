@@ -1,0 +1,290 @@
+/* Áp theme qua attribute selector trên <html> — không FOUC: script chặn render trong <head> (xem
+   layout.tsx) set các data-* này đồng bộ trước paint, đọc từ localStorage key `timmyhub-theme-config`.
+   Giá trị ở đây PHẢI khớp với dữ liệu tương ứng trong `src/lib/theme/{base-colors,accent-colors,
+   chart-colors,styles,fonts}.ts` — sửa một bên thì phải sửa bên kia. */
+
+/* ---- Base Color (nền/card/border/muted/accent trung tính) ---- */
+:root,
+[data-base-color='neutral'] {
+    --background: #ffffff;
+    --foreground: #171717;
+    --card: #ffffff;
+    --card-foreground: #171717;
+    --border: #e5e5e5;
+    --input: #e5e5e5;
+    --muted: #f5f5f5;
+    --muted-foreground: #737373;
+    --secondary: #f5f5f5;
+    --secondary-foreground: #171717;
+}
+
+[data-base-color='slate'] {
+    --background: #ffffff;
+    --foreground: #0f172a;
+    --card: #ffffff;
+    --card-foreground: #0f172a;
+    --border: #e2e8f0;
+    --input: #e2e8f0;
+    --muted: #f1f5f9;
+    --muted-foreground: #64748b;
+    --secondary: #f1f5f9;
+    --secondary-foreground: #0f172a;
+}
+
+[data-base-color='zinc'] {
+    --background: #ffffff;
+    --foreground: #18181b;
+    --card: #ffffff;
+    --card-foreground: #18181b;
+    --border: #e4e4e7;
+    --input: #e4e4e7;
+    --muted: #f4f4f5;
+    --muted-foreground: #71717a;
+    --secondary: #f4f4f5;
+    --secondary-foreground: #18181b;
+}
+
+[data-base-color='gray'] {
+    --background: #ffffff;
+    --foreground: #111827;
+    --card: #ffffff;
+    --card-foreground: #111827;
+    --border: #e5e7eb;
+    --input: #e5e7eb;
+    --muted: #f3f4f6;
+    --muted-foreground: #6b7280;
+    --secondary: #f3f4f6;
+    --secondary-foreground: #111827;
+}
+
+[data-base-color='stone'] {
+    --background: #ffffff;
+    --foreground: #1c1917;
+    --card: #ffffff;
+    --card-foreground: #1c1917;
+    --border: #e7e5e4;
+    --input: #e7e5e4;
+    --muted: #f5f5f4;
+    --muted-foreground: #78716c;
+    --secondary: #f5f5f4;
+    --secondary-foreground: #1c1917;
+}
+
+.dark[data-base-color='neutral'] {
+    --background: #0a0a0a;
+    --foreground: #fafafa;
+    --card: #171717;
+    --card-foreground: #fafafa;
+    --border: #262626;
+    --input: #262626;
+    --muted: #262626;
+    --muted-foreground: #a3a3a3;
+    --secondary: #262626;
+    --secondary-foreground: #fafafa;
+}
+
+.dark[data-base-color='slate'] {
+    --background: #020617;
+    --foreground: #f8fafc;
+    --card: #0f172a;
+    --card-foreground: #f8fafc;
+    --border: #1e293b;
+    --input: #1e293b;
+    --muted: #1e293b;
+    --muted-foreground: #94a3b8;
+    --secondary: #1e293b;
+    --secondary-foreground: #f8fafc;
+}
+
+.dark[data-base-color='zinc'] {
+    --background: #09090b;
+    --foreground: #fafafa;
+    --card: #18181b;
+    --card-foreground: #fafafa;
+    --border: #27272a;
+    --input: #27272a;
+    --muted: #27272a;
+    --muted-foreground: #a1a1aa;
+    --secondary: #27272a;
+    --secondary-foreground: #fafafa;
+}
+
+.dark[data-base-color='gray'] {
+    --background: #030712;
+    --foreground: #f9fafb;
+    --card: #111827;
+    --card-foreground: #f9fafb;
+    --border: #1f2937;
+    --input: #1f2937;
+    --muted: #1f2937;
+    --muted-foreground: #9ca3af;
+    --secondary: #1f2937;
+    --secondary-foreground: #f9fafb;
+}
+
+.dark[data-base-color='stone'] {
+    --background: #0c0a09;
+    --foreground: #fafaf9;
+    --card: #1c1917;
+    --card-foreground: #fafaf9;
+    --border: #292524;
+    --input: #292524;
+    --muted: #292524;
+    --muted-foreground: #a8a29e;
+    --secondary: #292524;
+    --secondary-foreground: #fafaf9;
+}
+
+/* ---- Accent ("Theme") -> primary + ring + sidebar-primary ---- */
+:root,
+[data-accent='nova'] {
+    --primary: #00a76f;
+    --primary-foreground: #ffffff;
+    --ring: #00a76f;
+}
+[data-accent='sky'] {
+    --primary: #0284c7;
+    --primary-foreground: #ffffff;
+    --ring: #0284c7;
+}
+[data-accent='indigo'] {
+    --primary: #4f46e5;
+    --primary-foreground: #ffffff;
+    --ring: #4f46e5;
+}
+[data-accent='violet'] {
+    --primary: #7c3aed;
+    --primary-foreground: #ffffff;
+    --ring: #7c3aed;
+}
+[data-accent='rose'] {
+    --primary: #e11d48;
+    --primary-foreground: #ffffff;
+    --ring: #e11d48;
+}
+[data-accent='orange'] {
+    --primary: #ea580c;
+    --primary-foreground: #ffffff;
+    --ring: #ea580c;
+}
+[data-accent='teal'] {
+    --primary: #0d9488;
+    --primary-foreground: #ffffff;
+    --ring: #0d9488;
+}
+[data-accent='amber'] {
+    --primary: #d97706;
+    --primary-foreground: #ffffff;
+    --ring: #d97706;
+}
+
+/* ---- Chart colors ---- */
+:root,
+[data-chart='neutral'] {
+    --chart-1: #dedede;
+    --chart-2: #a3a3a3;
+    --chart-3: #828282;
+    --chart-4: #5e5e5e;
+    --chart-5: #3f3f3f;
+}
+[data-chart='vivid'] {
+    --chart-1: #6366f1;
+    --chart-2: #22c55e;
+    --chart-3: #f59e0b;
+    --chart-4: #ef4444;
+    --chart-5: #06b6d4;
+}
+[data-chart='ocean'] {
+    --chart-1: #0ea5e9;
+    --chart-2: #0284c7;
+    --chart-3: #0369a1;
+    --chart-4: #075985;
+    --chart-5: #0c4a6e;
+}
+[data-chart='sunset'] {
+    --chart-1: #fbbf24;
+    --chart-2: #fb923c;
+    --chart-3: #f97316;
+    --chart-4: #ea580c;
+    --chart-5: #c2410c;
+}
+
+/* ---- Style -> chỉ đổi --radius (xem lý do trong styles.ts) ---- */
+:root,
+[data-style='nova'] {
+    --radius: 0.625rem;
+}
+[data-style='vega'] {
+    --radius: 1rem;
+}
+[data-style='maia'] {
+    --radius: 0.375rem;
+}
+[data-style='lyra'] {
+    --radius: 1.5rem;
+}
+[data-style='mira'] {
+    --radius: 0.25rem;
+}
+[data-style='luma'] {
+    --radius: 0.75rem;
+}
+[data-style='sera'] {
+    --radius: 0.5rem;
+}
+[data-style='rhea'] {
+    --radius: 1.125rem;
+}
+
+/* ---- Font (body) / Font Heading -> re-point --font-sans / --font-heading ---- */
+:root,
+[data-font='publicSans'] {
+    --font-sans: var(--font-public-sans);
+}
+[data-font='inter'] {
+    --font-sans: var(--font-inter);
+}
+[data-font='geist'] {
+    --font-sans: var(--font-geist);
+}
+[data-font='roboto'] {
+    --font-sans: var(--font-roboto);
+}
+[data-font='plusJakartaSans'] {
+    --font-sans: var(--font-plus-jakarta-sans);
+}
+[data-font='manrope'] {
+    --font-sans: var(--font-manrope);
+}
+[data-font='sora'] {
+    --font-sans: var(--font-sora);
+}
+[data-font='dmSans'] {
+    --font-sans: var(--font-dm-sans);
+}
+
+:root,
+[data-font-heading='publicSans'] {
+    --font-heading: var(--font-public-sans);
+}
+[data-font-heading='inter'] {
+    --font-heading: var(--font-inter);
+}
+[data-font-heading='geist'] {
+    --font-heading: var(--font-geist);
+}
+[data-font-heading='roboto'] {
+    --font-heading: var(--font-roboto);
+}
+[data-font-heading='plusJakartaSans'] {
+    --font-heading: var(--font-plus-jakarta-sans);
+}
+[data-font-heading='manrope'] {
+    --font-heading: var(--font-manrope);
+}
+[data-font-heading='sora'] {
+    --font-heading: var(--font-sora);
+}
+[data-font-heading='dmSans'] {
+    --font-heading: var(--font-dm-sans);
+}

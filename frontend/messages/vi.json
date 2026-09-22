@@ -1,0 +1,23 @@
+{
+  "common": {
+    "language": "Ngôn ngữ",
+    "languageVi": "Tiếng Việt",
+    "languageEn": "Tiếng Anh"
+  },
+  "theme": {
+    "trigger": "Menu",
+    "triggerLabel": "Mở tuỳ chỉnh giao diện",
+    "panelTitle": "Tuỳ chỉnh giao diện",
+    "panelDescription": "Chọn style, màu sắc và font cho toàn bộ giao diện.",
+    "style": "Style",
+    "baseColor": "Base Color",
+    "accentColor": "Theme",
+    "chartColor": "Chart Color",
+    "headingFont": "Heading",
+    "font": "Font",
+    "shuffle": "Shuffle",
+    "reset": "Đặt lại mặc định",
+    "loading": "Đang tải giao diện đã lưu…",
+    "selected": "Đang chọn"
+  }
+}

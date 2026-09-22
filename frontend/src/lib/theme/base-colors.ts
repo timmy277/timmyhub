@@ -1,0 +1,196 @@
+// Nguồn: bảng màu xám chuẩn của Tailwind CSS (neutral/slate/zinc/gray/stone), khớp 5 lựa chọn
+// "Base Color" mà `shadcn init --base-color` hỗ trợ. Song song với mỗi khối tương ứng trong
+// `src/app/theme-presets.css` (áp CSS variable thật) — sửa bảng này thì phải sửa cả hai nơi.
+export interface BaseColorPalette {
+    id: string
+    label: string
+    swatch: string
+    light: {
+        background: string
+        foreground: string
+        card: string
+        border: string
+        input: string
+        muted: string
+        mutedForeground: string
+        secondary: string
+        secondaryForeground: string
+        accent: string
+        accentForeground: string
+    }
+    dark: {
+        background: string
+        foreground: string
+        card: string
+        border: string
+        input: string
+        muted: string
+        mutedForeground: string
+        secondary: string
+        secondaryForeground: string
+        accent: string
+        accentForeground: string
+    }
+}
+
+export const BASE_COLOR_PALETTES = [
+    {
+        id: 'neutral',
+        label: 'Neutral',
+        swatch: '#a3a3a3',
+        light: {
+            background: '#ffffff',
+            foreground: '#171717',
+            card: '#ffffff',
+            border: '#e5e5e5',
+            input: '#e5e5e5',
+            muted: '#f5f5f5',
+            mutedForeground: '#737373',
+            secondary: '#f5f5f5',
+            secondaryForeground: '#171717',
+            accent: '#f5f5f5',
+            accentForeground: '#171717',
+        },
+        dark: {
+            background: '#0a0a0a',
+            foreground: '#fafafa',
+            card: '#171717',
+            border: '#262626',
+            input: '#262626',
+            muted: '#262626',
+            mutedForeground: '#a3a3a3',
+            secondary: '#262626',
+            secondaryForeground: '#fafafa',
+            accent: '#262626',
+            accentForeground: '#fafafa',
+        },
+    },
+    {
+        id: 'slate',
+        label: 'Slate',
+        swatch: '#94a3b8',
+        light: {
+            background: '#ffffff',
+            foreground: '#0f172a',
+            card: '#ffffff',
+            border: '#e2e8f0',
+            input: '#e2e8f0',
+            muted: '#f1f5f9',
+            mutedForeground: '#64748b',
+            secondary: '#f1f5f9',
+            secondaryForeground: '#0f172a',
+            accent: '#f1f5f9',
+            accentForeground: '#0f172a',
+        },
+        dark: {
+            background: '#020617',
+            foreground: '#f8fafc',
+            card: '#0f172a',
+            border: '#1e293b',
+            input: '#1e293b',
+            muted: '#1e293b',
+            mutedForeground: '#94a3b8',
+            secondary: '#1e293b',
+            secondaryForeground: '#f8fafc',
+            accent: '#1e293b',
+            accentForeground: '#f8fafc',
+        },
+    },
+    {
+        id: 'zinc',
+        label: 'Zinc',
+        swatch: '#a1a1aa',
+        light: {
+            background: '#ffffff',
+            foreground: '#18181b',
+            card: '#ffffff',
+            border: '#e4e4e7',
+            input: '#e4e4e7',
+            muted: '#f4f4f5',
+            mutedForeground: '#71717a',
+            secondary: '#f4f4f5',
+            secondaryForeground: '#18181b',
+            accent: '#f4f4f5',
+            accentForeground: '#18181b',
+        },
+        dark: {
+            background: '#09090b',
+            foreground: '#fafafa',
+            card: '#18181b',
+            border: '#27272a',
+            input: '#27272a',
+            muted: '#27272a',
+            mutedForeground: '#a1a1aa',
+            secondary: '#27272a',
+            secondaryForeground: '#fafafa',
+            accent: '#27272a',
+            accentForeground: '#fafafa',
+        },
+    },
+    {
+        id: 'gray',
+        label: 'Gray',
+        swatch: '#9ca3af',
+        light: {
+            background: '#ffffff',
+            foreground: '#111827',
+            card: '#ffffff',
+            border: '#e5e7eb',
+            input: '#e5e7eb',
+            muted: '#f3f4f6',
+            mutedForeground: '#6b7280',
+            secondary: '#f3f4f6',
+            secondaryForeground: '#111827',
+            accent: '#f3f4f6',
+            accentForeground: '#111827',
+        },
+        dark: {
+            background: '#030712',
+            foreground: '#f9fafb',
+            card: '#111827',
+            border: '#1f2937',
+            input: '#1f2937',
+            muted: '#1f2937',
+            mutedForeground: '#9ca3af',
+            secondary: '#1f2937',
+            secondaryForeground: '#f9fafb',
+            accent: '#1f2937',
+            accentForeground: '#f9fafb',
+        },
+    },
+    {
+        id: 'stone',
+        label: 'Stone',
+        swatch: '#a8a29e',
+        light: {
+            background: '#ffffff',
+            foreground: '#1c1917',
+            card: '#ffffff',
+            border: '#e7e5e4',
+            input: '#e7e5e4',
+            muted: '#f5f5f4',
+            mutedForeground: '#78716c',
+            secondary: '#f5f5f4',
+            secondaryForeground: '#1c1917',
+            accent: '#f5f5f4',
+            accentForeground: '#1c1917',
+        },
+        dark: {
+            background: '#0c0a09',
+            foreground: '#fafaf9',
+            card: '#1c1917',
+            border: '#292524',
+            input: '#292524',
+            muted: '#292524',
+            mutedForeground: '#a8a29e',
+            secondary: '#292524',
+            secondaryForeground: '#fafaf9',
+            accent: '#292524',
+            accentForeground: '#fafaf9',
+        },
+    },
+] as const satisfies readonly BaseColorPalette[]
+
+export const BASE_COLOR_IDS = BASE_COLOR_PALETTES.map((palette) => palette.id) as [string, ...string[]]
+
+export type BaseColorId = (typeof BASE_COLOR_PALETTES)[number]['id']

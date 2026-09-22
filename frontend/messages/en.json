@@ -1,0 +1,23 @@
+{
+  "common": {
+    "language": "Language",
+    "languageVi": "Vietnamese",
+    "languageEn": "English"
+  },
+  "theme": {
+    "trigger": "Menu",
+    "triggerLabel": "Open theme customizer",
+    "panelTitle": "Customize theme",
+    "panelDescription": "Choose style, colors and fonts for the whole interface.",
+    "style": "Style",
+    "baseColor": "Base Color",
+    "accentColor": "Theme",
+    "chartColor": "Chart Color",
+    "headingFont": "Heading",
+    "font": "Font",
+    "shuffle": "Shuffle",
+    "reset": "Reset to default",
+    "loading": "Loading saved theme…",
+    "selected": "Selected"
+  }
+}
