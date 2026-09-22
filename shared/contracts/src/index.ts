@@ -1,3 +1,5 @@
 export * from './errors'
 export * from './money.schema'
 export * from './auth.schema'
+export * from './permissions.catalog'
+export * from './rbac.schema'

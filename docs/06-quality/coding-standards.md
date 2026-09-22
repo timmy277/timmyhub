@@ -2,7 +2,7 @@
 title: Chuẩn mã nguồn và định dạng
 status: review
 owner: Tech Lead
-updated: 2026-09-19
+updated: 2026-09-22
 related: [docs/06-quality/git-hooks.md, docs/06-quality/definition-of-done.md, docs/06-quality/performance.md, docs/01-architecture/api-conventions.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
@@ -244,6 +244,49 @@ frontend/src/
 
 Quy tắc phụ thuộc, kiểm bằng ESLint boundaries: `features/*` được dùng `components/*` và `lib/*`; chiều ngược lại **cấm**.
 Hai feature không import chéo nhau — cần dùng chung thì nâng lên `components/common`.
+
+### 6.1 Module dùng chung (cross-cutting) trong backend
+
+`platform` không phải domain nghiệp vụ — nó chứa hạ tầng dùng chung cho mọi domain khác (decorator, guard, checker,
+interface xác thực/phân quyền…). Cấu trúc `<domain>.controller.ts` / `<domain>.service.ts` / `<domain>.repository.ts`
+ở §6 dành cho domain nghiệp vụ; module cross-cutting nhóm theo **loại kỹ thuật**, mỗi loại một thư mục con, mỗi thư
+mục con có `index.ts` riêng — theo đúng quy ước `auth/decorators`, `auth/guards`, `auth/interfaces`,
+`auth/strategies` của TimmyHub gốc (`timmyhub-nestjs/src/auth`):
+
+```
+platform/auth/
+    decorators/   # @Public, @Roles, @Permissions, @CurrentUser…
+        index.ts
+    guards/       # JwtAuthGuard, RolesGuard, PermissionsGuard…
+        index.ts
+    checkers/     # kiểm tra nhất quán lúc khởi động (OnApplicationBootstrap) — mới so với bản gốc, dùng chung quy ước
+        index.ts
+    interfaces/   # kiểu thuần (*.interface.ts, ví dụ AuthUser), không phụ thuộc NestJS runtime
+        index.ts
+    index.ts      # barrel gộp — chỗ duy nhất module khác được import
+```
+
+❌ **BAD** — gộp decorator, guard, checker, interface chung một thư mục phẳng, không phân biệt được loại nào dùng ở đâu:
+
+```
+platform/auth/
+    current-user.decorator.ts
+    jwt-auth.guard.ts
+    permissions.decorator.ts
+    permissions.guard.ts
+    public.decorator.ts
+    rbac-consistency.checker.ts
+    roles.decorator.ts
+    roles.guard.ts
+    auth-user.interface.ts
+```
+
+✅ **GOOD** — cấu trúc như trên, import chéo giữa các thư mục con luôn qua `index.ts` của thư mục đó
+(`../decorators/index`, `../interfaces/index`), không bao giờ trỏ thẳng vào file nội bộ
+(`../decorators/roles.decorator`) — ESLint `no-restricted-imports` (`../*/*` bị cấm, trừ `../*/index`) chặn ngay ở
+bước lint nếu làm sai. Đây là điểm khác bản gốc: bản gốc là app đơn lẻ nên `guards/`, `interfaces/` không cần
+`index.ts` riêng; ở đây là package dùng chung trong monorepo (`@timmyhub/modules`) nên mọi thư mục con đều cần
+barrel để tuân thủ rule boundary.
 
 ---
 

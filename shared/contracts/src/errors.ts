@@ -11,8 +11,17 @@ export const API_ERROR_CODES = {
     REFRESH_TOKEN_EXPIRED: { status: 401 },
     REFRESH_TOKEN_INVALID: { status: 401 },
     UNAUTHORIZED: { status: 401 },
+    FORBIDDEN: { status: 403 },
     NOT_FOUND: { status: 404 },
     INTERNAL: { status: 500 },
+    // domain rbac — docs/03-specs/rbac-permission/design.md
+    ROLE_NOT_FOUND: { status: 404 },
+    ROLE_ALREADY_EXISTS: { status: 409 },
+    ROLE_IS_SYSTEM: { status: 403 },
+    ROLE_IN_USE: { status: 409 },
+    PERMISSION_NOT_FOUND: { status: 404 },
+    PERMISSION_ALREADY_EXISTS: { status: 409 },
+    CANNOT_ESCALATE_PRIVILEGE: { status: 403 },
 } as const
 
 export type ApiErrorCode = keyof typeof API_ERROR_CODES

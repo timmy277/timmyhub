@@ -17,7 +17,9 @@
   "dependencies": {
     "@nestjs/common": "^11.0.1",
     "@prisma/adapter-pg": "^6.19.3",
-    "@prisma/client": "^6.19.3"
+    "@prisma/client": "^6.19.3",
+    "@timmyhub/contracts": "workspace:*",
+    "bcryptjs": "^3.0.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.7",

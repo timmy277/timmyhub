@@ -1,16 +1,11 @@
-import { randomBytes, scryptSync } from 'node:crypto'
+import * as bcrypt from 'bcryptjs'
 
 import type { PrismaClient } from '../../src/generated/prisma/client'
 
-// Chỉ dùng cho dữ liệu seed/dev — không phải thuật toán hash chính thức của module identity.
+// Phải khớp thuật toán hash của AuthService.login (bcrypt), nếu không user seed sẽ không đăng nhập được.
 // Mật khẩu seed chung cho mọi tài khoản mẫu: Seed@12345
-function hashSeedPassword(plain: string): string {
-    const salt = randomBytes(16).toString('hex')
-    const hash = scryptSync(plain, salt, 64).toString('hex')
-    return `scrypt$${salt}$${hash}`
-}
-
-const SEED_PASSWORD_HASH = hashSeedPassword('Seed@12345')
+const BCRYPT_COST = 12
+const SEED_PASSWORD_HASH = bcrypt.hashSync('Seed@12345', BCRYPT_COST)
 
 export type SeedUsers = {
     superAdminId: string
@@ -64,7 +59,7 @@ async function upsertUserWithProfile(
 ) {
     const user = await prisma.user.upsert({
         where: { email: input.email },
-        update: { roles: input.roles },
+        update: { roles: input.roles, passwordHash: SEED_PASSWORD_HASH },
         create: {
             email: input.email,
             phone: input.phone ?? null,

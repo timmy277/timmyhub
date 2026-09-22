@@ -7,12 +7,24 @@ import { IdentityEventsListener } from './events/identity.events'
 import { IdentityController } from './identity.controller'
 import { IdentityRepository } from './identity.repository'
 import { IdentityService } from './identity.service'
+import { PermissionCacheService } from './rbac/permission-cache.service'
+import { RbacRepository } from './rbac/rbac.repository'
+import { RbacService } from './rbac/rbac.service'
+import { RbacController } from './rbac.controller'
 
 @Module({
     // JwtModule.register({}) rỗng: mỗi lần signAsync/verify truyền algorithm + key riêng (RS256, xem auth.service.ts).
     imports: [JwtModule.register({})],
-    controllers: [IdentityController, AuthController],
-    providers: [IdentityService, IdentityRepository, IdentityEventsListener, AuthService],
-    exports: [IdentityService, AuthService],
+    controllers: [IdentityController, AuthController, RbacController],
+    providers: [
+        IdentityService,
+        IdentityRepository,
+        IdentityEventsListener,
+        AuthService,
+        RbacRepository,
+        RbacService,
+        PermissionCacheService,
+    ],
+    exports: [IdentityService, AuthService, RbacService],
 })
 export class IdentityModule {}

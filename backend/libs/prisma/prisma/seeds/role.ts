@@ -1,111 +1,94 @@
+import type { SystemRoleName } from '@timmyhub/contracts'
+import { PERMISSION_DEFINITIONS } from '@timmyhub/contracts'
+
 import type { PrismaClient } from '../../src/generated/prisma/client'
 
-const ROLES: Array<{
-    name: string
-    displayName: string
-    description: string
-    isSystem: boolean
-    // để rỗng = không gán quyền động nào (role dùng thuần layer 1 — User.roles enum)
-    permissionNames: string[]
-}> = [
-    {
-        name: 'SUPER_ADMIN',
+const ROLE_METADATA: Record<SystemRoleName, { displayName: string; description: string; isSystem: boolean }> = {
+    SUPER_ADMIN: {
         displayName: 'Quản trị viên tối cao',
-        description: 'Toàn quyền truy cập hệ thống',
+        description: 'Bỏ qua toàn bộ kiểm tra role/permission (layer 1-3), chỉ layer xác thực vẫn áp dụng.',
         isSystem: true,
-        permissionNames: ['admin:system:all'],
     },
-    {
-        name: 'ADMIN',
+    ADMIN: {
         displayName: 'Quản trị viên',
-        description: 'Vận hành sàn: duyệt seller, sản phẩm, xử lý tranh chấp, rút tiền',
+        description: 'Vận hành sàn: duyệt seller/sản phẩm, xử lý tranh chấp, rút tiền, kiểm duyệt nội dung.',
         isSystem: true,
-        permissionNames: [
-            'identity:user:read',
-            'identity:user:update',
-            'identity:user:ban',
-            'seller:application:read',
-            'seller:application:approve',
-            'seller:profile:suspend',
-            'catalog:category:create',
-            'catalog:category:update',
-            'catalog:category:delete',
-            'catalog:product:approve',
-            'order:order:read',
-            'order:order:process',
-            'order:dispute:resolve',
-            'payment:withdrawal:read',
-            'payment:withdrawal:approve',
-            'content:post:moderate',
-            'content:ad:approve',
-        ],
     },
-    {
-        name: 'MODERATOR',
+    MODERATOR: {
         displayName: 'Kiểm duyệt viên',
-        description: 'Duyệt sản phẩm/bài đăng, không đụng tới ví/rút tiền',
+        description: 'Duyệt sản phẩm/bài đăng/quảng cáo, không đụng tới ví/rút tiền.',
         isSystem: true,
-        permissionNames: [
-            'catalog:product:approve',
-            'content:post:moderate',
-            'content:ad:approve',
-            'seller:application:read',
-        ],
     },
-    {
-        name: 'SELLER',
+    SELLER: {
         displayName: 'Người bán',
-        description: 'Quản lý shop, sản phẩm, đơn hàng của chính mình',
+        description: 'Quản lý shop, sản phẩm, đơn hàng, ví của chính mình.',
         isSystem: true,
-        permissionNames: [
-            'catalog:product:create',
-            'catalog:product:update',
-            'catalog:inventory:adjust',
-            'seller:profile:update',
-            'promotion:voucher:create',
-        ],
     },
-    {
-        name: 'BRAND',
+    BRAND: {
         displayName: 'Thương hiệu',
-        description: 'Đại diện thương hiệu, quản lý shop chính hãng',
+        description: 'Đại diện thương hiệu, quản lý shop chính hãng.',
         isSystem: true,
-        permissionNames: ['catalog:product:create', 'catalog:product:update', 'promotion:campaign:create'],
     },
-    {
-        name: 'CUSTOMER',
+    CUSTOMER: {
         displayName: 'Khách hàng',
-        description: 'Người mua hàng trên sàn',
+        description: 'Người mua hàng trên sàn.',
         isSystem: true,
-        permissionNames: [],
     },
-    {
-        name: 'SHIPPER',
+    SHIPPER: {
         displayName: 'Người giao hàng',
-        description: 'Nhân viên giao vận, cập nhật trạng thái vận đơn',
+        description: 'Nhân viên giao vận, cập nhật trạng thái vận đơn được gán.',
         isSystem: true,
-        permissionNames: ['order:order:read', 'order:order:process'],
     },
-]
+}
+
+// permissionNames của mỗi role được TÍNH từ PERMISSION_DEFINITIONS[].defaultRoles, không khai tay riêng ở đây —
+// thêm permission mới vào catalog và gán defaultRoles là đủ, role.ts không cần sửa theo (tránh lệch, rbac-advanced.md §7).
+// SUPER_ADMIN không cần liệt kê permission nào: guard bypass thẳng theo layer 1 (RolesGuard/PermissionsGuard).
+function buildRolePermissionNames(): Record<SystemRoleName, string[]> {
+    const map: Record<SystemRoleName, string[]> = {
+        SUPER_ADMIN: [],
+        ADMIN: [],
+        MODERATOR: [],
+        SELLER: [],
+        BRAND: [],
+        CUSTOMER: [],
+        SHIPPER: [],
+    }
+    for (const permission of PERMISSION_DEFINITIONS) {
+        for (const roleName of permission.defaultRoles) {
+            map[roleName].push(permission.name)
+        }
+    }
+    return map
+}
 
 export async function seedRoles(prisma: PrismaClient) {
     console.log('  - Seeding roles và gán quyền...')
 
-    for (const role of ROLES) {
+    const rolePermissionNames = buildRolePermissionNames()
+
+    for (const [roleName, metadata] of Object.entries(ROLE_METADATA) as [
+        SystemRoleName,
+        (typeof ROLE_METADATA)[SystemRoleName],
+    ][]) {
         const systemRole = await prisma.systemRole.upsert({
-            where: { name: role.name },
-            update: { displayName: role.displayName, description: role.description },
+            where: { name: roleName },
+            update: { displayName: metadata.displayName, description: metadata.description },
             create: {
-                name: role.name,
-                displayName: role.displayName,
-                description: role.description,
-                isSystem: role.isSystem,
+                name: roleName,
+                displayName: metadata.displayName,
+                description: metadata.description,
+                isSystem: metadata.isSystem,
             },
         })
 
-        for (const permissionName of role.permissionNames) {
+        for (const permissionName of rolePermissionNames[roleName]) {
             const permission = await prisma.permission.findUnique({ where: { name: permissionName } })
-            if (!permission) continue
+            if (!permission) {
+                throw new Error(
+                    `Seed role: permission "${permissionName}" không tồn tại trong bảng Permission — chạy seedPermissions trước seedRoles.`,
+                )
+            }
 
             await prisma.rolePermission.upsert({
                 where: { roleId_permissionId: { roleId: systemRole.id, permissionId: permission.id } },

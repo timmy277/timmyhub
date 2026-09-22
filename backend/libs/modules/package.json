@@ -21,6 +21,10 @@
     "./platform": {
       "types": "./dist/platform/index.d.ts",
       "default": "./dist/platform/index.js"
+    },
+    "./platform/auth": {
+      "types": "./dist/platform/auth/index.d.ts",
+      "default": "./dist/platform/auth/index.js"
     }
   },
   "scripts": {
