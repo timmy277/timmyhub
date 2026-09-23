@@ -69,6 +69,8 @@ Mục lục đầy đủ và lối đọc theo vai trò: `docs/README.md`.
 15. Zod là nguồn validation duy nhất, schema dùng chung FE/BE qua `@timmyhub/contracts`.
 16. Không đưa việc chậm (mail, transcode, index) vào đường xử lý request — đẩy sang BullMQ.
 17. Không commit bí mật. Giá trị trong `.env` chỉ đọc **tên biến**, không đọc giá trị.
+18. Ô nhập trong form luôn dùng field có **label nổi** — `FloatInput`, `FloatCombobox`, `FloatMultiSelect` từ
+    `@/components` — không ghép `<Label>` riêng với `<Input>`/`Select`. `Label` rời chỉ dành cho checkbox, radio, switch.
 
 ## 4. Quy ước tài liệu
 

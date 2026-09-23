@@ -2,7 +2,11 @@
   "common": {
     "language": "Ngôn ngữ",
     "languageVi": "Tiếng Việt",
-    "languageEn": "Tiếng Anh"
+    "languageEn": "Tiếng Anh",
+    "showPassword": "Hiện mật khẩu",
+    "hidePassword": "Ẩn mật khẩu",
+    "noResults": "Không có kết quả",
+    "removeItem": "Bỏ {item}"
   },
   "nav": {
     "brand": "Timmy Hub",
@@ -31,5 +35,14 @@
     "reset": "Đặt lại mặc định",
     "loading": "Đang tải giao diện đã lưu…",
     "selected": "Đang chọn"
+  },
+  "home": {
+    "demoInput": "Nhập tên của bạn",
+    "demoCombobox": "Danh mục",
+    "demoMultiSelect": "Thẻ",
+    "categoryFashion": "Thời trang",
+    "categoryElectronics": "Điện tử",
+    "categoryHome": "Nhà cửa",
+    "categoryBeauty": "Làm đẹp"
   }
 }

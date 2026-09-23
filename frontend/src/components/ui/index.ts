@@ -1,13 +1,18 @@
-// Barrel export cho toàn bộ primitive shadcn/ui nguyên bản (ADR-0006 — không sửa tay các file trong
-// thư mục này). File này KHÔNG do `shadcn add` tự sinh/cập nhật — mỗi lần thêm component mới bằng CLI
-// phải tự thêm một dòng export tương ứng ở đây.
+// Barrel export cho primitive shadcn/ui nguyên bản (ADR-0006 — không sửa tay các file do CLI sinh) và các
+// field `float-*` do dự án tự viết, dựng trên primitive ở đây. File này KHÔNG do `shadcn add` tự sinh/cập
+// nhật — mỗi lần thêm component mới bằng CLI phải tự thêm một dòng export tương ứng ở đây.
 export * from './avatar'
 export * from './breadcrumb'
 export * from './button'
 export * from './collapsible'
+export * from './combobox'
 export * from './dialog'
 export * from './dropdown-menu'
+export * from './float-combobox'
+export * from './float-input'
+export * from './float-multi-select'
 export * from './input'
+export * from './input-group'
 export * from './label'
 export * from './popover'
 export * from './radio-group'
@@ -18,4 +23,5 @@ export * from './sheet'
 export * from './sidebar'
 export * from './skeleton'
 export * from './sonner'
+export * from './textarea'
 export * from './tooltip'

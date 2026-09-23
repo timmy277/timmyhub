@@ -2,7 +2,7 @@
 title: Chuẩn mã nguồn và định dạng
 status: review
 owner: Tech Lead
-updated: 2026-09-23
+updated: 2026-09-24
 related: [docs/06-quality/git-hooks.md, docs/06-quality/definition-of-done.md, docs/06-quality/performance.md, docs/01-architecture/api-conventions.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
@@ -153,6 +153,7 @@ Việc index Elasticsearch thuộc về consumer của `EVT-product.created`, kh
 | Không `dangerouslySetInnerHTML` nếu chưa sanitize ở server | XSS |
 | Ảnh luôn qua `next/image` có `sizes` | LCP |
 | Không chuỗi tiếng Việt viết thẳng trong component | Phải qua `next-intl` |
+| Ô nhập text/chọn trong form dùng field label nổi (`FloatInput`, `FloatCombobox`, `FloatMultiSelect`), không ghép `<Label>` + `<Input>` | Một kiểu form thống nhất; label gắn sẵn `htmlFor`, lỗi gắn sẵn `aria-describedby` |
 
 ❌ **BAD** — biến cả trang thành client chỉ vì một nút:
 
@@ -175,6 +176,35 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     return <article>…<AddToCartButton variantId={product.defaultVariantId} /></article>
 }
 ```
+
+❌ **BAD** — label tách rời, tự nối `htmlFor`/lỗi bằng tay, mỗi form một kiểu:
+
+```tsx
+<Label htmlFor="email">{t('email')}</Label>
+<Input id="email" {...register('email')} />
+{errors.email && <p className="text-destructive">{errors.email.message}</p>}
+```
+
+✅ **GOOD** — field label nổi lo label, trạng thái lỗi và liên kết ARIA:
+
+```tsx
+<FloatInput label={t('email')} error={errors.email?.message} {...register('email')} />
+<Controller
+    control={control}
+    name="categoryIds"
+    render={({ field, fieldState }) => (
+        <FloatMultiSelect
+            label={t('categories')}
+            options={categoryOptions}
+            value={field.value}
+            onValueChange={field.onChange}
+            error={fieldState.error?.message}
+        />
+    )}
+/>
+```
+
+`<Label>` rời chỉ dùng cho control không có ô nhập chữ: checkbox, radio, switch.
 
 ---
 

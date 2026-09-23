@@ -2,7 +2,7 @@
 title: ADR-0006 — shadcn/ui + Tailwind v4 thay Mantine
 status: accepted
 owner: Frontend Lead
-updated: 2026-09-16
+updated: 2026-09-24
 related: [docs/04-frontend/design-system.md, docs/04-frontend/component-inventory.md]
 ---
 
@@ -35,5 +35,8 @@ buộc, WCAG 2.2 AA). Chi tiết token: `docs/04-frontend/design-system.md`.
 - Cấu trúc thư mục phân biệt rõ `components/ui/` (shadcn nguyên bản, chỉ cập nhật qua CLI `shadcn add`, không sửa
   tay) và `components/common/` (component dựng từ `ui/`, tuỳ biến cho dự án) — vi phạm ranh giới này làm mất khả năng
   đồng bộ với upstream shadcn.
+- Ngoại lệ (2026-09-24): các field `components/ui/float-*.tsx` (`FloatInput`, `FloatCombobox`, `FloatMultiSelect`)
+  do dự án tự viết nhưng đặt trong `ui/` vì là primitive form dùng khắp nơi. Chúng chỉ **dựng trên** file CLI sinh
+  (`combobox.tsx`, `input-group.tsx`…), không sửa các file đó — `shadcn add --overwrite` vẫn an toàn.
 - AG Grid (nếu dùng cho lưới admin phức tạp, xem ADR-0007) và Recharts vẫn là thư viện ngoài độc lập với hệ token này,
   cần tự map màu theo token qua theme prop, không tự động kế thừa Tailwind.

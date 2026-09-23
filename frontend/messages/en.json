@@ -2,7 +2,11 @@
   "common": {
     "language": "Language",
     "languageVi": "Vietnamese",
-    "languageEn": "English"
+    "languageEn": "English",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "noResults": "No results",
+    "removeItem": "Remove {item}"
   },
   "nav": {
     "brand": "Timmy Hub",
@@ -31,5 +35,14 @@
     "reset": "Reset to default",
     "loading": "Loading saved theme…",
     "selected": "Selected"
+  },
+  "home": {
+    "demoInput": "Enter your name",
+    "demoCombobox": "Category",
+    "demoMultiSelect": "Tags",
+    "categoryFashion": "Fashion",
+    "categoryElectronics": "Electronics",
+    "categoryHome": "Home & living",
+    "categoryBeauty": "Beauty"
   }
 }
