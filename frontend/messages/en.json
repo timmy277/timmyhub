@@ -4,6 +4,19 @@
     "languageVi": "Vietnamese",
     "languageEn": "English"
   },
+  "nav": {
+    "brand": "Timmy Hub",
+    "toggleSidebar": "Toggle sidebar",
+    "overview": "Overview",
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "breadcrumb": "Breadcrumb",
+    "themeMode": "Toggle light/dark mode",
+    "account": "Account",
+    "notifications": "Notifications",
+    "noNotifications": "No notifications yet",
+    "logOut": "Log out"
+  },
   "theme": {
     "trigger": "Menu",
     "triggerLabel": "Open theme customizer",

@@ -4,6 +4,19 @@
     "languageVi": "Tiếng Việt",
     "languageEn": "Tiếng Anh"
   },
+  "nav": {
+    "brand": "Timmy Hub",
+    "toggleSidebar": "Đóng/mở thanh bên",
+    "overview": "Tổng quan",
+    "home": "Trang chủ",
+    "dashboard": "Bảng điều khiển",
+    "breadcrumb": "Đường dẫn trang",
+    "themeMode": "Chuyển chế độ sáng/tối",
+    "account": "Tài khoản",
+    "notifications": "Thông báo",
+    "noNotifications": "Chưa có thông báo nào",
+    "logOut": "Đăng xuất"
+  },
   "theme": {
     "trigger": "Menu",
     "triggerLabel": "Mở tuỳ chỉnh giao diện",
