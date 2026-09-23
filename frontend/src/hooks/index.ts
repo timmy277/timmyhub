@@ -1,4 +1,5 @@
-// Barrel export cho custom hook dùng chung xuyên nhiều feature. Thêm hook mới vào thư mục này thì phải
-// export lại ở đây — nơi khác trong repo chỉ import qua `@/hooks`, không import thẳng file con. Hook
-// gắn chặt với một domain cụ thể thì đặt trong `features/<domain>/`, không đưa vào đây.
-export {}
+// Barrel export cho mọi custom hook (`use*`) của frontend — hook không khai báo trong component hay
+// trong `features/`. Store zustand nằm ở `@/store`, không ở đây. Nơi khác trong repo chỉ import qua
+// `@/hooks`, không import thẳng file con.
+export * from './use-locale-switch'
+export * from './use-theme-attributes-sync'

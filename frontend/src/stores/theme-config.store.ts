@@ -3,16 +3,17 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-import { ACCENT_COLOR_IDS } from './accent-colors'
-import { BASE_COLOR_IDS } from './base-colors'
-import { CHART_COLOR_IDS } from './chart-colors'
-import { FONT_IDS } from './fonts'
-import { STYLE_IDS } from './styles'
-import { DEFAULT_THEME_CONFIG, ThemeConfig } from './theme-schema'
-
-function pickRandom<T extends string>(ids: readonly T[]): T {
-    return ids[Math.floor(Math.random() * ids.length)] as T
-}
+import {
+    ACCENT_COLOR_IDS,
+    BASE_COLOR_IDS,
+    CHART_COLOR_IDS,
+    DEFAULT_THEME_CONFIG,
+    FONT_IDS,
+    STYLE_IDS,
+    THEME_CONFIG_STORAGE_KEY,
+} from '@/constants'
+import type { ThemeConfig } from '@/schemas'
+import { pickRandom } from '@/utils'
 
 interface ThemeConfigState {
     config: ThemeConfig
@@ -52,7 +53,7 @@ export const useThemeConfigStore = create<ThemeConfigState>()(
             reset: () => set(() => ({ config: DEFAULT_THEME_CONFIG })),
         }),
         {
-            name: 'timmyhub-theme-config',
+            name: THEME_CONFIG_STORAGE_KEY,
             partialize: (state) => ({ config: state.config }),
         },
     ),

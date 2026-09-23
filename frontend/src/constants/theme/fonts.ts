@@ -5,6 +5,8 @@
 // `[data-font-heading="…"]` trong `src/app/theme-presets.css` (dùng cùng `id` và cùng tên biến CSS).
 import { DM_Sans, Geist, Inter, Manrope, Plus_Jakarta_Sans, Public_Sans, Roboto, Sora } from 'next/font/google'
 
+import type { FontOption } from '@/types'
+
 export const publicSansFont = Public_Sans({
     subsets: ['latin'],
     variable: '--font-public-sans',
@@ -53,12 +55,6 @@ export const dmSansFont = DM_Sans({
     variable: '--font-dm-sans',
     display: 'swap',
 })
-
-export interface FontOption {
-    id: string
-    label: string
-    cssVariable: string
-}
 
 export const FONT_OPTIONS = [
     { id: 'publicSans', label: 'Public Sans', cssVariable: publicSansFont.style.fontFamily },

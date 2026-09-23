@@ -2,12 +2,12 @@
 
 import { useEffect } from 'react'
 
-import { useThemeConfigStore } from '@/lib/theme/use-theme-config-store'
+import { useThemeConfigStore } from '@/stores'
 
 // Đồng bộ ThemeConfig hiện tại (từ store) ra data-* trên <html> mỗi khi đổi — CSS thật nằm trong
-// theme-presets.css (attribute selector), component này chỉ toggle attribute, không tính toán màu.
-// Lần đầu paint không phụ thuộc effect này: script chặn FOUC trong layout.tsx đã set trước rồi.
-export function ThemeAttributesSync() {
+// theme-presets.css (attribute selector), hook này chỉ toggle attribute, không tính toán màu.
+// Lần đầu paint không phụ thuộc effect này: THEME_INIT_SCRIPT trong layout.tsx đã set trước rồi.
+export function useThemeAttributesSync() {
     const config = useThemeConfigStore((state) => state.config)
     const hasHydrated = useThemeConfigStore((state) => state.hasHydrated)
 
@@ -21,6 +21,4 @@ export function ThemeAttributesSync() {
         root.setAttribute('data-font-heading', config.headingFont)
         root.setAttribute('data-font', config.bodyFont)
     }, [config, hasHydrated])
-
-    return null
 }

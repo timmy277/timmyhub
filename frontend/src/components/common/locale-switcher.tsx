@@ -1,25 +1,14 @@
 'use client'
 
-import { useTransition } from 'react'
-import { useLocale, useTranslations } from 'next-intl'
+import { useTranslations } from 'next-intl'
 
 import { Button } from '@/components/ui'
-import { LOCALES, type Locale } from '@/i18n/locale'
-import { setLocale } from '@/i18n/set-locale'
+import { LOCALES } from '@/constants'
+import { useLocaleSwitch } from '@/hooks'
 
-// Đổi locale qua Server Action + cookie (localePrefix "never"), không có segment [locale] trong URL nên
-// URL giữ nguyên khi đổi ngôn ngữ.
 export function LocaleSwitcher() {
     const t = useTranslations('common')
-    const locale = useLocale()
-    const [isPending, startTransition] = useTransition()
-
-    function handleSelect(next: Locale) {
-        if (next === locale || isPending) return
-        startTransition(async () => {
-            await setLocale(next)
-        })
-    }
+    const { locale, isPending, switchLocale } = useLocaleSwitch()
 
     return (
         <div className="flex flex-col gap-2">
@@ -34,7 +23,7 @@ export function LocaleSwitcher() {
                         className="flex-1"
                         aria-pressed={locale === code}
                         disabled={isPending}
-                        onClick={() => handleSelect(code)}
+                        onClick={() => switchLocale(code)}
                     >
                         {t(code === 'vi' ? 'languageVi' : 'languageEn')}
                     </Button>

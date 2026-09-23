@@ -1,37 +1,7 @@
 // Nguồn: bảng màu xám chuẩn của Tailwind CSS (neutral/slate/zinc/gray/stone), khớp 5 lựa chọn
 // "Base Color" mà `shadcn init --base-color` hỗ trợ. Song song với mỗi khối tương ứng trong
 // `src/app/theme-presets.css` (áp CSS variable thật) — sửa bảng này thì phải sửa cả hai nơi.
-export interface BaseColorPalette {
-    id: string
-    label: string
-    swatch: string
-    light: {
-        background: string
-        foreground: string
-        card: string
-        border: string
-        input: string
-        muted: string
-        mutedForeground: string
-        secondary: string
-        secondaryForeground: string
-        accent: string
-        accentForeground: string
-    }
-    dark: {
-        background: string
-        foreground: string
-        card: string
-        border: string
-        input: string
-        muted: string
-        mutedForeground: string
-        secondary: string
-        secondaryForeground: string
-        accent: string
-        accentForeground: string
-    }
-}
+import type { BaseColorPalette } from '@/types'
 
 export const BASE_COLOR_PALETTES = [
     {

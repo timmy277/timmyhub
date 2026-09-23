@@ -4,12 +4,7 @@
 // trượt (3.1–4.1:1) nên các màu này dùng chữ gần đen thay vì trắng — nova dùng #031a10 (tông xanh cùng
 // hue, ~5.8:1), còn lại dùng #0a0a0a (~4.8–6.2:1) — giữ đúng luật 11 CLAUDE.md.
 // Song song với khối `[data-accent="…"]` trong `src/app/theme-presets.css` — sửa ở đây phải sửa cả hai.
-export interface AccentColor {
-    id: string
-    label: string
-    swatch: string
-    foreground: string
-}
+import type { AccentColor } from '@/types'
 
 export const ACCENT_COLORS = [
     { id: 'nova', label: 'Nova', swatch: '#00a76f', foreground: '#031a10' },

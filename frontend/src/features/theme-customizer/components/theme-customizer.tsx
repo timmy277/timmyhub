@@ -14,16 +14,12 @@ import {
     SelectValue,
     Separator,
     Skeleton,
-} from '@/components/ui'
+    LocaleSwitcher,
+} from '@/components'
+import { ACCENT_COLORS, BASE_COLOR_PALETTES, CHART_COLOR_PALETTES, FONT_OPTIONS, STYLE_PRESETS } from '@/constants'
+import { useThemeConfigStore } from '@/stores'
+import { cn } from '@/utils'
 import { ColorSwatchButton } from './color-swatch-button'
-import { LocaleSwitcher } from '../locale-switcher/locale-switcher'
-import { ACCENT_COLORS } from '@/lib/theme/accent-colors'
-import { BASE_COLOR_PALETTES } from '@/lib/theme/base-colors'
-import { CHART_COLOR_PALETTES } from '@/lib/theme/chart-colors'
-import { FONT_OPTIONS } from '@/lib/theme/fonts'
-import { STYLE_PRESETS } from '@/lib/theme/styles'
-import { useThemeConfigStore } from '@/lib/theme/use-theme-config-store'
-import { cn } from '@/lib/utils'
 
 // Panel tuỳ chỉnh giao diện (Style/Base Color/Theme/Chart Color/Heading/Font/Shuffle), dựng từ
 // components/ui/* theo ranh giới ADR-0006. 7 trạng thái: mặc định (render bình thường) · đang tải

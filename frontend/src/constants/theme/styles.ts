@@ -4,11 +4,7 @@
 // một lần, tự bảo trì" của ADR-0006). Ở đây ta định nghĩa lại trục "Style" của riêng mình: chỉ đổi
 // `--radius`, dùng lại 8 cái tên trên để giữ đúng giao diện chọn lựa như ảnh mẫu. Song song với khối
 // `[data-style="…"]` trong `src/app/theme-presets.css`.
-export interface StylePreset {
-    id: string
-    label: string
-    radiusRem: number
-}
+import type { StylePreset } from '@/types'
 
 export const STYLE_PRESETS = [
     { id: 'nova', label: 'Nova', radiusRem: 0.625 },

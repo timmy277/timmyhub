@@ -1,12 +1,7 @@
 // 4 bộ màu cho biểu đồ (--chart-1..5). `neutral` khớp đúng giá trị đang có sẵn trong globals.css
 // (giữ nguyên hành vi mặc định khi chưa đổi gì). 3 bộ còn lại là palette thay thế, đều đạt phân biệt
 // tốt giữa các nét liền kề. Song song với khối `[data-chart="…"]` trong `src/app/theme-presets.css`.
-export interface ChartColorPalette {
-    id: string
-    label: string
-    swatch: string
-    colors: readonly [string, string, string, string, string]
-}
+import type { ChartColorPalette } from '@/types'
 
 export const CHART_COLOR_PALETTES = [
     {

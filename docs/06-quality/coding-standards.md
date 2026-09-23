@@ -235,26 +235,47 @@ backend/
         events/                      # emit (EventEmitter2) + @OnEvent listener + outbox writer (nếu có effect ra ngoài)
         index.ts                     # barrel export — chỗ duy nhất module khác được import
 frontend/src/
-    app/[locale]/(public|auth|account|seller|admin)/…
+    app/…                           # CHỈ route: page/layout/loading/error, metadata, fetch server cơ bản
+                                     # rồi truyền xuống component của feature — không chứa UI/logic chính
     components/ui/                  # shadcn nguyên bản, không sửa tay
-    components/common/              # component dùng chung của dự án
-    features/<domain>/              # component + hook + api gắn với một domain
-    lib/                            # tiện ích thuần, không phụ thuộc React (giữ tên `lib` — alias cố định
-                                     # của shadcn CLI trong components.json, không đổi tên/di chuyển)
-    hooks/                          # custom hook dùng chung xuyên feature, barrel qua index.ts
-    services/                       # gọi API/BE dùng chung xuyên feature, barrel qua index.ts
-    types/                          # type/interface dùng chung xuyên feature, barrel qua index.ts
-    constants/                      # hằng số dùng chung (route, key cookie/localStorage…), barrel qua index.ts
+    components/common/              # component dùng chung của dự án (không thuộc riêng feature nào)
+    features/<domain>/              # UI chính của từng tính năng: components/ + index.ts (public API)
+    hooks/                          # MỌI custom hook `use*` (trừ store zustand)
+    stores/                         # store zustand, mỗi store một file `<name>.store.ts`
+    schemas/                        # zod schema cho react-hook-form / validate phía client (+ type z.infer)
+    services/                       # gọi API/BE, Server Action
+    utils/                          # hàm tiện ích thuần, không phụ thuộc React (`cn`, `isLocale`…)
+    constants/                      # hằng số (route, key cookie/localStorage, bảng màu theme…)
+    types/                          # type/interface không suy ra từ zod
+    i18n/request.ts                 # cấu hình next-intl (đường dẫn cố định trong next.config.ts)
 ```
 
-Quy tắc phụ thuộc, kiểm bằng ESLint boundaries: `features/*` được dùng `components/*` và `lib/*`; chiều ngược lại **cấm**.
-Hai feature không import chéo nhau — cần dùng chung thì nâng lên `components/common`.
+Quy tắc phụ thuộc: `app/*` dùng `features/*`; `features/*` dùng `components/*`, `hooks`, `stores`, `schemas`,
+`services`, `utils`, `constants`, `types`; chiều ngược lại **cấm**. Hai feature không import chéo nhau — cần ghép thì
+ghép ở `app/` (page render cả hai), cần dùng chung thì nâng lên `components/common`.
 
-`hooks/`, `services/`, `types/`, `constants/` — mỗi thư mục có **duy nhất một** `index.ts` làm barrel export; nơi khác
-trong repo chỉ import qua gốc thư mục (`@/hooks`, `@/services`, `@/types`, `@/constants`), **không** import thẳng
-file con (`@/hooks/use-foo`) — cùng nguyên tắc barrel đã áp dụng cho backend ở §6.1. Hook/service/type/constant
-gắn chặt với một domain cụ thể (chỉ `features/<domain>` đó dùng) thì đặt trong `features/<domain>/`, không đưa lên
-đây — bốn thư mục này chỉ chứa cái dùng chung xuyên nhiều feature.
+`hooks/`, `stores/`, `schemas/`, `services/`, `utils/`, `constants/`, `types/` — mỗi thư mục có **duy nhất một**
+`index.ts` làm barrel export; nơi khác trong repo chỉ import qua gốc thư mục (`@/hooks`, `@/stores`…), **không** import
+thẳng file con (`@/hooks/use-foo`) — cùng nguyên tắc barrel đã áp dụng cho backend ở §6.1. Feature import qua
+`@/features/<domain>`. Luật `no-restricted-imports` trong `frontend/eslint.config.mjs` chặn import sâu (trừ
+`components/ui` do shadcn sinh; `import()` động cho `next/dynamic` không bị kiểm). Không khai báo hook, store, schema,
+hằng số trong file component hay trong `features/` — đưa về đúng thư mục ở trên.
+
+```tsx
+// ❌ BAD — hook, hằng số, logic đặt ngay trong page của app/
+export default function Page() {
+    const [isPending, startTransition] = useTransition()
+    const LOCALES = ['vi', 'en']
+    …
+}
+
+// ✅ GOOD — app/ chỉ ghép route; UI ở features, hook ở @/hooks, hằng số ở @/constants
+// app/page.tsx
+import { HomePage } from '@/features/home'
+export default function Page() {
+    return <HomePage />
+}
+```
 
 ### 6.1 Module dùng chung (cross-cutting) trong backend
 

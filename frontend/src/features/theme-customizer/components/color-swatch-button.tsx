@@ -2,7 +2,7 @@
 
 import { CheckIcon } from 'lucide-react'
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/utils'
 
 interface ColorSwatchButtonProps {
     color: string

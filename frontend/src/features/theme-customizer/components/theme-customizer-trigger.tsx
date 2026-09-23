@@ -13,7 +13,7 @@ import {
     SheetHeader,
     SheetTitle,
     SheetTrigger,
-} from '@/components/ui'
+} from '@/components'
 import { ThemeCustomizer } from './theme-customizer'
 
 // Nút nổi mở panel tuỳ chỉnh giao diện, dùng cho mọi user trên site (không giới hạn dev/admin).
