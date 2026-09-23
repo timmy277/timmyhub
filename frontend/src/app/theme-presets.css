@@ -139,12 +139,12 @@
 :root,
 [data-accent='nova'] {
     --primary: #00a76f;
-    --primary-foreground: #ffffff;
+    --primary-foreground: #031a10;
     --ring: #00a76f;
 }
 [data-accent='sky'] {
     --primary: #0284c7;
-    --primary-foreground: #ffffff;
+    --primary-foreground: #0a0a0a;
     --ring: #0284c7;
 }
 [data-accent='indigo'] {
@@ -164,17 +164,17 @@
 }
 [data-accent='orange'] {
     --primary: #ea580c;
-    --primary-foreground: #ffffff;
+    --primary-foreground: #0a0a0a;
     --ring: #ea580c;
 }
 [data-accent='teal'] {
     --primary: #0d9488;
-    --primary-foreground: #ffffff;
+    --primary-foreground: #0a0a0a;
     --ring: #0d9488;
 }
 [data-accent='amber'] {
     --primary: #d97706;
-    --primary-foreground: #ffffff;
+    --primary-foreground: #0a0a0a;
     --ring: #d97706;
 }
 
