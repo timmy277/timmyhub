@@ -36,13 +36,11 @@ export function AppSidebar() {
     const { isMobile, setOpenMobile } = useSidebar()
     const t = useTranslations('nav')
 
-    // Trên mobile sidebar là sheet phủ màn hình — chọn xong một link thì đóng lại.
     const closeMobileSidebar = () => {
         if (isMobile) setOpenMobile(false)
     }
 
     return (
-        // `icon` thay vì `offcanvas`: thu gọn vẫn còn rail icon để bấm, không phải mở lại mới đổi trang được.
         <Sidebar collapsible="icon">
             <SidebarHeader className="h-16 justify-center border-b border-sidebar-border/70">
                 <SidebarMenu>

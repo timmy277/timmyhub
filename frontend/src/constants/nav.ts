@@ -9,7 +9,6 @@ export const SIDEBAR_STATE_COOKIE_NAME = 'sidebar_state'
 // Chỉ liệt kê route đã tồn tại: link tới route chưa dựng là một trang 404 người dùng thấy trước mình.
 export const NAV_GROUPS: readonly NavGroup[] = [
     {
-        labelKey: 'overview',
         items: [
             { titleKey: 'home', url: ROUTE.HOME, icon: HouseIcon },
             { titleKey: 'dashboard', url: ROUTE.DASHBOARD, icon: LayoutGridIcon },

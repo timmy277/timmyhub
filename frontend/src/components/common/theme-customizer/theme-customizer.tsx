@@ -14,8 +14,7 @@ import {
     SelectValue,
     Separator,
     Skeleton,
-    LocaleSwitcher,
-} from '@/components'
+} from '@/components/ui'
 import { ACCENT_COLORS, BASE_COLOR_PALETTES, CHART_COLOR_PALETTES, FONT_OPTIONS, STYLE_PRESETS } from '@/constants'
 import { useThemeConfigStore } from '@/stores'
 import { cn } from '@/utils'
@@ -65,10 +64,6 @@ export function ThemeCustomizer() {
 
     return (
         <div className="flex flex-col gap-5 p-4">
-            <LocaleSwitcher />
-
-            <Separator />
-
             <section className="flex flex-col gap-2">
                 <span className="text-sm font-medium text-foreground">{t('style')}</span>
                 <div className="flex flex-wrap gap-2">

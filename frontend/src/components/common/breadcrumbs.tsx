@@ -27,8 +27,6 @@ export function Breadcrumbs() {
             <BreadcrumbList>
                 {items.map((item, index) => {
                     const label = item.titleKey ? t(item.titleKey) : item.title
-
-                    // Mobile chỉ giữ mắt xích cuối — header hẹp, trang hiện tại là thứ cần thấy nhất.
                     return index === lastIndex ? (
                         <BreadcrumbItem key={item.url}>
                             <BreadcrumbPage>{label}</BreadcrumbPage>

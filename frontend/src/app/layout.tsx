@@ -3,9 +3,8 @@ import { ThemeProvider } from 'next-themes'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
 
-import { Toaster, TooltipProvider } from '@/components'
+import { ThemeAttributesSync, Toaster, TooltipProvider } from '@/components'
 import { FONT_VARIABLE_CLASS_NAMES, THEME_INIT_SCRIPT } from '@/constants'
-import { ThemeAttributesSync } from '@/features/theme-customizer'
 import './globals.css'
 
 export const metadata: Metadata = {
