@@ -44,5 +44,17 @@
     "categoryElectronics": "Điện tử",
     "categoryHome": "Nhà cửa",
     "categoryBeauty": "Làm đẹp"
+  },
+  "login": {
+    "metaTitle": "Đăng nhập",
+    "title": "Chào mừng trở lại",
+    "description": "Đăng nhập để tiếp tục mua sắm và quản lý đơn hàng.",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "submit": "Đăng nhập",
+    "orContinueWith": "hoặc tiếp tục với",
+    "google": "Google",
+    "facebook": "Facebook",
+    "notConnected": "Tính năng đăng nhập chưa được kết nối."
   }
 }

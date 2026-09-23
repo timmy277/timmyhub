@@ -1,3 +1,4 @@
+export * from './auth-card'
 export * from './breadcrumbs'
 export * from './locale-flag'
 export * from './locale-switcher'

@@ -44,5 +44,17 @@
     "categoryElectronics": "Electronics",
     "categoryHome": "Home & living",
     "categoryBeauty": "Beauty"
+  },
+  "login": {
+    "metaTitle": "Log in",
+    "title": "Welcome back",
+    "description": "Log in to keep shopping and manage your orders.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Log in",
+    "orContinueWith": "or continue with",
+    "google": "Google",
+    "facebook": "Facebook",
+    "notConnected": "Login is not connected yet."
   }
 }
