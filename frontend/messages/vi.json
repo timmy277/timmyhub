@@ -72,7 +72,7 @@
     "addNotConnected": "Chưa kết nối API tạo người dùng."
   },
   "nav": {
-    "brand": "Timmy Hub",
+    "brand": "TimmyHub",
     "toggleSidebar": "Đóng/mở thanh bên",
     "home": "Trang chủ",
     "dashboard": "Bảng điều khiển",
@@ -117,6 +117,7 @@
     "description": "Đăng nhập để tiếp tục mua sắm và quản lý đơn hàng.",
     "email": "Email",
     "password": "Mật khẩu",
+    "forgotPassword": "Quên mật khẩu?",
     "submit": "Đăng nhập",
     "orContinueWith": "hoặc tiếp tục với",
     "google": "Google",

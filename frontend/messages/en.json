@@ -117,6 +117,7 @@
     "description": "Log in to keep shopping and manage your orders.",
     "email": "Email",
     "password": "Password",
+    "forgotPassword": "Forgot password?",
     "submit": "Log in",
     "orContinueWith": "or continue with",
     "google": "Google",

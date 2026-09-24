@@ -38,6 +38,17 @@ export function LoginForm() {
                 labelClassName={ON_CARD_LABEL}
             />
 
+            <div className="flex justify-end">
+                <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto min-h-6 p-0 text-xs font-semibold"
+                    onClick={notConnected}
+                >
+                    {t('forgotPassword')}
+                </Button>
+            </div>
+
             <Button type="submit" className="h-11 w-full text-sm font-semibold">
                 {t('submit')}
             </Button>

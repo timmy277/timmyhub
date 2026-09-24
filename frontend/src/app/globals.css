@@ -67,6 +67,14 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+
+    /* Nền màn auth: giấy ấm + lưới + khối pastel, lấy theo auth-theme của calendar-ui. */
+    --auth-paper: #faf7f2;
+    --auth-grid-x: rgb(210 201 183 / 50%);
+    --auth-grid-y: rgb(210 201 183 / 34%);
+    --auth-block-1: #ecbfa8;
+    --auth-block-2: #ecd08a;
+    --auth-block-3: #a6c0ac;
 }
 
 .dark {
@@ -83,6 +91,14 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
+
+    /* Dark: giữ nền theo theme, khối pastel hạ sáng để không chói. */
+    --auth-paper: var(--background);
+    --auth-grid-x: color-mix(in oklab, var(--border) 70%, transparent);
+    --auth-grid-y: color-mix(in oklab, var(--border) 50%, transparent);
+    --auth-block-1: color-mix(in oklab, #ecbfa8 45%, transparent);
+    --auth-block-2: color-mix(in oklab, #ecd08a 45%, transparent);
+    --auth-block-3: color-mix(in oklab, #a6c0ac 45%, transparent);
 }
 
 @layer base {
@@ -122,10 +138,10 @@
 @layer components {
     /* Nền lưới của các trang auth — nét lưới lấy từ token `--border` nên tự đổi theo theme và dark mode. */
     .auth-grid {
-        background-color: var(--background);
+        background-color: var(--auth-paper);
         background-image:
-            linear-gradient(to right, color-mix(in oklab, var(--border) 70%, transparent) 1px, transparent 1px),
-            linear-gradient(to bottom, color-mix(in oklab, var(--border) 50%, transparent) 1px, transparent 1px);
+            linear-gradient(to right, var(--auth-grid-x) 1px, transparent 1px),
+            linear-gradient(to bottom, var(--auth-grid-y) 1px, transparent 1px);
         background-size: 74px 44px;
     }
 
@@ -133,8 +149,8 @@
     .auth-scrim {
         background: radial-gradient(
             58% 46% at 50% 50%,
-            color-mix(in oklab, var(--background) 94%, transparent),
-            color-mix(in oklab, var(--background) 35%, transparent) 70%,
+            color-mix(in oklab, var(--auth-paper) 94%, transparent),
+            color-mix(in oklab, var(--auth-paper) 35%, transparent) 70%,
             transparent
         );
     }
