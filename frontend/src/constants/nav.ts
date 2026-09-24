@@ -1,4 +1,4 @@
-import { HouseIcon, LayoutGridIcon } from 'lucide-react'
+import { HouseIcon, LayoutGridIcon, UsersIcon } from 'lucide-react'
 
 import type { BreadcrumbEntry, NavGroup, NavUserInfo } from '@/types'
 import { ROUTE } from './route'
@@ -12,6 +12,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         items: [
             { titleKey: 'home', url: ROUTE.HOME, icon: HouseIcon },
             { titleKey: 'dashboard', url: ROUTE.DASHBOARD, icon: LayoutGridIcon },
+            { titleKey: 'users', url: ROUTE.USERS, icon: UsersIcon },
         ],
     },
 ]
@@ -22,6 +23,10 @@ export const BREADCRUMB_ROUTES: Readonly<Record<string, readonly BreadcrumbEntry
     [ROUTE.DASHBOARD]: [
         { titleKey: 'home', url: ROUTE.HOME },
         { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
+    ],
+    [ROUTE.USERS]: [
+        { titleKey: 'home', url: ROUTE.HOME },
+        { titleKey: 'users', url: ROUTE.USERS },
     ],
 }
 
