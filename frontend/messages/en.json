@@ -27,7 +27,15 @@
     "add": "Add new",
     "selectedCount": "{count} selected",
     "errorTitle": "Could not load data",
-    "retry": "Try again"
+    "retry": "Try again",
+    "pagination": "Pagination",
+    "pageInfo": "{from}–{to} of {total}",
+    "pageSize": "Rows per page",
+    "firstPage": "First page",
+    "lastPage": "Last page",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "goToPage": "Go to page {page}"
   },
   "userManagement": {
     "searchLabel": "Search by name, email…",

@@ -27,7 +27,15 @@
     "add": "Thêm mới",
     "selectedCount": "Đã chọn {count}",
     "errorTitle": "Không tải được dữ liệu",
-    "retry": "Thử lại"
+    "retry": "Thử lại",
+    "pagination": "Phân trang",
+    "pageInfo": "{from}–{to} / {total}",
+    "pageSize": "Số dòng mỗi trang",
+    "firstPage": "Trang đầu",
+    "lastPage": "Trang cuối",
+    "previousPage": "Trang trước",
+    "nextPage": "Trang sau",
+    "goToPage": "Đến trang {page}"
   },
   "userManagement": {
     "searchLabel": "Tìm theo tên, email…",

@@ -29,6 +29,7 @@ import { FloatInput } from '../float-input'
 import { Popover, PopoverContent, PopoverTrigger } from '../popover'
 import type { Locale } from '@/types'
 
+import { AgGridPagination } from './ag-grid-pagination'
 import { ColumnManagement } from './column-management'
 import { agGridTheme } from './ag-grid-theme'
 import { AG_GRID_TABLE_DEFAULT_HEIGHT, AG_GRID_NO_EXPORT } from './ag-grid-table-constants'
@@ -213,7 +214,8 @@ export function AgGridTable<TData>({
                         quickFilterText={quickFilterText}
                         pagination={pagination}
                         paginationPageSize={pageSize}
-                        paginationPageSizeSelector={PAGE_SIZE_OPTIONS}
+                        // Ẩn panel mặc định, dùng thanh ô số `AgGridPagination` bên dưới.
+                        suppressPaginationPanel
                         rowSelection={{ mode: 'multiRow', selectAll: 'filtered' }}
                         selectionColumnDef={{ pinned: 'left' }}
                         animateRows
@@ -225,6 +227,10 @@ export function AgGridTable<TData>({
                         onSelectionChanged={(event) => setSelectedCount(event.api.getSelectedRows().length)}
                     />
                 </div>
+            )}
+
+            {pagination && !error && gridApi && !gridApi.isDestroyed() && (
+                <AgGridPagination api={gridApi} pageSizeOptions={PAGE_SIZE_OPTIONS} disabled={loading} />
             )}
         </div>
     )

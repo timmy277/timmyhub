@@ -15,6 +15,14 @@ export function AgGridTableSkeleton({ height = AG_GRID_TABLE_DEFAULT_HEIGHT }: {
                 </div>
             </div>
             <Skeleton className="w-full rounded-lg" style={{ height }} />
+            <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+                <Skeleton className="h-7 w-40" />
+                <div className="flex gap-1.5">
+                    {Array.from({ length: 11 }, (_, index) => (
+                        <Skeleton key={index} className="size-8" />
+                    ))}
+                </div>
+            </div>
         </div>
     )
 }

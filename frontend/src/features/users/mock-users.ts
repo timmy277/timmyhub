@@ -40,7 +40,8 @@ const toAscii = (text: string) =>
 
 // Sinh tất định (không `Math.random`) để mỗi lần làm mới ra cùng bộ dữ liệu, dễ thử lọc/sắp xếp.
 export function createMockUsers(): DemoUser[] {
-    const users = Array.from({ length: 32 }, (_, index): DemoUser => {
+    // 199 người + super admin = 200 dòng, đủ nhiều trang để thử phân trang.
+    const users = Array.from({ length: 199 }, (_, index): DemoUser => {
         const firstName = FIRST_NAMES[index % FIRST_NAMES.length]
         const lastName = LAST_NAMES[(index * 3) % LAST_NAMES.length]
         const month = String((index % 12) + 1).padStart(2, '0')
