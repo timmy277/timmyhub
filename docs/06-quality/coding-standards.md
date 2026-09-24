@@ -153,7 +153,7 @@ Việc index Elasticsearch thuộc về consumer của `EVT-product.created`, kh
 | Không `dangerouslySetInnerHTML` nếu chưa sanitize ở server | XSS |
 | Ảnh luôn qua `next/image` có `sizes` | LCP |
 | Không chuỗi tiếng Việt viết thẳng trong component | Phải qua `next-intl` |
-| Ô nhập text/chọn trong form dùng field label nổi (`FloatInput`, `FloatCombobox`, `FloatMultiSelect`, `FloatDatePicker`), không ghép `<Label>` + `<Input>` | Một kiểu form thống nhất; label gắn sẵn `htmlFor`, lỗi gắn sẵn `aria-describedby` |
+| Ô nhập text/chọn trong form dùng field label nổi (`FloatInput`, `FloatCombobox`, `FloatMultiSelect`, `FloatDatePicker`, `FloatDateRangePicker`), không ghép `<Label>` + `<Input>` | Một kiểu form thống nhất; label gắn sẵn `htmlFor`, lỗi gắn sẵn `aria-describedby` |
 
 ❌ **BAD** — biến cả trang thành client chỉ vì một nút:
 

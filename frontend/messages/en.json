@@ -8,6 +8,8 @@
     "noResults": "No results",
     "selectDate": "Select date",
     "dateFormatHint": "dd/mm/yyyy",
+    "selectDateRange": "Select date range",
+    "dateRangeFormatHint": "dd/mm/yyyy - dd/mm/yyyy",
     "removeItem": "Remove {item}"
   },
   "nav": {
@@ -43,6 +45,7 @@
     "demoCombobox": "Category",
     "demoMultiSelect": "Tags",
     "demoDate": "Subscription date",
+    "demoDateRange": "Promotion period",
     "categoryFashion": "Fashion",
     "categoryElectronics": "Electronics",
     "categoryHome": "Home & living",

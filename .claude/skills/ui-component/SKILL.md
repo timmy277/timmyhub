@@ -38,7 +38,7 @@ Không component nào hiển thị dữ liệu được coi là xong nếu thi�
 - Không chuỗi tiếng Việt viết thẳng — mọi chữ qua `next-intl`, khoá có cấu trúc (`order.status.shipped`).
 - Form: `react-hook-form` + `zodResolver`, **dùng lại schema của backend** từ `@timmyhub/contracts`.
 - Ô nhập trong form luôn là field label nổi: `FloatInput` (text, password), `FloatCombobox` (chọn một, có tìm kiếm),
-  `FloatMultiSelect` (chọn nhiều, chip), `FloatDatePicker` (ngày, gõ tay hoặc chọn lịch). Không ghép `<Label>` + `<Input>`; `Label` rời chỉ cho checkbox/radio/switch.
+  `FloatMultiSelect` (chọn nhiều, chip), `FloatDatePicker` (ngày, gõ tay hoặc chọn lịch), `FloatDateRangePicker` (khoảng ngày). Không ghép `<Label>` + `<Input>`; `Label` rời chỉ cho checkbox/radio/switch.
 - Dữ liệu máy chủ: RSC hoặc TanStack Query. Không `useEffect` để fetch. Không đưa dữ liệu máy chủ vào Zustand.
 - Ảnh: `next/image` có `sizes`; ảnh chính của trang đặt `priority`.
 - Tiền: nhận chuỗi decimal từ API, không tính bằng `number`; định dạng bằng `Intl.NumberFormat` theo locale.

@@ -2,7 +2,15 @@ import Image from 'next/image'
 
 import { useTranslations } from 'next-intl'
 
-import { Button, FloatCombobox, FloatDatePicker, FloatInput, FloatMultiSelect, type FloatOption } from '@/components'
+import {
+    Button,
+    FloatCombobox,
+    FloatDatePicker,
+    FloatDateRangePicker,
+    FloatInput,
+    FloatMultiSelect,
+    type FloatOption,
+} from '@/components'
 
 export function HomePage() {
     const t = useTranslations('home')
@@ -60,6 +68,7 @@ export function HomePage() {
                     <FloatCombobox label={t('demoCombobox')} options={categories} />
                     <FloatMultiSelect label={t('demoMultiSelect')} options={categories} />
                     <FloatDatePicker label={t('demoDate')} name="subscriptionDate" />
+                    <FloatDateRangePicker label={t('demoDateRange')} name="promotion" />
                 </div>
                 <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
                     <a

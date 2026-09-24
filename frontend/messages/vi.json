@@ -8,6 +8,8 @@
     "noResults": "Không có kết quả",
     "selectDate": "Chọn ngày",
     "dateFormatHint": "dd/mm/yyyy",
+    "selectDateRange": "Chọn khoảng ngày",
+    "dateRangeFormatHint": "dd/mm/yyyy - dd/mm/yyyy",
     "removeItem": "Bỏ {item}"
   },
   "nav": {
@@ -43,6 +45,7 @@
     "demoCombobox": "Danh mục",
     "demoMultiSelect": "Thẻ",
     "demoDate": "Ngày đăng ký",
+    "demoDateRange": "Thời gian khuyến mãi",
     "categoryFashion": "Thời trang",
     "categoryElectronics": "Điện tử",
     "categoryHome": "Nhà cửa",
