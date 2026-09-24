@@ -920,7 +920,8 @@ tương ứng — không phải tài liệu tham khảo tuỳ chọn:
 ### 17.2 Skill cho Claude Code
 
 `.claude/skills/` chứa **mười** skill dự án, Claude tự nạp khi gặp đúng loại việc. Ngoài ra `CLAUDE.md` ở gốc repo
-ghi 17 luật cứng (tiền, ranh giới service, outbox, 4 lớp phân quyền, 7 trạng thái UI, nạp động, `strict`) và bản đồ
+ghi 19 luật cứng (tiền, ranh giới service, outbox, 4 lớp phân quyền, 7 trạng thái UI, nạp động, `strict`, component
+shadcn) và bản đồ
 tài liệu — file này được nạp tự động ở mọi phiên, nên luật không phụ thuộc việc ai nhớ nhắc.
 
 | Skill | Dùng cho |

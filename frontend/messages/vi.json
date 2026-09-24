@@ -6,6 +6,8 @@
     "showPassword": "Hiện mật khẩu",
     "hidePassword": "Ẩn mật khẩu",
     "noResults": "Không có kết quả",
+    "selectDate": "Chọn ngày",
+    "dateFormatHint": "dd/mm/yyyy",
     "removeItem": "Bỏ {item}"
   },
   "nav": {
@@ -40,6 +42,7 @@
     "demoInput": "Nhập tên của bạn",
     "demoCombobox": "Danh mục",
     "demoMultiSelect": "Thẻ",
+    "demoDate": "Ngày đăng ký",
     "categoryFashion": "Thời trang",
     "categoryElectronics": "Điện tử",
     "categoryHome": "Nhà cửa",

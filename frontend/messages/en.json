@@ -6,6 +6,8 @@
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "noResults": "No results",
+    "selectDate": "Select date",
+    "dateFormatHint": "dd/mm/yyyy",
     "removeItem": "Remove {item}"
   },
   "nav": {
@@ -40,6 +42,7 @@
     "demoInput": "Enter your name",
     "demoCombobox": "Category",
     "demoMultiSelect": "Tags",
+    "demoDate": "Subscription date",
     "categoryFashion": "Fashion",
     "categoryElectronics": "Electronics",
     "categoryHome": "Home & living",

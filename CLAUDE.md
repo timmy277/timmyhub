@@ -69,8 +69,10 @@ Mục lục đầy đủ và lối đọc theo vai trò: `docs/README.md`.
 15. Zod là nguồn validation duy nhất, schema dùng chung FE/BE qua `@timmyhub/contracts`.
 16. Không đưa việc chậm (mail, transcode, index) vào đường xử lý request — đẩy sang BullMQ.
 17. Không commit bí mật. Giá trị trong `.env` chỉ đọc **tên biến**, không đọc giá trị.
-18. Ô nhập trong form luôn dùng field có **label nổi** — `FloatInput`, `FloatCombobox`, `FloatMultiSelect` từ
+18. Ô nhập trong form luôn dùng field có **label nổi** — `FloatInput`, `FloatCombobox`, `FloatMultiSelect`, `FloatDatePicker` từ
     `@/components` — không ghép `<Label>` riêng với `<Input>`/`Select`. `Label` rời chỉ dành cho checkbox, radio, switch.
+19. Component giao diện lấy từ **shadcn/ui** (`shadcn add`). Cần một component shadcn chưa có thì cài bằng CLI;
+    muốn **tự viết** component mới (kể cả bọc lại primitive shadcn) phải **hỏi ý chủ dự án trước**, không tự tạo.
 
 ## 4. Quy ước tài liệu
 

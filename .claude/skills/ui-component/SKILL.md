@@ -8,7 +8,8 @@ description: Tạo hoặc sửa component giao diện TimmyHub theo design syste
 ## Quyết định trước khi gõ code
 
 1. **Có sẵn chưa?** Tìm trong `components/ui/` (shadcn nguyên bản) rồi `components/common/` trước khi tạo mới.
-   Component na ná cái đã có là nợ kỹ thuật.
+   Component na ná cái đã có là nợ kỹ thuật. Chưa có thì cài từ shadcn (`pnpm exec shadcn add <tên>`);
+   shadcn cũng không có mà phải tự viết → **hỏi ý chủ dự án trước** (luật cứng #19 `CLAUDE.md`).
 2. **Server hay client?** Mặc định là Server Component. `'use client'` chỉ đặt ở phần nhỏ nhất thật sự cần
    tương tác. Không biến cả trang thành client vì một cái nút.
 3. **Đặt ở đâu?** Dùng ở nhiều domain → `components/common/`; chỉ một domain → `features/<domain>/components/`.
@@ -37,7 +38,7 @@ Không component nào hiển thị dữ liệu được coi là xong nếu thi�
 - Không chuỗi tiếng Việt viết thẳng — mọi chữ qua `next-intl`, khoá có cấu trúc (`order.status.shipped`).
 - Form: `react-hook-form` + `zodResolver`, **dùng lại schema của backend** từ `@timmyhub/contracts`.
 - Ô nhập trong form luôn là field label nổi: `FloatInput` (text, password), `FloatCombobox` (chọn một, có tìm kiếm),
-  `FloatMultiSelect` (chọn nhiều, chip). Không ghép `<Label>` + `<Input>`; `Label` rời chỉ cho checkbox/radio/switch.
+  `FloatMultiSelect` (chọn nhiều, chip), `FloatDatePicker` (ngày, gõ tay hoặc chọn lịch). Không ghép `<Label>` + `<Input>`; `Label` rời chỉ cho checkbox/radio/switch.
 - Dữ liệu máy chủ: RSC hoặc TanStack Query. Không `useEffect` để fetch. Không đưa dữ liệu máy chủ vào Zustand.
 - Ảnh: `next/image` có `sizes`; ảnh chính của trang đặt `priority`.
 - Tiền: nhận chuỗi decimal từ API, không tính bằng `number`; định dạng bằng `Intl.NumberFormat` theo locale.
