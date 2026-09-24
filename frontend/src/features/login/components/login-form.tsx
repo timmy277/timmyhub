@@ -4,8 +4,7 @@ import type { FormEvent } from 'react'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 
-import { Button, FloatInput } from '@/components'
-import { FacebookLogo, GoogleLogo } from './social-logos'
+import { Button, FloatInput, IconPath } from '@/components'
 
 // Label nổi của field nằm trên card nên phần "cắt viền" phải cùng màu card, không phải màu nền trang.
 const ON_CARD_LABEL = 'bg-card peer-focus:bg-card peer-autofill:bg-card'
@@ -54,11 +53,11 @@ export function LoginForm() {
 
             <div className="grid gap-3 sm:grid-cols-2">
                 <Button type="button" variant="outline" className="h-11 w-full" onClick={notConnected}>
-                    <GoogleLogo className="size-4.5" />
+                    <IconPath name="google" className="size-4.5" />
                     {t('google')}
                 </Button>
                 <Button type="button" variant="outline" className="h-11 w-full" onClick={notConnected}>
-                    <FacebookLogo className="size-4.5" />
+                    <IconPath name="facebook" className="size-4.5" />
                     {t('facebook')}
                 </Button>
             </div>
