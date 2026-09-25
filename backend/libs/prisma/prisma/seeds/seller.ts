@@ -103,7 +103,7 @@ export async function seedSellers(prisma: PrismaClient, users: SeedUsers): Promi
         update: {},
         create: {
             id: 'seed-seller-application-pending',
-            userId: users.customerUserIds[0]!,
+            userId: users.buyerUserIds[0]!,
             shopName: 'Homemade An Nhiên',
             shopDescription: 'Đồ ăn vặt handmade, mới đăng ký bán hàng.',
             idDocumentUrl: 'https://cdn.timmyhub.dev/seed/id-documents/sample-cccd.jpg',
@@ -112,12 +112,12 @@ export async function seedSellers(prisma: PrismaClient, users: SeedUsers): Promi
         },
     })
 
-    // Theo dõi shop mẫu — vài customer follow shop TimmyWear
-    for (const customerUserId of users.customerUserIds.slice(0, 2)) {
+    // Theo dõi shop mẫu — vài người mua follow shop TimmyWear
+    for (const buyerUserId of users.buyerUserIds.slice(0, 2)) {
         await prisma.shopFollow.upsert({
-            where: { userId_sellerProfileId: { userId: customerUserId, sellerProfileId: brandSellerProfile.id } },
+            where: { userId_sellerProfileId: { userId: buyerUserId, sellerProfileId: brandSellerProfile.id } },
             update: {},
-            create: { userId: customerUserId, sellerProfileId: brandSellerProfile.id },
+            create: { userId: buyerUserId, sellerProfileId: brandSellerProfile.id },
         })
     }
 

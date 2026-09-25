@@ -1,37 +1,31 @@
-import { createHash, randomBytes } from 'node:crypto'
-
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { EventEmitter2 } from '@nestjs/event-emitter'
 import { JwtService } from '@nestjs/jwt'
-import type { AuthResult, LoginInput, RegisterInput } from '@timmyhub/contracts'
-import { ApiError } from '@timmyhub/contracts'
 import * as bcrypt from 'bcryptjs'
 
+import type { AuthResult, LoginInput, RegisterInput, UserRole } from '@timmyhub/contracts'
+import { ApiError } from '@timmyhub/contracts'
+
 import { isCommonPassword } from './common-passwords'
-import { IDENTITY_USER_LOCKED_EVENT, IDENTITY_USER_REGISTERED_EVENT } from './events/identity.events'
+import {
+    ACCESS_TOKEN_ALGORITHM,
+    ACCESS_TOKEN_TTL,
+    ACCOUNT_LOCK_REASON,
+    BCRYPT_COST,
+    DUMMY_HASH,
+    FAILED_LOGIN_LOCK_THRESHOLD,
+    IDENTITY_EVENT,
+    IDENTITY_MESSAGE,
+    LOCK_DURATION_MS,
+    REFRESH_TOKEN_TTL_MS,
+} from './identity.constants'
 import { IdentityRepository } from './identity.repository'
-
-const BCRYPT_COST = 12
-const FAILED_LOGIN_LOCK_THRESHOLD = 5
-const LOCK_DURATION_MS = 15 * 60 * 1000
-const ACCESS_TOKEN_TTL = '15m'
-const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000
-
-// Hash giả để so sánh khi email không tồn tại — giữ thời gian phản hồi ổn định (docs security.md §4).
-const DUMMY_HASH = bcrypt.hashSync('dummy-password-for-timing-safety', BCRYPT_COST)
-
-function hashRefreshToken(rawToken: string): string {
-    return createHash('sha256').update(rawToken).digest('hex')
-}
-
-// REQ-IDN-003: refresh token là chuỗi ngẫu nhiên 256 bit, không phải JWT.
-function generateRawRefreshToken(): string {
-    return randomBytes(32).toString('hex')
-}
+import { generateRawRefreshToken, hashRefreshToken } from './utils/index'
 
 @Injectable()
 export class AuthService {
+    // ===== Dependencies =====
     constructor(
         private readonly identityRepository: IdentityRepository,
         private readonly jwtService: JwtService,
@@ -39,15 +33,17 @@ export class AuthService {
         private readonly eventEmitter: EventEmitter2,
     ) {}
 
+    // ===== Commands =====
+
     // REQ-IDN-001 / REQ-IDN-002
     async register(input: RegisterInput): Promise<{ userId: string; email: string }> {
         if (isCommonPassword(input.password)) {
-            throw new ApiError('WEAK_PASSWORD', 'Mật khẩu quá phổ biến, vui lòng chọn mật khẩu khác.')
+            throw new ApiError('WEAK_PASSWORD', IDENTITY_MESSAGE.WEAK_PASSWORD)
         }
 
         const existing = await this.identityRepository.findUserByEmail(input.email)
         if (existing) {
-            throw new ApiError('EMAIL_ALREADY_REGISTERED', 'Email đã được sử dụng.')
+            throw new ApiError('EMAIL_ALREADY_REGISTERED', IDENTITY_MESSAGE.EMAIL_ALREADY_REGISTERED)
         }
 
         const passwordHash = await bcrypt.hash(input.password, BCRYPT_COST)
@@ -58,7 +54,8 @@ export class AuthService {
             lastName: input.lastName,
         })
 
-        this.eventEmitter.emit(IDENTITY_USER_REGISTERED_EVENT, { userId: user.id, email: user.email })
+        // Event nội bộ chỉ mang userId — listener không cần email, tránh đưa dữ liệu cá nhân đi lòng vòng.
+        this.eventEmitter.emit(IDENTITY_EVENT.USER_REGISTERED, { userId: user.id })
         return { userId: user.id, email: user.email }
     }
 
@@ -73,15 +70,15 @@ export class AuthService {
             if (user) {
                 await this.failLogin(user.id, user.failedLoginCount)
             }
-            throw new ApiError('INVALID_CREDENTIALS', 'Email hoặc mật khẩu không đúng.')
+            throw new ApiError('INVALID_CREDENTIALS', IDENTITY_MESSAGE.INVALID_CREDENTIALS)
         }
 
         if (user.isBanned) {
-            throw new ApiError('ACCOUNT_BANNED', 'Tài khoản đã bị khoá vĩnh viễn.')
+            throw new ApiError('ACCOUNT_BANNED', IDENTITY_MESSAGE.ACCOUNT_BANNED)
         }
 
         if (user.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
-            throw new ApiError('ACCOUNT_LOCKED', 'Tài khoản đang bị tạm khoá, vui lòng thử lại sau.')
+            throw new ApiError('ACCOUNT_LOCKED', IDENTITY_MESSAGE.ACCOUNT_LOCKED)
         }
 
         await this.identityRepository.recordSuccessfulLogin(user.id, context.ip)
@@ -98,7 +95,7 @@ export class AuthService {
         const currentToken = await this.identityRepository.findRefreshTokenByHash(currentHash)
 
         if (!currentToken) {
-            throw new ApiError('REFRESH_TOKEN_INVALID', 'Refresh token không hợp lệ.')
+            throw new ApiError('REFRESH_TOKEN_INVALID', IDENTITY_MESSAGE.REFRESH_TOKEN_INVALID)
         }
 
         const rawNextToken = generateRawRefreshToken()
@@ -119,21 +116,18 @@ export class AuthService {
             if (wasRotatedBefore) {
                 // Token ROTATED bị dùng lại — dấu hiệu bị đánh cắp, thu hồi toàn bộ phiên (REQ-IDN-006).
                 await this.identityRepository.revokeAllUserRefreshTokens(currentToken.userId)
-                throw new ApiError(
-                    'REFRESH_TOKEN_REUSED',
-                    'Phiên đăng nhập có dấu hiệu bị đánh cắp, vui lòng đăng nhập lại.',
-                )
+                throw new ApiError('REFRESH_TOKEN_REUSED', IDENTITY_MESSAGE.REFRESH_TOKEN_REUSED)
             }
-            throw new ApiError('REFRESH_TOKEN_EXPIRED', 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.')
+            throw new ApiError('REFRESH_TOKEN_EXPIRED', IDENTITY_MESSAGE.REFRESH_TOKEN_EXPIRED)
         }
 
         if (currentToken.expiresAt.getTime() < Date.now()) {
-            throw new ApiError('REFRESH_TOKEN_EXPIRED', 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.')
+            throw new ApiError('REFRESH_TOKEN_EXPIRED', IDENTITY_MESSAGE.REFRESH_TOKEN_EXPIRED)
         }
 
         const user = await this.identityRepository.findUserById(currentToken.userId)
         if (!user) {
-            throw new ApiError('REFRESH_TOKEN_INVALID', 'Refresh token không hợp lệ.')
+            throw new ApiError('REFRESH_TOKEN_INVALID', IDENTITY_MESSAGE.REFRESH_TOKEN_INVALID)
         }
 
         const accessToken = await this.signAccessToken(user.id, user.email, user.roles)
@@ -153,20 +147,21 @@ export class AuthService {
     async logoutAll(rawRefreshToken: string): Promise<void> {
         const token = await this.identityRepository.findRefreshTokenByHash(hashRefreshToken(rawRefreshToken))
         if (!token) {
-            throw new ApiError('REFRESH_TOKEN_INVALID', 'Refresh token không hợp lệ.')
+            throw new ApiError('REFRESH_TOKEN_INVALID', IDENTITY_MESSAGE.REFRESH_TOKEN_INVALID)
         }
         await this.identityRepository.revokeAllUserRefreshTokens(token.userId)
     }
 
+    // ===== Private helpers =====
     private async failLogin(userId: string, currentFailedCount: number): Promise<void> {
         await this.identityRepository.recordFailedLogin(userId)
         if (currentFailedCount + 1 >= FAILED_LOGIN_LOCK_THRESHOLD) {
             const lockedUntil = new Date(Date.now() + LOCK_DURATION_MS)
             await this.identityRepository.lockUser(userId, lockedUntil)
-            this.eventEmitter.emit(IDENTITY_USER_LOCKED_EVENT, {
+            this.eventEmitter.emit(IDENTITY_EVENT.USER_LOCKED, {
                 userId,
                 lockedUntil,
-                reason: 'too-many-failed-logins',
+                reason: ACCOUNT_LOCK_REASON.TOO_MANY_FAILED_LOGINS,
             })
         }
     }
@@ -174,7 +169,7 @@ export class AuthService {
     private async issueTokens(
         userId: string,
         email: string,
-        roles: string[],
+        roles: readonly UserRole[],
         deviceId: string,
     ): Promise<{ accessToken: string; refreshToken: string }> {
         const rawRefreshToken = generateRawRefreshToken()
@@ -186,15 +181,15 @@ export class AuthService {
         return { accessToken, refreshToken: rawRefreshToken }
     }
 
-    private async signAccessToken(userId: string, email: string, roles: string[]): Promise<string> {
+    private async signAccessToken(userId: string, email: string, roles: readonly UserRole[]): Promise<string> {
         const privateKey = this.configService.get<string>('JWT_ACCESS_PRIVATE_KEY')
         if (!privateKey) {
-            throw new Error('Thiếu biến môi trường JWT_ACCESS_PRIVATE_KEY')
+            throw new Error(IDENTITY_MESSAGE.MISSING_ACCESS_PRIVATE_KEY)
         }
         return this.jwtService.signAsync(
             { sub: userId, email, roles },
             {
-                algorithm: 'RS256',
+                algorithm: ACCESS_TOKEN_ALGORITHM,
                 privateKey,
                 expiresIn: ACCESS_TOKEN_TTL,
             },

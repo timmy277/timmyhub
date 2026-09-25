@@ -1,8 +1,13 @@
 import { randomUUID } from 'node:crypto'
 
 import { Injectable } from '@nestjs/common'
+
+import { OUTBOX_AGGREGATE, OUTBOX_EVENT, UserRole } from '@timmyhub/contracts'
 import type { User } from '@timmyhub/prisma'
 import { PrismaService } from '@timmyhub/prisma'
+
+import { writeOutboxEvent } from './events/index'
+import { REGISTERED_VIA } from './identity.constants'
 
 export type RegisterUserInput = {
     email: string
@@ -20,8 +25,10 @@ export type RefreshRotationResult =
 
 @Injectable()
 export class IdentityRepository {
+    // ===== Dependencies =====
     constructor(private readonly prisma: PrismaService) {}
 
+    // ===== Queries =====
     countUsers(): Promise<number> {
         return this.prisma.user.count()
     }
@@ -34,6 +41,17 @@ export class IdentityRepository {
         return this.prisma.user.findUnique({ where: { id } })
     }
 
+    findRefreshTokenByHash(tokenHash: string) {
+        return this.prisma.refreshToken.findUnique({ where: { token: tokenHash } })
+    }
+
+    // Sinh id trước khi ghi để token cũ trỏ được sang token mới (replacedBy) trong cùng lượt xoay.
+    generateOpaqueTokenId(): string {
+        return randomUUID()
+    }
+
+    // ===== Commands =====
+
     // REQ-IDN-001: tạo User + Profile + outbox event trong cùng transaction (luật cứng #3 CLAUDE.md).
     async registerUser(input: RegisterUserInput): Promise<User> {
         return this.prisma.$transaction(async (tx) => {
@@ -41,7 +59,7 @@ export class IdentityRepository {
                 data: {
                     email: input.email,
                     passwordHash: input.passwordHash,
-                    roles: ['CUSTOMER'],
+                    roles: [UserRole.USER],
                     isEmailVerified: false,
                     profile: {
                         create: {
@@ -53,13 +71,11 @@ export class IdentityRepository {
                 },
             })
 
-            await tx.outboxEvent.create({
-                data: {
-                    aggregateType: 'identity',
-                    aggregateId: user.id,
-                    eventType: 'user.registered',
-                    payload: { userId: user.id, email: user.email, registeredVia: 'password' },
-                },
+            await writeOutboxEvent(tx, {
+                aggregateType: OUTBOX_AGGREGATE.IDENTITY,
+                aggregateId: user.id,
+                eventType: OUTBOX_EVENT.USER_REGISTERED,
+                payload: { userId: user.id, email: user.email, registeredVia: REGISTERED_VIA.PASSWORD },
             })
 
             return user
@@ -130,10 +146,6 @@ export class IdentityRepository {
         return { id: created.id }
     }
 
-    findRefreshTokenByHash(tokenHash: string) {
-        return this.prisma.refreshToken.findUnique({ where: { token: tokenHash } })
-    }
-
     // REQ-IDN-005/006: compare-and-swap nguyên tử — chỉ một request thắng khi xoay token đồng thời.
     async rotateRefreshToken(input: {
         currentTokenHash: string
@@ -188,9 +200,5 @@ export class IdentityRepository {
             where: { userId, isRevoked: false },
             data: { isRevoked: true, revokedAt: new Date() },
         })
-    }
-
-    generateOpaqueTokenId(): string {
-        return randomUUID()
     }
 }

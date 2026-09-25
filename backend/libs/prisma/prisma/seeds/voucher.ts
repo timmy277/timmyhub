@@ -119,12 +119,12 @@ export async function seedVouchers(prisma: PrismaClient, users: SeedUsers, selle
     })
 
     const vouchersToSave = [platformPercentage, platformFixed, platformFreeShipping, sellerVoucher, brandVoucher]
-    for (const customerUserId of users.customerUserIds) {
+    for (const buyerUserId of users.buyerUserIds) {
         for (const voucher of vouchersToSave) {
             await prisma.userVoucher.upsert({
-                where: { userId_voucherId: { userId: customerUserId, voucherId: voucher.id } },
+                where: { userId_voucherId: { userId: buyerUserId, voucherId: voucher.id } },
                 update: {},
-                create: { userId: customerUserId, voucherId: voucher.id, status: 'SAVED' },
+                create: { userId: buyerUserId, voucherId: voucher.id, status: 'SAVED' },
             })
         }
     }

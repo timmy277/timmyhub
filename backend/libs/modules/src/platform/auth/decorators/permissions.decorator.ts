@@ -1,4 +1,5 @@
 import { SetMetadata } from '@nestjs/common'
+
 import type { PermissionName } from '@timmyhub/contracts'
 
 export const PERMISSIONS_KEY = 'permissions'

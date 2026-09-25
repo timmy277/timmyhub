@@ -1,26 +1,29 @@
 import type { OnApplicationBootstrap } from '@nestjs/common'
-import { Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable, Logger } from '@nestjs/common'
 import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core'
+
 import { PERMISSION_NAMES } from '@timmyhub/contracts'
 
-import { RbacService } from '@timmyhub/modules/identity'
-
+import { PERMISSION_RESOLVER } from '../auth.constants'
 import { PERMISSIONS_KEY } from '../decorators/index'
+import type { PermissionResolver } from '../interfaces/index'
 
 // REQ-RBAC-014: quét toàn bộ @Permissions(...) lúc khởi động, đối chiếu với PERMISSION_NAMES (contracts) và bảng
 // Permission (DB). Thiếu ở bất kỳ đâu thì từ chối khởi động — đây là fix cho lỗi nặng nhất của hệ thống cũ: một
 // endpoint đòi permission chưa từng được seed, khiến không ai gọi được (kể cả SUPER_ADMIN nếu guard không bypass đúng).
 @Injectable()
 export class RbacConsistencyChecker implements OnApplicationBootstrap {
+    // ===== Dependencies =====
     private readonly logger = new Logger(RbacConsistencyChecker.name)
 
     constructor(
         private readonly discovery: DiscoveryService,
         private readonly metadataScanner: MetadataScanner,
         private readonly reflector: Reflector,
-        private readonly rbacService: RbacService,
+        @Inject(PERMISSION_RESOLVER) private readonly permissionResolver: PermissionResolver,
     ) {}
 
+    // ===== Lifecycle =====
     async onApplicationBootstrap(): Promise<void> {
         const usedPermissions = this.collectUsedPermissions()
         if (usedPermissions.size === 0) return
@@ -34,7 +37,7 @@ export class RbacConsistencyChecker implements OnApplicationBootstrap {
             )
         }
 
-        const seeded = await this.rbacService.listPermissions()
+        const seeded = await this.permissionResolver.listPermissions()
         const seededNames = new Set(seeded.map((p) => p.name))
         const missingFromDb = [...usedPermissions].filter((name) => !seededNames.has(name))
         if (missingFromDb.length > 0) {
@@ -47,6 +50,7 @@ export class RbacConsistencyChecker implements OnApplicationBootstrap {
         this.logger.log(`RBAC: đối chiếu permission OK — ${usedPermissions.size} permission đang dùng trong route.`)
     }
 
+    // ===== Private helpers =====
     private collectUsedPermissions(): Set<string> {
         const used = new Set<string>()
         const controllers = this.discovery.getControllers()

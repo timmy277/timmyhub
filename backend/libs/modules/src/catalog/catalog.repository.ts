@@ -4,6 +4,7 @@ import { Injectable } from '@nestjs/common'
 // sẽ nối vào PrismaService khi triển khai spec catalog thật.
 @Injectable()
 export class CatalogRepository {
+    // ===== Queries =====
     countProducts(): Promise<number> {
         return Promise.resolve(0)
     }

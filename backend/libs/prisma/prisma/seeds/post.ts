@@ -97,11 +97,11 @@ export async function seedPosts(
         }
 
         let likeCount = 0
-        for (const customerUserId of users.customerUserIds) {
+        for (const buyerUserId of users.buyerUserIds) {
             const like = await prisma.postLike.upsert({
-                where: { postId_userId: { postId: post.id, userId: customerUserId } },
+                where: { postId_userId: { postId: post.id, userId: buyerUserId } },
                 update: {},
-                create: { postId: post.id, userId: customerUserId },
+                create: { postId: post.id, userId: buyerUserId },
             })
             if (like) likeCount++
         }
@@ -112,7 +112,7 @@ export async function seedPosts(
             create: {
                 id: `${seed.id}-comment-1`,
                 postId: post.id,
-                userId: users.customerUserIds[0]!,
+                userId: users.buyerUserIds[0]!,
                 content: 'Sản phẩm dùng ổn, giao hàng nhanh!',
             },
         })
@@ -123,7 +123,7 @@ export async function seedPosts(
             create: {
                 id: `${seed.id}-comment-1-reply`,
                 postId: post.id,
-                userId: users.customerUserIds[1]!,
+                userId: users.buyerUserIds[1]!,
                 parentId: comment.id,
                 content: 'Đồng ý, mình cũng mới mua tuần trước.',
             },

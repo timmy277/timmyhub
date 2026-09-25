@@ -1,11 +1,14 @@
 import { NestFactory } from '@nestjs/core'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
+
 import { ApiExceptionFilter } from '@timmyhub/common'
 
 import { AppModule } from './app.module'
 
 async function bootstrap(): Promise<void> {
     const app = await NestFactory.create(AppModule)
+    // Chạy OnModuleDestroy/OnApplicationShutdown khi nhận SIGTERM/SIGINT — PrismaService ngắt kết nối DB êm.
+    app.enableShutdownHooks()
     app.useGlobalFilters(new ApiExceptionFilter())
 
     // Chỉ bật Swagger UI ngoài production — /docs không nên lộ ra môi trường thật.

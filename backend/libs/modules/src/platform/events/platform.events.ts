@@ -1,14 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { OnEvent } from '@nestjs/event-emitter'
 
-export const PLATFORM_HEALTH_CHECKED_EVENT = 'platform.health.checked'
+import { PLATFORM_EVENT } from '../platform.constants'
 
 @Injectable()
 export class PlatformEventsListener {
+    // ===== Dependencies =====
     private readonly logger = new Logger(PlatformEventsListener.name)
 
-    @OnEvent(PLATFORM_HEALTH_CHECKED_EVENT)
+    // ===== Event handlers =====
+    @OnEvent(PLATFORM_EVENT.HEALTH_CHECKED)
     handleHealthChecked(): void {
-        this.logger.debug(`Nhận event ${PLATFORM_HEALTH_CHECKED_EVENT}`)
+        this.logger.debug(`Nhận event ${PLATFORM_EVENT.HEALTH_CHECKED}`)
     }
 }

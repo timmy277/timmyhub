@@ -1,25 +1,29 @@
-import type { Request } from 'express'
 import { Body, Controller, Post, Req } from '@nestjs/common'
+import type { Request } from 'express'
+
+import { ZodValidationPipe } from '@timmyhub/common'
 import type { LoginInput, LogoutInput, RefreshInput, RegisterInput } from '@timmyhub/contracts'
 import { LoginSchema, LogoutSchema, RefreshSchema, RegisterSchema } from '@timmyhub/contracts'
-import { ZodValidationPipe } from '@timmyhub/common'
-
 import { Public } from '@timmyhub/modules/platform/auth'
+
 import { AuthService } from './auth.service'
+import { AUTH_ROUTE } from './identity.constants'
 
 // Toàn bộ endpoint ở đây xảy ra TRƯỚC khi có access token hợp lệ — phải @Public(), nếu không JwtAuthGuard chặn hết.
-@Controller('v1/auth')
+@Controller(AUTH_ROUTE.ROOT)
 export class AuthController {
+    // ===== Dependencies =====
     constructor(private readonly authService: AuthService) {}
 
+    // ===== Commands =====
     @Public()
-    @Post('register')
+    @Post(AUTH_ROUTE.REGISTER)
     register(@Body(new ZodValidationPipe(RegisterSchema)) body: RegisterInput) {
         return this.authService.register(body)
     }
 
     @Public()
-    @Post('login')
+    @Post(AUTH_ROUTE.LOGIN)
     login(@Body(new ZodValidationPipe(LoginSchema)) body: LoginInput, @Req() req: Request) {
         return this.authService.login(body, {
             ip: req.ip ?? null,
@@ -28,19 +32,19 @@ export class AuthController {
     }
 
     @Public()
-    @Post('refresh')
+    @Post(AUTH_ROUTE.REFRESH)
     refresh(@Body(new ZodValidationPipe(RefreshSchema)) body: RefreshInput) {
         return this.authService.refresh(body.refreshToken)
     }
 
     @Public()
-    @Post('logout')
+    @Post(AUTH_ROUTE.LOGOUT)
     logout(@Body(new ZodValidationPipe(LogoutSchema)) body: LogoutInput) {
         return this.authService.logout(body.refreshToken)
     }
 
     @Public()
-    @Post('logout-all')
+    @Post(AUTH_ROUTE.LOGOUT_ALL)
     logoutAll(@Body(new ZodValidationPipe(LogoutSchema)) body: LogoutInput) {
         return this.authService.logoutAll(body.refreshToken)
     }

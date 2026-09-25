@@ -1,19 +1,21 @@
 import { Injectable } from '@nestjs/common'
 import { EventEmitter2 } from '@nestjs/event-emitter'
 
+import { CATALOG_EVENT } from './catalog.constants'
 import { CatalogRepository } from './catalog.repository'
-import { CATALOG_PRODUCT_PINGED_EVENT } from './events/catalog.events'
-import type { PingResponse } from './dto/ping.dto'
+import type { PingResponse } from './dto/index'
 
 @Injectable()
 export class CatalogService {
+    // ===== Dependencies =====
     constructor(
         private readonly catalogRepository: CatalogRepository,
         private readonly eventEmitter: EventEmitter2,
     ) {}
 
+    // ===== Queries =====
     ping(): PingResponse {
-        this.eventEmitter.emit(CATALOG_PRODUCT_PINGED_EVENT)
+        this.eventEmitter.emit(CATALOG_EVENT.PRODUCT_PINGED)
         return { module: 'catalog', status: 'ok' }
     }
 

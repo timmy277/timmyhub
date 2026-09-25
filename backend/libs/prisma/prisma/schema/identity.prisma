@@ -2,13 +2,15 @@
 // Nguồn: docs/02-domain/schemas/identity-service.prisma.md, quy ước id/tiền/map theo docs/01-architecture/data-architecture.md.
 // Không lưu dữ liệu nghiệp vụ của module khác — module khác chỉ giữ userId dạng String trần.
 
+// Phải khớp đúng tập `UserRole` của @timmyhub/contracts (roles.ts) — người mua là USER, không còn CUSTOMER.
 enum UserRole {
-    CUSTOMER
+    SUPER_ADMIN
+    ADMIN
+    MODERATOR
     SELLER
     BRAND
+    USER
     SHIPPER
-    ADMIN
-    SUPER_ADMIN
 }
 
 model User {
@@ -18,7 +20,7 @@ model User {
     passwordHash        String?
     googleId            String?               @unique
     facebookId          String?               @unique
-    roles               UserRole[]            @default([CUSTOMER])
+    roles               UserRole[]            @default([USER])
     isEmailVerified     Boolean               @default(false)
     isPhoneVerified     Boolean               @default(false)
     isActive            Boolean               @default(true)

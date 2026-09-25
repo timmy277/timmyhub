@@ -1,15 +1,19 @@
 import { Controller, Get } from '@nestjs/common'
 
 import { Public } from '@timmyhub/modules/platform/auth'
-import { CatalogService } from './catalog.service'
-import type { PingResponse } from './dto/ping.dto'
 
-@Controller('catalog')
+import { CATALOG_ROUTE } from './catalog.constants'
+import { CatalogService } from './catalog.service'
+import type { PingResponse } from './dto/index'
+
+@Controller(CATALOG_ROUTE.ROOT)
 export class CatalogController {
+    // ===== Dependencies =====
     constructor(private readonly catalogService: CatalogService) {}
 
+    // ===== Queries =====
     @Public()
-    @Get('ping')
+    @Get(CATALOG_ROUTE.PING)
     ping(): PingResponse {
         return this.catalogService.ping()
     }

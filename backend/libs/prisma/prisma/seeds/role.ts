@@ -1,9 +1,11 @@
-import type { SystemRoleName } from '@timmyhub/contracts'
-import { PERMISSION_DEFINITIONS } from '@timmyhub/contracts'
+import type { UserRole } from '@timmyhub/contracts'
+import { PERMISSION_DEFINITIONS, USER_ROLES } from '@timmyhub/contracts'
 
 import type { PrismaClient } from '../../src/generated/prisma/client'
 
-const ROLE_METADATA: Record<SystemRoleName, { displayName: string; description: string; isSystem: boolean }> = {
+type RoleMetadata = { displayName: string; description: string; isSystem: boolean }
+
+const ROLE_METADATA: Record<UserRole, RoleMetadata> = {
     SUPER_ADMIN: {
         displayName: 'Quản trị viên tối cao',
         description: 'Bỏ qua toàn bộ kiểm tra role/permission (layer 1-3), chỉ layer xác thực vẫn áp dụng.',
@@ -29,8 +31,8 @@ const ROLE_METADATA: Record<SystemRoleName, { displayName: string; description: 
         description: 'Đại diện thương hiệu, quản lý shop chính hãng.',
         isSystem: true,
     },
-    CUSTOMER: {
-        displayName: 'Khách hàng',
+    USER: {
+        displayName: 'Người dùng',
         description: 'Người mua hàng trên sàn.',
         isSystem: true,
     },
@@ -44,16 +46,8 @@ const ROLE_METADATA: Record<SystemRoleName, { displayName: string; description: 
 // permissionNames của mỗi role được TÍNH từ PERMISSION_DEFINITIONS[].defaultRoles, không khai tay riêng ở đây —
 // thêm permission mới vào catalog và gán defaultRoles là đủ, role.ts không cần sửa theo (tránh lệch, rbac-advanced.md §7).
 // SUPER_ADMIN không cần liệt kê permission nào: guard bypass thẳng theo layer 1 (RolesGuard/PermissionsGuard).
-function buildRolePermissionNames(): Record<SystemRoleName, string[]> {
-    const map: Record<SystemRoleName, string[]> = {
-        SUPER_ADMIN: [],
-        ADMIN: [],
-        MODERATOR: [],
-        SELLER: [],
-        BRAND: [],
-        CUSTOMER: [],
-        SHIPPER: [],
-    }
+function buildRolePermissionNames(): Record<UserRole, string[]> {
+    const map = Object.fromEntries(USER_ROLES.map((role) => [role, [] as string[]])) as Record<UserRole, string[]>
     for (const permission of PERMISSION_DEFINITIONS) {
         for (const roleName of permission.defaultRoles) {
             map[roleName].push(permission.name)
@@ -67,10 +61,8 @@ export async function seedRoles(prisma: PrismaClient) {
 
     const rolePermissionNames = buildRolePermissionNames()
 
-    for (const [roleName, metadata] of Object.entries(ROLE_METADATA) as [
-        SystemRoleName,
-        (typeof ROLE_METADATA)[SystemRoleName],
-    ][]) {
+    for (const roleName of USER_ROLES) {
+        const metadata = ROLE_METADATA[roleName]
         const systemRole = await prisma.systemRole.upsert({
             where: { name: roleName },
             update: { displayName: metadata.displayName, description: metadata.description },

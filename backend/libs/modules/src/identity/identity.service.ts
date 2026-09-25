@@ -1,19 +1,21 @@
 import { Injectable } from '@nestjs/common'
 import { EventEmitter2 } from '@nestjs/event-emitter'
 
-import { IDENTITY_USER_PINGED_EVENT } from './events/identity.events'
+import type { PingResponse } from './dto/index'
+import { IDENTITY_EVENT } from './identity.constants'
 import { IdentityRepository } from './identity.repository'
-import type { PingResponse } from './dto/ping.dto'
 
 @Injectable()
 export class IdentityService {
+    // ===== Dependencies =====
     constructor(
         private readonly identityRepository: IdentityRepository,
         private readonly eventEmitter: EventEmitter2,
     ) {}
 
+    // ===== Queries =====
     ping(): PingResponse {
-        this.eventEmitter.emit(IDENTITY_USER_PINGED_EVENT)
+        this.eventEmitter.emit(IDENTITY_EVENT.USER_PINGED)
         return { module: 'identity', status: 'ok' }
     }
 

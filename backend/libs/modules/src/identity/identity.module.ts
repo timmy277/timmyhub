@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common'
 import { JwtModule } from '@nestjs/jwt'
 
+import { PERMISSION_RESOLVER } from '@timmyhub/modules/platform/auth'
+
 import { AuthController } from './auth.controller'
 import { AuthService } from './auth.service'
-import { IdentityEventsListener } from './events/identity.events'
+import { IdentityEventsListener } from './events/index'
 import { IdentityController } from './identity.controller'
 import { IdentityRepository } from './identity.repository'
 import { IdentityService } from './identity.service'
-import { PermissionCacheService } from './rbac/permission-cache.service'
-import { RbacRepository } from './rbac/rbac.repository'
-import { RbacService } from './rbac/rbac.service'
+import { PermissionCacheService, RbacRepository, RbacService } from './rbac/index'
 import { RbacController } from './rbac.controller'
 
 @Module({
@@ -24,7 +24,9 @@ import { RbacController } from './rbac.controller'
         RbacRepository,
         RbacService,
         PermissionCacheService,
+        // Guard/checker của platform/auth chỉ biết token này, không biết RbacService — xem permission-resolver.interface.ts.
+        { provide: PERMISSION_RESOLVER, useExisting: RbacService },
     ],
-    exports: [IdentityService, AuthService, RbacService],
+    exports: [IdentityService, AuthService, RbacService, PERMISSION_RESOLVER],
 })
 export class IdentityModule {}

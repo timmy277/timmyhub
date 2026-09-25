@@ -1,4 +1,4 @@
-import type { UserRole } from '@timmyhub/prisma'
+import type { UserRole } from '@timmyhub/contracts'
 
 // Payload đã xác thực gắn vào request.user sau JwtAuthGuard — không bao giờ chứa permission (rbac-advanced.md §6:
 // permission không được nhúng vào JWT, nếu không việc thu hồi phải chờ token hết hạn).

@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common'
+
+import { OUTBOX_AGGREGATE, OUTBOX_EVENT } from '@timmyhub/contracts'
 import type { Permission, SystemRole } from '@timmyhub/prisma'
 import { PrismaService } from '@timmyhub/prisma'
+
+import { writeOutboxEvent } from '../events/index'
 
 export type UserWithRbac = {
     userRoles: { role: { permissions: { permission: Permission }[] } }[]
@@ -9,7 +13,10 @@ export type UserWithRbac = {
 
 @Injectable()
 export class RbacRepository {
+    // ===== Dependencies =====
     constructor(private readonly prisma: PrismaService) {}
+
+    // ===== Queries =====
 
     // §6 design.md: một query duy nhất, không đọc-rồi-lọc — dùng để tính effective permissions.
     findUserWithRbac(userId: string): Promise<UserWithRbac> {
@@ -38,6 +45,27 @@ export class RbacRepository {
         return this.prisma.systemRole.findUnique({ where: { name } })
     }
 
+    countUsersWithRole(roleId: string): Promise<number> {
+        return this.prisma.userSystemRole.count({ where: { roleId } })
+    }
+
+    listPermissions(): Promise<Permission[]> {
+        return this.prisma.permission.findMany({ orderBy: [{ module: 'asc' }, { resource: 'asc' }, { action: 'asc' }] })
+    }
+
+    findPermissionById(id: string): Promise<Permission | null> {
+        return this.prisma.permission.findUnique({ where: { id } })
+    }
+
+    findPermissionByName(name: string): Promise<Permission | null> {
+        return this.prisma.permission.findUnique({ where: { name } })
+    }
+
+    findPermissionsByNames(names: string[]): Promise<Permission[]> {
+        return this.prisma.permission.findMany({ where: { name: { in: names } } })
+    }
+
+    // ===== Commands =====
     createRole(input: { name: string; displayName: string; description?: string | undefined }): Promise<SystemRole> {
         return this.prisma.systemRole.create({
             data: { name: input.name, displayName: input.displayName, description: input.description ?? null },
@@ -57,24 +85,8 @@ export class RbacRepository {
         })
     }
 
-    async countUsersWithRole(roleId: string): Promise<number> {
-        return this.prisma.userSystemRole.count({ where: { roleId } })
-    }
-
     async deleteRole(id: string): Promise<void> {
         await this.prisma.systemRole.delete({ where: { id } })
-    }
-
-    listPermissions(): Promise<Permission[]> {
-        return this.prisma.permission.findMany({ orderBy: [{ module: 'asc' }, { resource: 'asc' }, { action: 'asc' }] })
-    }
-
-    findPermissionByName(name: string): Promise<Permission | null> {
-        return this.prisma.permission.findUnique({ where: { name } })
-    }
-
-    findPermissionsByNames(names: string[]): Promise<Permission[]> {
-        return this.prisma.permission.findMany({ where: { name: { in: names } } })
     }
 
     createPermission(input: {
@@ -106,13 +118,11 @@ export class RbacRepository {
             const affected = await tx.userSystemRole.findMany({ where: { roleId }, select: { userId: true } })
             const affectedUserIds = affected.map((a) => a.userId)
 
-            await tx.outboxEvent.create({
-                data: {
-                    aggregateType: 'identity',
-                    aggregateId: roleId,
-                    eventType: 'rbac.permissions.changed',
-                    payload: { roleId, affectedUserIds },
-                },
+            await writeOutboxEvent(tx, {
+                aggregateType: OUTBOX_AGGREGATE.IDENTITY,
+                aggregateId: roleId,
+                eventType: OUTBOX_EVENT.RBAC_PERMISSIONS_CHANGED,
+                payload: { roleId, affectedUserIds },
             })
 
             return affectedUserIds
@@ -128,13 +138,11 @@ export class RbacRepository {
                 create: { userId, roleId },
             })
 
-            await tx.outboxEvent.create({
-                data: {
-                    aggregateType: 'identity',
-                    aggregateId: userId,
-                    eventType: 'user.role-granted',
-                    payload: { userId, roleName, grantedBy },
-                },
+            await writeOutboxEvent(tx, {
+                aggregateType: OUTBOX_AGGREGATE.IDENTITY,
+                aggregateId: userId,
+                eventType: OUTBOX_EVENT.USER_ROLE_GRANTED,
+                payload: { userId, roleName, grantedBy },
             })
         })
     }
@@ -143,13 +151,11 @@ export class RbacRepository {
         await this.prisma.$transaction(async (tx) => {
             await tx.userSystemRole.deleteMany({ where: { userId, roleId } })
 
-            await tx.outboxEvent.create({
-                data: {
-                    aggregateType: 'identity',
-                    aggregateId: userId,
-                    eventType: 'user.role-revoked',
-                    payload: { userId, roleName, revokedBy },
-                },
+            await writeOutboxEvent(tx, {
+                aggregateType: OUTBOX_AGGREGATE.IDENTITY,
+                aggregateId: userId,
+                eventType: OUTBOX_EVENT.USER_ROLE_REVOKED,
+                payload: { userId, roleName, revokedBy },
             })
         })
     }
@@ -168,13 +174,11 @@ export class RbacRepository {
                 create: { userId, permissionId, isGranted },
             })
 
-            await tx.outboxEvent.create({
-                data: {
-                    aggregateType: 'identity',
-                    aggregateId: userId,
-                    eventType: 'rbac.permissions.changed',
-                    payload: { permissionId, affectedUserIds: [userId], grantedBy: actorId, isGranted },
-                },
+            await writeOutboxEvent(tx, {
+                aggregateType: OUTBOX_AGGREGATE.IDENTITY,
+                aggregateId: userId,
+                eventType: OUTBOX_EVENT.RBAC_PERMISSIONS_CHANGED,
+                payload: { permissionId, affectedUserIds: [userId], grantedBy: actorId, isGranted },
             })
         })
     }
