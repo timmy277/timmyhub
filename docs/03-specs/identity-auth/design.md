@@ -29,7 +29,7 @@ model User {
     passwordHash        String?
     googleId            String?               @unique
     facebookId          String?               @unique
-    roles               UserRole[]            @default([CUSTOMER])
+    roles               UserRole[]            @default([USER])
     isEmailVerified     Boolean               @default(false)
     isPhoneVerified     Boolean               @default(false)
     isActive            Boolean               @default(true)

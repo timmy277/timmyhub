@@ -26,7 +26,7 @@ Mẫu EARS dùng: Ubiquitous · Event-driven · State-driven · Optional · Unwa
 **Ưu tiên:** P0
 
 KHI khách vãng lai gửi `email` + `password` hợp lệ tới đăng ký, HỆ THỐNG PHẢI băm mật khẩu bằng `bcrypt` (cost ≥ 12),
-tạo `User` với `roles = [CUSTOMER]`, `isEmailVerified = false`, tạo `Profile` rỗng, và phát `EVT-user.registered`
+tạo `User` với `roles = [USER]`, `isEmailVerified = false`, tạo `Profile` rỗng, và phát `EVT-user.registered`
 trong cùng transaction (outbox).
 
 | # | Given | When | Then |
@@ -274,7 +274,7 @@ NẾU mật khẩu hiện tại gửi lên không khớp `passwordHash` đang l�
 
 KHI NextAuth hoàn tất OAuth2 + PKCE với Google và gửi hồ sơ đã xác minh tới `POST /v1/auth/sso`, HỆ THỐNG PHẢI: tìm
 `User` theo `googleId`; nếu chưa có và `email` đã tồn tại với `isEmailVerified = true` thì liên kết `googleId` vào
-`User` đó; nếu chưa có tài khoản nào khớp thì tạo `User` mới với `roles = [CUSTOMER]`, `isEmailVerified` theo Google,
+`User` đó; nếu chưa có tài khoản nào khớp thì tạo `User` mới với `roles = [USER]`, `isEmailVerified` theo Google,
 không có `passwordHash`.
 
 | # | Given | When | Then |

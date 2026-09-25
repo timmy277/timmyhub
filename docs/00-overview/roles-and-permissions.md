@@ -2,7 +2,7 @@
 title: Vai trò & Quyền (RBAC)
 status: approved
 owner: Backend Lead
-updated: 2026-09-15
+updated: 2026-09-25
 related: [docs/03-specs/rbac-permission/requirements.md, docs/01-architecture/security.md, docs/00-overview/feature-inventory.md]
 ---
 
@@ -43,14 +43,19 @@ tài nguyên có chủ sở hữu.
 
 ## 2. Vai trò hệ thống
 
-`enum UserRole { GUEST, USER, SELLER, SHIPPER, ADMIN, SUPER_ADMIN }`
+Nguồn duy nhất: `UserRole` trong `shared/contracts/src/roles.ts`, dùng chung FE/BE; enum Prisma `UserRole` phải khớp.
+
+`UserRole = { SUPER_ADMIN, ADMIN, MODERATOR, SELLER, BRAND, USER, SHIPPER }` — `GUEST` chỉ là trạng thái chưa đăng nhập,
+không nằm trong enum.
 
 | Role | Cách có được | Kế thừa quyền | Ghi chú |
 |---|---|---|---|
 | `GUEST` | Mặc định khi chưa đăng nhập | — | Không lưu trong DB, chỉ là trạng thái |
-| `USER` | Tự động sau khi đăng ký | `GUEST` | Vai mặc định |
+| `USER` | Tự động sau khi đăng ký | `GUEST` | Vai mặc định (người mua). Không dùng tên `CUSTOMER` |
 | `SELLER` | Admin duyệt đơn đăng ký bán hàng | `USER` | Một tài khoản vừa là `USER` vừa là `SELLER` |
+| `BRAND` | Chưa chốt quy trình — hiện chỉ có trong seed | `USER` | Quản lý thương hiệu (`seller:brands:*`), sản phẩm của mình |
 | `SHIPPER` | Admin gán | `USER` | Chỉ cập nhật trạng thái đơn được gán |
+| `MODERATOR` | Chưa chốt quy trình — hiện chỉ có trong seed | `USER` | Duyệt sản phẩm, bài đăng, quảng cáo, đánh giá (§4) |
 | `ADMIN` | `SUPER_ADMIN` gán | `USER` | Vận hành sàn |
 | `SUPER_ADMIN` | Seed hoặc `SUPER_ADMIN` khác gán | `ADMIN` | Toàn quyền, **bỏ qua kiểm tra permission** |
 

@@ -14,10 +14,11 @@ Sở hữu danh tính người dùng, phiên đăng nhập, thiết bị, và ha
 
 ```prisma
 enum UserRole {
-    CUSTOMER
+    USER
     SELLER
     BRAND
     SHIPPER
+    MODERATOR
     ADMIN
     SUPER_ADMIN
 }
@@ -29,7 +30,7 @@ model User {
     passwordHash        String?
     googleId            String?               @unique
     facebookId          String?               @unique
-    roles               UserRole[]            @default([CUSTOMER])
+    roles               UserRole[]            @default([USER])
     isEmailVerified     Boolean               @default(false)
     isPhoneVerified     Boolean               @default(false)
     isActive            Boolean               @default(true)

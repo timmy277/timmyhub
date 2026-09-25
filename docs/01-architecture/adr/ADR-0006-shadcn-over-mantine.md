@@ -35,8 +35,9 @@ buộc, WCAG 2.2 AA). Chi tiết token: `docs/04-frontend/design-system.md`.
 - Cấu trúc thư mục phân biệt rõ `components/ui/` (shadcn nguyên bản, chỉ cập nhật qua CLI `shadcn add`, không sửa
   tay) và `components/common/` (component dựng từ `ui/`, tuỳ biến cho dự án) — vi phạm ranh giới này làm mất khả năng
   đồng bộ với upstream shadcn.
-- Ngoại lệ (2026-09-24): các field `components/ui/float-*.tsx` (`FloatInput`, `FloatCombobox`, `FloatMultiSelect`,
-  `FloatDatePicker`, `FloatDateRangePicker`) do dự án tự viết nhưng đặt trong `ui/` vì là primitive form dùng khắp nơi. Chúng chỉ **dựng trên** file CLI sinh
-  (`combobox.tsx`, `input-group.tsx`…), không sửa các file đó — `shadcn add --overwrite` vẫn an toàn.
+- Các field label nổi (`FloatInput`, `FloatCombobox`, `FloatMultiSelect`, `FloatDatePicker`, `FloatDateRangePicker`)
+  và `AgGridTable` do dự án tự viết nên nằm ở `components/common/` (2026-09-25 chuyển từ `ui/` sang; trước đó là ngoại
+  lệ đặt trong `ui/`). Chúng chỉ **dựng trên** file CLI sinh (`combobox.tsx`, `input-group.tsx`…), không sửa các file
+  đó — `shadcn add --overwrite` vẫn an toàn. Miễn ESLint chỉ còn áp cho file shadcn trong `ui/`.
 - AG Grid (nếu dùng cho lưới admin phức tạp, xem ADR-0007) và Recharts vẫn là thư viện ngoài độc lập với hệ token này,
   cần tự map màu theo token qua theme prop, không tự động kế thừa Tailwind.

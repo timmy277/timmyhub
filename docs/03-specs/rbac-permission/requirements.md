@@ -30,7 +30,7 @@ khi đi tới `PermissionsGuard` (lớp 2) cho mọi request đã xác thực.
 | # | Given | When | Then |
 |---|---|---|---|
 | 1 | User có `roles: [SELLER]` | Gọi endpoint gắn `@Roles(SELLER, ADMIN)` | Qua lớp 1, đi tiếp lớp 2 |
-| 2 | User có `roles: [CUSTOMER]` | Gọi endpoint gắn `@Roles(SELLER, ADMIN)` | `403`, dừng ở lớp 1, không đánh giá lớp 2/3 |
+| 2 | User có `roles: [USER]` | Gọi endpoint gắn `@Roles(SELLER, ADMIN)` | `403`, dừng ở lớp 1, không đánh giá lớp 2/3 |
 | 3 | User có `roles: [SUPER_ADMIN]` | Gọi bất kỳ endpoint nào | Qua lớp 1 và mọi lớp sau, nhưng vẫn ghi audit log bypass |
 
 ---
@@ -63,7 +63,7 @@ lực dù role có cấp.
 
 | # | Given | When | Then |
 |---|---|---|---|
-| 1 | User role `CUSTOMER`, không role nào có `content:reports:list` | Super Admin tạo `UserPermission(isGranted: true)` cho quyền đó | User gọi được endpoint yêu cầu quyền đó |
+| 1 | User role `USER`, không role nào có `content:reports:list` | Super Admin tạo `UserPermission(isGranted: true)` cho quyền đó | User gọi được endpoint yêu cầu quyền đó |
 | 2 | User role `ADMIN` có `orders:cancel:any` qua role | Super Admin tạo `UserPermission(isGranted: false)` cho đúng quyền đó | User bị từ chối dù role vẫn có quyền |
 | 3 | Người cấp quyền không tự có permission X | Người đó cố tạo `UserPermission` cấp X cho người khác | HỆ THỐNG PHẢI từ chối (không tự nâng cấp qua uỷ quyền) |
 
@@ -180,7 +180,7 @@ KHI Admin gán hoặc gỡ role cho một user, HỆ THỐNG PHẢI cập nhật
 
 | # | Given | When | Then |
 |---|---|---|---|
-| 1 | User chỉ có role `CUSTOMER` | Admin gán role `SELLER` | `UserSystemRole` mới, phát `user.role-granted`, cache permission bị xoá ngay |
+| 1 | User chỉ có role `USER` | Admin gán role `SELLER` | `UserSystemRole` mới, phát `user.role-granted`, cache permission bị xoá ngay |
 | 2 | User có role `SELLER` | Admin gỡ role `SELLER` | Phát `user.role-revoked`, lần gọi API tiếp theo của user không còn quyền của `SELLER` |
 | 3 | Admin cố gán role `SUPER_ADMIN` cho user khác | Admin không phải `SUPER_ADMIN` | `403` — không tự nâng cấp quyền qua gán role vượt cấp bản thân |
 

@@ -380,8 +380,8 @@ await fetch(`/api/admin/users/${id}/lock`, { method: 'POST' })
 ✅ **GOOD**:
 
 ```ts
-// shared/contracts/src/user.schema.ts
-export const UserRole = { CUSTOMER: 'CUSTOMER', SELLER: 'SELLER', SUPER_ADMIN: 'SUPER_ADMIN' } as const
+// shared/contracts/src/roles.ts
+export const UserRole = { USER: 'USER', SELLER: 'SELLER', SUPER_ADMIN: 'SUPER_ADMIN' } as const
 export type UserRole = (typeof UserRole)[keyof typeof UserRole]
 export const UserRoleSchema = z.enum(UserRole)
 ```
