@@ -3,9 +3,9 @@
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 
-import { LOCALE_COOKIE_MAX_AGE_SECONDS, LOCALE_COOKIE_NAME } from '@/constants'
-import type { Locale } from '@/types'
-import { isLocale } from '@/utils'
+import { isLocale, LOCALE_COOKIE_NAME, type Locale } from '@timmyhub/contracts'
+
+import { LOCALE_COOKIE_MAX_AGE_SECONDS } from '@/constants'
 
 export async function setLocale(locale: Locale): Promise<void> {
     if (!isLocale(locale)) return

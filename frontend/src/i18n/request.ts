@@ -1,11 +1,12 @@
 import { cookies } from 'next/headers'
 import { getRequestConfig } from 'next-intl/server'
 
-import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME } from '@/constants'
-import { isLocale } from '@/utils'
+import { API_MESSAGES, DEFAULT_LOCALE, isLocale, LOCALE_COOKIE_NAME } from '@timmyhub/contracts'
 
 // Không dùng routing/middleware/segment [locale] của next-intl (localePrefix "never") — locale đọc từ
 // cookie, URL giữ nguyên dù đổi ngôn ngữ. Đổi locale qua Server Action `setLocale` (`@/services`).
+// Catalog thông điệp API (lỗi, validation) dùng chung với BE, gắn vào namespace `api` để FE dịch
+// `messageKey` trả về từ BE bằng `useTranslations('api')`.
 export default getRequestConfig(async () => {
     const cookieStore = await cookies()
     const cookieLocale = cookieStore.get(LOCALE_COOKIE_NAME)?.value
@@ -13,6 +14,9 @@ export default getRequestConfig(async () => {
 
     return {
         locale,
-        messages: (await import(`../../messages/${locale}.json`)).default,
+        messages: {
+            ...(await import(`../../messages/${locale}.json`)).default,
+            api: API_MESSAGES[locale],
+        },
     }
 })

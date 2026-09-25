@@ -37,7 +37,6 @@ import {
     SEARCH_DEBOUNCE_MS,
 } from '@/constants'
 import { useDebouncedValue } from '@/hooks'
-import type { Locale } from '@/types'
 
 import { ErrorState } from '../error-state'
 import { FloatInput } from '../float-input'
@@ -119,7 +118,7 @@ export function AgGridTable<TData>({
 
     // ===== Hooks =====
     const t = useTranslations('agGridTable')
-    const locale = useLocale() as Locale
+    const locale = useLocale()
     // Suspend tới khi bản dịch lưới tải xong — nằm trong ranh giới `loading` của `next/dynamic`.
     const localeText = use(loadGridLocaleText(locale))
     const debouncedQuickFilter = useDebouncedValue(quickFilterText, SEARCH_DEBOUNCE_MS)

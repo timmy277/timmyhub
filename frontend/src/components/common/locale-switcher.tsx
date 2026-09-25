@@ -2,6 +2,8 @@
 
 import { useTranslations } from 'next-intl'
 
+import { isLocale, LOCALES } from '@timmyhub/contracts'
+
 import {
     Button,
     DropdownMenu,
@@ -12,9 +14,8 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui'
-import { DEFAULT_LOCALE, LOCALE_LABEL_KEY, LOCALES } from '@/constants'
+import { LOCALE_LABEL_KEY } from '@/constants'
 import { useLocaleSwitch } from '@/hooks'
-import { isLocale } from '@/utils'
 
 import { LocaleFlag } from './locale-flag'
 
@@ -22,10 +23,7 @@ import { LocaleFlag } from './locale-flag'
 export function LocaleSwitcher() {
     // ===== Hooks =====
     const t = useTranslations('common')
-    const { locale, isPending, switchLocale } = useLocaleSwitch()
-
-    // ===== Derived =====
-    const current = isLocale(locale) ? locale : DEFAULT_LOCALE
+    const { locale: current, isPending, switchLocale } = useLocaleSwitch()
 
     // ===== Handlers =====
     const handleValueChange = (value: string) => {

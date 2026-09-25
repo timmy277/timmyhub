@@ -1,7 +1,6 @@
 export * from './cn'
 export * from './date'
 export * from './initials'
-export * from './locale'
 export * from './pagination'
 export * from './random'
 export * from './theme'

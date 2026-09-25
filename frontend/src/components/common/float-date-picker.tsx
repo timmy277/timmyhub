@@ -6,7 +6,6 @@ import { useLocale, useTranslations } from 'next-intl'
 
 import { Button, Calendar, Popover, PopoverContent, PopoverTrigger } from '@/components/ui'
 import { CALENDAR_LOCALES } from '@/constants'
-import type { Locale } from '@/types'
 import { cn, formatDisplayDate, formatSubmitDate, parseDisplayDate } from '@/utils'
 
 import { FloatFieldDescription } from './float-combobox'
@@ -54,7 +53,7 @@ export function FloatDatePicker({
 
     // ===== Hooks =====
     const t = useTranslations('common')
-    const locale = useLocale() as Locale
+    const locale = useLocale()
     const generatedId = useId()
 
     // ===== Derived =====

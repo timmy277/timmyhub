@@ -1,8 +1,9 @@
 import { useTransition } from 'react'
 import { useLocale } from 'next-intl'
 
+import type { Locale } from '@timmyhub/contracts'
+
 import { setLocale } from '@/services'
-import type { Locale } from '@/types'
 
 export function useLocaleSwitch() {
     // ===== Hooks =====

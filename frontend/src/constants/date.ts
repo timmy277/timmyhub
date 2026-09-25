@@ -1,6 +1,6 @@
 import { enUS, vi, type Locale as DateFnsLocale } from 'date-fns/locale'
 
-import type { Locale } from '@/types'
+import type { Locale } from '@timmyhub/contracts'
 
 // Locale date-fns cho Calendar (react-day-picker) theo ngôn ngữ giao diện.
 export const CALENDAR_LOCALES: Record<Locale, DateFnsLocale> = { vi, en: enUS }

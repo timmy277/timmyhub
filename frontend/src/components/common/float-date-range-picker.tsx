@@ -8,7 +8,6 @@ import type { DateRange } from 'react-day-picker'
 import { Button, Calendar, Popover, PopoverContent, PopoverTrigger } from '@/components/ui'
 import { CALENDAR_LOCALES } from '@/constants'
 import { useIsMobile } from '@/hooks'
-import type { Locale } from '@/types'
 import { cn, formatDisplayRange, formatSubmitDate, isSameRange, parseDisplayRange } from '@/utils'
 
 import { FloatFieldDescription } from './float-combobox'
@@ -59,7 +58,7 @@ export function FloatDateRangePicker({
 
     // ===== Hooks =====
     const t = useTranslations('common')
-    const locale = useLocale() as Locale
+    const locale = useLocale()
     const isMobile = useIsMobile()
     const generatedId = useId()
 

@@ -1,4 +1,5 @@
-import type { Locale } from '@/types'
+import type { Locale } from '@timmyhub/contracts'
+
 import { cn } from '@/utils'
 
 import { IconPath, type IconName } from '../icons'

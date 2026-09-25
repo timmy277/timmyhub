@@ -3,8 +3,9 @@
 import { useEffect } from 'react'
 import { createTranslator, NextIntlClientProvider } from 'next-intl'
 
+import { DEFAULT_LOCALE } from '@timmyhub/contracts'
+
 import { ErrorState } from '@/components'
-import { DEFAULT_LOCALE } from '@/constants'
 import type { RouteErrorProps } from '@/types'
 
 import defaultMessages from '../../messages/vi.json'
