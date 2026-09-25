@@ -31,7 +31,7 @@ không còn header `X-Locale`. Tên cookie, danh sách locale và `DEFAULT_LOCAL
 `@timmyhub/contracts` (`shared/contracts/src/locale.ts`).
 
 Hiện thực: `resolveRequestLocale(headers)` ở `@timmyhub/common`, gọi trong `ApiExceptionFilter`. Giá trị lạ rơi về
-`vi`, không báo lỗi. Chưa có `nestjs-cls` (chưa được thêm dependency) — hiện chỉ tầng filter cần locale. Khi có
+`vi`, không báo lỗi. Chưa cần `nestjs-cls` — hiện chỉ tầng filter đọc locale, mà filter có sẵn request. Khi có
 nội dung sinh ở tầng service (email, file xuất) thì bổ sung CLS và hai nguồn nữa: `?lang=` cho link trong email và
 `User.preferredLocale` trong hồ sơ, đứng giữa cookie và Accept-Language.
 
@@ -80,8 +80,9 @@ Response lỗi có header `Content-Language` cho biết ngôn ngữ của `messa
 Catalog nằm ở `shared/contracts/src/i18n/messages.{vi,en}.ts` — TS object, lồng theo namespace, cú pháp tham số ICU
 tương thích `next-intl`. Bản `vi` là nguồn; bản `en` có kiểu `ApiMessageCatalog` suy từ bản `vi` và namespace
 `error` `satisfies Record<ApiErrorCode, string>`, nên **thiếu khoá ở bất kỳ ngôn ngữ nào là typecheck đỏ** — CI chặn
-ngay, không cần test riêng. Chưa dùng `nestjs-i18n` / file `errors.json` như kế hoạch cũ vì chưa được thêm dependency;
-một catalog TS dùng chung FE/BE cũng tránh được hai bảng dịch lệch nhau.
+ngay, không cần test riêng. Không dùng `nestjs-i18n` / file `errors.json` như kế hoạch cũ: một catalog TS dùng chung
+FE/BE tránh được hai bảng dịch lệch nhau, và khoá có kiểu mà không cần bước sinh type. Cân nhắc lại `nestjs-i18n`
+khi cần dịch ở tầng service/worker (email, file xuất), lúc đó nó nạp chính catalog này.
 
 FE nạp cùng catalog vào `next-intl` dưới namespace `api` (`frontend/src/i18n/request.ts`), nên hiển thị lỗi từ BE là
 `` t(`api.${error.messageKey}`, error.messageParams) `` — không cần bảng dịch lỗi thứ hai ở FE.

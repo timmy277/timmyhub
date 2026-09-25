@@ -11,8 +11,9 @@ related: [docs/04-frontend/fe-architecture.md, docs/04-frontend/routes.md, docs/
 > Với một sàn thương mại điện tử, lưu lượng tự nhiên từ tìm kiếm là kênh rẻ nhất và bền nhất. SEO ở đây **không phải
 > việc marketing làm sau** — nó là ràng buộc kỹ thuật lên cách render, cách đặt URL và cách sinh metadata.
 >
-> Bản cũ hỏng gốc: mọi trang đều là client component, không có locale trên URL, không có sitemap, không có dữ liệu có
-> cấu trúc. Trang sản phẩm gần như không tồn tại với công cụ tìm kiếm.
+> Bản cũ hỏng gốc: mọi trang đều là client component, bản dịch chỉ chạy sau khi JS tải xong, không có sitemap, không có
+> dữ liệu có cấu trúc. Trang sản phẩm gần như không tồn tại với công cụ tìm kiếm. (Locale giữ trong cookie, không nằm
+> trên URL — đánh đổi SEO bản `en` ghi ở ADR-0008 phần sửa đổi.)
 
 ---
 

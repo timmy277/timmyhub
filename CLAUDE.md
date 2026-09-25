@@ -4,8 +4,9 @@ Sàn thương mại điện tử kiểu Shopee: trung tâm trao đổi **admin �
 video quảng cáo và quản lý doanh số.
 
 **Trạng thái hiện tại: đang dựng khung.** `backend/` (NestJS modular monolith: identity, rbac, platform),
-`frontend/` (Next.js 16: auth, dashboard, quản trị user bản demo) và `shared/contracts` đã có code. Không cài
-dependency hay mở rộng phạm vi ngoài việc được giao.
+`frontend/` (Next.js 16: auth, dashboard, quản trị user bản demo) và `shared/contracts` đã có code. Được thêm
+dependency khi việc cần (ưu tiên thư viện đã chọn trong `project-plan.md`), nêu tên + lý do trong báo cáo; thư viện
+nặng phía FE vẫn theo luật #12. Không mở rộng phạm vi ngoài việc được giao.
 
 ---
 
