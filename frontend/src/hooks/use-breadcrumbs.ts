@@ -1,5 +1,3 @@
-'use client'
-
 import { useMemo } from 'react'
 import { usePathname } from 'next/navigation'
 
@@ -8,8 +6,10 @@ import type { BreadcrumbEntry } from '@/types'
 
 // Breadcrumb của trang hiện tại: ưu tiên bản khai báo trong BREADCRUMB_ROUTES, không có thì dựng từ URL.
 export function useBreadcrumbs(): readonly BreadcrumbEntry[] {
+    // ===== Hooks =====
     const pathname = usePathname()
 
+    // ===== Derived =====
     return useMemo(() => {
         const declared = BREADCRUMB_ROUTES[pathname]
         if (declared) return declared

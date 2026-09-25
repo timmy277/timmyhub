@@ -1,6 +1,12 @@
 {
+  "metadata": {
+    "title": "TimmyHub",
+    "titleTemplate": "%s · TimmyHub",
+    "description": "Sàn thương mại điện tử TimmyHub"
+  },
   "common": {
     "language": "Ngôn ngữ",
+    "languageAria": "Ngôn ngữ: {language}",
     "languageVi": "Tiếng Việt",
     "languageEn": "Tiếng Anh",
     "showPassword": "Hiện mật khẩu",
@@ -10,13 +16,31 @@
     "dateFormatHint": "dd/mm/yyyy",
     "selectDateRange": "Chọn khoảng ngày",
     "dateRangeFormatHint": "dd/mm/yyyy - dd/mm/yyyy",
-    "removeItem": "Bỏ {item}"
+    "removeItem": "Bỏ {item}",
+    "cancel": "Huỷ",
+    "processing": "Đang xử lý…",
+    "loading": "Đang tải…",
+    "retry": "Thử lại",
+    "errorTitle": "Đã có lỗi xảy ra",
+    "errorDescription": "Không tải được nội dung này. Vui lòng thử lại sau ít phút.",
+    "errorDigest": "Không tải được nội dung này. Mã lỗi: {digest}",
+    "notFoundTitle": "Không tìm thấy trang",
+    "notFoundDescription": "Trang bạn tìm không tồn tại hoặc đã bị chuyển đi.",
+    "backHome": "Về trang chủ"
+  },
+  "role": {
+    "superAdmin": "Quản trị cấp cao",
+    "admin": "Quản trị viên",
+    "moderator": "Kiểm duyệt viên",
+    "seller": "Người bán",
+    "brand": "Thương hiệu",
+    "user": "Người dùng",
+    "shipper": "Người giao hàng"
   },
   "agGridTable": {
     "search": "Tìm kiếm",
     "refresh": "Làm mới",
-    "refreshed": "Đã làm mới dữ liệu",
-    "reset": "Reset",
+    "reset": "Đặt lại",
     "resetDone": "Đã đặt lại bộ lọc và cột",
     "columns": "Cột",
     "pinLeft": "Ghim trái",
@@ -24,12 +48,13 @@
     "pinRight": "Ghim phải",
     "exportCsv": "Xuất CSV",
     "exportSelected": "Xuất hàng đã chọn",
+    "exported": "Đã xuất {fileName}",
+    "defaultExportFileName": "du-lieu",
     "add": "Thêm mới",
     "selectedCount": "Đã chọn {count}",
-    "errorTitle": "Không tải được dữ liệu",
-    "retry": "Thử lại",
     "pagination": "Phân trang",
     "pageInfo": "{from}–{to} / {total}",
+    "pageOf": "{page}/{total}",
     "pageSize": "Số dòng mỗi trang",
     "firstPage": "Trang đầu",
     "lastPage": "Trang cuối",
@@ -38,8 +63,14 @@
     "goToPage": "Đến trang {page}"
   },
   "userManagement": {
+    "pageTitle": "Người dùng",
+    "pageDescription": "Tra cứu, khoá và mở khoá tài khoản người dùng trên sàn.",
     "searchLabel": "Tìm theo tên, email…",
     "addUser": "Thêm người dùng",
+    "exportFileName": "nguoi-dung",
+    "refreshing": "Đang làm mới danh sách…",
+    "refreshed": "Đã làm mới danh sách người dùng",
+    "refreshFailed": "Không làm mới được danh sách",
     "columnAvatar": "Ảnh đại diện",
     "columnName": "Họ tên",
     "columnEmail": "Email",
@@ -50,11 +81,7 @@
     "notUpdated": "Chưa cập nhật",
     "statusActive": "Hoạt động",
     "statusInactive": "Đã khoá",
-    "roleUser": "Người dùng",
-    "roleSeller": "Người bán",
-    "roleShipper": "Người giao hàng",
-    "roleAdmin": "Quản trị viên",
-    "roleSuperAdmin": "Quản trị cấp cao",
+    "rowActionAria": "{action} {target}",
     "view": "Xem",
     "edit": "Sửa",
     "lock": "Khoá",
@@ -63,13 +90,16 @@
     "unlockAccount": "Mở khoá tài khoản",
     "confirmLock": "Tài khoản {email} sẽ không đăng nhập được cho tới khi được mở khoá.",
     "confirmUnlock": "Tài khoản {email} sẽ đăng nhập lại được bình thường.",
-    "cancel": "Huỷ",
     "locked": "Đã khoá {email}",
     "unlocked": "Đã mở khoá {email}",
     "superAdminProtected": "Không thể khoá tài khoản quản trị cấp cao",
     "viewing": "Đang xem {email}",
     "editNotConnected": "Chưa kết nối API cập nhật người dùng.",
     "addNotConnected": "Chưa kết nối API tạo người dùng."
+  },
+  "dashboard": {
+    "pageTitle": "Bảng điều khiển",
+    "pageDescription": "Tổng quan hoạt động của sàn — widget sẽ được bổ sung theo spec."
   },
   "nav": {
     "brand": "TimmyHub",
@@ -80,12 +110,13 @@
     "breadcrumb": "Đường dẫn trang",
     "themeMode": "Chuyển chế độ sáng/tối",
     "account": "Tài khoản",
+    "accountComingSoon": "Trang tài khoản đang được xây dựng.",
     "notifications": "Thông báo",
     "noNotifications": "Chưa có thông báo nào",
-    "logOut": "Đăng xuất"
+    "logOut": "Đăng xuất",
+    "loggedOut": "Đã đăng xuất"
   },
   "theme": {
-    "trigger": "Menu",
     "triggerLabel": "Mở tuỳ chỉnh giao diện",
     "panelTitle": "Tuỳ chỉnh giao diện",
     "panelDescription": "Chọn style, màu sắc và font cho toàn bộ giao diện.",
@@ -97,10 +128,15 @@
     "font": "Font",
     "shuffle": "Shuffle",
     "reset": "Đặt lại mặc định",
-    "loading": "Đang tải giao diện đã lưu…",
-    "selected": "Đang chọn"
+    "loading": "Đang tải giao diện đã lưu…"
   },
   "home": {
+    "title": "Trang chủ",
+    "description": "Lối tắt tới các màn quản trị đã dựng trong bản demo.",
+    "goToDashboard": "Mở bảng điều khiển",
+    "goToUsers": "Quản lý người dùng",
+    "demoTitle": "Thử các ô nhập",
+    "demoDescription": "Các field label nổi dùng chung cho mọi form của sàn.",
     "demoInput": "Nhập tên của bạn",
     "demoCombobox": "Danh mục",
     "demoMultiSelect": "Thẻ",

@@ -1,8 +1,22 @@
-import type { ThemeConfig } from '@/schemas'
+import type { AccentColorId } from './accent-colors'
+import type { BaseColorId } from './base-colors'
+import type { ChartColorId } from './chart-colors'
+import type { FontId } from './fonts'
+import type { StyleId } from './styles'
 
 export const THEME_CONFIG_STORAGE_KEY = 'timmyhub-theme-config'
 
-export const DEFAULT_THEME_CONFIG: ThemeConfig = {
+// Kiểu khai báo từ các id cùng thư mục thay vì import `ThemeConfig` từ `@/schemas` — schema đã import `*_IDS` từ
+// `@/constants`, import ngược lại sẽ tạo vòng constants ↔ schemas. Store gán giá trị này vào `config: ThemeConfig`
+// nên lệch kiểu với schema vẫn bị typecheck bắt.
+export const DEFAULT_THEME_CONFIG: {
+    style: StyleId
+    baseColor: BaseColorId
+    accentColor: AccentColorId
+    chartColor: ChartColorId
+    headingFont: FontId
+    bodyFont: FontId
+} = {
     style: 'nova',
     baseColor: 'neutral',
     accentColor: 'nova',

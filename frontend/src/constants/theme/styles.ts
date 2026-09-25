@@ -6,6 +6,9 @@
 // `[data-style="…"]` trong `src/app/theme-presets.css`.
 import type { StylePreset } from '@/types'
 
+// Nút xem trước style trong ThemeCustomizer nhỏ hơn component thật nên bo góc thu theo tỉ lệ này.
+export const STYLE_PREVIEW_RADIUS_SCALE = 0.6
+
 export const STYLE_PRESETS = [
     { id: 'nova', label: 'Nova', radiusRem: 0.625 },
     { id: 'vega', label: 'Vega', radiusRem: 1 },
@@ -17,6 +20,7 @@ export const STYLE_PRESETS = [
     { id: 'rhea', label: 'Rhea', radiusRem: 1.125 },
 ] as const satisfies readonly StylePreset[]
 
-export const STYLE_IDS = STYLE_PRESETS.map((style) => style.id) as [string, ...string[]]
-
 export type StyleId = (typeof STYLE_PRESETS)[number]['id']
+
+// Tuple không rỗng giữ nguyên union literal để `z.enum` suy ra đúng `StyleId`, không nới thành `string`.
+export const STYLE_IDS = STYLE_PRESETS.map((style) => style.id) as [StyleId, ...StyleId[]]

@@ -1,6 +1,12 @@
 {
+  "metadata": {
+    "title": "TimmyHub",
+    "titleTemplate": "%s · TimmyHub",
+    "description": "TimmyHub e-commerce marketplace"
+  },
   "common": {
     "language": "Language",
+    "languageAria": "Language: {language}",
     "languageVi": "Vietnamese",
     "languageEn": "English",
     "showPassword": "Show password",
@@ -10,12 +16,30 @@
     "dateFormatHint": "dd/mm/yyyy",
     "selectDateRange": "Select date range",
     "dateRangeFormatHint": "dd/mm/yyyy - dd/mm/yyyy",
-    "removeItem": "Remove {item}"
+    "removeItem": "Remove {item}",
+    "cancel": "Cancel",
+    "processing": "Processing…",
+    "loading": "Loading…",
+    "retry": "Try again",
+    "errorTitle": "Something went wrong",
+    "errorDescription": "This content could not be loaded. Please try again in a few minutes.",
+    "errorDigest": "This content could not be loaded. Error code: {digest}",
+    "notFoundTitle": "Page not found",
+    "notFoundDescription": "The page you are looking for does not exist or has been moved.",
+    "backHome": "Back to home"
+  },
+  "role": {
+    "superAdmin": "Super admin",
+    "admin": "Admin",
+    "moderator": "Moderator",
+    "seller": "Seller",
+    "brand": "Brand",
+    "user": "User",
+    "shipper": "Shipper"
   },
   "agGridTable": {
     "search": "Search",
     "refresh": "Refresh",
-    "refreshed": "Data refreshed",
     "reset": "Reset",
     "resetDone": "Filters and columns reset",
     "columns": "Columns",
@@ -24,12 +48,13 @@
     "pinRight": "Pin right",
     "exportCsv": "Export CSV",
     "exportSelected": "Export selected",
+    "exported": "Exported {fileName}",
+    "defaultExportFileName": "data",
     "add": "Add new",
     "selectedCount": "{count} selected",
-    "errorTitle": "Could not load data",
-    "retry": "Try again",
     "pagination": "Pagination",
     "pageInfo": "{from}–{to} of {total}",
+    "pageOf": "{page}/{total}",
     "pageSize": "Rows per page",
     "firstPage": "First page",
     "lastPage": "Last page",
@@ -38,8 +63,14 @@
     "goToPage": "Go to page {page}"
   },
   "userManagement": {
+    "pageTitle": "Users",
+    "pageDescription": "Look up, lock and unlock marketplace user accounts.",
     "searchLabel": "Search by name, email…",
     "addUser": "Add user",
+    "exportFileName": "users",
+    "refreshing": "Refreshing the list…",
+    "refreshed": "User list refreshed",
+    "refreshFailed": "Could not refresh the list",
     "columnAvatar": "Avatar",
     "columnName": "Full name",
     "columnEmail": "Email",
@@ -50,11 +81,7 @@
     "notUpdated": "Not updated",
     "statusActive": "Active",
     "statusInactive": "Locked",
-    "roleUser": "User",
-    "roleSeller": "Seller",
-    "roleShipper": "Shipper",
-    "roleAdmin": "Admin",
-    "roleSuperAdmin": "Super admin",
+    "rowActionAria": "{action} {target}",
     "view": "View",
     "edit": "Edit",
     "lock": "Lock",
@@ -63,7 +90,6 @@
     "unlockAccount": "Unlock account",
     "confirmLock": "{email} will not be able to log in until the account is unlocked.",
     "confirmUnlock": "{email} will be able to log in again.",
-    "cancel": "Cancel",
     "locked": "Locked {email}",
     "unlocked": "Unlocked {email}",
     "superAdminProtected": "Super admin accounts cannot be locked",
@@ -71,8 +97,12 @@
     "editNotConnected": "User update API is not connected yet.",
     "addNotConnected": "User creation API is not connected yet."
   },
+  "dashboard": {
+    "pageTitle": "Dashboard",
+    "pageDescription": "Marketplace activity overview — widgets will be added per spec."
+  },
   "nav": {
-    "brand": "Timmy Hub",
+    "brand": "TimmyHub",
     "toggleSidebar": "Toggle sidebar",
     "home": "Home",
     "dashboard": "Dashboard",
@@ -80,12 +110,13 @@
     "breadcrumb": "Breadcrumb",
     "themeMode": "Toggle light/dark mode",
     "account": "Account",
+    "accountComingSoon": "The account page is under construction.",
     "notifications": "Notifications",
     "noNotifications": "No notifications yet",
-    "logOut": "Log out"
+    "logOut": "Log out",
+    "loggedOut": "Logged out"
   },
   "theme": {
-    "trigger": "Menu",
     "triggerLabel": "Open theme customizer",
     "panelTitle": "Customize theme",
     "panelDescription": "Choose style, colors and fonts for the whole interface.",
@@ -97,10 +128,15 @@
     "font": "Font",
     "shuffle": "Shuffle",
     "reset": "Reset to default",
-    "loading": "Loading saved theme…",
-    "selected": "Selected"
+    "loading": "Loading saved theme…"
   },
   "home": {
+    "title": "Home",
+    "description": "Shortcuts to the admin screens built in this demo.",
+    "goToDashboard": "Open dashboard",
+    "goToUsers": "Manage users",
+    "demoTitle": "Try the input fields",
+    "demoDescription": "Floating-label fields shared by every form on the marketplace.",
     "demoInput": "Enter your name",
     "demoCombobox": "Category",
     "demoMultiSelect": "Tags",

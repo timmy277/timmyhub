@@ -1,6 +1,7 @@
 import { HouseIcon, LayoutGridIcon, UsersIcon } from 'lucide-react'
 
-import type { BreadcrumbEntry, NavGroup, NavUserInfo } from '@/types'
+import type { BreadcrumbEntry, NavGroup } from '@/types'
+
 import { ROUTE } from './route'
 
 // Tên cookie mà `components/ui/sidebar.tsx` ghi khi đóng/mở — NavLayout đọc lại ở server để render đúng trạng thái.
@@ -28,10 +29,4 @@ export const BREADCRUMB_ROUTES: Readonly<Record<string, readonly BreadcrumbEntry
         { titleKey: 'home', url: ROUTE.HOME },
         { titleKey: 'users', url: ROUTE.USERS },
     ],
-}
-
-// Dữ liệu giả cho menu user ở header, thay bằng user thật khi có auth ở FE.
-export const MOCK_NAV_USER: NavUserInfo = {
-    name: 'Timmy Hub',
-    email: 'demo@timmyhub.dev',
 }

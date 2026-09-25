@@ -30,6 +30,7 @@ export const CHART_COLOR_PALETTES = [
     },
 ] as const satisfies readonly ChartColorPalette[]
 
-export const CHART_COLOR_IDS = CHART_COLOR_PALETTES.map((palette) => palette.id) as [string, ...string[]]
-
 export type ChartColorId = (typeof CHART_COLOR_PALETTES)[number]['id']
+
+// Tuple không rỗng giữ nguyên union literal để `z.enum` suy ra đúng `ChartColorId`, không nới thành `string`.
+export const CHART_COLOR_IDS = CHART_COLOR_PALETTES.map((palette) => palette.id) as [ChartColorId, ...ChartColorId[]]

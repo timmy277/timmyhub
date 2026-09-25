@@ -161,6 +161,7 @@ export const BASE_COLOR_PALETTES = [
     },
 ] as const satisfies readonly BaseColorPalette[]
 
-export const BASE_COLOR_IDS = BASE_COLOR_PALETTES.map((palette) => palette.id) as [string, ...string[]]
-
 export type BaseColorId = (typeof BASE_COLOR_PALETTES)[number]['id']
+
+// Tuple không rỗng giữ nguyên union literal để `z.enum` suy ra đúng `BaseColorId`, không nới thành `string`.
+export const BASE_COLOR_IDS = BASE_COLOR_PALETTES.map((palette) => palette.id) as [BaseColorId, ...BaseColorId[]]

@@ -6,11 +6,12 @@ const eslintConfig = defineConfig([
     ...nextVitals,
     ...nextTs,
     // Quy ước thư mục FE (coding-standards §6): chỉ import qua barrel gốc (`@/hooks`, `@/stores`…), không
-    // import thẳng file con. `components/ui` do shadcn CLI sinh nên được miễn. `import()` động (next/dynamic
-    // cho thư viện nặng, luật 12) không bị luật này kiểm.
+    // import thẳng file con. Chỉ `components/ui` được miễn, vì mọi file trong đó do shadcn CLI sinh (ADR-0006).
+    // Component dự án tự viết (field `float-*`, `ag-grid-table`…) nằm ở `components/common` và vẫn bị kiểm.
+    // `import()` động (next/dynamic cho thư viện nặng, luật 12) không bị luật này kiểm.
     {
         files: ['src/**/*.{ts,tsx}'],
-        ignores: ['src/components/ui/**'],
+        ignores: ['src/components/ui/*.tsx', 'src/components/ui/index.ts'],
         rules: {
             'no-restricted-imports': [
                 'error',
@@ -26,6 +27,8 @@ const eslintConfig = defineConfig([
                                 '@/stores/*',
                                 '@/types/*',
                                 '@/utils/*',
+                                '@/config/*',
+                                '@/mocks/*',
                                 '@/features/*/*',
                             ],
                             message:

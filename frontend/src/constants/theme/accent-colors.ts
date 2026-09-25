@@ -17,6 +17,7 @@ export const ACCENT_COLORS = [
     { id: 'amber', label: 'Amber', swatch: '#d97706', foreground: '#0a0a0a' },
 ] as const satisfies readonly AccentColor[]
 
-export const ACCENT_COLOR_IDS = ACCENT_COLORS.map((color) => color.id) as [string, ...string[]]
-
 export type AccentColorId = (typeof ACCENT_COLORS)[number]['id']
+
+// Tuple không rỗng giữ nguyên union literal để `z.enum` suy ra đúng `AccentColorId`, không nới thành `string`.
+export const ACCENT_COLOR_IDS = ACCENT_COLORS.map((color) => color.id) as [AccentColorId, ...AccentColorId[]]

@@ -1,3 +1,6 @@
+export * from './badge'
 export * from './locale'
 export * from './nav'
+export * from './route'
 export * from './theme'
+export * from './user'

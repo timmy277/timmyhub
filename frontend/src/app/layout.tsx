@@ -1,15 +1,20 @@
 import type { Metadata } from 'next'
 import { ThemeProvider } from 'next-themes'
 import { NextIntlClientProvider } from 'next-intl'
-import { getLocale, getMessages } from 'next-intl/server'
+import { getLocale, getMessages, getTranslations } from 'next-intl/server'
 
 import { ThemeAttributesSync, Toaster, TooltipProvider } from '@/components'
 import { FONT_VARIABLE_CLASS_NAMES, THEME_INIT_SCRIPT } from '@/constants'
+
 import './globals.css'
 
-export const metadata: Metadata = {
-    title: 'TimmyHub',
-    description: 'Sàn thương mại điện tử TimmyHub',
+// Tiêu đề trang con ghép theo `title.template` ("Người dùng · TimmyHub"); trang không đặt title dùng `default`.
+export async function generateMetadata(): Promise<Metadata> {
+    const t = await getTranslations('metadata')
+    return {
+        title: { default: t('title'), template: t('titleTemplate') },
+        description: t('description'),
+    }
 }
 
 export default async function RootLayout({ children }: LayoutProps<'/'>) {
