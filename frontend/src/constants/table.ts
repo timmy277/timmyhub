@@ -9,7 +9,7 @@ export const AG_GRID_NO_EXPORT = { excludeFromExport: true } as const
 // Key mà AgGridTable đọc trong `colDef.context` khi lọc cột xuất CSV.
 export const AG_GRID_NO_EXPORT_KEY: keyof typeof AG_GRID_NO_EXPORT = 'excludeFromExport'
 
-export const AG_GRID_PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const
+export const AG_GRID_PAGE_SIZE_OPTIONS = [20, 50, 100] as const
 
 export const AG_GRID_DEFAULT_PAGE_SIZE = AG_GRID_PAGE_SIZE_OPTIONS[0]
 
