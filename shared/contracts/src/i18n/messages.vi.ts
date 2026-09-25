@@ -1,0 +1,68 @@
+import type { ApiErrorCode } from '../errors'
+
+// Bản gốc (vi) của catalog thông điệp API — docs/01-architecture/i18n-backend.md §2. Cấu trúc `namespace.key` lồng
+// hai tầng để FE nạp thẳng vào next-intl (namespace `api`). Tham số viết kiểu ICU `{name}`.
+// `error` phải phủ đủ mọi ApiErrorCode — thiếu mã là lỗi typecheck. Ngôn ngữ khác theo khuôn `ApiMessageCatalog`.
+export const API_MESSAGES_VI = {
+    error: {
+        BAD_REQUEST: 'Yêu cầu không hợp lệ.',
+        VALIDATION_FAILED: 'Dữ liệu gửi lên không hợp lệ.',
+        CONFLICT: 'Dữ liệu bị xung đột, vui lòng tải lại và thử lại.',
+        TOO_MANY_REQUESTS: 'Bạn thao tác quá nhanh, vui lòng thử lại sau.',
+        EMAIL_ALREADY_REGISTERED: 'Email đã được sử dụng.',
+        WEAK_PASSWORD: 'Mật khẩu quá phổ biến, vui lòng chọn mật khẩu khác.',
+        INVALID_CREDENTIALS: 'Email hoặc mật khẩu không đúng.',
+        ACCOUNT_LOCKED: 'Tài khoản đang bị tạm khoá, vui lòng thử lại sau.',
+        ACCOUNT_BANNED: 'Tài khoản đã bị khoá vĩnh viễn.',
+        REFRESH_TOKEN_REUSED: 'Phiên đăng nhập có dấu hiệu bị đánh cắp, vui lòng đăng nhập lại.',
+        REFRESH_TOKEN_EXPIRED: 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.',
+        REFRESH_TOKEN_INVALID: 'Refresh token không hợp lệ.',
+        UNAUTHORIZED: 'Chưa xác thực.',
+        FORBIDDEN: 'Không có quyền truy cập tài nguyên này.',
+        NOT_FOUND: 'Không tìm thấy tài nguyên.',
+        INTERNAL: 'Có lỗi xảy ra, vui lòng thử lại sau.',
+        ROLE_NOT_FOUND: 'Vai trò không tồn tại.',
+        ROLE_ALREADY_EXISTS: 'Vai trò đã tồn tại.',
+        ROLE_IS_SYSTEM: 'Không thể thay đổi vai trò hệ thống.',
+        ROLE_IN_USE: 'Vai trò đang được gán cho người dùng, phải chuyển hết trước khi xoá.',
+        PERMISSION_NOT_FOUND: 'Permission không tồn tại.',
+        PERMISSION_ALREADY_EXISTS: 'Permission đã tồn tại.',
+        CANNOT_ESCALATE_PRIVILEGE: 'Không thể cấp quyền vượt quá quyền của bạn.',
+    } satisfies Record<ApiErrorCode, string>,
+    auth: {
+        missingAccessToken: 'Thiếu access token.',
+        invalidAccessToken: 'Access token không hợp lệ hoặc đã hết hạn.',
+        forbiddenPermission: 'Không có quyền thực hiện thao tác này.',
+    },
+    identity: {
+        userNotFound: 'Người dùng không tồn tại.',
+    },
+    rbac: {
+        roleNotFoundByName: 'Vai trò "{roleName}" không tồn tại.',
+        roleAlreadyExists: 'Vai trò "{roleName}" đã tồn tại.',
+        superAdminNotEditable: 'Không thể sửa vai trò SUPER_ADMIN.',
+        superAdminNotConfigurable: 'SUPER_ADMIN bỏ qua mọi kiểm tra quyền, không cấu hình được.',
+        systemRoleNotDeletable: 'Không thể xoá vai trò hệ thống.',
+        permissionNotFoundByName: 'Permission "{permissionName}" không tồn tại.',
+        permissionsNotFound: 'Permission không tồn tại: {names}',
+        permissionAlreadyExists: 'Permission "{permissionName}" đã tồn tại.',
+        cannotGrantSuperAdmin: 'Chỉ SUPER_ADMIN mới được gán vai trò SUPER_ADMIN.',
+        cannotGrantUnownedPermission: 'Không thể cấp quyền mà bạn không có.',
+    },
+    validation: {
+        invalid: 'Giá trị không hợp lệ.',
+        required: 'Trường này không được để trống.',
+        emailInvalid: 'Email không hợp lệ.',
+        passwordRequired: 'Mật khẩu không được để trống.',
+        passwordMin: 'Mật khẩu phải có ít nhất {minimum} ký tự.',
+        passwordLetter: 'Mật khẩu phải có ít nhất một chữ cái.',
+        passwordDigit: 'Mật khẩu phải có ít nhất một số.',
+        firstNameRequired: 'Tên không được để trống.',
+        lastNameRequired: 'Họ không được để trống.',
+        roleNameRequired: 'Tên vai trò không được để trống.',
+        roleNameFormat: 'Tên vai trò viết HOA_GẠCH_DƯỚI, ví dụ SUPPORT_AGENT.',
+        displayNameRequired: 'Tên hiển thị không được để trống.',
+        permissionNameRequired: 'Tên permission không được để trống.',
+        permissionNameFormat: 'Định dạng phải là module:resource:action[:any].',
+    },
+} as const

@@ -1,36 +1,45 @@
 import { z } from 'zod'
 
+import { apiMessageKey } from './i18n/translate'
 import type { UserRole } from './roles'
 
+// Message của zod là khoá thông điệp (`api.*` phía FE), không phải câu — BE dịch ở ZodValidationPipe, FE dịch bằng
+// next-intl. Tham số (vd `{minimum}`) lấy từ chính issue của zod.
+
 // REQ-IDN-001: mật khẩu >= 8 ký tự, có chữ và số. Danh sách mật khẩu phổ biến kiểm ở service layer.
+export const PASSWORD_MIN_LENGTH = 8
+
 const PasswordSchema = z
     .string()
-    .min(8, 'Mật khẩu phải có ít nhất 8 ký tự')
-    .regex(/[a-zA-Z]/, 'Mật khẩu phải có ít nhất một chữ cái')
-    .regex(/[0-9]/, 'Mật khẩu phải có ít nhất một số')
+    .min(PASSWORD_MIN_LENGTH, apiMessageKey('validation.passwordMin'))
+    .regex(/[a-zA-Z]/, apiMessageKey('validation.passwordLetter'))
+    .regex(/[0-9]/, apiMessageKey('validation.passwordDigit'))
+
+const EmailSchema = z.string().email(apiMessageKey('validation.emailInvalid'))
+const RefreshTokenSchema = z.string().min(1, apiMessageKey('validation.required'))
 
 export const RegisterSchema = z.object({
-    email: z.string().email('Email không hợp lệ'),
+    email: EmailSchema,
     password: PasswordSchema,
-    firstName: z.string().min(1, 'Họ không được để trống'),
-    lastName: z.string().min(1, 'Tên không được để trống'),
+    firstName: z.string().min(1, apiMessageKey('validation.firstNameRequired')),
+    lastName: z.string().min(1, apiMessageKey('validation.lastNameRequired')),
 })
 export type RegisterInput = z.infer<typeof RegisterSchema>
 
 export const LoginSchema = z.object({
-    email: z.string().email('Email không hợp lệ'),
-    password: z.string().min(1, 'Mật khẩu không được để trống'),
+    email: EmailSchema,
+    password: z.string().min(1, apiMessageKey('validation.passwordRequired')),
     deviceName: z.string().optional(),
 })
 export type LoginInput = z.infer<typeof LoginSchema>
 
 export const RefreshSchema = z.object({
-    refreshToken: z.string().min(1, 'refreshToken không được để trống'),
+    refreshToken: RefreshTokenSchema,
 })
 export type RefreshInput = z.infer<typeof RefreshSchema>
 
 export const LogoutSchema = z.object({
-    refreshToken: z.string().min(1, 'refreshToken không được để trống'),
+    refreshToken: RefreshTokenSchema,
 })
 export type LogoutInput = z.infer<typeof LogoutSchema>
 

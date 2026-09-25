@@ -1,3 +1,6 @@
+import type { ApiMessageKey, ApiMessageParams } from './i18n/message-key'
+import { errorMessageKey } from './i18n/translate'
+
 // Danh mục mã lỗi dùng chung FE/BE — theo docs/01-architecture/api-conventions.md §3.3/§5.
 // Bắt đầu với các mã của domain identity-auth; các domain khác bổ sung dần, không tạo file catalog riêng.
 export const API_ERROR_CODES = {
@@ -29,16 +32,38 @@ export const API_ERROR_CODES = {
 
 export type ApiErrorCode = keyof typeof API_ERROR_CODES
 
-// message là chuỗi hiển thị mặc định (tiếng Việt) — tầng gọi có thể thay bằng bản dịch theo Accept-Language.
+// Một lỗi validation trong `error.details` của VALIDATION_FAILED. `message` do BE dịch theo locale của request; FE có
+// thể tự dịch lại từ `messageKey` + `messageParams` (namespace `api` của next-intl).
+export type ApiValidationIssue = {
+    path: (string | number)[]
+    messageKey: ApiMessageKey
+    messageParams?: ApiMessageParams | undefined
+    message?: string
+}
+
+export type ApiErrorOptions = {
+    // Mặc định `error.<code>`. Dùng khoá riêng khi cần câu cụ thể hơn câu chung của mã lỗi.
+    messageKey?: ApiMessageKey
+    messageParams?: ApiMessageParams | undefined
+    details?: unknown
+}
+
+// Không mang câu đã dịch: chỉ mang khoá + tham số, ApiExceptionFilter dịch theo locale của request
+// (docs/01-architecture/i18n-backend.md §2). `Error.message` là khoá — đủ để đọc log.
 export class ApiError extends Error {
     readonly code: ApiErrorCode
     readonly status: number
+    readonly messageKey: ApiMessageKey
+    readonly messageParams: ApiMessageParams | undefined
     readonly details?: unknown
 
-    constructor(code: ApiErrorCode, message: string, details?: unknown) {
-        super(message)
+    constructor(code: ApiErrorCode, options: ApiErrorOptions = {}) {
+        const messageKey = options.messageKey ?? errorMessageKey(code)
+        super(messageKey)
         this.code = code
         this.status = API_ERROR_CODES[code].status
-        this.details = details
+        this.messageKey = messageKey
+        this.messageParams = options.messageParams
+        this.details = options.details
     }
 }

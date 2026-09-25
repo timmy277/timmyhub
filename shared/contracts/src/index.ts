@@ -1,5 +1,7 @@
 export * from './errors'
 export * from './events'
+export * from './i18n/index'
+export * from './locale'
 export * from './money.schema'
 export * from './password-hashing'
 export * from './roles'
