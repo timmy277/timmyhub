@@ -2,7 +2,7 @@
 title: TimmyHub — Mục lục tài liệu
 status: approved
 owner: Tech Lead
-updated: 2026-09-19
+updated: 2026-09-25
 related: [docs/00-overview/product-overview.md, docs/07-plan/implementation-plan.md, docs/08-handoff/handoff.md, docs/01-architecture/adr/ADR-0015-modular-monolith.md]
 ---
 
@@ -92,6 +92,7 @@ Các tài liệu cắt ngang nhiều domain, không thuộc lối đọc nào �
 | [04-frontend/motion-and-effects.md](04-frontend/motion-and-effects.md) | Làm hiệu ứng, chuyển cảnh, parallax |
 | [06-quality/coding-standards.md](06-quality/coding-standards.md) | Trước PR đầu tiên |
 | [06-quality/performance.md](06-quality/performance.md) | Trang/endpoint chậm, hoặc trước khi phát hành màn hình nặng |
+| [06-quality/performance-campaign.md](06-quality/performance-campaign.md) | Chọn SSG/ISR/SSR/streaming/CSR cho route mới; làm các `TASK-PERF-*` |
 | [06-quality/quality-gates.md](06-quality/quality-gates.md) | Dựng CI cho a11y, Lighthouse, ngân sách gói |
 | [06-quality/git-hooks.md](06-quality/git-hooks.md) | Cài Husky, viết commit đúng chuẩn, thêm scope mới |
 | [01-architecture/media-video-pipeline.md](01-architecture/media-video-pipeline.md) | Làm upload, transcode, phát video (HLS, ffmpeg worker, tus) |
@@ -115,6 +116,18 @@ nằm ở [`CLAUDE.md`](../CLAUDE.md) ở gốc repo, Claude đọc tự động
 | `code-review` | Rà code trước khi merge: đua tranh, tiền, phạm vi dữ liệu, ranh giới module, bảo mật |
 | `perf-audit` | Truy nguyên nhân chậm: gói JS, Core Web Vitals, N+1, index, cache, hàng đợi |
 | `i18n-strings` | Trích chuỗi cứng, đặt tên khoá, ICU plural, thêm một ngôn ngữ mới |
+
+Ngoài ra có **14 skill bên thứ ba**, cài bằng `npx skills add` và khoá phiên bản trong `skills-lock.json`. Skill dự án
+ở trên luôn thắng khi hai bên nói khác nhau.
+
+| Skill | Dùng cho |
+|---|---|
+| `ui-ux-pro-max`, `frontend-design`, `web-design-guidelines`, `accessibility` | Thiết kế giao diện, rà soát UI/UX, a11y |
+| `vercel-react-best-practices`, `vercel-composition-patterns` | Hiệu năng React/Next, tách component, tránh prop drilling |
+| `next-cache-components-adoption`, `next-cache-components-optimizer` | Bật `cacheComponents`, `'use cache'`, PPR ở Next 16 |
+| `seo` | Metadata, dữ liệu có cấu trúc |
+| `nestjs-best-practices`, `nodejs-best-practices`, `nodejs-backend-patterns` | Cấu trúc module NestJS, pattern backend Node |
+| `supabase`, `supabase-postgres-best-practices` | Postgres: index, truy vấn, RLS (khi dùng Supabase) |
 
 ## Cấu trúc thư mục
 

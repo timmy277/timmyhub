@@ -3,8 +3,9 @@
 Sàn thương mại điện tử kiểu Shopee: trung tâm trao đổi **admin ↔ user ↔ seller**. Seller đăng bán, đăng bài post,
 video quảng cáo và quản lý doanh số.
 
-**Trạng thái hiện tại: chỉ có tài liệu.** `backend/`, `frontend/`, `shared/` còn rỗng. Không sinh code ứng dụng, không
-cài dependency, trừ khi được yêu cầu rõ ràng. Mọi thay đổi lúc này nằm trong `docs/`.
+**Trạng thái hiện tại: đang dựng khung.** `backend/` (NestJS modular monolith: identity, rbac, platform),
+`frontend/` (Next.js 16: auth, dashboard, quản trị user bản demo) và `shared/contracts` đã có code. Không cài
+dependency hay mở rộng phạm vi ngoài việc được giao.
 
 ---
 
@@ -29,6 +30,7 @@ cài dependency, trừ khi được yêu cầu rõ ràng. Mọi thay đổi lúc
 | Video, upload, transcode | `docs/01-architecture/media-video-pipeline.md` |
 | Quy ước code + tiền tệ | `docs/06-quality/coding-standards.md` |
 | Ngân sách hiệu năng | `docs/06-quality/performance.md` |
+| Chiến lược render SSG/ISR/SSR/CSR, `TASK-PERF-*` | `docs/06-quality/performance-campaign.md` |
 | Cổng chất lượng CI | `docs/06-quality/quality-gates.md` |
 | Chuyển động, hiệu ứng, parallax | `docs/04-frontend/motion-and-effects.md` |
 | SEO | `docs/04-frontend/seo.md` |
@@ -74,6 +76,21 @@ Mục lục đầy đủ và lối đọc theo vai trò: `docs/README.md`.
 19. Component giao diện lấy từ **shadcn/ui** (`shadcn add`). Cần một component shadcn chưa có thì cài bằng CLI;
     muốn **tự viết** component mới (kể cả bọc lại primitive shadcn) phải **hỏi ý chủ dự án trước**, không tự tạo.
 
+**Tổ chức mã** (chi tiết + ví dụ ❌/✅: `coding-standards.md` §3.2, §4.1–4.6, §6)
+
+20. Component/hook xếp nhóm theo thứ tự **State → Hooks → Derived → Handlers → Effects**; class backend theo
+    **Dependencies → Lifecycle → Queries → Commands → Event handlers → Private helpers**. Mỗi nhóm mở bằng
+    `// ===== <Tên nhóm> =====`.
+21. Import bốn nhóm cách dòng trống: ngoài → `@timmyhub/*` → `@/…` → tương đối. Chỉ import qua barrel.
+22. Đúng chỗ: hằng số `constants/`, schema `schemas/`, hàm thuần `utils/`, cột AG Grid `config/columns/`, URL API
+    `constants/api-route.ts`, dữ liệu giả `mocks/`, SVG path `components/icons/icon-path.tsx`. Không khai báo trong
+    file component.
+23. Tập giá trị hữu hạn dùng **const object + type suy ra** (`UserRole.SUPER_ADMIN`), không chuỗi trần, không
+    `enum` TypeScript. Type dùng chung FE/BE nằm ở `@timmyhub/contracts`, cả hai phía import từ đó.
+24. Ưu tiên shadcn/component dự án hơn thẻ HTML tương tác trần. Ô tìm kiếm qua `useDebouncedValue`. Thao tác ghi có
+    toast; hành động nhạy cảm có `AlertDialog`. Skeleton dùng `Skeleton` của shadcn. Responsive từ 360 px.
+25. Zustand luôn đọc qua selector (`useStore((s) => s.x)` hoặc `useShallow`), không lấy cả store.
+
 ## 4. Quy ước tài liệu
 
 - Front-matter YAML: `title`, `status`, `owner`, `updated`, `related`.
@@ -100,9 +117,22 @@ Mục lục đầy đủ và lối đọc theo vai trò: `docs/README.md`.
 | `spec-domain` | Viết spec domain EARS |
 | `docs-audit` | Kiểm tra toàn vẹn bộ docs |
 
+Skill bên thứ ba (tham khảo khi cần, skill dự án thắng khi mâu thuẫn): `ui-ux-pro-max`, `frontend-design`,
+`web-design-guidelines`, `accessibility`, `vercel-react-best-practices`, `vercel-composition-patterns`,
+`next-cache-components-adoption`, `next-cache-components-optimizer`, `seo`, `nestjs-best-practices`,
+`nodejs-best-practices`, `nodejs-backend-patterns`, `supabase`, `supabase-postgres-best-practices`.
+
+MCP có sẵn: `chrome-devtools` (trace, Lighthouse, screenshot), `next-devtools` (lỗi, route, cache của dev server),
+`vercel`, `supabase`. Dùng khi việc cần đo đạc hoặc tra cứu thật, không đoán.
+
 ## 6. Cách làm việc mong đợi
 
 1. Đọc spec liên quan trước khi viết. Không có spec mà là tính năng mới → viết spec trước (`spec-domain`).
 2. Làm hết phạm vi được giao; phần nào bị chặn thì nói rõ, không âm thầm thu hẹp.
 3. Báo cáo trung thực: test đỏ thì nói đỏ kèm output.
 4. Không tự ý commit hoặc push khi chưa được yêu cầu.
+5. Xong mỗi thay đổi code thì **tự rà soát** theo §3 và `coding-standards.md`, rồi báo lại: prop drilling, cách
+   dùng zustand (có selector chưa), render thừa, chuỗi/số ma thuật, file đặt sai thư mục, chỗ vi phạm có sẵn từ
+   trước trong vùng vừa đụng. Luôn để mắt tới hiệu năng (`performance-campaign.md` §5).
+6. **Hỏi trước** khi: tạo component dùng chung mới, thêm cảnh báo/xác nhận cho hành động nhạy cảm (xoá, khoá, đặt
+   lại…), hoặc di chuyển file giữa các thư mục gốc.
