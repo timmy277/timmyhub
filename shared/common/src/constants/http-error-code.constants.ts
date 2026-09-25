@@ -21,5 +21,3 @@ export const FALLBACK_SERVER_ERROR_CODE: ApiErrorCode = 'INTERNAL'
 // Ngưỡng dưới của lớp 5xx. Là `number` (không dùng enum HttpStatus) để so với `exception.getStatus()` mà không
 // vướng @typescript-eslint/no-unsafe-enum-comparison.
 export const SERVER_ERROR_STATUS_MIN: number = HttpStatus.INTERNAL_SERVER_ERROR
-
-export const INTERNAL_ERROR_MESSAGE = 'Có lỗi xảy ra, vui lòng thử lại sau.'
