@@ -5,7 +5,8 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { EyeIcon, EyeOffIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
-import { cn } from 'cn'
+import { Button } from '@/components/ui'
+import { cn } from '@/utils'
 
 export const floatInputVariants = cva(
     'peer block w-full appearance-none text-foreground outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50',
@@ -77,13 +78,21 @@ export function FloatInput({
     ref,
     ...props
 }: FloatInputProps) {
-    const t = useTranslations('common')
+    // ===== State =====
     const [showPassword, setShowPassword] = useState(false)
+
+    // ===== Hooks =====
+    const t = useTranslations('common')
     const generatedId = useId()
+
+    // ===== Derived =====
     const inputId = id ?? generatedId
     const descriptionId = `${inputId}-description`
     const isPassword = type === 'password'
     const description = error ?? helperText
+
+    // ===== Handlers =====
+    const handleTogglePassword = () => setShowPassword((prev) => !prev)
 
     return (
         <div>
@@ -113,16 +122,21 @@ export function FloatInput({
                 </label>
 
                 {isPassword && (
-                    <button
-                        type="button"
-                        aria-label={t(showPassword ? 'hidePassword' : 'showPassword')}
-                        aria-pressed={showPassword}
-                        className="absolute top-1/2 right-2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
-                        onClick={() => setShowPassword((prev) => !prev)}
-                        disabled={disabled}
-                    >
-                        {showPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
-                    </button>
+                    // Vỏ định vị tách khỏi Button: `active:translate-y-px` của Button sẽ ghi đè `-translate-y-1/2`.
+                    <span className="absolute top-1/2 right-2 flex -translate-y-1/2">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            aria-label={t(showPassword ? 'hidePassword' : 'showPassword')}
+                            aria-pressed={showPassword}
+                            className="text-muted-foreground"
+                            onClick={handleTogglePassword}
+                            disabled={disabled}
+                        >
+                            {showPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
+                        </Button>
+                    </span>
                 )}
             </div>
 

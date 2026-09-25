@@ -12,18 +12,25 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui'
-import { LOCALES } from '@/constants'
+import { DEFAULT_LOCALE, LOCALE_LABEL_KEY, LOCALES } from '@/constants'
 import { useLocaleSwitch } from '@/hooks'
 import { isLocale } from '@/utils'
+
 import { LocaleFlag } from './locale-flag'
 
 // Icon cờ của ngôn ngữ hiện tại trên header, bấm mở menu chọn ngôn ngữ.
 export function LocaleSwitcher() {
+    // ===== Hooks =====
     const t = useTranslations('common')
     const { locale, isPending, switchLocale } = useLocaleSwitch()
-    const current = isLocale(locale) ? locale : LOCALES[0]
 
-    const labelOf = (code: (typeof LOCALES)[number]) => t(code === 'vi' ? 'languageVi' : 'languageEn')
+    // ===== Derived =====
+    const current = isLocale(locale) ? locale : DEFAULT_LOCALE
+
+    // ===== Handlers =====
+    const handleValueChange = (value: string) => {
+        if (isLocale(value)) switchLocale(value)
+    }
 
     return (
         <DropdownMenu>
@@ -32,7 +39,7 @@ export function LocaleSwitcher() {
                     variant="ghost"
                     size="icon"
                     disabled={isPending}
-                    aria-label={`${t('language')}: ${labelOf(current)}`}
+                    aria-label={t('languageAria', { language: t(LOCALE_LABEL_KEY[current]) })}
                 >
                     <LocaleFlag locale={current} />
                 </Button>
@@ -40,16 +47,11 @@ export function LocaleSwitcher() {
             <DropdownMenuContent className="min-w-44 rounded-lg" align="end" sideOffset={8}>
                 <DropdownMenuLabel>{t('language')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuRadioGroup
-                    value={current}
-                    onValueChange={(value) => {
-                        if (isLocale(value)) switchLocale(value)
-                    }}
-                >
+                <DropdownMenuRadioGroup value={current} onValueChange={handleValueChange}>
                     {LOCALES.map((code) => (
                         <DropdownMenuRadioItem key={code} value={code} disabled={isPending}>
                             <LocaleFlag locale={code} className="h-3.5" />
-                            {labelOf(code)}
+                            {t(LOCALE_LABEL_KEY[code])}
                         </DropdownMenuRadioItem>
                     ))}
                 </DropdownMenuRadioGroup>

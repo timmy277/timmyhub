@@ -1,10 +1,21 @@
 'use client'
 
-import { useState } from 'react'
-import { AG_GRID_LOCALE_EN, AG_GRID_LOCALE_VN } from '@ag-grid-community/locale'
+import { use, useState } from 'react'
 import {
-    AllCommunityModule,
+    CellStyleModule,
+    ClientSideRowModelModule,
+    ColumnApiModule,
+    CsvExportModule,
+    DateFilterModule,
+    EventApiModule,
+    LocaleModule,
     ModuleRegistry,
+    NumberFilterModule,
+    PaginationModule,
+    QuickFilterModule,
+    RowSelectionModule,
+    TextFilterModule,
+    ValidationModule,
     type ColDef,
     type ColGroupDef,
     type GetRowIdFunc,
@@ -12,46 +23,47 @@ import {
     type GridReadyEvent,
 } from 'ag-grid-community'
 import { AgGridReact, type AgGridReactProps } from 'ag-grid-react'
-import {
-    Columns3Icon,
-    FileDownIcon,
-    PlusIcon,
-    RefreshCwIcon,
-    RotateCcwIcon,
-    SearchIcon,
-    TriangleAlertIcon,
-} from 'lucide-react'
+import { Columns3Icon, FileDownIcon, PlusIcon, RefreshCwIcon, RotateCcwIcon, SearchIcon } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 
-import { Button } from '../button'
-import { FloatInput } from '../float-input'
-import { Popover, PopoverContent, PopoverTrigger } from '../popover'
+import { Button, Popover, PopoverContent, PopoverTrigger } from '@/components/ui'
+import { DEFAULT_COL_DEF } from '@/config'
+import {
+    AG_GRID_DEFAULT_PAGE_SIZE,
+    AG_GRID_NO_EXPORT_KEY,
+    AG_GRID_PAGE_SIZE_OPTIONS,
+    AG_GRID_TABLE_DEFAULT_HEIGHT,
+    SEARCH_DEBOUNCE_MS,
+} from '@/constants'
+import { useDebouncedValue } from '@/hooks'
 import type { Locale } from '@/types'
 
+import { ErrorState } from '../error-state'
+import { FloatInput } from '../float-input'
 import { AgGridPagination } from './ag-grid-pagination'
-import { ColumnManagement } from './column-management'
+import { loadGridLocaleText } from './ag-grid-locale'
 import { agGridTheme } from './ag-grid-theme'
-import { AG_GRID_TABLE_DEFAULT_HEIGHT, AG_GRID_NO_EXPORT } from './ag-grid-table-constants'
+import { ColumnManagement } from './column-management'
 
 // File này chỉ được nạp qua `next/dynamic` (ag-grid-table-lazy.tsx) nên gói AG Grid không lọt vào bundle chung — luật
-// cứng #12. Đăng ký cả gói Community để trang dùng AgGridTable bật thêm tính năng qua `gridProps` mà không thiếu module.
-ModuleRegistry.registerModules([AllCommunityModule])
-
-const GRID_LOCALE_TEXT: Record<Locale, Record<string, string>> = { vi: AG_GRID_LOCALE_VN, en: AG_GRID_LOCALE_EN }
-const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
-const EXCLUDE_KEY: keyof typeof AG_GRID_NO_EXPORT = 'excludeFromExport'
-
-const DEFAULT_COL_DEF: ColDef = {
-    flex: 1,
-    minWidth: 100,
-    filter: true,
-    sortable: true,
-    resizable: true,
-    // Căn giữa nội dung mọi ô theo cả hai chiều. Dùng inline style vì CSS của AG Grid không nằm trong layer nên
-    // utility Tailwind (trong `@layer utilities`) không đè được; cột nào cần căn khác thì tự đặt `cellStyle`.
-    cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' },
-}
+// cứng #12. Chỉ đăng ký module bảng thật sự dùng (PERF-008) thay vì `AllCommunityModule`; trang cần tính năng khác
+// (sửa ô, kéo thả hàng…) thì thêm module tương ứng vào đây. `ValidationModule` chỉ nạp ở dev để báo cấu hình sai.
+ModuleRegistry.registerModules([
+    ClientSideRowModelModule,
+    PaginationModule,
+    QuickFilterModule,
+    TextFilterModule,
+    NumberFilterModule,
+    DateFilterModule,
+    CsvExportModule,
+    RowSelectionModule,
+    CellStyleModule,
+    ColumnApiModule,
+    EventApiModule,
+    LocaleModule,
+    ...(process.env.NODE_ENV === 'production' ? [] : [ValidationModule]),
+])
 
 export interface AgGridTableProps<TData> {
     rowData: TData[] | null | undefined
@@ -60,10 +72,12 @@ export interface AgGridTableProps<TData> {
     loading?: boolean
     // Có `error` thì thay lưới bằng khối báo lỗi kèm nút thử lại (`onRefresh`).
     error?: string
+    // Trang tự báo toast kết quả làm mới (thường qua `toast.promise`) — bảng không giả định thành công.
     onRefresh?: () => void
     onAdd?: () => void
     addLabel?: string
     searchLabel?: string
+    // Tên file CSV không kèm đuôi. Mặc định `agGridTable.defaultExportFileName`.
     exportFileName?: string
     pagination?: boolean
     pageSize?: number
@@ -78,6 +92,9 @@ export interface AgGridTableProps<TData> {
 // Trang chỉ cần truyền dữ liệu và cột; nút nào có callback (`onRefresh`, `onAdd`) mới hiện:
 //     <AgGridTable<User> rowData={users} columnDefs={columns} getRowId={(p) => p.data.id} onRefresh={refetch} />
 // Cột không muốn xuất CSV (avatar, thao tác) gắn `context: AG_GRID_NO_EXPORT`.
+// 7 trạng thái: mặc định · đang tải (skeleton của `next/dynamic` rồi overlay `loading` của lưới) · rỗng (overlay "không
+// có dữ liệu" của AG Grid) · lỗi (`error` → ErrorState) · không có quyền (trang không render bảng / không truyền
+// `onAdd`) · vô hiệu hoá (nút khoá khi chưa có `gridApi` hoặc đang tải) · thành công (toast sau reset/xuất CSV).
 export function AgGridTable<TData>({
     rowData,
     columnDefs,
@@ -88,24 +105,30 @@ export function AgGridTable<TData>({
     onAdd,
     addLabel,
     searchLabel,
-    exportFileName = 'export',
+    exportFileName,
     pagination = true,
-    pageSize = 10,
+    pageSize = AG_GRID_DEFAULT_PAGE_SIZE,
     height = AG_GRID_TABLE_DEFAULT_HEIGHT,
     onGridReady,
     gridProps,
 }: AgGridTableProps<TData>) {
-    const t = useTranslations('agGridTable')
-    const locale = useLocale() as Locale
+    // ===== State =====
     const [gridApi, setGridApi] = useState<GridApi<TData> | null>(null)
     const [quickFilterText, setQuickFilterText] = useState('')
     const [selectedCount, setSelectedCount] = useState(0)
 
-    const handleRefresh = () => {
-        onRefresh?.()
-        toast.success(t('refreshed'))
-    }
+    // ===== Hooks =====
+    const t = useTranslations('agGridTable')
+    const locale = useLocale() as Locale
+    // Suspend tới khi bản dịch lưới tải xong — nằm trong ranh giới `loading` của `next/dynamic`.
+    const localeText = use(loadGridLocaleText(locale))
+    const debouncedQuickFilter = useDebouncedValue(quickFilterText, SEARCH_DEBOUNCE_MS)
 
+    // ===== Derived =====
+    const hasSelection = selectedCount > 0
+    const fileName = `${exportFileName ?? t('defaultExportFileName')}.csv`
+
+    // ===== Handlers =====
     const handleReset = () => {
         if (!gridApi) return
         setQuickFilterText('')
@@ -118,9 +141,15 @@ export function AgGridTable<TData>({
         if (!gridApi) return
         const columnKeys = gridApi
             .getAllDisplayedColumns()
-            .filter((column) => !column.getColDef().context?.[EXCLUDE_KEY])
+            .filter((column) => !column.getColDef().context?.[AG_GRID_NO_EXPORT_KEY])
         // Đang chọn hàng thì chỉ xuất các hàng đã chọn, không thì xuất toàn bộ hàng sau khi lọc.
-        gridApi.exportDataAsCsv({ fileName: `${exportFileName}.csv`, columnKeys, onlySelected: selectedCount > 0 })
+        gridApi.exportDataAsCsv({ fileName, columnKeys, onlySelected: hasSelection })
+        toast.success(t('exported', { fileName }))
+    }
+
+    const handleGridReady = (event: GridReadyEvent<TData>) => {
+        setGridApi(event.api)
+        onGridReady?.(event)
     }
 
     return (
@@ -138,14 +167,17 @@ export function AgGridTable<TData>({
                     />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    {selectedCount > 0 && (
+                    {hasSelection && (
                         <span className="me-1 text-sm text-muted-foreground" aria-live="polite">
                             {t('selectedCount', { count: selectedCount })}
                         </span>
                     )}
                     {onRefresh && (
-                        <Button variant="outline" onClick={handleRefresh} disabled={loading}>
-                            <RefreshCwIcon data-icon="inline-start" className={loading ? 'animate-spin' : undefined} />
+                        <Button variant="outline" onClick={onRefresh} disabled={loading}>
+                            <RefreshCwIcon
+                                data-icon="inline-start"
+                                className={loading ? 'animate-spin motion-reduce:animate-none' : undefined}
+                            />
                             {t('refresh')}
                         </Button>
                     )}
@@ -160,13 +192,13 @@ export function AgGridTable<TData>({
                                 {t('columns')}
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent align="end" className="w-80">
+                        <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)]">
                             {gridApi && <ColumnManagement api={gridApi} />}
                         </PopoverContent>
                     </Popover>
                     <Button variant="outline" onClick={handleExport} disabled={!gridApi || Boolean(error)}>
                         <FileDownIcon data-icon="inline-start" />
-                        {selectedCount > 0 ? t('exportSelected') : t('exportCsv')}
+                        {hasSelection ? t('exportSelected') : t('exportCsv')}
                     </Button>
                     {onAdd && (
                         <Button onClick={onAdd}>
@@ -178,22 +210,8 @@ export function AgGridTable<TData>({
             </div>
 
             {error ? (
-                <div
-                    role="alert"
-                    style={{ height }}
-                    className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-destructive/40 bg-destructive/5 p-6 text-center"
-                >
-                    <TriangleAlertIcon className="size-8 text-destructive" aria-hidden />
-                    <div>
-                        <p className="font-medium">{t('errorTitle')}</p>
-                        <p className="text-sm text-muted-foreground">{error}</p>
-                    </div>
-                    {onRefresh && (
-                        <Button variant="outline" onClick={onRefresh}>
-                            <RefreshCwIcon data-icon="inline-start" />
-                            {t('retry')}
-                        </Button>
-                    )}
+                <div style={{ height }} className="flex">
+                    <ErrorState description={error} onRetry={onRefresh} className="flex-1" />
                 </div>
             ) : (
                 <div
@@ -205,13 +223,13 @@ export function AgGridTable<TData>({
                         // AG Grid chỉ đọc `localeText` lúc khởi tạo — đổi ngôn ngữ thì dựng lại lưới.
                         key={locale}
                         theme={agGridTheme}
-                        localeText={GRID_LOCALE_TEXT[locale]}
+                        localeText={localeText}
                         rowData={rowData}
                         columnDefs={columnDefs}
                         defaultColDef={DEFAULT_COL_DEF}
                         getRowId={getRowId}
                         loading={loading}
-                        quickFilterText={quickFilterText}
+                        quickFilterText={debouncedQuickFilter}
                         pagination={pagination}
                         paginationPageSize={pageSize}
                         // Ẩn panel mặc định, dùng thanh ô số `AgGridPagination` bên dưới.
@@ -220,17 +238,14 @@ export function AgGridTable<TData>({
                         selectionColumnDef={{ pinned: 'left' }}
                         animateRows
                         {...gridProps}
-                        onGridReady={(event) => {
-                            setGridApi(event.api)
-                            onGridReady?.(event)
-                        }}
+                        onGridReady={handleGridReady}
                         onSelectionChanged={(event) => setSelectedCount(event.api.getSelectedRows().length)}
                     />
                 </div>
             )}
 
             {pagination && !error && gridApi && !gridApi.isDestroyed() && (
-                <AgGridPagination api={gridApi} pageSizeOptions={PAGE_SIZE_OPTIONS} disabled={loading} />
+                <AgGridPagination api={gridApi} pageSizeOptions={AG_GRID_PAGE_SIZE_OPTIONS} disabled={loading} />
             )}
         </div>
     )

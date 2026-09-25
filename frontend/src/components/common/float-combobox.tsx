@@ -2,10 +2,11 @@
 
 import { useId } from 'react'
 import { Combobox as ComboboxPrimitive } from '@base-ui/react'
-import { cn } from 'cn'
 import { useTranslations } from 'next-intl'
 
-import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxItem, ComboboxList, ComboboxTrigger } from './combobox'
+import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxItem, ComboboxList, ComboboxTrigger } from '@/components/ui'
+import { cn } from '@/utils'
+
 import { FLOAT_LABEL_CLASS, LABEL_CUTOUT_CLASS, floatInputVariants } from './float-input'
 
 // Shape `{ value, label }` là quy ước của Base UI: nó tự lấy `label` để hiện và `value` để submit form.
@@ -69,11 +70,17 @@ export function FloatCombobox({
     className,
     labelClassName,
 }: FloatComboboxProps) {
+    // ===== Hooks =====
     const t = useTranslations('common')
     const generatedId = useId()
+
+    // ===== Derived =====
     const inputId = id ?? generatedId
     const descriptionId = `${inputId}-description`
     const hasDescription = Boolean(error ?? helperText)
+
+    // ===== Handlers =====
+    const handleValueChange = (option: FloatOption | null) => onValueChange?.(option?.value ?? null)
 
     return (
         <div className={className}>
@@ -83,7 +90,7 @@ export function FloatCombobox({
                 disabled={disabled}
                 value={value === undefined ? undefined : findOption(options, value)}
                 defaultValue={defaultValue === undefined ? undefined : findOption(options, defaultValue)}
-                onValueChange={(option) => onValueChange?.(option?.value ?? null)}
+                onValueChange={handleValueChange}
             >
                 <div className="relative">
                     <ComboboxPrimitive.Input

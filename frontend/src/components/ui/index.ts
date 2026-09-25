@@ -1,7 +1,7 @@
-// Barrel export cho primitive shadcn/ui nguyên bản (ADR-0006 — không sửa tay các file do CLI sinh), các
-// field `float-*` và bảng `ag-grid-table` do dự án tự viết, dựng trên primitive ở đây. File này KHÔNG do `shadcn add` tự sinh/cập
-// nhật — mỗi lần thêm component mới bằng CLI phải tự thêm một dòng export tương ứng ở đây.
-export * from './ag-grid-table'
+// Barrel export cho primitive shadcn/ui nguyên bản (ADR-0006 — không sửa tay các file do CLI sinh). Component dự án tự
+// viết dựng trên các primitive này (field `float-*`, `ag-grid-table`, `ConfirmDialog`…) nằm ở `components/common/`.
+// File này KHÔNG do `shadcn add` tự sinh/cập nhật — mỗi lần thêm component mới bằng CLI phải tự thêm một dòng export
+// tương ứng ở đây.
 export * from './alert-dialog'
 export * from './avatar'
 export * from './badge'
@@ -13,11 +13,6 @@ export * from './collapsible'
 export * from './combobox'
 export * from './dialog'
 export * from './dropdown-menu'
-export * from './float-combobox'
-export * from './float-date-picker'
-export * from './float-date-range-picker'
-export * from './float-input'
-export * from './float-multi-select'
 export * from './input'
 export * from './input-group'
 export * from './label'

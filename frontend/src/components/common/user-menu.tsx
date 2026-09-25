@@ -1,12 +1,12 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useRouter } from 'next/navigation'
 import { BadgeCheckIcon, LogOutIcon } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import { toast } from 'sonner'
 
 import {
-    Avatar,
-    AvatarFallback,
-    AvatarImage,
+    Button,
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuGroup,
@@ -15,35 +15,41 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui'
-import { MOCK_NAV_USER } from '@/constants'
-import { getInitials } from '@/utils'
+import { ROUTE } from '@/constants'
+import { MOCK_NAV_USER } from '@/mocks'
 
+import { UserAvatar } from './user-avatar'
+
+// Menu tài khoản trên header. Chưa có auth ở FE: đăng xuất chỉ điều hướng về trang đăng nhập, trang tài khoản chưa
+// dựng nên báo "sắp ra mắt" thay vì link tới 404.
 export function UserMenu() {
+    // ===== Hooks =====
     const t = useTranslations('nav')
+    const router = useRouter()
+
+    // ===== Derived =====
     const user = MOCK_NAV_USER
-    const initials = getInitials(user.name)
+
+    // ===== Handlers =====
+    const handleAccount = () => toast.info(t('accountComingSoon'))
+
+    const handleLogOut = () => {
+        // TODO(auth): gọi `API_ROUTE.AUTH.LOGOUT` và xoá phiên trước khi điều hướng.
+        router.push(ROUTE.LOGIN)
+        toast.success(t('loggedOut'))
+    }
 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <button
-                    type="button"
-                    aria-label={t('account')}
-                    className="flex items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                    <Avatar className="size-8">
-                        {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
-                        <AvatarFallback>{initials}</AvatarFallback>
-                    </Avatar>
-                </button>
+                <Button variant="ghost" size="icon" aria-label={t('account')} className="rounded-full">
+                    <UserAvatar name={user.name} imageUrl={user.avatar} />
+                </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="min-w-56 rounded-lg" align="end" sideOffset={8}>
                 <DropdownMenuLabel className="p-0 font-normal">
                     <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                        <Avatar className="size-8 rounded-lg">
-                            {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
-                            <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
-                        </Avatar>
+                        <UserAvatar name={user.name} imageUrl={user.avatar} />
                         <div className="grid flex-1 leading-tight">
                             <span className="truncate font-medium">{user.name}</span>
                             <span className="truncate text-xs text-muted-foreground">{user.email}</span>
@@ -52,13 +58,13 @@ export function UserMenu() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onSelect={handleAccount}>
                         <BadgeCheckIcon aria-hidden />
                         {t('account')}
                     </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleLogOut}>
                     <LogOutIcon aria-hidden />
                     {t('logOut')}
                 </DropdownMenuItem>

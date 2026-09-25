@@ -1,39 +1,16 @@
 'use client'
 
-import { useId, useState } from 'react'
-import { format as formatDate, isValid, parse } from 'date-fns'
-import { enUS, vi, type Locale as DateFnsLocale } from 'date-fns/locale'
+import { useId, useState, type ChangeEvent, type KeyboardEvent } from 'react'
 import { CalendarIcon } from 'lucide-react'
-import { cn } from 'cn'
 import { useLocale, useTranslations } from 'next-intl'
 
+import { Button, Calendar, Popover, PopoverContent, PopoverTrigger } from '@/components/ui'
+import { CALENDAR_LOCALES } from '@/constants'
 import type { Locale } from '@/types'
+import { cn, formatDisplayDate, formatSubmitDate, parseDisplayDate } from '@/utils'
 
-import { Button } from './button'
-import { Calendar } from './calendar'
 import { FloatFieldDescription } from './float-combobox'
 import { FLOAT_LABEL_CLASS, LABEL_CUTOUT_CLASS, floatInputVariants } from './float-input'
-import { Popover, PopoverContent, PopoverTrigger } from './popover'
-
-// Các hằng/hàm dưới đây export để FloatDateRangePicker dùng chung — hai field phải hiển thị và đọc ngày giống hệt nhau.
-export const CALENDAR_LOCALES: Record<Locale, DateFnsLocale> = { vi, en: enUS }
-
-// Hiển thị cố định ngày/tháng/năm bằng số ở mọi ngôn ngữ — cùng một định dạng thì gõ tay mới đọc ngược lại được.
-export const DATE_DISPLAY_FORMAT = 'dd/MM/yyyy'
-// Định dạng gửi lên backend qua input ẩn — không phụ thuộc ngôn ngữ.
-export const DATE_SUBMIT_FORMAT = 'yyyy-MM-dd'
-// Chấp nhận gõ thiếu số 0 (`1/6/2026`), nhưng năm phải đủ 4 chữ số — tránh `1/6/2` thành năm 0002 khi đang gõ dở.
-const TYPED_DATE_PATTERN = /^\d{1,2}\/\d{1,2}\/\d{4}$/
-
-export function formatDisplayDate(date: Date | null | undefined) {
-    return date ? formatDate(date, DATE_DISPLAY_FORMAT) : ''
-}
-
-export function parseDisplayDate(text: string) {
-    if (!TYPED_DATE_PATTERN.test(text)) return null
-    const parsed = parse(text, 'd/M/yyyy', new Date())
-    return isValid(parsed) ? parsed : null
-}
 
 export interface FloatDatePickerProps {
     label: string
@@ -66,38 +43,74 @@ export function FloatDatePicker({
     className,
     labelClassName,
 }: FloatDatePickerProps) {
+    // ===== State =====
+    const [uncontrolledDate, setUncontrolledDate] = useState<Date | null>(defaultValue ?? null)
+    const isControlled = value !== undefined
+    const date = isControlled ? value : uncontrolledDate
+    const [open, setOpen] = useState(false)
+    const [month, setMonth] = useState<Date | undefined>(date ?? undefined)
+    const [text, setText] = useState(() => formatDisplayDate(date))
+    const [syncedDate, setSyncedDate] = useState(date)
+
+    // ===== Hooks =====
     const t = useTranslations('common')
     const locale = useLocale() as Locale
     const generatedId = useId()
+
+    // ===== Derived =====
     const inputId = id ?? generatedId
     const descriptionId = `${inputId}-description`
     const hasDescription = Boolean(error ?? helperText)
 
-    const [uncontrolledDate, setUncontrolledDate] = useState<Date | null>(defaultValue ?? null)
-    const isControlled = value !== undefined
-    const date = isControlled ? value : uncontrolledDate
-
-    const [open, setOpen] = useState(false)
-    const [month, setMonth] = useState<Date | undefined>(date ?? undefined)
-    const [text, setText] = useState(() => formatDisplayDate(date))
-
     // Controlled value đổi từ bên ngoài (reset form…) → đồng bộ lại chữ trong ô, theo mẫu "điều chỉnh state khi render".
-    const [syncedDate, setSyncedDate] = useState(date)
     if (syncedDate?.getTime() !== date?.getTime()) {
         setSyncedDate(date)
         setText(formatDisplayDate(date))
         if (date) setMonth(date)
     }
 
+    // ===== Handlers =====
     const commit = (next: Date | null) => {
         setSyncedDate(next)
         if (!isControlled) setUncontrolledDate(next)
         onValueChange?.(next)
     }
 
+    const handleTextChange = (event: ChangeEvent<HTMLInputElement>) => {
+        const nextText = event.target.value
+        setText(nextText)
+        if (nextText.trim() === '') {
+            commit(null)
+            return
+        }
+        const parsed = parseDisplayDate(nextText.trim())
+        if (parsed) {
+            commit(parsed)
+            setMonth(parsed)
+        }
+    }
+
+    const handleBlur = () => setText(formatDisplayDate(date))
+
+    const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === 'ArrowDown') {
+            event.preventDefault()
+            setOpen(true)
+        }
+    }
+
+    const handleCalendarSelect = (selected: Date | undefined) => {
+        const next = selected ?? null
+        commit(next)
+        setText(formatDisplayDate(next))
+        setOpen(false)
+    }
+
     return (
         <div className={className}>
             <div className="relative">
+                {/* `<input>` trần có chủ đích: cùng lớp `floatInputVariants` với FloatInput, nhưng cần điều khiển
+                    chữ/parse riêng nên không bọc lại FloatInput. */}
                 <input
                     id={inputId}
                     value={text}
@@ -111,60 +124,46 @@ export function FloatDatePicker({
                         floatInputVariants({ variant: 'outlined', size: 'default' }),
                         'pr-11 placeholder:text-transparent focus:placeholder:text-muted-foreground',
                     )}
-                    onChange={(event) => {
-                        const nextText = event.target.value
-                        setText(nextText)
-                        if (nextText.trim() === '') {
-                            commit(null)
-                            return
-                        }
-                        const parsed = parseDisplayDate(nextText.trim())
-                        if (parsed) {
-                            commit(parsed)
-                            setMonth(parsed)
-                        }
-                    }}
-                    onBlur={() => setText(formatDisplayDate(date))}
-                    onKeyDown={(event) => {
-                        if (event.key === 'ArrowDown') {
-                            event.preventDefault()
-                            setOpen(true)
-                        }
-                    }}
+                    onChange={handleTextChange}
+                    onBlur={handleBlur}
+                    onKeyDown={handleKeyDown}
                 />
                 <label htmlFor={inputId} className={cn(FLOAT_LABEL_CLASS, LABEL_CUTOUT_CLASS, labelClassName)}>
                     {label}
                 </label>
-                <Popover open={open} onOpenChange={setOpen}>
-                    <PopoverTrigger asChild>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            disabled={disabled}
-                            aria-label={t('selectDate')}
-                            className="absolute top-1/2 right-2.5 -translate-y-1/2 text-muted-foreground"
+                {/* Định vị bằng span bọc ngoài — Button có `translate-y-px` khi nhấn, sẽ đè `-translate-y-1/2`. */}
+                <span className="absolute top-1/2 right-2.5 flex -translate-y-1/2">
+                    <Popover open={open} onOpenChange={setOpen}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                disabled={disabled}
+                                aria-label={t('selectDate')}
+                                className="text-muted-foreground"
+                            >
+                                <CalendarIcon className="size-4" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                            className="w-auto overflow-hidden p-0"
+                            align="end"
+                            alignOffset={-8}
+                            sideOffset={10}
                         >
-                            <CalendarIcon className="size-4" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto overflow-hidden p-0" align="end" alignOffset={-8} sideOffset={10}>
-                        <Calendar
-                            mode="single"
-                            selected={date ?? undefined}
-                            month={month}
-                            onMonthChange={setMonth}
-                            locale={CALENDAR_LOCALES[locale]}
-                            onSelect={(selected) => {
-                                const next = selected ?? null
-                                commit(next)
-                                setText(formatDisplayDate(next))
-                                setOpen(false)
-                            }}
-                        />
-                    </PopoverContent>
-                </Popover>
-                {name && <input type="hidden" name={name} value={date ? formatDate(date, DATE_SUBMIT_FORMAT) : ''} />}
+                            <Calendar
+                                mode="single"
+                                selected={date ?? undefined}
+                                month={month}
+                                onMonthChange={setMonth}
+                                locale={CALENDAR_LOCALES[locale]}
+                                onSelect={handleCalendarSelect}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                </span>
+                {name && <input type="hidden" name={name} value={formatSubmitDate(date)} />}
             </div>
             <FloatFieldDescription id={descriptionId} error={error} helperText={helperText} />
         </div>

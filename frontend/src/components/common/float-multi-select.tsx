@@ -2,12 +2,11 @@
 
 import { useId } from 'react'
 import { Combobox as ComboboxPrimitive } from '@base-ui/react'
-import { cn } from 'cn'
 import { XIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
-import { Button } from './button'
 import {
+    Button,
     Combobox,
     ComboboxChip,
     ComboboxChips,
@@ -18,7 +17,9 @@ import {
     ComboboxList,
     ComboboxValue,
     useComboboxAnchor,
-} from './combobox'
+} from '@/components/ui'
+import { cn } from '@/utils'
+
 import { FloatFieldDescription, type FloatOption } from './float-combobox'
 
 // Ô chips không có một input "rỗng/không rỗng" duy nhất để dùng `peer-placeholder-shown`, nên label nổi theo
@@ -64,12 +65,18 @@ export function FloatMultiSelect({
     className,
     labelClassName,
 }: FloatMultiSelectProps) {
+    // ===== Hooks =====
     const t = useTranslations('common')
     const anchor = useComboboxAnchor()
     const generatedId = useId()
+
+    // ===== Derived =====
     const inputId = id ?? generatedId
     const descriptionId = `${inputId}-description`
     const hasDescription = Boolean(error ?? helperText)
+
+    // ===== Handlers =====
+    const handleValueChange = (selected: FloatOption[]) => onValueChange?.(selected.map((option) => option.value))
 
     return (
         <div className={className}>
@@ -80,7 +87,7 @@ export function FloatMultiSelect({
                 disabled={disabled}
                 value={toOptions(options, value)}
                 defaultValue={toOptions(options, defaultValue)}
-                onValueChange={(selected) => onValueChange?.(selected.map((option) => option.value))}
+                onValueChange={handleValueChange}
             >
                 <ComboboxChips
                     ref={anchor}

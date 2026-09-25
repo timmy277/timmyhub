@@ -5,9 +5,7 @@ import type { ColumnPinnedType, GridApi } from 'ag-grid-community'
 import { ArrowLeftToLineIcon, ArrowRightToLineIcon, PinOffIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
-import { Button } from '../button'
-import { Checkbox } from '../checkbox'
-import { Label } from '../label'
+import { Button, Checkbox, Label } from '@/components/ui'
 
 interface ColumnSnapshot {
     id: string
