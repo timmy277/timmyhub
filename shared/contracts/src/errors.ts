@@ -1,7 +1,10 @@
 // Danh mục mã lỗi dùng chung FE/BE — theo docs/01-architecture/api-conventions.md §3.3/§5.
 // Bắt đầu với các mã của domain identity-auth; các domain khác bổ sung dần, không tạo file catalog riêng.
 export const API_ERROR_CODES = {
+    BAD_REQUEST: { status: 400 },
     VALIDATION_FAILED: { status: 422 },
+    CONFLICT: { status: 409 },
+    TOO_MANY_REQUESTS: { status: 429 },
     EMAIL_ALREADY_REGISTERED: { status: 409 },
     WEAK_PASSWORD: { status: 422 },
     INVALID_CREDENTIALS: { status: 401 },

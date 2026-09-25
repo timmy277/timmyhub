@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import type { UserRole } from './roles'
+
 // REQ-IDN-001: mật khẩu >= 8 ký tự, có chữ và số. Danh sách mật khẩu phổ biến kiểm ở service layer.
 const PasswordSchema = z
     .string()
@@ -41,6 +43,6 @@ export type AuthResult = AuthTokens & {
     user: {
         id: string
         email: string
-        roles: string[]
+        roles: UserRole[]
     }
 }
