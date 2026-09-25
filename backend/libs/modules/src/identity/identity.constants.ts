@@ -88,32 +88,10 @@ export const RBAC_ROUTE = {
     USER_EFFECTIVE_PERMISSIONS: `users/:${RBAC_ROUTE_PARAM.USER_ID}/effective-permissions`,
 } as const
 
-// ===== Thông điệp =====
+// ===== Lỗi cấu hình =====
 
-// Catalog thông điệp lỗi của identity (CLAUDE.md §1: chuỗi hiển thị không hardcode rải rác). Thông điệp có tham số là
-// hàm để vẫn giữ một chỗ khai báo duy nhất.
-export const IDENTITY_MESSAGE = {
-    WEAK_PASSWORD: 'Mật khẩu quá phổ biến, vui lòng chọn mật khẩu khác.',
-    EMAIL_ALREADY_REGISTERED: 'Email đã được sử dụng.',
-    INVALID_CREDENTIALS: 'Email hoặc mật khẩu không đúng.',
-    ACCOUNT_BANNED: 'Tài khoản đã bị khoá vĩnh viễn.',
-    ACCOUNT_LOCKED: 'Tài khoản đang bị tạm khoá, vui lòng thử lại sau.',
-    REFRESH_TOKEN_INVALID: 'Refresh token không hợp lệ.',
-    REFRESH_TOKEN_EXPIRED: 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.',
-    REFRESH_TOKEN_REUSED: 'Phiên đăng nhập có dấu hiệu bị đánh cắp, vui lòng đăng nhập lại.',
+// Thông điệp hiển thị cho người dùng nằm ở catalog `@timmyhub/contracts` (i18n/messages.*.ts), ném qua ApiError bằng
+// khoá. Ở đây chỉ còn lỗi cấu hình lúc khởi động — dành cho log vận hành, không tới tay người dùng.
+export const IDENTITY_CONFIG_ERROR = {
     MISSING_ACCESS_PRIVATE_KEY: 'Thiếu biến môi trường JWT_ACCESS_PRIVATE_KEY',
-    USER_NOT_FOUND: 'Người dùng không tồn tại.',
-    ROLE_NOT_FOUND: 'Vai trò không tồn tại.',
-    ROLE_NOT_FOUND_BY_NAME: (roleName: string) => `Vai trò "${roleName}" không tồn tại.`,
-    ROLE_ALREADY_EXISTS: (roleName: string) => `Vai trò "${roleName}" đã tồn tại.`,
-    SUPER_ADMIN_ROLE_NOT_EDITABLE: 'Không thể sửa vai trò SUPER_ADMIN.',
-    SUPER_ADMIN_ROLE_NOT_CONFIGURABLE: 'SUPER_ADMIN bỏ qua mọi kiểm tra quyền, không cấu hình được.',
-    SYSTEM_ROLE_NOT_DELETABLE: 'Không thể xoá vai trò hệ thống.',
-    ROLE_IN_USE: 'Vai trò đang được gán cho người dùng, phải chuyển hết trước khi xoá.',
-    PERMISSION_NOT_FOUND: 'Permission không tồn tại.',
-    PERMISSION_NOT_FOUND_BY_NAME: (permissionName: string) => `Permission "${permissionName}" không tồn tại.`,
-    PERMISSIONS_NOT_FOUND: (missing: readonly string[]) => `Permission không tồn tại: ${missing.join(', ')}`,
-    PERMISSION_ALREADY_EXISTS: (permissionName: string) => `Permission "${permissionName}" đã tồn tại.`,
-    CANNOT_GRANT_SUPER_ADMIN: 'Chỉ SUPER_ADMIN mới được gán vai trò SUPER_ADMIN.',
-    CANNOT_GRANT_UNOWNED_PERMISSION: 'Không thể cấp quyền mà bạn không có.',
 } as const

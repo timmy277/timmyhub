@@ -6,7 +6,6 @@ import type { Request } from 'express'
 import type { UserRole } from '@timmyhub/contracts'
 import { ApiError, isSuperAdmin } from '@timmyhub/contracts'
 
-import { AUTH_GUARD_MESSAGE } from '../auth.constants'
 import { ROLES_KEY } from '../decorators/index'
 
 // Layer 1 — kiểm tra thô trên User.roles. Chạy sau JwtAuthGuard nên request.user đã có.
@@ -28,7 +27,7 @@ export class RolesGuard implements CanActivate {
         if (!required || required.length === 0) return true
 
         const { user } = context.switchToHttp().getRequest<Request>()
-        if (!user) throw new ApiError('UNAUTHORIZED', AUTH_GUARD_MESSAGE.UNAUTHENTICATED)
+        if (!user) throw new ApiError('UNAUTHORIZED')
 
         if (isSuperAdmin(user.roles)) {
             this.logger.warn(
@@ -38,7 +37,7 @@ export class RolesGuard implements CanActivate {
         }
 
         const allowed = required.some((role) => user.roles.includes(role))
-        if (!allowed) throw new ApiError('FORBIDDEN', AUTH_GUARD_MESSAGE.FORBIDDEN_ROLE)
+        if (!allowed) throw new ApiError('FORBIDDEN')
         return true
     }
 }

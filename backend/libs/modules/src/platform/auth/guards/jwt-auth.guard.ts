@@ -6,9 +6,9 @@ import { JwtService } from '@nestjs/jwt'
 import type { Request } from 'express'
 
 import type { UserRole } from '@timmyhub/contracts'
-import { ApiError } from '@timmyhub/contracts'
+import { ApiError, apiMessageKey } from '@timmyhub/contracts'
 
-import { ACCESS_TOKEN_VERIFY_ALGORITHM, AUTH_GUARD_MESSAGE, BEARER_PREFIX } from '../auth.constants'
+import { ACCESS_TOKEN_VERIFY_ALGORITHM, AUTH_CONFIG_ERROR, BEARER_PREFIX } from '../auth.constants'
 import { IS_PUBLIC_KEY } from '../decorators/index'
 
 type AccessTokenPayload = { sub: string; email: string; roles: UserRole[] }
@@ -34,12 +34,12 @@ export class JwtAuthGuard implements CanActivate {
         const request = context.switchToHttp().getRequest<Request>()
         const token = this.extractBearerToken(request)
         if (!token) {
-            throw new ApiError('UNAUTHORIZED', AUTH_GUARD_MESSAGE.MISSING_ACCESS_TOKEN)
+            throw new ApiError('UNAUTHORIZED', { messageKey: apiMessageKey('auth.missingAccessToken') })
         }
 
         const publicKey = this.configService.get<string>('JWT_ACCESS_PUBLIC_KEY')
         if (!publicKey) {
-            throw new Error(AUTH_GUARD_MESSAGE.MISSING_ACCESS_PUBLIC_KEY)
+            throw new Error(AUTH_CONFIG_ERROR.MISSING_ACCESS_PUBLIC_KEY)
         }
 
         try {
@@ -50,7 +50,7 @@ export class JwtAuthGuard implements CanActivate {
             request.user = { id: payload.sub, email: payload.email, roles: payload.roles }
             return true
         } catch {
-            throw new ApiError('UNAUTHORIZED', AUTH_GUARD_MESSAGE.INVALID_ACCESS_TOKEN)
+            throw new ApiError('UNAUTHORIZED', { messageKey: apiMessageKey('auth.invalidAccessToken') })
         }
     }
 

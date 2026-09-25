@@ -21,8 +21,8 @@ import {
 import { CurrentUser, Permissions } from '@timmyhub/modules/platform/auth'
 import type { AuthUser } from '@timmyhub/modules/platform/auth'
 
-import { RBAC_ROUTE, RBAC_ROUTE_PARAM } from './identity.constants'
-import { RbacService } from './rbac/index'
+import { RBAC_ROUTE, RBAC_ROUTE_PARAM } from '../identity.constants'
+import { RbacService } from './rbac.service'
 
 // docs/03-specs/rbac-permission/design.md §3 — endpoint quản trị role/permission (layer 2, `identity` module).
 // Controller chỉ nhận/validate input và chuyển cho RbacService — mọi quyết định phân quyền nằm ở service.

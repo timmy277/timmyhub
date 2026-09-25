@@ -9,8 +9,7 @@ import { IdentityEventsListener } from './events/index'
 import { IdentityController } from './identity.controller'
 import { IdentityRepository } from './identity.repository'
 import { IdentityService } from './identity.service'
-import { PermissionCacheService, RbacRepository, RbacService } from './rbac/index'
-import { RbacController } from './rbac.controller'
+import { PermissionCacheService, RbacController, RbacRepository, RbacService } from './rbac/index'
 
 @Module({
     // JwtModule.register({}) rỗng: mỗi lần signAsync/verify truyền algorithm + key riêng (RS256, xem auth.service.ts).

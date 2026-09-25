@@ -4,9 +4,9 @@ import { Reflector } from '@nestjs/core'
 import type { Request } from 'express'
 
 import type { PermissionName } from '@timmyhub/contracts'
-import { ApiError, isSuperAdmin } from '@timmyhub/contracts'
+import { ApiError, apiMessageKey, isSuperAdmin } from '@timmyhub/contracts'
 
-import { AUTH_GUARD_MESSAGE, PERMISSION_RESOLVER } from '../auth.constants'
+import { PERMISSION_RESOLVER } from '../auth.constants'
 import { PERMISSIONS_KEY } from '../decorators/index'
 import type { PermissionResolver } from '../interfaces/index'
 
@@ -29,12 +29,12 @@ export class PermissionsGuard implements CanActivate {
         if (!required || required.length === 0) return true
 
         const { user } = context.switchToHttp().getRequest<Request>()
-        if (!user) throw new ApiError('UNAUTHORIZED', AUTH_GUARD_MESSAGE.UNAUTHENTICATED)
+        if (!user) throw new ApiError('UNAUTHORIZED')
         if (isSuperAdmin(user.roles)) return true
 
         const effective = await this.permissionResolver.getEffectivePermissions(user.id)
         const allowed = required.every((permission) => effective.has(permission))
-        if (!allowed) throw new ApiError('FORBIDDEN', AUTH_GUARD_MESSAGE.FORBIDDEN_PERMISSION)
+        if (!allowed) throw new ApiError('FORBIDDEN', { messageKey: apiMessageKey('auth.forbiddenPermission') })
         return true
     }
 }

@@ -15,8 +15,8 @@ import {
     BCRYPT_COST,
     DUMMY_HASH,
     FAILED_LOGIN_LOCK_THRESHOLD,
+    IDENTITY_CONFIG_ERROR,
     IDENTITY_EVENT,
-    IDENTITY_MESSAGE,
     LOCK_DURATION_MS,
     REFRESH_TOKEN_TTL_MS,
 } from './identity.constants'
@@ -38,12 +38,12 @@ export class AuthService {
     // REQ-IDN-001 / REQ-IDN-002
     async register(input: RegisterInput): Promise<{ userId: string; email: string }> {
         if (isCommonPassword(input.password)) {
-            throw new ApiError('WEAK_PASSWORD', IDENTITY_MESSAGE.WEAK_PASSWORD)
+            throw new ApiError('WEAK_PASSWORD')
         }
 
         const existing = await this.identityRepository.findUserByEmail(input.email)
         if (existing) {
-            throw new ApiError('EMAIL_ALREADY_REGISTERED', IDENTITY_MESSAGE.EMAIL_ALREADY_REGISTERED)
+            throw new ApiError('EMAIL_ALREADY_REGISTERED')
         }
 
         const passwordHash = await bcrypt.hash(input.password, BCRYPT_COST)
@@ -70,15 +70,15 @@ export class AuthService {
             if (user) {
                 await this.failLogin(user.id, user.failedLoginCount)
             }
-            throw new ApiError('INVALID_CREDENTIALS', IDENTITY_MESSAGE.INVALID_CREDENTIALS)
+            throw new ApiError('INVALID_CREDENTIALS')
         }
 
         if (user.isBanned) {
-            throw new ApiError('ACCOUNT_BANNED', IDENTITY_MESSAGE.ACCOUNT_BANNED)
+            throw new ApiError('ACCOUNT_BANNED')
         }
 
         if (user.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
-            throw new ApiError('ACCOUNT_LOCKED', IDENTITY_MESSAGE.ACCOUNT_LOCKED)
+            throw new ApiError('ACCOUNT_LOCKED')
         }
 
         await this.identityRepository.recordSuccessfulLogin(user.id, context.ip)
@@ -95,7 +95,7 @@ export class AuthService {
         const currentToken = await this.identityRepository.findRefreshTokenByHash(currentHash)
 
         if (!currentToken) {
-            throw new ApiError('REFRESH_TOKEN_INVALID', IDENTITY_MESSAGE.REFRESH_TOKEN_INVALID)
+            throw new ApiError('REFRESH_TOKEN_INVALID')
         }
 
         const rawNextToken = generateRawRefreshToken()
@@ -116,18 +116,18 @@ export class AuthService {
             if (wasRotatedBefore) {
                 // Token ROTATED bị dùng lại — dấu hiệu bị đánh cắp, thu hồi toàn bộ phiên (REQ-IDN-006).
                 await this.identityRepository.revokeAllUserRefreshTokens(currentToken.userId)
-                throw new ApiError('REFRESH_TOKEN_REUSED', IDENTITY_MESSAGE.REFRESH_TOKEN_REUSED)
+                throw new ApiError('REFRESH_TOKEN_REUSED')
             }
-            throw new ApiError('REFRESH_TOKEN_EXPIRED', IDENTITY_MESSAGE.REFRESH_TOKEN_EXPIRED)
+            throw new ApiError('REFRESH_TOKEN_EXPIRED')
         }
 
         if (currentToken.expiresAt.getTime() < Date.now()) {
-            throw new ApiError('REFRESH_TOKEN_EXPIRED', IDENTITY_MESSAGE.REFRESH_TOKEN_EXPIRED)
+            throw new ApiError('REFRESH_TOKEN_EXPIRED')
         }
 
         const user = await this.identityRepository.findUserById(currentToken.userId)
         if (!user) {
-            throw new ApiError('REFRESH_TOKEN_INVALID', IDENTITY_MESSAGE.REFRESH_TOKEN_INVALID)
+            throw new ApiError('REFRESH_TOKEN_INVALID')
         }
 
         const accessToken = await this.signAccessToken(user.id, user.email, user.roles)
@@ -147,7 +147,7 @@ export class AuthService {
     async logoutAll(rawRefreshToken: string): Promise<void> {
         const token = await this.identityRepository.findRefreshTokenByHash(hashRefreshToken(rawRefreshToken))
         if (!token) {
-            throw new ApiError('REFRESH_TOKEN_INVALID', IDENTITY_MESSAGE.REFRESH_TOKEN_INVALID)
+            throw new ApiError('REFRESH_TOKEN_INVALID')
         }
         await this.identityRepository.revokeAllUserRefreshTokens(token.userId)
     }
@@ -184,7 +184,7 @@ export class AuthService {
     private async signAccessToken(userId: string, email: string, roles: readonly UserRole[]): Promise<string> {
         const privateKey = this.configService.get<string>('JWT_ACCESS_PRIVATE_KEY')
         if (!privateKey) {
-            throw new Error(IDENTITY_MESSAGE.MISSING_ACCESS_PRIVATE_KEY)
+            throw new Error(IDENTITY_CONFIG_ERROR.MISSING_ACCESS_PRIVATE_KEY)
         }
         return this.jwtService.signAsync(
             { sub: userId, email, roles },

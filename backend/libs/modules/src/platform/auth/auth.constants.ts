@@ -8,11 +8,7 @@ export const PERMISSION_RESOLVER = Symbol.for('timmyhub.platform.auth.PERMISSION
 export const BEARER_PREFIX = 'Bearer '
 export const ACCESS_TOKEN_VERIFY_ALGORITHM = 'RS256'
 
-export const AUTH_GUARD_MESSAGE = {
-    UNAUTHENTICATED: 'Chưa xác thực.',
-    MISSING_ACCESS_TOKEN: 'Thiếu access token.',
-    INVALID_ACCESS_TOKEN: 'Access token không hợp lệ hoặc đã hết hạn.',
+// Thông điệp cho người dùng đi qua khoá `auth.*` / `error.*` của catalog contracts; ở đây chỉ còn lỗi cấu hình (log).
+export const AUTH_CONFIG_ERROR = {
     MISSING_ACCESS_PUBLIC_KEY: 'Thiếu biến môi trường JWT_ACCESS_PUBLIC_KEY',
-    FORBIDDEN_ROLE: 'Không có quyền truy cập tài nguyên này.',
-    FORBIDDEN_PERMISSION: 'Không có quyền thực hiện thao tác này.',
 } as const
