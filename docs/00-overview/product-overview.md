@@ -160,7 +160,7 @@ Chín domain lõi, theo thứ tự triển khai:
 | Kiến trúc | Full microservices, **database-per-service** — không service nào đọc trực tiếp DB của service khác |
 | Hạ tầng | Upstash Redis (REST cho cache/rate-limit, TCP cho BullMQ & socket adapter), Supabase Storage cho media |
 | Thanh toán | VNPay; IPN **phải idempotent** — đây là điểm rủi ro cao nhất hệ thống |
-| Ngôn ngữ giao diện | `vi` mặc định, `en` thứ hai; locale nằm trên URL (`/vi/...`, `/en/...`) |
+| Ngôn ngữ giao diện | `vi` mặc định, `en` thứ hai; locale nằm trong cookie `NEXT_LOCALE`, URL không đổi theo ngôn ngữ |
 | Khả năng truy cập | WCAG 2.2 AA, vùng chạm tối thiểu 44×44 px |
 | Bảo mật | Không có token/secret trong repo; mọi secret qua biến môi trường hoặc secret manager |
 

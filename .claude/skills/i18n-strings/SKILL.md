@@ -66,7 +66,10 @@ Chuỗi dùng ở ≥ 2 namespace thì chuyển lên `common`, không sao chép.
   phải sửa lại toàn bộ khi thêm ngôn ngữ.
 - Tiền: **không** dịch, định dạng bằng `Intl.NumberFormat(locale, { style: 'currency', currency })` từ **chuỗi decimal**.
 - Ngày giờ: `Intl.DateTimeFormat` theo locale + múi giờ người dùng; dữ liệu luôn là UTC.
-- Ngôn ngữ nằm trên URL: `/[locale]/...`, `vi` là mặc định. Đủ `hreflang` + `x-default`.
+- Ngôn ngữ nằm trong cookie `NEXT_LOCALE`, **không** có segment `[locale]`; `vi` là mặc định. `Locale`, `isLocale`,
+  `DEFAULT_LOCALE` import từ `@timmyhub/contracts`; `useLocale()` đã có kiểu `Locale`, không ép `as Locale`.
+- Lỗi từ BE hiển thị bằng `` t(`api.${messageKey}`, messageParams) `` — catalog `api` dùng chung với BE, không tự đặt
+  khoá lỗi riêng ở FE. Message của schema zod là khoá `validation.*`, không phải câu.
 - Chuỗi cho SEO (title, description, JSON-LD) cũng phải dịch — thường bị bỏ sót.
 - Tiếng Anh dài hơn tiếng Việt khoảng 30%: kiểm lại nút, chip, tiêu đề cột bảng ở bản `en` xem có vỡ layout không.
 - Thiếu khoá thì báo lỗi ồn ào ở dev và CI, **không** âm thầm hiện tên khoá ra cho người dùng.

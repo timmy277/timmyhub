@@ -2,7 +2,7 @@
 title: SEO — code chuẩn tìm kiếm
 status: review
 owner: FE Lead
-updated: 2026-09-16
+updated: 2026-09-25
 related: [docs/04-frontend/fe-architecture.md, docs/04-frontend/routes.md, docs/04-frontend/i18n.md, docs/06-quality/performance.md]
 ---
 
@@ -54,18 +54,16 @@ Mỗi route xuất `generateMetadata`, **không** đặt thẻ bằng `useEffect
 
 ```tsx
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-    const { locale, slug } = await params
+    const { slug } = await params
+    const locale = await getLocale()
     const product = await getProductBySlug(slug)
     if (!product) return { title: 'Không tìm thấy sản phẩm' }
 
-    const url = `${BASE_URL}/${locale}/san-pham/${product.slug}-p${product.id}`
+    const url = `${BASE_URL}/san-pham/${product.slug}-p${product.id}`
     return {
         title: `${product.name} | ${product.shopName} | TimmyHub`,
         description: truncate(stripHtml(product.description), 155),
-        alternates: {
-            canonical: url,
-            languages: { vi: `${BASE_URL}/vi/…`, en: `${BASE_URL}/en/…`, 'x-default': `${BASE_URL}/vi/…` },
-        },
+        alternates: { canonical: url },
         openGraph: {
             type: 'website',
             title: product.name,
@@ -83,7 +81,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 | `title` | ≤ 60 ký tự, từ khoá đứng trước, tên sàn đứng cuối |
 | `description` | 120–155 ký tự, **không** lặp lại title, sinh từ mô tả thật chứ không ghép máy móc |
 | `canonical` | Bắt buộc ở **mọi** trang; trang lọc trỏ canonical về trang danh mục gốc |
-| `hreflang` | Đủ cặp `vi`/`en` + `x-default`, hai chiều |
+| `hreflang` | Không áp dụng: locale nằm trong cookie, mỗi trang một URL, bot chỉ thấy bản `vi` (ADR-0008 phần sửa đổi) |
 | `robots` | Sản phẩm chưa duyệt / đã gỡ / hết hàng vĩnh viễn → `noindex` |
 
 ---
@@ -187,7 +185,7 @@ Thứ tốt cho người dùng trình đọc màn hình cũng tốt cho công c�
 ## 10. Checklist trước khi phát hành một loại trang mới
 
 - [ ] Nội dung chính có trong HTML lần đầu, không chờ JS
-- [ ] Có `generateMetadata` với title, description, canonical, hreflang, OG
+- [ ] Có `generateMetadata` với title, description, canonical, OG
 - [ ] Có JSON-LD đúng loại và **khớp** nội dung hiển thị
 - [ ] URL có slug, có `301` từ slug cũ nếu đổi
 - [ ] Đã thêm vào sitemap hoặc `noindex` có chủ đích

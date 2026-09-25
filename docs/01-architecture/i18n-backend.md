@@ -2,8 +2,8 @@
 title: Đa ngôn ngữ phía backend
 status: review
 owner: Tech Lead
-updated: 2026-09-16
-related: [docs/04-frontend/i18n.md, docs/01-architecture/api-conventions.md, docs/02-domain/product-variant.md]
+updated: 2026-09-25
+related: [docs/04-frontend/i18n.md, docs/01-architecture/adr/ADR-0008-next-intl.md, docs/01-architecture/api-conventions.md, docs/02-domain/product-variant.md]
 ---
 
 # Đa ngôn ngữ phía backend
@@ -21,24 +21,26 @@ related: [docs/04-frontend/i18n.md, docs/01-architecture/api-conventions.md, doc
 Thứ tự ưu tiên, dừng ở cái đầu tiên hợp lệ:
 
 ```
-1. ?lang= trên query (chỉ cho công cụ nội bộ và link trong email)
-2. Header X-Locale do frontend gắn (lấy từ /[locale]/ trên URL)
-3. User.preferredLocale trong hồ sơ
-4. Accept-Language
-5. vi
+1. Cookie NEXT_LOCALE — FE ghi qua Server Action `setLocale`; cùng site nên trình duyệt tự gửi kèm request API
+2. Accept-Language — thương lượng theo subtag chính (`en-US` → `en`) và trọng số `q`
+3. vi
 ```
 
-Giá trị được chuẩn hoá và **kiểm tra danh sách trắng** ngay ở gateway; locale lạ thì rơi về `vi`, không báo lỗi.
-Locale lưu vào `nestjs-cls` để mọi tầng dưới dùng được mà không phải truyền tay qua từng hàm.
+Locale **không** nằm trên URL (bỏ segment `[locale]`, `TASK-PERF-002` đã huỷ — xem ADR-0008 phần sửa đổi), nên
+không còn header `X-Locale`. Tên cookie, danh sách locale và `DEFAULT_LOCALE` dùng chung FE/BE qua
+`@timmyhub/contracts` (`shared/contracts/src/locale.ts`).
+
+Hiện thực: `resolveRequestLocale(headers)` ở `@timmyhub/common`, gọi trong `ApiExceptionFilter`. Giá trị lạ rơi về
+`vi`, không báo lỗi. Chưa có `nestjs-cls` (chưa được thêm dependency) — hiện chỉ tầng filter cần locale. Khi có
+nội dung sinh ở tầng service (email, file xuất) thì bổ sung CLS và hai nguồn nữa: `?lang=` cho link trong email và
+`User.preferredLocale` trong hồ sơ, đứng giữa cookie và Accept-Language.
 
 ```ts
-@Injectable()
-export class LocaleMiddleware implements NestMiddleware {
-    use(req: Request, _res: Response, next: NextFunction) {
-        this.cls.set('locale', resolveLocale(req))
-        next()
-    }
-}
+// ❌ BAD — tự đọc header ở từng controller, mỗi nơi một kiểu
+const locale = req.headers['accept-language']?.slice(0, 2) ?? 'vi'
+
+// ✅ GOOD — một hàm duy nhất, kiểm tra danh sách trắng bằng isLocale
+const locale = resolveRequestLocale(req.headers)
 ```
 
 Locale còn phải đi kèm **mọi message RabbitMQ** trong `headers.locale`, nếu không email do worker gửi sẽ luôn ra tiếng Việt
@@ -48,31 +50,58 @@ kể cả với người dùng chọn tiếng Anh.
 
 ## 2. Thông báo lỗi
 
-Backend **không** trả câu tiếng Việt viết sẵn. Backend trả **mã lỗi**, frontend quyết định hiển thị thế nào.
+Backend **không** viết sẵn câu cố định trong code. Code ném `ApiError` kèm **mã lỗi** và (tuỳ chọn) **khoá thông
+điệp** + tham số; `ApiExceptionFilter` dịch theo locale của request.
 
 ```json
 {
     "success": false,
     "error": {
-        "code": "ORDER_OUT_OF_STOCK",
-        "message": "Sản phẩm đã hết hàng",
-        "messageParams": { "productName": "Áo thun basic", "available": 2 },
-        "field": "items[0].quantity"
+        "code": "CONFLICT",
+        "messageKey": "rbac.roleAlreadyExists",
+        "messageParams": { "roleName": "editor" },
+        "message": "Vai trò \"editor\" đã tồn tại",
+        "details": null
     },
-    "requestId": "01J8..."
+    "meta": { "requestId": "01J8...", "timestamp": "2026-09-25T03:12:00.000Z" }
 }
 ```
 
 | Trường | Vai trò |
 |---|---|
-| `code` | Hợp đồng giữa FE và BE, **không đổi**, viết `SCREAMING_SNAKE_CASE` |
-| `message` | Bản dịch theo locale của request — dùng cho log, công cụ nội bộ, client không có bảng dịch |
-| `messageParams` | Tham số để FE tự nội suy vào câu dịch của mình |
+| `code` | Hợp đồng giữa FE và BE (`ApiErrorCode`), **không đổi**, viết `SCREAMING_SNAKE_CASE` |
+| `messageKey` | Khoá trong catalog, dạng `namespace.key`; không truyền thì mặc định `error.<CODE>` |
+| `messageParams` | Tham số ICU `{name}` để FE tự nội suy vào câu dịch của mình |
+| `message` | Bản dịch theo locale của request — cho log, công cụ nội bộ, client không có bảng dịch |
+| `details` | Lỗi validation: mảng `{ path, messageKey, messageParams, message }`, mỗi phần tử đã dịch |
 
-Bảng dịch phía backend nằm ở `libs/i18n/{vi,en}/errors.json`, nạp bằng `nestjs-i18n`. Có test bảo đảm **mọi `code`
-xuất hiện trong code đều có khoá dịch ở tất cả ngôn ngữ** — thiếu thì CI đỏ.
+Response lỗi có header `Content-Language` cho biết ngôn ngữ của `message`.
 
-Lỗi validation của zod cũng đi qua cùng cơ chế: `issue.code` + `path` → khoá dịch, không lấy nguyên văn tiếng Anh của zod.
+Catalog nằm ở `shared/contracts/src/i18n/messages.{vi,en}.ts` — TS object, lồng theo namespace, cú pháp tham số ICU
+tương thích `next-intl`. Bản `vi` là nguồn; bản `en` có kiểu `ApiMessageCatalog` suy từ bản `vi` và namespace
+`error` `satisfies Record<ApiErrorCode, string>`, nên **thiếu khoá ở bất kỳ ngôn ngữ nào là typecheck đỏ** — CI chặn
+ngay, không cần test riêng. Chưa dùng `nestjs-i18n` / file `errors.json` như kế hoạch cũ vì chưa được thêm dependency;
+một catalog TS dùng chung FE/BE cũng tránh được hai bảng dịch lệch nhau.
+
+FE nạp cùng catalog vào `next-intl` dưới namespace `api` (`frontend/src/i18n/request.ts`), nên hiển thị lỗi từ BE là
+`` t(`api.${error.messageKey}`, error.messageParams) `` — không cần bảng dịch lỗi thứ hai ở FE.
+
+```ts
+// ❌ BAD — câu cố định trong code, người dùng tiếng Anh vẫn nhận tiếng Việt
+throw new ConflictException(`Vai trò "${roleName}" đã tồn tại`)
+
+// ✅ GOOD — mã lỗi + khoá có kiểu + tham số, filter dịch theo locale
+throw new ApiError('CONFLICT', {
+    messageKey: apiMessageKey('rbac.roleAlreadyExists'),
+    messageParams: { roleName },
+})
+```
+
+Lỗi validation của zod cũng đi qua cùng cơ chế: schema ở `@timmyhub/contracts` ghi `message` là **khoá**
+(`apiMessageKey('validation.passwordMin')`), `ZodValidationPipe` đổi `issue` thành `{ path, messageKey,
+messageParams }` (lấy `minimum`/`maximum` làm tham số), không lấy nguyên văn tiếng Anh của zod. Issue không mang khoá
+thì rơi về `validation.invalid`. Khi FE nối form, dùng cùng schema với `zodResolver` và dịch
+`error.message` (là khoá) bằng `t('api.…')` — hiện chưa form nào dùng schema contracts.
 
 ---
 
@@ -198,9 +227,11 @@ mất kết quả khi sản phẩm chưa có bản dịch.
 
 ## 8. Checklist
 
-- [ ] Locale được giải quyết ở gateway và đưa vào CLS + header của message RabbitMQ
-- [ ] Lỗi trả `code` + `messageParams`, không phải câu hoàn chỉnh cố định
-- [ ] Mọi `errorCode` có khoá dịch đủ mọi ngôn ngữ (có test)
+- [x] Locale giải quyết một chỗ (`resolveRequestLocale`): cookie `NEXT_LOCALE` → Accept-Language → `vi`
+- [ ] Locale đưa vào CLS + header của message RabbitMQ (khi có nội dung sinh ở service/worker)
+- [x] Lỗi trả `code` + `messageKey` + `messageParams`, không phải câu hoàn chỉnh cố định
+- [x] Mọi `ApiErrorCode` và khoá thông điệp có bản dịch đủ mọi ngôn ngữ (bảo đảm bằng typecheck)
+- [x] Message của schema zod là khoá, không phải câu
 - [ ] Danh mục dùng bảng dịch; sản phẩm dùng JSONB kèm cờ `isTranslated`
 - [ ] Elasticsearch có analyzer riêng cho từng ngôn ngữ, tìm được cả không dấu
 - [ ] Thông báo lưu khoá + tham số, không lưu câu

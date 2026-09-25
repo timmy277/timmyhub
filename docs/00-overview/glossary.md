@@ -165,7 +165,7 @@ Mọi khoá **phải** có TTL trừ khi là dữ liệu bền vững có chủ 
 
 | Loại | Quy ước | Ví dụ |
 |---|---|---|
-| Route segment | kebab-case | `app/[locale]/(shop)/product-detail/` |
+| Route segment | kebab-case | `app/(shop)/product-detail/` |
 | Component | `PascalCase.tsx` | `ProductCard.tsx` |
 | Hook | `useXxx.ts` | `useCartQuery.ts` |
 | Store Zustand | `xxx.store.ts` | `cart.store.ts` |

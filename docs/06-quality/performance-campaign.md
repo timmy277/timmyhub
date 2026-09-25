@@ -85,8 +85,8 @@ Mức ảnh hưởng: **Cao** = đổi hẳn LCP/JS của mọi trang; **Vừa**
 | ID | Việc | Mức | Tiêu chí xong |
 |---|---|---|---|
 | `TASK-PERF-001` | Tạo `app/(protected)/layout.tsx` chứa `NavLayout`, bỏ việc mỗi page tự bọc — sidebar không remount khi chuyển trang | Cao | Chuyển `/dashboard` ↔ `/users` không mount lại sidebar (React DevTools Profiler) |
-| `TASK-PERF-002` | Chốt chiến lược locale: segment `[locale]` + `proxy.ts`, `localePrefix: 'as-needed'` cho trang công khai; root layout không đọc cookie | Cao | `next build` báo `/` và `/login` là tĩnh (○) |
-| `TASK-PERF-003` | Bật `cacheComponents`, áp `'use cache'`/`cacheLife`/`cacheTag`; thay `revalidatePath('/', 'layout')` ở `services/locale.service.ts` | Cao | Không còn `revalidatePath` toàn site; build không cảnh báo dynamic ngoài Suspense |
+| ~~`TASK-PERF-002`~~ | **Huỷ 2026-09-25** — chủ dự án chốt không dùng segment `[locale]`; locale giữ trong cookie `NEXT_LOCALE` (ADR-0008 phần sửa đổi). Việc tĩnh hoá `/` và `/login` chuyển sang `TASK-PERF-003` | — | — |
+| `TASK-PERF-003` | Bật `cacheComponents`, áp `'use cache'`/`cacheLife`/`cacheTag`; thay `revalidatePath('/', 'layout')` ở `services/locale.service.ts` | Cao | Không còn `revalidatePath` toàn site; build không cảnh báo dynamic ngoài Suspense; phần đọc cookie locale nằm trong Suspense để vỏ trang `/`, `/login` được prerender |
 | `TASK-PERF-004` | Thêm `loading.tsx`, `error.tsx`, `not-found.tsx`, `global-error.tsx` theo nhóm route; skeleton đúng kích thước | Vừa–Cao | Mỗi nhóm route có đủ bốn file; CLS ≤ 0,1 khi tải chậm |
 
 ### 4.2 Giai đoạn 2 — giảm JS gửi xuống

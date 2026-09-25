@@ -20,7 +20,7 @@ Trang sau đăng nhập (giỏ, đơn, quản trị) thì `noindex`, ưu tiên t
 ## 2. Bộ file tối thiểu của một route
 
 ```
-app/[locale]/san-pham/[slug]/
+app/san-pham/[slug]/
 ├── page.tsx           # Server Component, fetch dữ liệu, render
 ├── layout.tsx         # chỉ khi cần khung riêng
 ├── loading.tsx        # skeleton đúng bố cục thật

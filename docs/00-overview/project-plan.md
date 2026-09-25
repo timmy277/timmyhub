@@ -270,7 +270,7 @@ giữ tồn (reserve) khi checkout và tự nhả sau 15 phút nếu không than
 | `FEAT-DEP-002` | Cookie `user_roles` / `user_permissions` phía client | Lỗ hổng phân quyền |
 | `FEAT-DEP-003` | DTO `class-validator` | Trùng vai trò với zod, và không hề chạy ở bản cũ |
 | `FEAT-DEP-004` | AG Grid Enterprise làm mặc định | Giấy phép thương mại |
-| `FEAT-DEP-005` | i18next | Thay bằng next-intl có locale trên URL |
+| `FEAT-DEP-005` | i18next | Thay bằng next-intl, locale trong cookie `NEXT_LOCALE` |
 | `FEAT-DEP-006` | `db push --accept-data-loss` | Thay bằng migration có lịch sử |
 
 ---
@@ -415,7 +415,7 @@ Chi tiết từng module (hàm export qua `index.ts`, event phát/nhận, job n�
 | Form | **react-hook-form + zod** (`zodResolver`) | Cùng schema với backend |
 | HTTP | **axios** + interceptor | Refresh token, chuẩn hoá lỗi, gắn `X-Request-Id` |
 | Auth | **NextAuth (Auth.js v5)** | Session mã hoá HttpOnly, SSO Google/Facebook |
-| i18n | **next-intl** | Locale trên URL `/[locale]/...`, dịch được ở server component |
+| i18n | **next-intl** | Locale trong cookie `NEXT_LOCALE` (không segment `[locale]`), dịch được ở server component |
 | Realtime | **socket.io-client** | Khớp với gateway |
 | Storybook | **Storybook 8** (CSF3) | Bắt buộc có story cho component dùng chung |
 | Test | Vitest + Testing Library + Playwright | Unit / component / e2e |
@@ -1397,11 +1397,11 @@ Nguồn: `kế thừa` giữ nguyên · `kế thừa+` mở rộng · `kế th�
 
 ## Phụ lục B. Bản đồ màn hình frontend
 
-Mọi route nằm dưới tiền tố locale: `/[locale]/...` với `locale ∈ { vi, en }`, mặc định `vi`
-([ADR-0008](../01-architecture/adr/ADR-0008-next-intl.md)). Cột **Guard** là điều kiện tối thiểu do
+Route **không** có tiền tố locale; `locale ∈ { vi, en }` nằm trong cookie `NEXT_LOCALE`, mặc định `vi`
+([ADR-0008](../01-architecture/adr/ADR-0008-next-intl.md), phần sửa đổi 2026-09-25). Cột **Guard** là điều kiện tối thiểu do
 `middleware.ts` kiểm tra; quyền chi tiết vẫn được backend kiểm tra lại.
 
-### B.1 Nhóm công khai — `app/[locale]/(public)/`
+### B.1 Nhóm công khai — `app/(public)/`
 
 | Route | Màn hình | Render | Guard |
 |---|---|---|---|
@@ -1418,7 +1418,7 @@ Mọi route nằm dưới tiền tố locale: `/[locale]/...` với `locale ∈ 
 | `/hashtag/[tag]` | Nội dung theo hashtag | RSC | — |
 | `/help`, `/policy/[slug]` | Trợ giúp, điều khoản, chính sách | RSC tĩnh | — |
 
-### B.2 Nhóm xác thực — `app/[locale]/(auth)/`
+### B.2 Nhóm xác thực — `app/(auth)/`
 
 | Route | Màn hình | Guard |
 |---|---|---|
@@ -1428,7 +1428,7 @@ Mọi route nằm dưới tiền tố locale: `/[locale]/...` với `locale ∈ 
 | `/reset-password` | Đặt lại bằng token | Token hợp lệ |
 | `/verify-email` | Xác minh email | Token hợp lệ |
 
-### B.3 Nhóm tài khoản người mua — `app/[locale]/(account)/`
+### B.3 Nhóm tài khoản người mua — `app/(account)/`
 
 | Route | Màn hình | Guard |
 |---|---|---|
@@ -1455,7 +1455,7 @@ Mọi route nằm dưới tiền tố locale: `/[locale]/...` với `locale ∈ 
 | `/notifications` | Trung tâm thông báo | `USER` |
 | `/become-seller` | Đăng ký bán hàng, theo dõi trạng thái đơn | `USER` |
 
-### B.4 Nhóm người bán — `app/[locale]/(seller)/seller/`
+### B.4 Nhóm người bán — `app/(seller)/seller/`
 
 | Route | Màn hình | Guard |
 |---|---|---|
@@ -1476,7 +1476,7 @@ Mọi route nằm dưới tiền tố locale: `/[locale]/...` với `locale ∈ 
 | `/seller/wallet` · `/seller/withdrawals` | Ví, sổ giao dịch, yêu cầu rút tiền | `SELLER` |
 | `/seller/settings` | Nhân viên shop, thông báo, tích hợp | `SELLER` |
 
-### B.5 Nhóm quản trị — `app/[locale]/(admin)/admin/`
+### B.5 Nhóm quản trị — `app/(admin)/admin/`
 
 | Route | Màn hình | Quyền |
 |---|---|---|

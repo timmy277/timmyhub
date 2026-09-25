@@ -96,9 +96,9 @@ Ngân sách JS ở [performance.md §1.1](performance.md#11-frontend-đo-trên-t
 // .size-limit.js
 module.exports = [
     { name: 'Gói chung (framework + chia sẻ)', path: '.next/static/chunks/main-*.js', limit: '90 KB' },
-    { name: 'Trang chủ',            path: '.next/static/chunks/app/[locale]/page-*.js',                 limit: '160 KB' },
-    { name: 'Chi tiết sản phẩm',    path: '.next/static/chunks/app/[locale]/san-pham/**/page-*.js',     limit: '180 KB' },
-    { name: 'Thanh toán',           path: '.next/static/chunks/app/[locale]/thanh-toan/**/page-*.js',   limit: '200 KB' },
+    { name: 'Trang chủ',            path: '.next/static/chunks/app/page-*.js',                 limit: '160 KB' },
+    { name: 'Chi tiết sản phẩm',    path: '.next/static/chunks/app/san-pham/**/page-*.js',     limit: '180 KB' },
+    { name: 'Thanh toán',           path: '.next/static/chunks/app/thanh-toan/**/page-*.js',   limit: '200 KB' },
 ]
 ```
 

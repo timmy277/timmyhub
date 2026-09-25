@@ -1,14 +1,14 @@
 ---
-title: ADR-0008 — next-intl thay i18next, locale trên URL
+title: ADR-0008 — next-intl thay i18next, locale trong cookie
 status: accepted
 owner: Frontend Lead
-updated: 2026-09-16
-related: [docs/04-frontend/i18n.md, .claude/skills/i18n-strings/SKILL.md]
+updated: 2026-09-25
+related: [docs/04-frontend/i18n.md, docs/01-architecture/i18n-backend.md, docs/06-quality/performance-campaign.md, .claude/skills/i18n-strings/SKILL.md]
 ---
 
-# ADR-0008 — next-intl thay i18next, locale trên URL
+# ADR-0008 — next-intl thay i18next, locale trong cookie
 
-**Trạng thái:** accepted · **Ngày:** 2026-09-16 · **Người quyết:** Frontend Lead
+**Trạng thái:** accepted (sửa đổi 2026-09-25) · **Ngày:** 2026-09-16 · **Người quyết:** Frontend Lead
 
 ## Bối cảnh
 
@@ -30,10 +30,25 @@ Chọn **B**. Locale nằm trên URL: `/[locale]/...`, `vi` là mặc định. N
 (`common`, `auth`, `product`, `cart`, `order`, `payment`, `seller`, `admin`, `content`, `error`) — chi tiết quy ước
 đặt tên khoá và cách trích chuỗi: skill `i18n-strings` và `docs/04-frontend/i18n.md`.
 
+## Sửa đổi 2026-09-25 — bỏ locale trên URL
+
+Chủ dự án quyết định **không** dùng segment `[locale]` (`TASK-PERF-002` huỷ). Vẫn giữ next-intl (phương án B),
+nhưng locale nằm trong cookie `NEXT_LOCALE`, URL giữ nguyên khi đổi ngôn ngữ (`frontend/src/i18n/request.ts`, không
+dùng routing/middleware của next-intl). Tên cookie, `Locale`, `LOCALES`, `DEFAULT_LOCALE`, `isLocale` nằm ở
+`@timmyhub/contracts` để BE đọc cùng cookie — chi tiết `docs/01-architecture/i18n-backend.md` §1.
+
+Đánh đổi chấp nhận:
+
+- Mỗi trang chỉ có **một URL**; bot tìm kiếm không mang cookie nên chỉ index bản `vi`. Không có `hreflang` cặp
+  `vi`/`en` — bản `en` không SEO được. Cần SEO theo ngôn ngữ thì phải mở ADR mới quay lại locale trên URL.
+- Root layout đọc cookie nên các route đang render động; tối ưu tĩnh hoá xử lý ở `TASK-PERF-003` (Cache Components),
+  không qua segment locale.
+
 ## Hệ quả
 
-- Backend **không** trả câu tiếng Việt cho lỗi nghiệp vụ — trả `code` + tham số, frontend tự dịch qua next-intl (đã
-  ghi thành luật cứng #17 nhánh liên quan trong `CLAUDE.md`, chi tiết ở `docs/01-architecture/i18n-backend.md`).
-- SEO: `hreflang` + `x-default` bắt buộc cho mọi route công khai — chi tiết `docs/04-frontend/seo.md`.
-- Thêm ngôn ngữ mới là việc thêm thư mục `messages/<locale>/`, không đổi code — nếu phải sửa code khi thêm ngôn ngữ
-  thì kiến trúc i18n đang sai.
+- Backend **không** trả câu cố định cho lỗi nghiệp vụ — trả `code` + `messageKey` + tham số; catalog thông điệp API
+  dùng chung FE/BE ở `@timmyhub/contracts`, FE nạp dưới namespace `api` (`docs/01-architecture/i18n-backend.md` §2).
+- SEO: `canonical` bắt buộc cho mọi route công khai; `hreflang` không áp dụng khi locale nằm trong cookie (xem phần
+  sửa đổi) — chi tiết `docs/04-frontend/seo.md`.
+- Thêm ngôn ngữ mới là thêm một giá trị vào `Locale` (`@timmyhub/contracts`), một file `messages/<locale>.json` ở FE
+  và một catalog `messages.<locale>.ts` — không sửa logic. Phải sửa logic khi thêm ngôn ngữ thì kiến trúc i18n đang sai.
