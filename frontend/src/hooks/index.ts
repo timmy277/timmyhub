@@ -4,5 +4,7 @@
 export * from './use-breadcrumbs'
 export * from './use-debounced-value'
 export * from './use-locale-switch'
+export * from './use-login'
+export * from './use-logout'
 export * from './use-mobile'
 export * from './use-theme-attributes-sync'

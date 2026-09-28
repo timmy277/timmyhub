@@ -158,6 +158,9 @@
     "orContinueWith": "or continue with",
     "google": "Google",
     "facebook": "Facebook",
-    "notConnected": "Login is not connected yet."
+    "notConnected": "Login is not connected yet.",
+    "loginFailed": "Login failed. Please check your credentials.",
+    "loginUnavailable": "Cannot reach the server. Please try again later.",
+    "loggingIn": "Logging in…"
   }
 }

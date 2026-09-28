@@ -158,6 +158,9 @@
     "orContinueWith": "hoặc tiếp tục với",
     "google": "Google",
     "facebook": "Facebook",
-    "notConnected": "Tính năng đăng nhập chưa được kết nối."
+    "notConnected": "Tính năng đăng nhập chưa được kết nối.",
+    "loginFailed": "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.",
+    "loginUnavailable": "Không kết nối được máy chủ. Vui lòng thử lại sau.",
+    "loggingIn": "Đang đăng nhập…"
   }
 }
