@@ -1,6 +1,10 @@
 // Nguồn duy nhất cho đường dẫn API backend (CLAUDE.md luật #22) — khớp `AUTH_ROUTE`, `IDENTITY_ROUTE` và
 // `@Controller('v1/rbac')` ở backend. Đường dẫn tương đối, chưa gồm base URL; route có tham số là hàm để không ghép
 // chuỗi tay ở nơi gọi.
+
+// Base URL backend — apps/api chạy cổng 3001 (project-plan.md bảng cổng dịch vụ; FE dev chiếm 3000).
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+
 export const API_ROUTE = {
     AUTH: {
         REGISTER: 'v1/auth/register',
