@@ -3,7 +3,14 @@ import { ThemeProvider } from 'next-themes'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages, getTranslations } from 'next-intl/server'
 
-import { ThemeAttributesSync, Toaster, TooltipProvider } from '@/components'
+import {
+    AuthProvider,
+    QueryProvider,
+    SessionTokenWatcher,
+    ThemeAttributesSync,
+    Toaster,
+    TooltipProvider,
+} from '@/components'
 import { FONT_VARIABLE_CLASS_NAMES, THEME_INIT_SCRIPT } from '@/constants'
 
 import './globals.css'
@@ -29,11 +36,16 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
             <body className="min-h-full flex flex-col">
                 <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
                     <NextIntlClientProvider locale={locale} messages={messages}>
-                        <TooltipProvider>
-                            <ThemeAttributesSync />
-                            {children}
-                            <Toaster />
-                        </TooltipProvider>
+                        <AuthProvider>
+                            <QueryProvider>
+                                <TooltipProvider>
+                                    <SessionTokenWatcher />
+                                    <ThemeAttributesSync />
+                                    {children}
+                                    <Toaster />
+                                </TooltipProvider>
+                            </QueryProvider>
+                        </AuthProvider>
                     </NextIntlClientProvider>
                 </ThemeProvider>
             </body>
