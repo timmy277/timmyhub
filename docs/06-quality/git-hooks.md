@@ -173,7 +173,7 @@ export default {
             // khác
             'frontend', 'docs', 'infra', 'ci', 'deps',
         ]],
-        'subject-case': [0],                    // tiêu đề tiếng Việt, không ép kiểu chữ
+        'subject-case': [0],                    // tiêu đề tiếng Anh, không ép kiểu chữ
         'subject-max-length': [2, 'always', 72],
         'body-max-line-length': [2, 'always', 100],
     },
@@ -183,9 +183,9 @@ export default {
 Cấu trúc:
 
 ```
-<type>(<scope>): <tiêu đề tiếng Việt, câu mệnh lệnh, không dấu chấm cuối>
+<type>(<scope>): <tiêu đề tiếng Anh, câu mệnh lệnh, không dấu chấm cuối>
 
-<thân: vì sao thay đổi, không phải thay đổi cái gì — diff đã nói cái gì rồi>
+<thân tiếng Anh: vì sao thay đổi, không phải thay đổi cái gì — diff đã nói cái gì rồi>
 
 Refs: REQ-ORD-012, TASK-ORD-021
 ```
@@ -193,10 +193,10 @@ Refs: REQ-ORD-012, TASK-ORD-021
 Ví dụ:
 
 ```
-feat(order): thêm huỷ đơn khi chưa xác nhận
+feat(order): let buyers cancel an order before it is confirmed
 
-Người mua đang phải nhắn cho seller để huỷ. Thêm endpoint huỷ có kiểm
-trạng thái nguồn và hoàn lại tồn kho trong cùng transaction.
+Buyers currently have to message the seller to cancel. The new endpoint checks the
+source state and restores stock in the same transaction.
 
 Refs: REQ-ORD-018, TASK-ORD-034
 ```
@@ -206,7 +206,7 @@ Quy định kèm theo:
 | Hạng mục | Quy định |
 |---|---|
 | `scope` | **Bắt buộc**, lấy từ `scope-enum` ở trên. Đụng nhiều service thì tách commit, không dùng scope gộp |
-| Tiêu đề | Tiếng Việt, ≤ 72 ký tự, động từ mệnh lệnh ("thêm", "sửa", "bỏ"), không dấu chấm cuối |
+| Tiêu đề | **Tiếng Anh**, ≤ 72 ký tự, động từ mệnh lệnh ("add", "fix", "drop"), không dấu chấm cuối |
 | Thân | Giải thích **vì sao**; bắt buộc khi thay đổi > 100 dòng hoặc đổi hành vi |
 | `Refs:` | Nối về `REQ-*` / `TASK-*` / issue. Đây là mắt xích giữ truy vết sống sau khi merge |
 | Thay đổi phá vỡ | `feat(contracts)!: ...` kèm đoạn `BREAKING CHANGE:` mô tả cách di chuyển |
@@ -217,15 +217,15 @@ Quy định kèm theo:
 ```
 update code
 fix bug
-feat: sửa nhiều thứ ở order và payment và catalog
+feat: change a lot of things in order, payment and catalog
 ```
 
 ✅ **GOOD**
 
 ```
-fix(payment): xử lý IPN VNPay trùng lặp bằng idempotency key
-docs(media): bổ sung ladder HLS và điều kiện chuyển sang dịch vụ ngoài
-refactor(catalog): tách whereForScope ra khỏi service
+fix(payment): handle duplicate VNPay IPN with an idempotency key
+docs(media): document the HLS ladder and when to use an external service
+refactor(catalog): extract whereForScope out of the service
 ```
 
 ---

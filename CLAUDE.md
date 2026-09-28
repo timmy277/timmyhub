@@ -12,7 +12,8 @@ nặng phía FE vẫn theo luật #12. Không mở rộng phạm vi ngoài việ
 
 ## 1. Ngôn ngữ và văn phong
 
-- Văn xuôi, comment, commit message, nội dung tài liệu: **tiếng Việt**.
+- Văn xuôi, comment, nội dung tài liệu: **tiếng Việt**. Riêng **commit message: tiếng Anh** — chi tiết ở
+  `docs/06-quality/git-hooks.md`.
 - Mọi identifier — tên service, bảng, field, route, enum, event, biến, hàm, component: **tiếng Anh**.
   Không dịch `OrderStatus.PENDING`, `order.paid`, `SellerProfile`.
 - Chuỗi hiển thị cho người dùng: **không hardcode**, luôn đi qua `next-intl` (FE) hoặc catalog thông điệp (BE).

@@ -1,5 +1,5 @@
 /**
- * Quy ước commit: Conventional Commits, tiêu đề tiếng Việt, scope tiếng Anh.
+ * Quy ước commit: Conventional Commits, tiêu đề và thân tiếng Anh, scope tiếng Anh.
  * Chi tiết và ví dụ: docs/06-quality/git-hooks.md
  */
 export default {
@@ -46,7 +46,7 @@ export default {
                 'deps',
             ],
         ],
-        'subject-case': [0], // tiêu đề tiếng Việt, không ép kiểu chữ
+        'subject-case': [0], // tiêu đề tiếng Anh, không ép kiểu chữ
         'subject-max-length': [2, 'always', 72],
         'body-max-line-length': [2, 'always', 100],
     },
