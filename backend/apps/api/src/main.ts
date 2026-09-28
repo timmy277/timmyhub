@@ -10,6 +10,11 @@ async function bootstrap(): Promise<void> {
     // Chạy OnModuleDestroy/OnApplicationShutdown khi nhận SIGTERM/SIGINT — PrismaService ngắt kết nối DB êm.
     app.enableShutdownHooks()
     app.useGlobalFilters(new ApiExceptionFilter())
+    const corsOrigins = (process.env.FRONTEND_URL ?? 'http://localhost:3000')
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean)
+    app.enableCors({ origin: corsOrigins, credentials: true })
 
     // Chỉ bật Swagger UI ngoài production — /docs không nên lộ ra môi trường thật.
     if (process.env.NODE_ENV !== 'production') {
@@ -23,7 +28,7 @@ async function bootstrap(): Promise<void> {
         SwaggerModule.setup('docs', app, document)
     }
 
-    await app.listen(process.env.PORT ?? 3000)
+    await app.listen(process.env.PORT ?? 3001)
 }
 
 void bootstrap()

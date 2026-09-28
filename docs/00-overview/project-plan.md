@@ -372,7 +372,7 @@ Ba đơn vị triển khai thật sự (đóng image, scale độc lập):
 
 | # | Đơn vị | Port dev | Database | Ghi chú |
 |---|---|---|---|---|
-| 1 | `backend/apps/api` | 3000 | Postgres 16 (1 database chung) | Web process, mọi module ở trên trừ phần chạy trong worker |
+| 1 | `backend/apps/api` | 3001 | Postgres 16 (1 database chung) | Web process, mọi module ở trên trừ phần chạy trong worker |
 | 2 | `backend/apps/worker` | — | dùng chung Postgres | BullMQ, entrypoint mặc định: mail, index, thumbnail, dispatch outbox |
 | 3 | `worker-media` | — | dùng chung Postgres | Cùng codebase với `worker`, entrypoint/image riêng chạy ffmpeg; scale theo độ sâu hàng đợi, không theo CPU trung bình |
 

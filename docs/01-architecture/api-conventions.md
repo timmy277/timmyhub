@@ -330,7 +330,7 @@ hợp từ nhiều service như trước [ADR-0015](adr/ADR-0015-modular-monolit
 
 | Môi trường | Đường dẫn | Bảo vệ |
 |---|---|---|
-| dev | `http://localhost:3000/docs` | Mở |
+| dev | `http://localhost:3001/docs` | Mở |
 | staging | `https://api-staging.timmyhub.vn/docs` | HTTP Basic |
 | production | **Không phơi ra công khai** | Chỉ truy cập nội bộ |
 
