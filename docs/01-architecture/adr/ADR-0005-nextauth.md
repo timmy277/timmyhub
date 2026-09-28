@@ -34,9 +34,23 @@ NextAuth server-side (và middleware chạy ở edge runtime của chính Next.j
 
 SSO Google/Facebook dùng provider có sẵn của NextAuth, không tự viết OAuth flow.
 
+## Cập nhật — 2026-09-28 (bản triển khai thực tế)
+
+Ba điểm dưới đây chốt theo code đang chạy, chi tiết ở `docs/04-frontend/auth-nextauth.md`:
+
+1. **Refresh token nằm trong JWE của cookie phiên**, không có cookie `__Host-refresh-token` riêng. Về mặt bảo vệ
+   tương đương hoặc tốt hơn (mã hoá + `HttpOnly`, không bao giờ đi qua client JS), và REQ-IDN-022 đã được cập nhật
+   cho khớp.
+2. **Proxy dùng `auth()`** để giải mã phiên ở edge rồi mới quyết định cho qua hay đá về login kèm `callbackUrl`.
+3. **Refresh phiên được khoá giữa các tab bằng Web Locks** (`withAuthRefreshLock`): backend xoay refresh token bằng
+   compare-and-swap, request thua trong một race thật bị coi là token bị đánh cắp và **thu hồi toàn bộ phiên
+   (REQ-IDN-006)**, nên phía client phải bảo đảm không bao giờ có hai request refresh đồng thời.
+
 ## Hệ quả
 
-- Middleware Next.js đọc session qua `auth()` của NextAuth, **không** tự parse cookie bằng tay.
+- Middleware Next.js đọc session qua `auth()` của NextAuth, **không** tự parse cookie bằng tay. Kiểm tra sự tồn tại
+  của cookie là chưa đủ: cookie còn nhưng JWT không giải mã được (đổi `AUTH_SECRET`, phiên bị thu hồi) sẽ sinh vòng
+  lặp redirect — proxy cho qua trang protected, layout xác minh thất bại rồi đá về login, proxy lại cho qua tiếp.
 - Backend (`identity-service`) vẫn là nguồn sự thật cho user/role/permission; NextAuth chỉ là lớp quản lý phiên ở
   frontend, gọi API `identity-service` để xác thực và lấy claim.
 - `callbackUrl` chuẩn hoá theo đúng tên tham số của NextAuth — bản gốc dùng `?redirect` không nhất quán ở một số nơi

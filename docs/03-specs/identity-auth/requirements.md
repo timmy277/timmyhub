@@ -349,15 +349,19 @@ nào khác), THÌ HỆ THỐNG PHẢI từ chối với `409 LAST_AUTH_METHOD` �
 **Nguồn:** `FEAT-IDN-012`
 **Ưu tiên:** P0
 
-HỆ THỐNG PHẢI phát hành `__Secure-authjs.session-token`, `__Host-refresh-token`, `__Host-authjs.csrf-token` với
-`HttpOnly`, `Secure` (bật ở staging/production, có thể tắt `Secure` ở `http://localhost` khi dev), và
-`SameSite=Lax` (session/CSRF) hoặc `SameSite=Strict` (`__Host-refresh-token`, `Path=/api/auth`) — đúng bảng thuộc
-tính ở `docs/01-architecture/security.md#7-bảo-vệ-ở-tầng-vận-chuyển-và-trình-duyệt`.
+HỆ THỐNG PHẢI phát hành cookie phiên `authjs.session-token` (production: `__Secure-authjs.session-token`) và
+cookie CSRF của NextAuth `authjs.csrf-token` (production: `__Host-authjs.csrf-token`) với `HttpOnly`, `SameSite=Lax`,
+`Path=/`, và `Secure` (bật ở staging/production, bỏ khi dev qua `http://localhost` không TLS).
+
+Access token **và** refresh token của backend nằm **bên trong payload JWT đã mã hoá JWE** của cookie phiên — không
+phát hành cookie riêng cho refresh token, và không token nào sống ở `localStorage`/`sessionStorage`/cookie thường.
+Chi tiết cấu hình, callback và luồng refresh: `docs/04-frontend/auth-nextauth.md`.
 
 | # | Given | When | Then |
 |---|---|---|---|
 | 1 | Môi trường production | Đăng nhập thành công | Cookie có `Secure`, không đọc được bằng `document.cookie` |
 | 2 | Môi trường local dev qua `http://localhost` | Đăng nhập thành công | Cookie vẫn `HttpOnly`, cho phép bỏ `Secure` để chạy không TLS |
+| 3 | Người dùng đã đăng nhập | Đọc `document.cookie`, `localStorage`, `sessionStorage` | Không thấy access token hay refresh token ở bất kỳ đâu |
 
 ### REQ-IDN-023 — Phiên NextAuth không lộ role/permission cho client
 
