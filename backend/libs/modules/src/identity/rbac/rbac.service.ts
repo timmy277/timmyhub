@@ -1,13 +1,19 @@
 import { Injectable } from '@nestjs/common'
 
-import type { CreatePermissionInput, EffectivePermissions, PermissionSummary, RoleSummary } from '@timmyhub/contracts'
+import type {
+    CreatePermissionInput,
+    EffectivePermissions,
+    PermissionSummary,
+    RoleDetail,
+    RoleSummary,
+} from '@timmyhub/contracts'
 import { ApiError, apiMessageKey, isSuperAdmin, PERMISSION_NAMES, UserRole } from '@timmyhub/contracts'
 import type { PermissionResolver } from '@timmyhub/modules/platform/auth'
 import type { SystemRole } from '@timmyhub/prisma'
 
 import { PERMISSION_NAME_SEPARATOR, READ_OTHER_USERS_PERMISSION } from '../identity.constants'
 import { PermissionCacheService } from './permission-cache.service'
-import { toPermissionSummary, toRoleSummary } from './rbac.mapper'
+import { toPermissionSummary, toRoleDetail, toRoleSummary } from './rbac.mapper'
 import { RbacRepository } from './rbac.repository'
 
 export type RbacActor = {
@@ -84,9 +90,24 @@ export class RbacService implements PermissionResolver {
         return roles.map(toRoleSummary)
     }
 
+    // Chi tiết role kèm tập quyền đang gán (màn chi tiết/sửa role). Không thấy thì 404 (ROLE_NOT_FOUND), giống các
+    // thao tác ghi khác — ngoài phạm vi và không tồn tại trả cùng một câu trả lời.
+    async getRoleDetail(roleId: string): Promise<RoleDetail> {
+        const role = await this.repository.findRoleWithPermissions(roleId)
+        if (!role) throw new ApiError('ROLE_NOT_FOUND')
+        const permissionNames = role.permissions.map((entry) => entry.permission.name).sort()
+        return toRoleDetail(role, permissionNames)
+    }
+
     async listPermissions(): Promise<PermissionSummary[]> {
         const permissions = await this.repository.listPermissions()
         return permissions.map(toPermissionSummary)
+    }
+
+    async getPermissionDetail(permissionId: string): Promise<PermissionSummary> {
+        const permission = await this.repository.findPermissionById(permissionId)
+        if (!permission) throw new ApiError('PERMISSION_NOT_FOUND')
+        return toPermissionSummary(permission)
     }
 
     // ===== Commands =====

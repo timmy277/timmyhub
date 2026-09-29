@@ -15,6 +15,7 @@ import { PERMISSION_RESOLVER } from '@timmyhub/modules/platform/auth'
 
 import { isCommonPassword } from '../common-passwords'
 import { ASSIGN_USER_ROLE_PERMISSION, BCRYPT_COST, DEFAULT_CREATED_USER_ROLES } from '../identity.constants'
+import { PermissionCacheService } from '../rbac'
 import { toUserDetail, toUserPagination, toUserSummary } from './users.mapper'
 import type { UserWithProfile } from './users.repository'
 import { UsersRepository } from './users.repository'
@@ -38,6 +39,7 @@ export class UsersService {
     constructor(
         private readonly repository: UsersRepository,
         @Inject(PERMISSION_RESOLVER) private readonly permissionResolver: PermissionResolver,
+        private readonly permissionCache: PermissionCacheService,
     ) {}
 
     // ===== Queries =====
@@ -124,7 +126,9 @@ export class UsersService {
         const hasChange = Object.values(input).some((value) => value !== undefined)
         if (!hasChange) return toUserDetail(target)
 
-        return toUserDetail(await this.repository.updateUser(userId, input, actor.id))
+        const updated = await this.repository.updateUser(userId, input, actor.id)
+        if (input.roles !== undefined) this.permissionCache.invalidateUser(userId)
+        return toUserDetail(updated)
     }
 
     // REQ-USR-012 / REQ-USR-013

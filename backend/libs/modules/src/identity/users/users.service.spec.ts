@@ -8,6 +8,7 @@ import {
 } from '@timmyhub/contracts'
 import type { PermissionResolver } from '@timmyhub/modules/platform/auth'
 
+import type { PermissionCacheService } from '../rbac'
 import { buildUserListOrderBy, buildUserListWhere } from '../utils/index'
 import type { CreateUserRecordInput, UpdateUserRecordInput, UserWithProfile } from './users.repository'
 import type { UsersRepository } from './users.repository'
@@ -96,8 +97,10 @@ function buildService(options: { repository?: Partial<MockRepository>; permissio
         listPermissions: jest.fn().mockResolvedValue([]),
     }
 
-    const service = new UsersService(repository as unknown as UsersRepository, permissionResolver)
-    return { service, repository, getEffectivePermissions }
+    const invalidateUser = jest.fn()
+    const permissionCache = { invalidateUser } as unknown as PermissionCacheService
+    const service = new UsersService(repository as unknown as UsersRepository, permissionResolver, permissionCache)
+    return { service, repository, getEffectivePermissions, invalidateUser }
 }
 
 const ADMIN_ACTOR = { id: 'admin-1', roles: [UserRole.ADMIN] }
@@ -299,6 +302,17 @@ describe('UsersService — sửa hồ sơ', () => {
         await service.updateUser('user-1', { firstName: 'X' }, SUPER_ADMIN_ACTOR)
 
         expect(repository.updateUser).toHaveBeenCalledWith('user-1', { firstName: 'X' }, 'root-1')
+    })
+
+    it('invalidate permission cache sau khi PATCH thay đổi role', async () => {
+        const { service, repository, invalidateUser } = buildService()
+        const target = buildUser()
+        repository.findUserById.mockResolvedValue(target)
+        repository.updateUser.mockResolvedValue({ ...target, roles: [UserRole.ADMIN], updatedAt: NOW })
+
+        await service.updateUser('user-1', { roles: [UserRole.ADMIN] }, SUPER_ADMIN_ACTOR)
+
+        expect(invalidateUser).toHaveBeenCalledWith('user-1')
     })
 
     it('không ghi DB khi không có field nào đổi (idempotent theo nội dung)', async () => {

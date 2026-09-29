@@ -16,6 +16,9 @@ export type UserWithRbac = {
     userPermissions: { permission: Permission; isGranted: boolean }[]
 } | null
 
+// Role kèm permission đang gán — dùng cho màn chi tiết/sửa role (đọc tập quyền để hiện và gán lại).
+export type RoleWithPermissions = SystemRole & { permissions: { permission: Permission }[] }
+
 @Injectable()
 export class RbacRepository {
     // ===== Dependencies =====
@@ -48,6 +51,14 @@ export class RbacRepository {
 
     findRoleByName(name: string): Promise<SystemRole | null> {
         return this.prisma.systemRole.findUnique({ where: { name } })
+    }
+
+    // Một query duy nhất lấy role + permission đang gán (join `RolePermission`), không đọc-rồi-lọc (luật cứng #7).
+    findRoleWithPermissions(id: string): Promise<RoleWithPermissions | null> {
+        return this.prisma.systemRole.findUnique({
+            where: { id },
+            include: { permissions: { include: { permission: true } } },
+        })
     }
 
     countUsersWithRole(roleId: string): Promise<number> {
