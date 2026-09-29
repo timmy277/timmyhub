@@ -155,9 +155,30 @@ export class IdentityRepository {
         deviceId: string | null
         expiresAt: Date
     }): Promise<RefreshRotationResult> {
-        const result = await this.prisma.refreshToken.updateMany({
-            where: { token: input.currentTokenHash, isRevoked: false, replacedBy: null },
-            data: { replacedBy: input.nextTokenId },
+        const now = new Date()
+        const result = await this.prisma.$transaction(async (tx) => {
+            const updated = await tx.refreshToken.updateMany({
+                where: {
+                    token: input.currentTokenHash,
+                    isRevoked: false,
+                    replacedBy: null,
+                    expiresAt: { gt: now },
+                },
+                data: { replacedBy: input.nextTokenId },
+            })
+
+            if (updated.count === 0) return updated
+
+            await tx.refreshToken.create({
+                data: {
+                    id: input.nextTokenId,
+                    userId: input.userId,
+                    deviceId: input.deviceId,
+                    token: input.nextTokenHash,
+                    expiresAt: input.expiresAt,
+                },
+            })
+            return updated
         })
 
         if (result.count === 0) {
@@ -175,15 +196,6 @@ export class IdentityRepository {
             }
         }
 
-        await this.prisma.refreshToken.create({
-            data: {
-                id: input.nextTokenId,
-                userId: input.userId,
-                deviceId: input.deviceId,
-                token: input.nextTokenHash,
-                expiresAt: input.expiresAt,
-            },
-        })
         return { outcome: 'rotated', refreshTokenId: input.nextTokenId }
     }
 

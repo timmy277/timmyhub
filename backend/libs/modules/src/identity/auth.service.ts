@@ -98,6 +98,10 @@ export class AuthService {
             throw new ApiError('REFRESH_TOKEN_INVALID')
         }
 
+        if (currentToken.expiresAt.getTime() <= Date.now()) {
+            throw new ApiError('REFRESH_TOKEN_EXPIRED')
+        }
+
         const rawNextToken = generateRawRefreshToken()
         const nextHash = hashRefreshToken(rawNextToken)
         const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS)
@@ -118,10 +122,6 @@ export class AuthService {
                 await this.identityRepository.revokeAllUserRefreshTokens(currentToken.userId)
                 throw new ApiError('REFRESH_TOKEN_REUSED')
             }
-            throw new ApiError('REFRESH_TOKEN_EXPIRED')
-        }
-
-        if (currentToken.expiresAt.getTime() < Date.now()) {
             throw new ApiError('REFRESH_TOKEN_EXPIRED')
         }
 
