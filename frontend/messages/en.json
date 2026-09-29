@@ -56,6 +56,7 @@
   "userManagement": {
     "pageTitle": "Users",
     "tabList": "List",
+    "openTabsRegion": "Open user tabs",
     "tabCreate": "Create",
     "tabUpdateWithId": "Update: {id}",
     "tabDetailWithId": "Detail: {id}",

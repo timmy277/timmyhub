@@ -14,13 +14,14 @@ import { UserPanelError } from './user-panel-error'
 interface UserUpdatePanelProps {
     userId: string
     permissions: UserPermissionFlags
+    currentUserId: string
 }
 
 // Tab "Cập nhật". Server Component tải bản ghi rồi đưa giá trị hiện tại xuống `UserForm` (client) — form không phải
 // tự gọi backend để lấy dữ liệu khởi tạo, nên không có trạng thái "đang tải" cho phần điền sẵn.
 //
 // Cần cả `update` lẫn `read`: form lấy giá trị hiện tại từ endpoint chi tiết, mà endpoint đó đòi `identity:users:read`.
-export async function UserUpdatePanel({ userId, permissions }: UserUpdatePanelProps) {
+export async function UserUpdatePanel({ userId, permissions, currentUserId }: UserUpdatePanelProps) {
     // ===== Hooks =====
     const t = await getTranslations('userManagement')
 
@@ -43,5 +44,5 @@ export async function UserUpdatePanel({ userId, permissions }: UserUpdatePanelPr
 
     // Đổi vai trò ở màn sửa không nằm trong form: việc đó có endpoint riêng và nằm ở tab "Chi tiết" để mọi thay đổi
     // quyền đều đi qua một chỗ.
-    return <UserForm user={result.data} canAssignRole={false} />
+    return <UserForm user={result.data} canAssignRole={false} actorId={currentUserId} />
 }

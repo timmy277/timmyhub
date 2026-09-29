@@ -25,7 +25,7 @@ import { useDebouncedValue, useDeleteUser, useUserListQuery } from '@/hooks'
 
 import { buildUserListHref } from '../user-list-href'
 import { userColumnFilterParams } from '../user-list-query'
-import { buildUserTabsHref, parseUserTabs, type UserTabState } from '../user-tab-query'
+import { buildUserTabsHref, type UserTabState } from '../user-tab-query'
 import { UserLockDialog } from './user-lock-dialog'
 
 interface UserTableProps {
@@ -66,13 +66,9 @@ export function UserTable({ rows, pagination, query, permissions, error }: UserT
     const isLoading = isPending || removeUser.isPending
 
     // Thao tác trên hàng là **điều hướng** sang tab tương ứng chứ không mở hộp thoại — nhờ vậy URL của bản ghi đang
-    // xem chia sẻ được, và tải lại trang vẫn ra đúng chỗ. Tab đang mở nằm trong URL nên đọc lại ngay tại đây để mở
-    // thêm bản ghi mà không làm rơi mất những tab đã mở trước đó.
+    // xem chia sẻ được, và tải lại trang vẫn ra đúng chỗ. Danh sách tab đang mở được UserTabs lưu riêng ở localStorage.
     const hrefFor = useCallback(
-        (target: UserTabState) => {
-            const { open } = parseUserTabs(searchParams)
-            return buildUserTabsHref(pathname, searchParams, target, open)
-        },
+        (target: UserTabState) => buildUserTabsHref(pathname, searchParams, target),
         [pathname, searchParams],
     )
 

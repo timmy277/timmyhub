@@ -16,7 +16,7 @@ import { USER_STATUS_LABEL_KEY, USER_STATUS_TONE, USER_TAB } from '@/constants'
 import { useDeleteUser } from '@/hooks'
 import { formatDisplayDate } from '@/utils'
 
-import { buildUserTabsHref, parseUserTabs } from '../user-tab-query'
+import { buildUserTabsHref } from '../user-tab-query'
 import { UserLockDialog } from './user-lock-dialog'
 import { UserRolesSection } from './user-roles-section'
 
@@ -46,9 +46,8 @@ export function UserDetailView({ user, permissions, currentUserId }: UserDetailV
     const isLocked = user.status === UserStatus.LOCKED
 
     // Mở tab Sửa **thêm một tab** bên cạnh tab Chi tiết đang xem, không thay thế nó: tab Chi tiết vẫn nằm trên thanh
-    // tab để quay lại. Nút này là `<Link>` nên phải giữ nguyên danh sách tab đang mở trong URL.
-    const { open } = parseUserTabs(searchParams)
-    const editHref = buildUserTabsHref(pathname, searchParams, { tab: USER_TAB.UPDATE, id: user.id }, open)
+    // tab để quay lại. UserTabs sẽ ghi tab mới vào localStorage khi URL active đổi.
+    const editHref = buildUserTabsHref(pathname, searchParams, { tab: USER_TAB.UPDATE, id: user.id })
 
     const formatTimestamp = (value: string | null) => (value ? formatDisplayDate(parseISO(value)) : t('never'))
 

@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
-import Link from 'next/link'
+import { useCallback, useState, type FormEvent } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 
@@ -13,13 +12,15 @@ import { ROLE_LABEL_KEY, USER_TAB } from '@/constants'
 import { useCreateUser, useUpdateUser } from '@/hooks'
 import { toFieldErrors } from '@/utils'
 
-import { buildUserTabCloseHref, type UserTabItem } from '../user-tab-query'
+import { buildUserTabCloseHref, type UserTabItem, withoutUserTab } from '../user-tab-query'
+import { readOpenUserTabs, writeOpenUserTabs } from '../user-tabs-storage'
 
 interface UserFormProps {
     // `null` = tạo mới; có giá trị = sửa tài khoản đó.
     user: UserSummary | null
     // Chỉ có `identity:users:assign-role` mới được chọn vai trò khi tạo (backend chặn lần nữa nếu thiếu).
     canAssignRole: boolean
+    actorId: string
 }
 
 // Form tạo/sửa người dùng, dùng chung cho tab "Tạo" và tab "Cập nhật". Validate bằng chính schema của
@@ -29,7 +30,7 @@ interface UserFormProps {
 // 7 trạng thái: mặc định · đang tải (nút lưu quay, khoá form) · rỗng (N/A) · lỗi (`fieldErrors` dưới từng ô, lỗi
 // nghiệp vụ hiện toast ở hook) · không có quyền (tab không hiện — nơi gọi quyết định) · vô hiệu hoá (đang gửi) ·
 // thành công (toast + tab tự đóng, bảng đã dựng lại qua `revalidatePath`).
-export function UserForm({ user, canAssignRole }: UserFormProps) {
+export function UserForm({ user, canAssignRole, actorId }: UserFormProps) {
     const isEdit = user !== null
 
     // ===== State =====
@@ -51,21 +52,24 @@ export function UserForm({ user, canAssignRole }: UserFormProps) {
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
+    const editedUserId = user?.id
 
-    // Ghi xong thì chính tab này tự đóng và nhường chỗ cho tab liền trước (thường là danh sách) — ở dạng tab không còn
-    // "đóng hộp thoại" để báo là đã xong. `leaveHref` khai báo ở khối Derived bên dưới; hai callback này chỉ chạy sau
-    // khi render xong nên không sao.
-    const create = useCreateUser({ onSucceeded: () => router.push(leaveHref) })
-    const update = useUpdateUser({ onSucceeded: () => router.push(leaveHref) })
+    // Tab của form này. Lưu thành công hoặc Huỷ sẽ gỡ đúng tab hiện tại khỏi localStorage.
+    const closeCurrentTab = useCallback(() => {
+        const selfTab: UserTabItem = editedUserId
+            ? { tab: USER_TAB.UPDATE, id: editedUserId }
+            : { tab: USER_TAB.CREATE }
+        const open = readOpenUserTabs(actorId)
+        const href = buildUserTabCloseHref(pathname, searchParams, selfTab, open)
+        writeOpenUserTabs(actorId, withoutUserTab(open, selfTab))
+        router.push(href)
+    }, [actorId, editedUserId, pathname, router, searchParams])
+    const create = useCreateUser({ onSucceeded: closeCurrentTab })
+    const update = useUpdateUser({ onSucceeded: closeCurrentTab })
     const isPending = create.isPending || update.isPending
 
     // ===== Derived =====
     const roleOptions = USER_ROLES.map((role) => ({ value: role, label: tRole(ROLE_LABEL_KEY[role]) }))
-
-    // Tab của chính form này, để biết cần gỡ tab nào khỏi danh sách đang mở. Lưu xong hay bấm Huỷ đều đi qua đây: form
-    // đóng thì tab cũng đóng, còn các tab khác đang mở vẫn nguyên trên thanh tab.
-    const selfTab: UserTabItem = isEdit ? { tab: USER_TAB.UPDATE, id: user.id } : { tab: USER_TAB.CREATE }
-    const leaveHref = buildUserTabCloseHref(pathname, searchParams, selfTab)
 
     // ===== Handlers =====
     const setField = (field: keyof typeof values) => (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -204,8 +208,8 @@ export function UserForm({ user, canAssignRole }: UserFormProps) {
                         {t('cancel')}
                     </Button>
                 ) : (
-                    <Button type="button" variant="outline" asChild>
-                        <Link href={leaveHref}>{t('cancel')}</Link>
+                    <Button type="button" variant="outline" onClick={closeCurrentTab}>
+                        {t('cancel')}
                     </Button>
                 )}
                 <Button type="submit" disabled={isPending}>

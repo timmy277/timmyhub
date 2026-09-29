@@ -17,7 +17,7 @@ import { UserUpdatePanel } from './user-update-panel'
 
 interface UserManagementPageProps {
     query: UserListQuery
-    // Tab đang xem + danh sách tab đang mở, đọc từ URL — xem `parseUserTabs`.
+    // Chỉ tab hiện tại nằm trong URL; danh sách tab đang mở do UserTabs nạp từ localStorage.
     tabs: UserTabsState
 }
 
@@ -39,7 +39,7 @@ export async function UserManagementPage({ query, tabs }: UserManagementPageProp
     const t = await getTranslations('userManagement')
 
     // ===== Derived =====
-    const { active, open } = tabs
+    const { active } = tabs
 
     // ===== Data =====
     const actor = await getActor()
@@ -81,12 +81,12 @@ export async function UserManagementPage({ query, tabs }: UserManagementPageProp
     let panel: ReactNode
     if (active.tab === USER_TAB.CREATE) {
         panel = permissions.CREATE ? (
-            <UserForm user={null} canAssignRole={permissions.ASSIGN_ROLE} />
+            <UserForm user={null} canAssignRole={permissions.ASSIGN_ROLE} actorId={actor.userId} />
         ) : (
             <EmptyState title={t('noPermissionTitle')} description={t('noPermissionDescription')} />
         )
     } else if (active.tab === USER_TAB.UPDATE) {
-        panel = <UserUpdatePanel userId={active.id} permissions={permissions} />
+        panel = <UserUpdatePanel userId={active.id} permissions={permissions} currentUserId={actor.userId} />
     } else if (active.tab === USER_TAB.DETAIL) {
         panel = <UserDetailPanel userId={active.id} permissions={permissions} currentUserId={actor.userId} />
     } else {
@@ -98,7 +98,7 @@ export async function UserManagementPage({ query, tabs }: UserManagementPageProp
             {/* Thanh tab nằm trong card, cùng chỗ với khung `Paper` bọc `Tabs` của TimmyHub gốc — tab là một phần của
                 màn hình đang xem, không phải một dải điều hướng treo lơ lửng phía trên. */}
             <section className="rounded-xl border bg-card p-4 text-card-foreground shadow-sm">
-                <UserTabs active={active} open={open} />
+                <UserTabs active={active} userId={actor.userId} />
                 <div className="mt-4">{panel}</div>
             </section>
         </PageContainer>

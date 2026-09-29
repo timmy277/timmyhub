@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
 import { FileTextIcon, PencilIcon, PlusIcon, XIcon } from 'lucide-react'
 import Link from 'next/link'
@@ -7,21 +8,24 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui'
-import { USER_TAB, USER_TAB_ID_LABEL_LENGTH } from '@/constants'
+import { USER_QUERY_PARAM, USER_TAB, USER_TAB_ID_LABEL_LENGTH } from '@/constants'
 
 import {
     activeUserTabKey,
+    addUserTab,
     buildUserTabCloseHref,
     buildUserTabsHref,
+    parseUserTabKeys,
+    parseUserTabItem,
     userTabKey,
     type UserTabItem,
     type UserTabState,
 } from '../user-tab-query'
+import { getOpenUserTabsSnapshot, subscribeToOpenUserTabs, writeOpenUserTabs } from '../user-tabs-storage'
 
 interface UserTabsProps {
     active: UserTabState
-    // Danh sách tab đang mở, không tính tab danh sách — nguồn sự thật của thanh tab, đọc từ tham số `open`.
-    open: UserTabItem[]
+    userId: string
 }
 
 interface UserTabStripItem {
@@ -41,14 +45,15 @@ interface UserTabStripItem {
 // đường kẻ, `data-active:border-b-card` tô viền dưới bằng màu card nên đường kẻ bị ngắt dưới tab đang xem.
 //
 // `variant="line"` chỉ để lấy `bg-transparent` + `rounded-none` của cva (variant mặc định là pill nền `bg-muted`).
-// Mọi thứ còn lại của cva đều phải ghi đè: `h-8` → `h-auto`, `p-[3px]` → `p-0`, `w-fit` → `w-full`, `gap-1` → `gap-0`,
+// Danh sách rộng ít nhất bằng khung nhìn và nới theo số tab; từng tab giữ nguyên chiều rộng để thanh có thể cuộn.
+// Mọi thứ còn lại của cva đều phải ghi đè: `h-8` → `h-auto`, `p-[3px]` → `p-0`, `w-fit` → `min-w-full w-max`, `gap-1` → `gap-0`,
 // `h-[calc(100%-1px)]` → `h-9`, `flex-1` → `flex-none`, `rounded-md` → bo hai góc trên. Đã kiểm bằng chính `cn`
 // (tailwind-merge) nên không còn cặp class nào chọi nhau. Hai chỗ tailwind-merge cố ý giữ lại cả hai vì chúng thuộc
 // hai nhóm khác nhau — `rounded-md` với `rounded-t-md`/`rounded-b-none`, và `data-active:border-border` với
 // `data-active:border-b-card` — đều dựa vào thứ tự CSS của Tailwind: utility theo cạnh luôn được xếp sau utility
 // toàn phần nên cạnh thắng.
 const TABS_LIST_CLASS =
-    'group-data-horizontal/tabs:h-auto w-full justify-start gap-0 rounded-none border-b border-border p-0'
+    'group-data-horizontal/tabs:h-auto min-w-full w-max flex-nowrap justify-start gap-0 rounded-none border-b border-border p-0'
 
 // `dark:group-data-horizontal/tabs:data-active:border-b-card` có độ ưu tiên cao hơn `dark:data-active:border-input`
 // của cva, nên ở dark mode đường kẻ vẫn bị cắt đúng chỗ thay vì bị viền `input` mờ che mất.
@@ -57,6 +62,16 @@ const TABS_TRIGGER_CLASS = [
     'after:hidden',
     'data-active:border-border data-active:border-b-card dark:group-data-horizontal/tabs:data-active:border-b-card',
 ].join(' ')
+
+function sameUserTabs(left: readonly UserTabItem[], right: readonly UserTabItem[]): boolean {
+    return (
+        left.length === right.length &&
+        left.every((item, index) => {
+            const other = right[index]
+            return other !== undefined && userTabKey(item) === userTabKey(other)
+        })
+    )
+}
 
 // Thanh tab của màn quản lý người dùng, dựng theo mẫu `ManagementPage` của TimmyHub gốc: tab danh sách luôn có mặt,
 // tab bản ghi chỉ hiện khi đang mở, và mỗi tab bản ghi có nút × để đóng.
@@ -68,16 +83,62 @@ const TABS_TRIGGER_CLASS = [
 // Tab đã mở thì **còn mãi cho tới khi bấm ×**, kể cả lúc đang đứng ở danh sách — về danh sách không đóng bản ghi đang
 // xem, nên bấm qua lại giữa xem bản ghi và danh sách không phải mở lại từ đầu.
 //
-// Tab nằm trong URL nên mỗi tab là một `<Link>` thật: prefetch, mở tab mới và nút Back đều chạy, còn panel tương ứng
-// do Server Component render theo `searchParams`. Vì vậy `onValueChange` cố ý KHÔNG nối vào điều hướng — Radix gọi nó
-// cho cả click lẫn phím mũi tên, mà click thì `<Link>` đã điều hướng rồi; nối thêm `router.push` sẽ đẩy hai lần vào
-// lịch sử và làm nút Back phải bấm hai lần.
-export function UserTabs({ active, open }: UserTabsProps) {
+// Mỗi tab là một `<Link>` thật: tab đang chọn nằm trong URL nên tải lại/chia sẻ link vẫn giữ đúng panel; danh sách tab
+// mở được lưu riêng trong localStorage. `onValueChange` cố ý không điều hướng vì click của `<Link>` đã làm việc đó.
+export function UserTabs({ active, userId }: UserTabsProps) {
     // ===== Hooks =====
     const t = useTranslations('userManagement')
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
+    const searchQuery = searchParams.toString()
+    const legacyOpen = searchParams.get(USER_QUERY_PARAM.OPEN)
+    const activeKey = activeUserTabKey(active)
+    const openSnapshot = useSyncExternalStore(
+        useCallback((onChange) => subscribeToOpenUserTabs(userId, onChange), [userId]),
+        useCallback(() => getOpenUserTabsSnapshot(userId), [userId]),
+        () => '[]',
+    )
+    const open = useMemo(() => {
+        try {
+            return parseUserTabKeys(JSON.parse(openSnapshot))
+        } catch {
+            return []
+        }
+    }, [openSnapshot])
+    const activeTabRef = useRef<HTMLAnchorElement | null>(null)
+
+    const commitOpenTabs = useCallback((next: UserTabItem[]) => writeOpenUserTabs(userId, next), [userId])
+
+    useEffect(() => {
+        let stored: UserTabItem[] = []
+        try {
+            stored = parseUserTabKeys(JSON.parse(getOpenUserTabsSnapshot(userId)))
+        } catch {
+            // Ignore invalid localStorage data and replace it with the normalized active tab list below.
+        }
+        const legacyTabs = parseUserTabKeys(legacyOpen?.split(',') ?? [])
+        const next = legacyTabs.reduce((items, item) => addUserTab(items, item), stored)
+        const activeItem = parseUserTabItem(activeKey)
+        const withActive = activeItem ? addUserTab(next, activeItem) : next
+
+        if (!sameUserTabs(stored, withActive)) {
+            writeOpenUserTabs(userId, withActive)
+        }
+    }, [activeKey, legacyOpen, userId])
+
+    useEffect(() => {
+        if (legacyOpen !== null) {
+            const params = new URLSearchParams(searchQuery)
+            params.delete(USER_QUERY_PARAM.OPEN)
+            const query = params.toString()
+            router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
+        }
+    }, [legacyOpen, pathname, router, searchQuery])
+
+    useEffect(() => {
+        activeTabRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    }, [activeKey])
 
     // ===== Derived =====
     // Nhãn chỉ hiện 8 ký tự đầu của định danh — uuid đầy đủ (36 ký tự) làm tab dài quá khổ, mà tab chỉ cần đủ để người
@@ -97,6 +158,7 @@ export function UserTabs({ active, open }: UserTabsProps) {
     }
 
     // Thứ tự tab đúng bằng thứ tự mở, y như `openTabs` của gốc: mở thêm thì nối vào cuối, không sắp xếp lại.
+    const visibleOpen = useMemo(() => (active.tab === USER_TAB.LIST ? open : addUserTab(open, active)), [active, open])
     const items: UserTabStripItem[] = [
         {
             value: USER_TAB.LIST,
@@ -105,7 +167,7 @@ export function UserTabs({ active, open }: UserTabsProps) {
             target: { tab: USER_TAB.LIST },
             item: null,
         },
-        ...open.map((item) => ({
+        ...visibleOpen.map((item) => ({
             value: userTabKey(item),
             target: item,
             item,
@@ -114,39 +176,49 @@ export function UserTabs({ active, open }: UserTabsProps) {
     ]
 
     // ===== Handlers =====
-    // Tab danh sách giữ nguyên `open` nên về danh sách không đóng bản ghi nào; mở một tab bản ghi thì tab đó tự được
-    // thêm vào `open` (việc gộp nằm trong `buildUserTabsHref`).
-    const hrefFor = (target: UserTabState) => buildUserTabsHref(pathname, searchParams, target, open)
+    // Tab danh sách giữ nguyên danh sách tab đã mở; route chỉ thay đổi tab đang được chọn.
+    const hrefFor = (target: UserTabState) => buildUserTabsHref(pathname, searchParams, target)
 
     const handleClose = (event: MouseEvent<HTMLSpanElement>, item: UserTabItem) => {
         // Nút × nằm trong `<Link>` nên phải tự chặn điều hướng của thẻ cha, không thì vừa đóng tab vừa mở lại chính
         // nó. `stopPropagation` để Radix không nhận click này thành một lần đổi tab.
         event.preventDefault()
         event.stopPropagation()
-        router.push(buildUserTabCloseHref(pathname, searchParams, item))
+        const href = buildUserTabCloseHref(pathname, searchParams, item, open)
+        commitOpenTabs(open.filter((existing) => userTabKey(existing) !== userTabKey(item)))
+        if (active.tab !== USER_TAB.LIST && userTabKey(active) === userTabKey(item)) {
+            router.push(href)
+        }
     }
 
     return (
         <Tabs value={activeUserTabKey(active)} onValueChange={() => undefined}>
-            <TabsList variant="line" className={TABS_LIST_CLASS}>
-                {items.map(({ value, label, icon, target, item }) => (
-                    <TabsTrigger key={value} value={value} asChild className={TABS_TRIGGER_CLASS}>
-                        <Link href={hrefFor(target)}>
-                            {icon}
-                            {label}
-                            {item && (
-                                <span
-                                    title={t('closeTab')}
-                                    onClick={(event) => handleClose(event, item)}
-                                    className="-me-1 ms-0.5 flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
-                                >
-                                    <XIcon className="size-3" />
-                                </span>
-                            )}
-                        </Link>
-                    </TabsTrigger>
-                ))}
-            </TabsList>
+            <div
+                className="w-full overflow-x-auto overscroll-x-contain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                role="region"
+                aria-label={t('openTabsRegion')}
+                tabIndex={0}
+            >
+                <TabsList variant="line" className={TABS_LIST_CLASS}>
+                    {items.map(({ value, label, icon, target, item }) => (
+                        <TabsTrigger key={value} value={value} asChild className={TABS_TRIGGER_CLASS}>
+                            <Link href={hrefFor(target)} ref={value === activeKey ? activeTabRef : undefined}>
+                                {icon}
+                                {label}
+                                {item && (
+                                    <span
+                                        title={t('closeTab')}
+                                        onClick={(event) => handleClose(event, item)}
+                                        className="-me-1 ms-0.5 flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
+                                    >
+                                        <XIcon className="size-3" />
+                                    </span>
+                                )}
+                            </Link>
+                        </TabsTrigger>
+                    ))}
+                </TabsList>
+            </div>
         </Tabs>
     )
 }

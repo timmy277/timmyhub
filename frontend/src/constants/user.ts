@@ -28,10 +28,10 @@ export const USER_QUERY_PARAM = {
     EMAIL: 'email',
     CREATED_FROM: 'createdFrom',
     CREATED_TO: 'createdTo',
-    // Tab đang xem (`create` / `update:<uuid>` / `detail:<uuid>`, vắng mặt = danh sách) và danh sách tab đang mở
-    // (`update:<uuid>,create`) của màn quản lý. Chỉ là mối quan tâm giao diện nên KHÔNG nằm trong
-    // `UserListQuerySchema` — backend không bao giờ nhận hai tham số này.
+    // Tab hiện tại (`create` / `update:<uuid>` / `detail:<uuid>`, vắng mặt = danh sách); danh sách tab mở ở localStorage.
+    // Chỉ là mối quan tâm giao diện nên KHÔNG nằm trong `UserListQuerySchema`.
     TABS: 'tabs',
+    // Tên cũ chỉ dùng để dọn URL cũ đã lưu danh sách tab trong query string.
     OPEN: 'open',
 } as const
 
@@ -49,10 +49,6 @@ export type UserTab = (typeof USER_TAB)[keyof typeof USER_TAB]
 // Ngăn cách tên tab với định danh bản ghi trong cùng một giá trị: `detail:<uuid>`. Dùng chung cho cả lúc dựng URL và
 // lúc đọc lại — hai nơi lệch nhau là URL hỏng.
 export const USER_TAB_ID_SEPARATOR = ':'
-
-// Ngăn cách các tab trong danh sách tab đang mở (tham số `open`): `detail:<uuid>,create`. Uuid không chứa dấu phẩy
-// nên tách chuỗi là đủ, không cần mã hoá gì thêm.
-export const USER_TAB_LIST_SEPARATOR = ','
 
 // Nhãn tab chỉ hiện phần đầu của định danh: uuid đầy đủ (36 ký tự) làm tab dài quá khổ, mà tab chỉ cần đủ để người
 // dùng đối chiếu với bản ghi đang mở. Định danh đầy đủ vẫn nằm trong `title` để rê chuột là thấy.
