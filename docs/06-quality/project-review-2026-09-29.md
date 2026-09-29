@@ -23,6 +23,27 @@ Nền tảng tốt, kỷ luật code cao, nhưng **chưa release-ready** và **t
 - **Vấn đề quy trình:** 15/15 task RBAC vẫn `- [ ]`, mọi spec vẫn `status: draft`, `feature-inventory.md` không có cột trạng thái ⇒ không có cách nào biết dự án đang ở đâu nếu chỉ đọc tài liệu.
 - **Chưa commit gì.** Working tree đang có 28 file thay đổi.
 
+### 0.1 Cập nhật cuối ngày 29/09 — đã vá gì
+
+Sau review, Timmy chốt phạm vi **"bug + warning code"** (không gồm nợ kiến trúc và phần lệch tài liệu còn lại). Trạng thái từng phát hiện:
+
+| Phát hiện | Mức | Trạng thái |
+|---|---|---|
+| `PermissionsGuard` fail-open (`!required → true`) | P2 | **Đã vá** — fail-closed + `@AuthenticatedOnly()` + checker chặn khởi động |
+| Refresh token hết hạn ⇒ thu hồi mọi phiên | P1 | **Đã vá** — chặn trước khi xoay + test hồi quy `auth.service.spec.ts` |
+| `CreatePermissionSchema` chỉ nhận hậu tố `:any` | P3 | **Đã vá** — nhận mọi scope thường; smoke RBAC 62 → 65 assertion |
+| Cache quyền hiệu lực không có trần | P2 | **Đã vá** — trần 5000, đuổi entry cũ nhất |
+| `(protected)` index được, thiếu `robots.ts` | — | **Đã vá** — `noindex` ở layout + `app/robots.ts` |
+| `api-server.ts` không có timeout | P3 | **Đã vá** — `AbortSignal.timeout`; axios thêm `timeout` |
+| `clsx` + `tailwind-merge` thừa | P3 | **Đã vá** — bỏ khỏi `package.json` + lockfile |
+| Lớp 1 (`@Roles`) là code chết | P2 | **Chưa** — ngoài phạm vi (kiến trúc) |
+| Lớp 4 `DataScope` không tồn tại | P2 | **Chưa** — ngoài phạm vi (kiến trúc) |
+| `logoutAll` không cắt access token đang sống | P1 | **Chưa** — cần `sessionId` trong JWT |
+| Audit bypass SUPER_ADMIN không có dấu vết | P2 | **Chưa** |
+| Lệch tài liệu (§1.3) | — | **Vá một phần** — ADR-0007/0018 đã sửa; task/spec/liên kết hỏng còn nguyên |
+
+Commit: `5fd4e6b` → `ea31830` (8 commit trên `main`, **chưa push**). Cổng kiểm tra sau khi vá: jest 6 suite / 91 test · smoke-users 32/32 · smoke-rbac 65/65 · ui-rbac-check 41/41 · users-columns 128/128 · i18n 316/316 · prettier sạch · tsc + eslint 0 lỗi.
+
 ---
 
 ## 1. Đã đến bước nào rồi
