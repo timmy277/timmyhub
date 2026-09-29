@@ -8,3 +8,7 @@ package-lock.json
 # docs/ theo quy ước định dạng riêng (4 space, bảng căn tay) — xem docs/06-quality/coding-standards.md
 docs
 *.md
+
+# Next sinh file này mỗi lần `next dev`/`next build` (và nằm trong .gitignore) — định dạng lại cũng bị ghi đè,
+# nên chặn ở đây thay vì sửa tay.
+next-env.d.ts
