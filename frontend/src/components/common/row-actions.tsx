@@ -39,7 +39,18 @@ export function RowActions({ actions, className }: RowActionsProps) {
                     icon={<Icon />}
                     disabled={disabled}
                     onClick={onClick}
-                    className={destructive ? 'text-destructive hover:text-destructive' : undefined}
+                    className={cn(
+                        key === 'edit' &&
+                            'text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300',
+                        key === 'view' &&
+                            'text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300',
+                        key === 'toggle' &&
+                            destructive &&
+                            'text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300',
+                        key !== 'toggle' &&
+                            (key === 'delete' || destructive) &&
+                            'text-destructive hover:text-destructive',
+                    )}
                 />
             ))}
         </div>

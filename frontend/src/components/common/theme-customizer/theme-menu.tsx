@@ -29,7 +29,7 @@ export function ThemeMenu() {
                 <TooltipTrigger asChild>
                     <PopoverTrigger asChild>
                         <Button variant="ghost" size="icon" aria-label={t('triggerLabel')}>
-                            <PaletteIcon aria-hidden />
+                            <PaletteIcon aria-hidden className="text-primary" />
                         </Button>
                     </PopoverTrigger>
                 </TooltipTrigger>

@@ -439,22 +439,34 @@ export function AgGridTable<TData>({
                         </span>
                     )}
                     {onRefresh && (
-                        <Button variant="outline" onClick={onRefresh} disabled={loading}>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
+                            onClick={onRefresh}
+                            disabled={loading}
+                        >
                             <RefreshCwIcon
                                 data-icon="inline-start"
-                                className={loading ? 'animate-spin motion-reduce:animate-none' : undefined}
+                                className={`text-primary${loading ? ' animate-spin motion-reduce:animate-none' : ''}`}
                             />
                             {t('refresh')}
                         </Button>
                     )}
-                    <Button variant="outline" onClick={handleReset} disabled={!gridApi}>
-                        <RotateCcwIcon data-icon="inline-start" />
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-orange-500/40 text-orange-700 hover:bg-orange-500/10 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-300"
+                        onClick={handleReset}
+                        disabled={!gridApi}
+                    >
+                        <RotateCcwIcon data-icon="inline-start" className="text-orange-600 dark:text-orange-400" />
                         {t('reset')}
                     </Button>
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="outline" disabled={!gridApi}>
-                                <Columns3Icon data-icon="inline-start" />
+                            <Button size="sm" variant="outline" disabled={!gridApi}>
+                                <Columns3Icon data-icon="inline-start" className="text-blue-600 dark:text-blue-400" />
                                 {t('columns')}
                             </Button>
                         </PopoverTrigger>
@@ -462,13 +474,19 @@ export function AgGridTable<TData>({
                             {gridApi && <ColumnManagement api={gridApi} />}
                         </PopoverContent>
                     </Popover>
-                    <Button variant="outline" onClick={handleExport} disabled={!gridApi || Boolean(error)}>
-                        <FileDownIcon data-icon="inline-start" />
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-green-600/40 text-green-700 hover:bg-green-600/10 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                        onClick={handleExport}
+                        disabled={!gridApi || Boolean(error)}
+                    >
+                        <FileDownIcon data-icon="inline-start" className="text-green-600 dark:text-green-400" />
                         {hasSelection ? t('exportSelected') : t('exportCsv')}
                     </Button>
                     {onAdd && (
-                        <Button onClick={onAdd}>
-                            <PlusIcon data-icon="inline-start" />
+                        <Button size="sm" className="text-white" onClick={onAdd}>
+                            <PlusIcon data-icon="inline-start" className="text-primary-foreground/85" />
                             {addLabel ?? t('add')}
                         </Button>
                     )}

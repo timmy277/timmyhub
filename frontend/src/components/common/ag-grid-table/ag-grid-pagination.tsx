@@ -115,7 +115,7 @@ export function AgGridPagination<TData>({ api, pageSizeOptions, disabled = false
                     </PaginationItem>
                     {isMobile ? (
                         <PaginationItem>
-                            <span aria-current="page" className="px-2 text-sm font-medium text-foreground">
+                            <span aria-current="page" className="px-2 text-sm font-medium text-primary">
                                 {t('pageOf', { page: currentPage + 1, total: totalPages })}
                             </span>
                         </PaginationItem>
