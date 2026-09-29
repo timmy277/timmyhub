@@ -120,15 +120,18 @@ function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
         />
     )
 }
-
 function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.Props) {
     return (
         <ComboboxPrimitive.Item
             data-slot="combobox-item"
-            className={cn(
-                "relative flex w-full cursor-default items-center gap-2 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-selected:bg-primary/10 data-selected:text-primary data-selected:data-highlighted:bg-primary/10 data-selected:data-highlighted:text-primary data-selected:data-highlighted:**:text-primary not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-                className,
-            )}
+            className={(state) =>
+                cn(
+                    'relative flex w-full cursor-default items-center gap-2 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4',
+                    state.selected &&
+                        'bg-primary/10 !text-primary data-highlighted:bg-primary/10 data-highlighted:!text-primary',
+                    typeof className === 'function' ? className(state) : className,
+                )
+            }
             {...props}
         >
             {children}
@@ -142,7 +145,6 @@ function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.
         </ComboboxPrimitive.Item>
     )
 }
-
 function ComboboxGroup({ className, ...props }: ComboboxPrimitive.Group.Props) {
     return <ComboboxPrimitive.Group data-slot="combobox-group" className={cn(className)} {...props} />
 }
