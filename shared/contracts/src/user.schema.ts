@@ -97,11 +97,13 @@ export type CreateUserInput = z.infer<typeof CreateUserSchema>
 
 // PATCH /v1/identity/users/:userId — `identity:users:update`, sửa hồ sơ thay người dùng (hỗ trợ).
 // `phone: null` là xoá số điện thoại; gửi object rỗng là no-op không ghi DB.
+// PATCH user profile and, with identity:users:assign-role, assigned roles.
 export const UpdateUserSchema = z.object({
     firstName: PersonNameSchema('validation.firstNameRequired').optional(),
     lastName: PersonNameSchema('validation.lastNameRequired').optional(),
     displayName: z.string().trim().min(1, apiMessageKey('validation.displayNameRequired')).max(100).optional(),
     phone: PhoneSchema.nullable().optional(),
+    roles: z.array(UserRoleSchema).min(1, apiMessageKey('validation.rolesRequired')).optional(),
 })
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>
 

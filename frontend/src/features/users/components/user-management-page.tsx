@@ -81,14 +81,14 @@ export async function UserManagementPage({ query, tabs }: UserManagementPageProp
     let panel: ReactNode
     if (active.tab === USER_TAB.CREATE) {
         panel = permissions.CREATE ? (
-            <UserForm user={null} canAssignRole={permissions.ASSIGN_ROLE} actorId={actor.userId} />
+            <UserForm key="create" canAssignRole={permissions.ASSIGN_ROLE} actorId={actor.userId} />
         ) : (
             <EmptyState title={t('noPermissionTitle')} description={t('noPermissionDescription')} />
         )
     } else if (active.tab === USER_TAB.UPDATE) {
         panel = <UserUpdatePanel userId={active.id} permissions={permissions} currentUserId={actor.userId} />
     } else if (active.tab === USER_TAB.DETAIL) {
-        panel = <UserDetailPanel userId={active.id} permissions={permissions} currentUserId={actor.userId} />
+        panel = <UserDetailPanel userId={active.id} permissions={permissions} />
     } else {
         panel = <UserListPanel query={query} permissions={permissions} />
     }

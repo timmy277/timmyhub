@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 
 import type { UserListQuery } from '@timmyhub/contracts'
-import { OUTBOX_AGGREGATE, OUTBOX_EVENT, UserRole } from '@timmyhub/contracts'
+import { OUTBOX_AGGREGATE, OUTBOX_EVENT, isUserRole, UserRole } from '@timmyhub/contracts'
 import type { Prisma, Profile, User } from '@timmyhub/prisma'
 import { PrismaService } from '@timmyhub/prisma'
 
@@ -26,11 +26,12 @@ export type CreateUserRecordInput = {
     createdBy: string
 }
 
-export type UpdateUserProfileInput = {
+export type UpdateUserRecordInput = {
     firstName?: string | undefined
     lastName?: string | undefined
     displayName?: string | undefined
     phone?: string | null | undefined
+    roles?: UserRole[] | undefined
 }
 
 // `sort` → orderBy của Prisma nằm ở `../utils/user-list.utils` (`buildUserListOrderBy`) — hàm thuần, kiểm chứng được
@@ -131,7 +132,7 @@ export class UsersRepository {
     }
 
     // PATCH hồ sơ thay người dùng (hỗ trợ). `phone: null` là xoá số; field không gửi thì giữ nguyên.
-    async updateUserProfile(userId: string, input: UpdateUserProfileInput, actorId: string): Promise<UserWithProfile> {
+    async updateUser(userId: string, input: UpdateUserRecordInput, actorId: string): Promise<UserWithProfile> {
         return this.prisma.$transaction(async (tx) => {
             const profileData: Prisma.ProfileUpdateInput = {}
             if (input.firstName !== undefined) profileData.firstName = input.firstName
@@ -156,6 +157,79 @@ export class UsersRepository {
                 await tx.user.update({ where: { id: userId }, data: { phone: input.phone } })
             }
 
+            const changedRoleNames: { granted: string[]; revoked: string[] } = { granted: [], revoked: [] }
+            if (input.roles !== undefined) {
+                const [currentAssignments, requestedSystemRoles] = await Promise.all([
+                    tx.userSystemRole.findMany({ where: { userId }, include: { role: { select: { name: true } } } }),
+                    tx.systemRole.findMany({ where: { name: { in: input.roles } } }),
+                ])
+                const requestedNames = new Set(input.roles)
+                const currentNames = new Set(
+                    currentAssignments.map((assignment) => assignment.role.name).filter(isUserRole),
+                )
+                const granted = input.roles.filter((roleName) => !currentNames.has(roleName))
+                const revoked = [...currentNames].filter((roleName) => !requestedNames.has(roleName))
+
+                if (requestedSystemRoles.length !== requestedNames.size) {
+                    throw new Error('One or more requested system roles are missing from the database')
+                }
+
+                const currentEnumAssignments = currentAssignments.filter((assignment) =>
+                    isUserRole(assignment.role.name),
+                )
+                const requestedRoleIds = new Set(requestedSystemRoles.map((role) => role.id))
+                const idsToRevoke = currentEnumAssignments
+                    .filter((assignment) => !requestedRoleIds.has(assignment.roleId))
+                    .map((assignment) => assignment.roleId)
+                if (idsToRevoke.length > 0) {
+                    await tx.userSystemRole.deleteMany({ where: { userId, roleId: { in: idsToRevoke } } })
+                }
+
+                const currentRoleIds = new Set(currentEnumAssignments.map((assignment) => assignment.roleId))
+                const assignmentsToCreate = requestedSystemRoles
+                    .filter((role) => !currentRoleIds.has(role.id))
+                    .map((role) => ({ userId, roleId: role.id }))
+                if (assignmentsToCreate.length > 0) {
+                    await tx.userSystemRole.createMany({ data: assignmentsToCreate, skipDuplicates: true })
+                }
+                await tx.user.update({ where: { id: userId }, data: { roles: input.roles } })
+                changedRoleNames.granted = granted
+                changedRoleNames.revoked = revoked
+            }
+
+            for (const roleName of changedRoleNames.granted) {
+                await writeOutboxEvent(tx, {
+                    aggregateType: OUTBOX_AGGREGATE.IDENTITY,
+                    aggregateId: userId,
+                    eventType: OUTBOX_EVENT.USER_ROLE_GRANTED,
+                    payload: { userId, roleName, grantedBy: actorId },
+                })
+                await writeAuditLog(tx, {
+                    action: 'identity.user.role.grant',
+                    entityType: 'User',
+                    entityId: userId,
+                    actorId,
+                    actorType: 'ADMIN',
+                    after: { roleName },
+                })
+            }
+            for (const roleName of changedRoleNames.revoked) {
+                await writeOutboxEvent(tx, {
+                    aggregateType: OUTBOX_AGGREGATE.IDENTITY,
+                    aggregateId: userId,
+                    eventType: OUTBOX_EVENT.USER_ROLE_REVOKED,
+                    payload: { userId, roleName, revokedBy: actorId },
+                })
+                await writeAuditLog(tx, {
+                    action: 'identity.user.role.revoke',
+                    entityType: 'User',
+                    entityId: userId,
+                    actorId,
+                    actorType: 'ADMIN',
+                    after: { roleName },
+                })
+            }
+
             await writeOutboxEvent(tx, {
                 aggregateType: OUTBOX_AGGREGATE.IDENTITY,
                 aggregateId: userId,
@@ -163,7 +237,7 @@ export class UsersRepository {
                 payload: {
                     userId,
                     fields: Object.keys(input).filter(
-                        (field) => input[field as keyof UpdateUserProfileInput] !== undefined,
+                        (field) => input[field as keyof UpdateUserRecordInput] !== undefined,
                     ),
                 },
             })
@@ -176,8 +250,9 @@ export class UsersRepository {
                 actorType: 'ADMIN',
                 after: {
                     changedFields: Object.keys(input).filter(
-                        (field) => input[field as keyof UpdateUserProfileInput] !== undefined,
+                        (field) => input[field as keyof UpdateUserRecordInput] !== undefined,
                     ),
+                    ...(input.roles !== undefined ? { roles: input.roles } : {}),
                 },
             })
 

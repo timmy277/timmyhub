@@ -42,7 +42,14 @@ export async function UserUpdatePanel({ userId, permissions, currentUserId }: Us
         )
     }
 
-    // Đổi vai trò ở màn sửa không nằm trong form: việc đó có endpoint riêng và nằm ở tab "Chi tiết" để mọi thay đổi
-    // quyền đều đi qua một chỗ.
-    return <UserForm user={result.data} canAssignRole={false} actorId={currentUserId} />
+    return (
+        <UserForm
+            key={`${userId}:${result.data.updatedAt}`}
+            userId={userId}
+            user={result.data}
+            canAssignRole={false}
+            actorId={currentUserId}
+            permissions={permissions}
+        />
+    )
 }

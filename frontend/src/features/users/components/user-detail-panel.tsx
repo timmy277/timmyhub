@@ -14,7 +14,6 @@ import { UserPanelError } from './user-panel-error'
 interface UserDetailPanelProps {
     userId: string
     permissions: UserPermissionFlags
-    currentUserId: string
 }
 
 // Tab "Chi tiết" (FEAT-USR-010). Server Component: tự lấy phiên rồi tải chi tiết ngay trên server, nên tab này không
@@ -22,7 +21,7 @@ interface UserDetailPanelProps {
 //
 // Ai vào được không phụ thuộc role: chỉ cần `identity:users:read`, thiếu thì thấy khối "không có quyền" — cùng câu
 // trả lời mà backend sẽ đưa ra (403) nếu gọi thẳng.
-export async function UserDetailPanel({ userId, permissions, currentUserId }: UserDetailPanelProps) {
+export async function UserDetailPanel({ userId, permissions }: UserDetailPanelProps) {
     // ===== Hooks =====
     const t = await getTranslations('userManagement')
 
@@ -45,5 +44,5 @@ export async function UserDetailPanel({ userId, permissions, currentUserId }: Us
         )
     }
 
-    return <UserDetailView user={result.data} permissions={permissions} currentUserId={currentUserId} />
+    return <UserDetailView user={result.data} permissions={permissions} />
 }

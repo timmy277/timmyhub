@@ -4,26 +4,33 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { parseISO } from 'date-fns'
-import { PencilIcon, Trash2Icon } from 'lucide-react'
+import {
+    CalendarDaysIcon,
+    CheckIcon,
+    FingerprintIcon,
+    PencilIcon,
+    ShieldCheckIcon,
+    Trash2Icon,
+    UserRoundIcon,
+    XIcon,
+} from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
 import type { UserDetail } from '@timmyhub/contracts'
 import { UserStatus } from '@timmyhub/contracts'
 
-import { Button, ConfirmDialog, StatusBadge } from '@/components'
+import { Button, ConfirmDialog, RoleBadges, StatusBadge } from '@/components'
 import type { UserPermissionFlags } from '@/constants'
 import { USER_STATUS_LABEL_KEY, USER_STATUS_TONE, USER_TAB } from '@/constants'
 import { useDeleteUser } from '@/hooks'
-import { formatDisplayDate } from '@/utils'
+import { formatDisplayDate, getUserDisplayName } from '@/utils'
 
 import { buildUserTabsHref } from '../user-tab-query'
 import { UserLockDialog } from './user-lock-dialog'
-import { UserRolesSection } from './user-roles-section'
 
 interface UserDetailViewProps {
     user: UserDetail
     permissions: UserPermissionFlags
-    currentUserId: string
 }
 
 // Nội dung tab "Chi tiết". Là client component vì phần thao tác cần state (hộp xác nhận xoá, hộp nhập lý do khoá);
@@ -31,7 +38,7 @@ interface UserDetailViewProps {
 // 7 trạng thái: mặc định · đang tải (dữ liệu đã sẵn, nút đang gửi mới quay) · rỗng (chưa có hồ sơ → "chưa cập nhật") ·
 // lỗi (panel cha lo) · không có quyền (nút thao tác ẩn theo `permissions`) · vô hiệu hoá (nút đang gửi) ·
 // thành công (toast + bảng dựng lại).
-export function UserDetailView({ user, permissions, currentUserId }: UserDetailViewProps) {
+export function UserDetailView({ user, permissions }: UserDetailViewProps) {
     // ===== State =====
     const [pendingLock, setPendingLock] = useState(false)
     const [pendingDelete, setPendingDelete] = useState(false)
@@ -44,6 +51,13 @@ export function UserDetailView({ user, permissions, currentUserId }: UserDetailV
 
     // ===== Derived =====
     const isLocked = user.status === UserStatus.LOCKED
+    const displayName = getUserDisplayName(user) ?? user.email
+    const initials = displayName
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part[0])
+        .join('')
+        .toLocaleUpperCase()
 
     // Mở tab Sửa **thêm một tab** bên cạnh tab Chi tiết đang xem, không thay thế nó: tab Chi tiết vẫn nằm trên thanh
     // tab để quay lại. UserTabs sẽ ghi tab mới vào localStorage khi URL active đổi.
@@ -52,68 +66,112 @@ export function UserDetailView({ user, permissions, currentUserId }: UserDetailV
     const formatTimestamp = (value: string | null) => (value ? formatDisplayDate(parseISO(value)) : t('never'))
 
     return (
-        <div className="flex flex-col gap-4">
-            <dl className="grid max-w-3xl gap-x-6 gap-y-3 sm:grid-cols-2">
-                <DetailItem label={t('columnName')}>
-                    {user.profile ? `${user.profile.lastName} ${user.profile.firstName}`.trim() : t('notUpdated')}
-                </DetailItem>
-                <DetailItem label={t('fieldDisplayName')}>{user.profile?.displayName ?? t('notUpdated')}</DetailItem>
-                <DetailItem label={t('columnEmail')}>{user.email}</DetailItem>
-                <DetailItem label={t('fieldPhone')}>{user.phone ?? t('notUpdated')}</DetailItem>
-                <DetailItem label={t('columnStatus')}>
-                    <StatusBadge tone={USER_STATUS_TONE[user.status]} label={t(USER_STATUS_LABEL_KEY[user.status])} />
-                </DetailItem>
-                <DetailItem label={t('detailEmailVerified')}>{user.isEmailVerified ? t('yes') : t('no')}</DetailItem>
-                <DetailItem label={t('detailTwoFactor')}>{user.twoFactorEnabled ? t('yes') : t('no')}</DetailItem>
-                <DetailItem label={t('columnMemberSince')}>{formatTimestamp(user.createdAt)}</DetailItem>
-                <DetailItem label={t('detailLastLogin')}>{formatTimestamp(user.lastLoginAt)}</DetailItem>
-                <DetailItem label={t('detailUpdatedAt')}>{formatTimestamp(user.updatedAt)}</DetailItem>
-                {user.banReason && (
-                    <DetailItem label={t('detailBanReason')} className="sm:col-span-2">
-                        {user.banReason}
-                    </DetailItem>
-                )}
-            </dl>
-
-            <UserRolesSection
-                userId={user.id}
-                email={user.email}
-                roles={user.roles}
-                permissions={permissions}
-                currentUserId={currentUserId}
-            />
-
-            <div className="flex flex-wrap gap-2">
-                {permissions.UPDATE && permissions.READ && (
-                    <Button type="button" variant="outline" asChild>
-                        <Link href={editHref}>
-                            <PencilIcon data-icon="inline-start" />
-                            {t('edit')}
-                        </Link>
-                    </Button>
-                )}
-                {permissions.LOCK && (
-                    <Button
-                        type="button"
-                        variant={isLocked ? 'outline' : 'destructive'}
-                        onClick={() => setPendingLock(true)}
-                        disabled={removeUser.isPending}
+        <div className="flex flex-col gap-6">
+            <section className="flex flex-col gap-5 rounded-xl border bg-muted/20 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-4">
+                    <div
+                        className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-lg font-semibold text-primary"
+                        aria-hidden="true"
                     >
-                        {isLocked ? t('unlock') : t('lock')}
-                    </Button>
-                )}
-                {permissions.DELETE && (
-                    <Button
-                        type="button"
-                        variant="destructive"
-                        onClick={() => setPendingDelete(true)}
-                        disabled={removeUser.isPending}
-                    >
-                        <Trash2Icon data-icon="inline-start" />
-                        {t('delete')}
-                    </Button>
-                )}
-            </div>
+                        {initials || <UserRoundIcon className="size-6" />}
+                    </div>
+                    <div className="min-w-0">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <h1 className="truncate text-xl font-semibold tracking-tight">{displayName}</h1>
+                            <RoleBadges roles={user.roles} />
+                        </div>
+                        <p className="mt-1 truncate text-sm text-muted-foreground">{user.email}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <StatusBadge
+                                tone={USER_STATUS_TONE[user.status]}
+                                label={t(USER_STATUS_LABEL_KEY[user.status])}
+                            />
+                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                <FingerprintIcon className="size-3.5" />
+                                {t('detailAccountId', { id: user.id })}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    {permissions.UPDATE && permissions.READ && (
+                        <Button type="button" variant="outline" asChild>
+                            <Link href={editHref}>
+                                <PencilIcon data-icon="inline-start" />
+                                {t('edit')}
+                            </Link>
+                        </Button>
+                    )}
+                    {permissions.LOCK && (
+                        <Button
+                            type="button"
+                            variant={isLocked ? 'outline' : 'destructive'}
+                            onClick={() => setPendingLock(true)}
+                            disabled={removeUser.isPending}
+                        >
+                            {isLocked ? t('unlock') : t('lock')}
+                        </Button>
+                    )}
+                    {permissions.DELETE && (
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={() => setPendingDelete(true)}
+                            disabled={removeUser.isPending}
+                        >
+                            <Trash2Icon data-icon="inline-start" />
+                            {t('delete')}
+                        </Button>
+                    )}
+                </div>
+            </section>
+
+            <section className="grid gap-6 lg:grid-cols-2">
+                <DetailSection icon={<UserRoundIcon />} title={t('detailSectionProfile')}>
+                    <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
+                        <DetailItem label={t('columnName')}>
+                            {user.profile
+                                ? `${user.profile.lastName} ${user.profile.firstName}`.trim()
+                                : t('notUpdated')}
+                        </DetailItem>
+                        <DetailItem label={t('fieldDisplayName')}>
+                            {user.profile?.displayName ?? t('notUpdated')}
+                        </DetailItem>
+                        <DetailItem label={t('columnEmail')}>{user.email}</DetailItem>
+                        <DetailItem label={t('fieldPhone')}>{user.phone ?? t('notUpdated')}</DetailItem>
+                    </dl>
+                </DetailSection>
+
+                <DetailSection icon={<ShieldCheckIcon />} title={t('detailSectionSecurity')}>
+                    <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
+                        <DetailItem label={t('columnStatus')}>
+                            <StatusBadge
+                                tone={USER_STATUS_TONE[user.status]}
+                                label={t(USER_STATUS_LABEL_KEY[user.status])}
+                            />
+                        </DetailItem>
+                        <DetailItem label={t('detailEmailVerified')}>
+                            <BooleanValue value={user.isEmailVerified} yes={t('yes')} no={t('no')} />
+                        </DetailItem>
+                        <DetailItem label={t('detailTwoFactor')}>
+                            <BooleanValue value={user.twoFactorEnabled} yes={t('yes')} no={t('no')} />
+                        </DetailItem>
+                        {user.banReason && (
+                            <DetailItem label={t('detailBanReason')} className="sm:col-span-2">
+                                {user.banReason}
+                            </DetailItem>
+                        )}
+                    </dl>
+                </DetailSection>
+
+                <DetailSection icon={<CalendarDaysIcon />} title={t('detailSectionActivity')} className="lg:col-span-2">
+                    <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-3">
+                        <DetailItem label={t('columnMemberSince')}>{formatTimestamp(user.createdAt)}</DetailItem>
+                        <DetailItem label={t('detailLastLogin')}>{formatTimestamp(user.lastLoginAt)}</DetailItem>
+                        <DetailItem label={t('detailUpdatedAt')}>{formatTimestamp(user.updatedAt)}</DetailItem>
+                    </dl>
+                </DetailSection>
+            </section>
 
             {pendingLock && <UserLockDialog user={user} onOpenChange={(open) => setPendingLock(open)} />}
 
@@ -132,11 +190,43 @@ export function UserDetailView({ user, permissions, currentUserId }: UserDetailV
     )
 }
 
+function DetailSection({
+    icon,
+    title,
+    children,
+    className,
+}: {
+    icon: React.ReactNode
+    title: string
+    children: React.ReactNode
+    className?: string
+}) {
+    return (
+        <section className={`rounded-xl border p-5 ${className ?? ''}`}>
+            <div className="mb-5 flex items-center gap-2">
+                <span className="text-primary [&_svg]:size-4">{icon}</span>
+                <h2 className="text-sm font-semibold">{title}</h2>
+            </div>
+            {children}
+        </section>
+    )
+}
+
+function BooleanValue({ value, yes, no }: { value: boolean; yes: string; no: string }) {
+    const Icon = value ? CheckIcon : XIcon
+    return (
+        <span className={`inline-flex items-center gap-1.5 ${value ? 'text-primary' : 'text-muted-foreground'}`}>
+            <Icon className="size-4" />
+            {value ? yes : no}
+        </span>
+    )
+}
+
 function DetailItem({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
     return (
         <div className={className}>
-            <dt className="text-xs text-muted-foreground">{label}</dt>
-            <dd className="text-sm text-foreground">{children}</dd>
+            <dt className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</dt>
+            <dd className="break-words text-sm font-medium text-foreground">{children}</dd>
         </div>
     )
 }

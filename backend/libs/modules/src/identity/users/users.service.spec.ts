@@ -9,7 +9,7 @@ import {
 import type { PermissionResolver } from '@timmyhub/modules/platform/auth'
 
 import { buildUserListOrderBy, buildUserListWhere } from '../utils/index'
-import type { CreateUserRecordInput, UpdateUserProfileInput, UserWithProfile } from './users.repository'
+import type { CreateUserRecordInput, UpdateUserRecordInput, UserWithProfile } from './users.repository'
 import type { UsersRepository } from './users.repository'
 import { UsersService } from './users.service'
 
@@ -66,7 +66,7 @@ type MockRepository = {
     findUserByEmail: jest.Mock
     findUserByPhone: jest.Mock
     createUser: jest.Mock<Promise<UserWithProfile>, [CreateUserRecordInput]>
-    updateUserProfile: jest.Mock<Promise<UserWithProfile>, [string, UpdateUserProfileInput, string]>
+    updateUser: jest.Mock<Promise<UserWithProfile>, [string, UpdateUserRecordInput, string]>
     setUserLocked: jest.Mock<
         Promise<UserWithProfile>,
         [string, { locked: boolean; reason?: string | undefined; actorId: string }]
@@ -81,7 +81,7 @@ function buildService(options: { repository?: Partial<MockRepository>; permissio
         findUserByEmail: jest.fn().mockResolvedValue(null),
         findUserByPhone: jest.fn().mockResolvedValue(null),
         createUser: jest.fn<Promise<UserWithProfile>, [CreateUserRecordInput]>(),
-        updateUserProfile: jest.fn<Promise<UserWithProfile>, [string, UpdateUserProfileInput, string]>(),
+        updateUser: jest.fn<Promise<UserWithProfile>, [string, UpdateUserRecordInput, string]>(),
         setUserLocked: jest.fn<
             Promise<UserWithProfile>,
             [string, { locked: boolean; reason?: string | undefined; actorId: string }]
@@ -287,18 +287,18 @@ describe('UsersService — sửa hồ sơ', () => {
             code: 'NOT_FOUND',
             status: 404,
         })
-        expect(repository.updateUserProfile).not.toHaveBeenCalled()
+        expect(repository.updateUser).not.toHaveBeenCalled()
     })
 
     it('SUPER_ADMIN sửa được tài khoản SUPER_ADMIN khác', async () => {
         const { service, repository } = buildService()
         const target = buildUser({ roles: [UserRole.SUPER_ADMIN] })
         repository.findUserById.mockResolvedValue(target)
-        repository.updateUserProfile.mockResolvedValue({ ...target, updatedAt: NOW })
+        repository.updateUser.mockResolvedValue({ ...target, updatedAt: NOW })
 
         await service.updateUser('user-1', { firstName: 'X' }, SUPER_ADMIN_ACTOR)
 
-        expect(repository.updateUserProfile).toHaveBeenCalledWith('user-1', { firstName: 'X' }, 'root-1')
+        expect(repository.updateUser).toHaveBeenCalledWith('user-1', { firstName: 'X' }, 'root-1')
     })
 
     it('không ghi DB khi không có field nào đổi (idempotent theo nội dung)', async () => {
@@ -307,7 +307,7 @@ describe('UsersService — sửa hồ sơ', () => {
 
         const result = await service.updateUser('user-1', {}, ADMIN_ACTOR)
 
-        expect(repository.updateUserProfile).not.toHaveBeenCalled()
+        expect(repository.updateUser).not.toHaveBeenCalled()
         expect(result.id).toBe('user-1')
     })
 

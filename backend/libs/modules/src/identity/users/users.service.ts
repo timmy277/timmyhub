@@ -107,6 +107,11 @@ export class UsersService {
     async updateUser(userId: string, input: UpdateUserInput, actor: UsersActor): Promise<UserDetail> {
         const target = await this.requireManageableUser(userId, actor)
 
+        if (input.roles !== undefined) {
+            this.assertNotSelf(userId, actor)
+            await this.assertCanUpdateRoles(actor, input.roles)
+        }
+
         if (input.phone !== undefined && input.phone !== null) {
             const phoneTaken = await this.repository.findUserByPhone(input.phone)
             if (phoneTaken && phoneTaken.id !== userId) {
@@ -119,7 +124,7 @@ export class UsersService {
         const hasChange = Object.values(input).some((value) => value !== undefined)
         if (!hasChange) return toUserDetail(target)
 
-        return toUserDetail(await this.repository.updateUserProfile(userId, input, actor.id))
+        return toUserDetail(await this.repository.updateUser(userId, input, actor.id))
     }
 
     // REQ-USR-012 / REQ-USR-013
@@ -189,6 +194,18 @@ export class UsersService {
             throw new ApiError('CANNOT_ESCALATE_PRIVILEGE', {
                 messageKey: apiMessageKey('rbac.cannotGrantUnownedPermission'),
             })
+        }
+    }
+
+    private async assertCanUpdateRoles(actor: UsersActor, roles: readonly string[]): Promise<void> {
+        if (roles.includes(UserRole.SUPER_ADMIN) && !isSuperAdmin(actor.roles)) {
+            throw new ApiError('CANNOT_ESCALATE_PRIVILEGE', { messageKey: apiMessageKey('rbac.cannotGrantSuperAdmin') })
+        }
+        if (isSuperAdmin(actor.roles)) return
+
+        const effective = await this.permissionResolver.getEffectivePermissions(actor.id)
+        if (!effective.has(ASSIGN_USER_ROLE_PERMISSION)) {
+            throw new ApiError('FORBIDDEN')
         }
     }
 }
