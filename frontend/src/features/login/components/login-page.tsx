@@ -10,7 +10,6 @@ export function LoginPage() {
 
     return (
         <AuthCard title={t('title')} description={t('description')}>
-            {/* Đã đăng nhập (phiên xác minh thật, không phải chỉ có cookie) mà vào /login thì đá về dashboard. */}
             <RedirectIfAuthenticated />
             <LoginForm />
         </AuthCard>

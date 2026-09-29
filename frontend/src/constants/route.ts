@@ -3,5 +3,7 @@ export const ROUTE = {
     HOME: '/',
     DASHBOARD: '/dashboard',
     USERS: '/users',
+    ROLES: '/roles',
+    PERMISSIONS: '/permissions',
     LOGIN: '/login',
 } as const
