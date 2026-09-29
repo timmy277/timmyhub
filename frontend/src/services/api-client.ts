@@ -1,15 +1,19 @@
 import axios, { type AxiosError } from 'axios'
 
-import { API_BASE_URL, API_ROUTE } from '@/constants'
+import { API_BASE_URL, API_REQUEST_TIMEOUT_MS, API_ROUTE } from '@/constants'
 import { withAuthRefreshLock } from '@/utils'
 
 // ===== Instance =====
 
 // Instance duy nhất cho mọi call API phía client — interceptor nằm ngay đây, nơi khác không tự gắn header
 // hay tự refresh (config chung theo yêu cầu; CLAUDE.md luật #22).
+//
+// `timeout` phải khai ở đây: axios mặc định chờ vô hạn, nên một backend treo sẽ để react-query quay mãi mà không bao
+// giờ chạm `onError`. Hết hạn thì axios ném `ECONNABORTED` và đi thẳng đường lỗi thông thường.
 export const apiClient = axios.create({
     baseURL: API_BASE_URL,
     headers: { 'Content-Type': 'application/json' },
+    timeout: API_REQUEST_TIMEOUT_MS,
 })
 
 // ===== Interceptors =====

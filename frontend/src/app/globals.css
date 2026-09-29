@@ -172,3 +172,22 @@
                 border-box;
     }
 }
+
+/*
+    Người dùng bật "giảm chuyển động" ở hệ điều hành (WCAG 2.3.3). Tailwind và `tw-animate-css` gắn
+    `animation`/`transition` bằng utility class có độ đặc hiệu cao, nên nếu không ép bằng `!important` thì media query
+    này không thắng được utility nào và trở thành vô nghĩa.
+
+    Hạ thời lượng xuống gần 0 chứ không đặt `animation: none`: animation vẫn chạy tới khung hình cuối ngay lập tức, nên
+    phần tử giữ đúng trạng thái sau animation (spinner, fade-in của dialog…) thay vì kẹt ở khung hình đầu.
+*/
+@media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

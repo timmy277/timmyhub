@@ -1,6 +1,6 @@
 import type { ApiErrorCode } from '@timmyhub/contracts'
 
-import { API_BASE_URL } from '@/constants'
+import { API_BASE_URL, API_REQUEST_TIMEOUT_MS } from '@/constants'
 
 // Gọi backend từ **phía server** (Server Component, Server Action): access token lấy từ phiên NextAuth nằm trong cookie
 // HttpOnly nên không bao giờ đi qua JavaScript của trình duyệt. Vì chạy trên server, request này cũng không dính CORS.
@@ -19,7 +19,7 @@ export type BackendResult<T> = { ok: true; data: T } | BackendFailure
 
 type FetchBackendOptions = {
     token: string
-    method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
+    method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
     body?: unknown
     // Tham số truy vấn; giá trị `undefined` bị bỏ qua thay vì gửi chuỗi rỗng.
     query?: Record<string, string | number | undefined>
@@ -44,6 +44,9 @@ export async function fetchBackend<T>(path: string, options: FetchBackendOptions
             // Không cache: dữ liệu quản trị phải phản ánh ngay thay đổi vừa ghi, và `revalidatePath` sau mỗi thao tác
             // ghi mới là thứ quyết định khi nào bảng được dựng lại.
             cache: 'no-store',
+            // `AbortSignal.timeout` ném `TimeoutError` khi hết hạn ⇒ rơi vào `catch` bên dưới và thành
+            // `BACKEND_UNAVAILABLE`, đúng nghĩa "không gọi được backend" mà nơi gọi đã phân biệt sẵn.
+            signal: AbortSignal.timeout(API_REQUEST_TIMEOUT_MS),
             ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
         })
     } catch {
@@ -55,11 +58,17 @@ export async function fetchBackend<T>(path: string, options: FetchBackendOptions
         return { ok: false, status: response.status, code: code ?? BACKEND_UNAVAILABLE_CODE }
     }
 
-    // 204 (xoá thành công) không có body.
-    if (response.status === 204) return { ok: true, data: undefined as T }
+    // 204/205: thành công không có body (theo chuẩn HTTP).
+    if (response.status === 204 || response.status === 205) return { ok: true, data: undefined as T }
+
+    // Đọc thô trước khi parse: nhiều endpoint ghi (`DELETE`, `POST` gán vai trò…) trả 200/201 **body rỗng** thay vì
+    // 204 — body rỗng là thành công, không phải lỗi. Chỉ khi có chữ mà không parse được thành JSON mới coi là backend
+    // trả sai. (Gọi thẳng `response.json()` ở đây từng làm các thao tác thành công bị báo `BACKEND_UNAVAILABLE`.)
+    const text = await response.text()
+    if (text.trim() === '') return { ok: true, data: undefined as T }
 
     try {
-        return { ok: true, data: (await response.json()) as T }
+        return { ok: true, data: JSON.parse(text) as T }
     } catch {
         return { ok: false, status: response.status, code: BACKEND_UNAVAILABLE_CODE }
     }

@@ -5,6 +5,11 @@
 // Base URL backend — apps/api chạy cổng 3001 (project-plan.md bảng cổng dịch vụ; FE dev chiếm 3000).
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
+// Trần thời gian chờ một lượt gọi backend. Không có nó thì một backend treo sẽ giữ request của Server Component/
+// Server Action mở vô hạn (Next dev không tự ngắt), trang đứng im mà không có thông báo nào. 10s đủ rộng cho truy vấn
+// quản trị, vẫn đủ nhanh để rơi về `BACKEND_UNAVAILABLE` thay vì treo.
+export const API_REQUEST_TIMEOUT_MS = 10_000
+
 export const API_ROUTE = {
     AUTH: {
         REGISTER: 'v1/auth/register',
