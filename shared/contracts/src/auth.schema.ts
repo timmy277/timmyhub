@@ -9,13 +9,14 @@ import type { UserRole } from './roles'
 // REQ-IDN-001: mật khẩu >= 8 ký tự, có chữ và số. Danh sách mật khẩu phổ biến kiểm ở service layer.
 export const PASSWORD_MIN_LENGTH = 8
 
-const PasswordSchema = z
+// Export để schema tạo người dùng của admin (user.schema.ts) dùng lại đúng chính sách mật khẩu — không chép tay.
+export const PasswordSchema = z
     .string()
     .min(PASSWORD_MIN_LENGTH, apiMessageKey('validation.passwordMin'))
     .regex(/[a-zA-Z]/, apiMessageKey('validation.passwordLetter'))
     .regex(/[0-9]/, apiMessageKey('validation.passwordDigit'))
 
-const EmailSchema = z.string().email(apiMessageKey('validation.emailInvalid'))
+export const EmailSchema = z.string().email(apiMessageKey('validation.emailInvalid'))
 const RefreshTokenSchema = z.string().min(1, apiMessageKey('validation.required'))
 
 export const RegisterSchema = z.object({

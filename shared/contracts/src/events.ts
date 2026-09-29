@@ -2,6 +2,9 @@
 // Producer ghi `eventType` từ đây, consumer lọc theo cùng hằng số; không gõ chuỗi event trần.
 export const OUTBOX_EVENT = {
     USER_REGISTERED: 'user.registered',
+    USER_PROFILE_UPDATED: 'user.profile-updated',
+    USER_LOCKED: 'user.locked',
+    USER_DELETED: 'user.deleted',
     USER_ROLE_GRANTED: 'user.role-granted',
     USER_ROLE_REVOKED: 'user.role-revoked',
     RBAC_PERMISSIONS_CHANGED: 'rbac.permissions.changed',

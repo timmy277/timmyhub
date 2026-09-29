@@ -23,3 +23,9 @@ export const UserRoleSchema = z.enum(UserRole)
 export function isSuperAdmin(roles: readonly string[]): boolean {
     return roles.includes(UserRole.SUPER_ADMIN)
 }
+
+// Vai trò hệ thống có thể tạo động (`SystemRole` cho phép tên tự do), nhưng cột `User.roles` chỉ nhận tập enum này —
+// dùng để đồng bộ hai lớp mà không phải ép kiểu chuỗi trần ở nơi gọi.
+export function isUserRole(value: string): value is UserRole {
+    return (USER_ROLES as readonly string[]).includes(value)
+}

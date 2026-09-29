@@ -20,6 +20,9 @@ export const API_ERROR_CODES = {
     FORBIDDEN: { status: 403 },
     NOT_FOUND: { status: 404 },
     INTERNAL: { status: 500 },
+    // domain identity — quản trị người dùng (FEAT-USR-004/005)
+    PHONE_ALREADY_REGISTERED: { status: 409 },
+    CANNOT_MODIFY_SELF: { status: 422 },
     // domain rbac — docs/03-specs/rbac-permission/design.md
     ROLE_NOT_FOUND: { status: 404 },
     ROLE_ALREADY_EXISTS: { status: 409 },
@@ -28,6 +31,7 @@ export const API_ERROR_CODES = {
     PERMISSION_NOT_FOUND: { status: 404 },
     PERMISSION_ALREADY_EXISTS: { status: 409 },
     CANNOT_ESCALATE_PRIVILEGE: { status: 403 },
+    CANNOT_REMOVE_LAST_ROLE: { status: 422 },
 } as const
 
 export type ApiErrorCode = keyof typeof API_ERROR_CODES
