@@ -32,7 +32,7 @@ export const CreatePermissionSchema = z.object({
     name: z
         .string()
         .regex(
-            /^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*:[a-z][a-z0-9-]*(:any)?$/,
+            /^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*:[a-z][a-z0-9-]*(:[a-z][a-z0-9-]*)?$/,
             apiMessageKey('validation.permissionNameFormat'),
         ),
     displayName: DisplayNameSchema,
@@ -66,6 +66,10 @@ export type PermissionSummary = {
     module: string
     resource: string
     action: string
+}
+
+export type RoleDetail = RoleSummary & {
+    permissionNames: string[]
 }
 
 export type EffectivePermissions = {

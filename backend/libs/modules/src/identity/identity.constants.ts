@@ -48,6 +48,10 @@ export const ASSIGN_USER_ROLE_PERMISSION: PermissionName = 'identity:users:assig
 // Cache effective permission in-process — rbac-advanced.md §6 (xem permission-cache.service.ts).
 export const PERMISSION_CACHE_TTL_MS = 15 * 60 * 1000
 
+// Trần số bản ghi của cache in-process. Cache chỉ để tăng tốc nên vượt trần thì bỏ bản ghi cũ nhất; không có trần
+// thì mỗi user từng đăng nhập để lại một entry sống tới 15 phút, đủ để Map phình theo lượng truy cập.
+export const PERMISSION_CACHE_MAX_ENTRIES = 5_000
+
 // Dấu phân cách trong tên permission `module:resource:action[:scope]`.
 export const PERMISSION_NAME_SEPARATOR = ':'
 
