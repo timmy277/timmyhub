@@ -433,7 +433,7 @@ Mã domain: `IDN` identity-auth · `RBAC` rbac-permission · `USR` user-profile 
 | FEAT-DEP-001 | Tích hợp Stripe (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) | Khai báo env nhưng **chưa từng được dùng** | VNPay (`payment-vnpay`) |
 | FEAT-DEP-002 | Cookie `user_roles` / `user_permissions` không HttpOnly đọc ở edge | Lộ mô hình quyền ra client, dễ giả mạo | Phiên NextAuth mã hoá (FEAT-IDN-013) |
 | FEAT-DEP-003 | DTO `class-validator` song song với zod | Chỉ `ZodValidationPipe` được đăng ký nên DTO **không bao giờ được validate** | zod + `nestjs-zod` ([ADR-0010](../01-architecture/adr/ADR-0010-zod-single-validation-source.md)) |
-| FEAT-DEP-004 | AG Grid Enterprise làm bảng mặc định | Bản quyền thương mại; phần lớn màn hình không cần | TanStack Table ([ADR-0007](../01-architecture/adr/ADR-0007-tanstack-table-over-aggrid.md)) |
+| FEAT-DEP-004 | AG Grid Enterprise làm bảng mặc định | Bản quyền thương mại; phần lớn màn hình không cần | AG Grid Community ([ADR-0007](../01-architecture/adr/ADR-0007-aggrid-community-only.md)) |
 | FEAT-DEP-005 | i18next khởi tạo phía client, không có locale trên URL | Không SEO được theo ngôn ngữ | next-intl ([ADR-0008](../01-architecture/adr/ADR-0008-next-intl.md)) |
 | FEAT-DEP-006 | `prisma db push --accept-data-loss` trong quy trình phát triển | Không có lịch sử migration, rủi ro mất dữ liệu | `prisma migrate` ([ADR-0009](../01-architecture/adr/ADR-0009-prisma-migrate.md)) |
 

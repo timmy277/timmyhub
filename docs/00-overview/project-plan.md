@@ -106,7 +106,7 @@ Nhưng có những vấn đề không sửa vá được:
 | 6 | Model `Wallet`/`WalletTransaction` tồn tại nhưng **không có một API nào** | Doanh số không có đường về tiền cho seller | Domain `wallet-settlement` đầy đủ (§5) |
 | 7 | Trừ kho trực tiếp khi tạo đơn, không có reserve | Oversell khi flash sale | Domain `inventory` với reserve/commit/release trong cùng transaction |
 | 8 | `strict: false`, `no-explicit-any: 'off'` ở backend; không Husky, không test, không Storybook | Lỗi kiểu chỉ lộ ra lúc chạy | TypeScript strict, Husky + lint-staged + commitlint, chiến lược test 4 tầng |
-| 9 | AG Grid **Enterprise** dùng làm mặc định | Rủi ro giấy phép thương mại | TanStack Table mặc định ([ADR-0007](../01-architecture/adr/ADR-0007-tanstack-table-over-aggrid.md)) |
+| 9 | AG Grid **Enterprise** dùng làm mặc định | Rủi ro giấy phép thương mại | AG Grid **Community** cho mọi bảng ([ADR-0007](../01-architecture/adr/ADR-0007-aggrid-community-only.md)) |
 | 10 | Không có `error.tsx` / `not-found.tsx` ở bất kỳ route nào; 2 route chết (`/admin/customers`, `/seller/orders`); 2 trang stub | Lỗi runtime làm trắng trang | Bắt buộc có trang lỗi/rỗng cho mọi route group |
 | 11 | Bí mật bị commit (Sentry token, Supabase connection string, Vercel token, Google API key) | Rò rỉ hạ tầng | Xoay toàn bộ trước khi tái sử dụng — xem §18 |
 | 12 | Không có `docs/`, chỉ 1 file kế hoạch 2.397 dòng | Không ai onboard được | Bộ `docs/` ~95 file có truy vết ID |
