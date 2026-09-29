@@ -19,13 +19,26 @@ export default [
                 {
                     patterns: [
                         {
-                            group: ['../*/*', '!../*/index'],
+                            // `!../events/outbox-writer`: barrel `events/index` kéo theo `IdentityEventsListener`, mà
+                            // `@nestjs/event-emitter` là ESM thuần nên Jest/CJS không `require` được — repository phải
+                            // import thẳng writer. Đây là import **trong cùng domain**, không phải vi phạm ranh giới;
+                            // ngoại lệ khai một lần ở đây thay vì rải `eslint-disable` khắp các repository.
+                            group: ['../*/*', '!../*/index', '!../events/outbox-writer'],
                             message:
                                 'Chỉ được import module domain khác qua index.ts (barrel), không import thẳng file nội bộ (controller/service/repository/dto/events).',
                         },
                     ],
                 },
             ],
+        },
+    },
+    {
+        // Test phải chạy được guard/controller **thật** của domain khác để bắt lỗi cấu hình (thiếu `@Permissions`,
+        // sai thứ tự guard…), mà barrel cố ý không export controller/guard vì chúng là file nội bộ. Rule ranh giới
+        // chỉ có nghĩa với mã chạy production, nên tắt riêng cho file test.
+        files: ['src/**/*.spec.ts'],
+        rules: {
+            'no-restricted-imports': 'off',
         },
     },
 ]

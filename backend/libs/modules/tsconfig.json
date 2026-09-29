@@ -4,7 +4,10 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    // `*.spec.ts` nằm trong cùng project này (Nest co-locate test với mã nguồn), nên typecheck/lint cần type của Jest.
+    // Build thì loại test ra bằng `tsconfig.build.json` để `dist` không chứa file test.
+    "types": ["jest", "node"]
   },
   "include": ["src"]
 }

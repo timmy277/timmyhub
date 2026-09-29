@@ -1,0 +1,21 @@
+// Append-only business audit trail. Writes are created in the same transaction as the identity change.
+model AuditLog {
+    id           String   @id @default(cuid())
+    service      String
+    action       String
+    entityType   String
+    entityId     String
+    actorId      String?
+    actorType    String
+    actorIp      String?
+    userAgent    String?
+    before       Json?
+    after        Json?
+    result       String   @default("SUCCESS")
+    errorMessage String?
+    occurredAt   DateTime @default(now())
+
+    @@index([entityType, entityId, occurredAt(sort: Desc)])
+    @@index([actorId, occurredAt(sort: Desc)])
+    @@map("audit_logs")
+}

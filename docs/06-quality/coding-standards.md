@@ -98,7 +98,7 @@ Quy ước đặt tên:
 | Module không import trực tiếp file nội bộ của module khác, chỉ qua `index.ts` | ESLint boundaries theo `src/modules/<domain>` |
 | Không gọi mạng ngoài (HTTP bên thứ ba, SMTP, webhook) trong `$transaction` — gọi module khác qua DI thì được | Review + lint tự viết bắt `await fetch\|axios\|client.send` trong `$transaction` |
 | Lỗi nghiệp vụ ném exception có mã, không trả `null` mập mờ | Review |
-| Mọi thao tác ghi có `@AuditAction` | Test quét metadata |
+| Mọi thao tác ghi nghiệp vụ phải ghi `AuditLog` trong cùng transaction với thay đổi dữ liệu; không dùng decorator thủ công làm cơ chế audit | Review + test repository/service |
 | Không `console.log` | ESLint `no-console` (dùng `pino`) |
 
 ❌ **BAD** — controller làm hết, không có ranh giới, lỗi mất dấu:
@@ -117,7 +117,6 @@ async create(@Body() body: any) {
 ```ts
 @Post()
 @Permissions(PERMISSIONS.CATALOG.PRODUCTS.CREATE)
-@AuditAction('catalog.product.create')
 async create(@Body() dto: CreateProductDto, @CurrentUser() user: AuthUser): Promise<ApiResponse<ProductDto>> {
     return ok(await this.productService.create(dto, user))
 }

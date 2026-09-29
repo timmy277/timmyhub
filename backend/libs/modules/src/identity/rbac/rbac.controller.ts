@@ -57,8 +57,8 @@ export class RbacController {
     // ===== Commands =====
     @Permissions('rbac:roles:create')
     @Post(RBAC_ROUTE.ROLES)
-    createRole(@Body(new ZodValidationPipe(CreateRoleSchema)) body: CreateRoleInput) {
-        return this.rbacService.createRole(body)
+    createRole(@Body(new ZodValidationPipe(CreateRoleSchema)) body: CreateRoleInput, @CurrentUser() actor: AuthUser) {
+        return this.rbacService.createRole(body, actor)
     }
 
     @Permissions('rbac:roles:update')
@@ -66,14 +66,15 @@ export class RbacController {
     updateRole(
         @Param(RBAC_ROUTE_PARAM.ROLE_ID) roleId: string,
         @Body(new ZodValidationPipe(UpdateRoleSchema)) body: UpdateRoleInput,
+        @CurrentUser() actor: AuthUser,
     ) {
-        return this.rbacService.updateRole(roleId, body)
+        return this.rbacService.updateRole(roleId, body, actor)
     }
 
     @Permissions('rbac:roles:delete')
     @Delete(RBAC_ROUTE.ROLE)
-    deleteRole(@Param(RBAC_ROUTE_PARAM.ROLE_ID) roleId: string) {
-        return this.rbacService.deleteRole(roleId)
+    deleteRole(@Param(RBAC_ROUTE_PARAM.ROLE_ID) roleId: string, @CurrentUser() actor: AuthUser) {
+        return this.rbacService.deleteRole(roleId, actor)
     }
 
     @Permissions('rbac:role-permissions:assign')
@@ -81,20 +82,24 @@ export class RbacController {
     assignRolePermissions(
         @Param(RBAC_ROUTE_PARAM.ROLE_ID) roleId: string,
         @Body(new ZodValidationPipe(AssignRolePermissionsSchema)) body: AssignRolePermissionsInput,
+        @CurrentUser() actor: AuthUser,
     ) {
-        return this.rbacService.assignRolePermissions(roleId, body.permissionNames)
+        return this.rbacService.assignRolePermissions(roleId, body.permissionNames, actor)
     }
 
     @Permissions('rbac:permissions:create')
     @Post(RBAC_ROUTE.PERMISSIONS)
-    createPermission(@Body(new ZodValidationPipe(CreatePermissionSchema)) body: CreatePermissionInput) {
-        return this.rbacService.createPermission(body)
+    createPermission(
+        @Body(new ZodValidationPipe(CreatePermissionSchema)) body: CreatePermissionInput,
+        @CurrentUser() actor: AuthUser,
+    ) {
+        return this.rbacService.createPermission(body, actor)
     }
 
     @Permissions('rbac:permissions:delete')
     @Delete(RBAC_ROUTE.PERMISSION)
-    deletePermission(@Param(RBAC_ROUTE_PARAM.PERMISSION_ID) permissionId: string) {
-        return this.rbacService.deletePermission(permissionId)
+    deletePermission(@Param(RBAC_ROUTE_PARAM.PERMISSION_ID) permissionId: string, @CurrentUser() actor: AuthUser) {
+        return this.rbacService.deletePermission(permissionId, actor)
     }
 
     @Permissions('identity:users:assign-role')

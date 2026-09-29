@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 
 import type { CreatePermissionInput, EffectivePermissions, PermissionSummary, RoleSummary } from '@timmyhub/contracts'
-import { ApiError, apiMessageKey, isSuperAdmin, UserRole } from '@timmyhub/contracts'
+import { ApiError, apiMessageKey, isSuperAdmin, PERMISSION_NAMES, UserRole } from '@timmyhub/contracts'
 import type { PermissionResolver } from '@timmyhub/modules/platform/auth'
 import type { SystemRole } from '@timmyhub/prisma'
 
@@ -63,6 +63,13 @@ export class RbacService implements PermissionResolver {
             throw new ApiError('NOT_FOUND', { messageKey: apiMessageKey('identity.userNotFound') })
         }
 
+        // SUPER_ADMIN bỏ qua lớp 2 (PermissionsGuard trả true trước khi hỏi resolver), nên tập quyền hiệu lực của
+        // chính họ là toàn bộ danh mục — trả đúng như guard hành xử. Vai trò SUPER_ADMIN không seed permission nào
+        // (role.ts), nếu trả tập rỗng thì giao diện sẽ ẩn hết nút của chính người quản trị cao nhất.
+        if (targetUserId === actor.id && isSuperAdmin(actor.roles)) {
+            return { userId: targetUserId, permissions: [...PERMISSION_NAMES] }
+        }
+
         const permissions = await this.getEffectivePermissions(targetUserId)
         return { userId: targetUserId, permissions: [...permissions] }
     }
@@ -83,35 +90,39 @@ export class RbacService implements PermissionResolver {
     }
 
     // ===== Commands =====
-    async createRole(input: {
-        name: string
-        displayName: string
-        description?: string | undefined
-    }): Promise<RoleSummary> {
+    async createRole(
+        input: {
+            name: string
+            displayName: string
+            description?: string | undefined
+        },
+        actor: RbacActor,
+    ): Promise<RoleSummary> {
         const existing = await this.repository.findRoleByName(input.name)
         if (existing)
             throw new ApiError('ROLE_ALREADY_EXISTS', {
                 messageKey: apiMessageKey('rbac.roleAlreadyExists'),
                 messageParams: { roleName: input.name },
             })
-        const role = await this.repository.createRole(input)
+        const role = await this.repository.createRole(input, actor.id)
         return toRoleSummary(role)
     }
 
     async updateRole(
         roleId: string,
         input: { displayName?: string | undefined; description?: string | undefined },
+        actor: RbacActor,
     ): Promise<RoleSummary> {
         const role = await this.getRoleOrThrow(roleId)
         // SUPER_ADMIN bypass mọi kiểm tra layer 2-3, nên metadata của chính vai trò đó không được sửa qua API.
         if (role.name === UserRole.SUPER_ADMIN) {
             throw new ApiError('ROLE_IS_SYSTEM', { messageKey: apiMessageKey('rbac.superAdminNotEditable') })
         }
-        const updated = await this.repository.updateRole(roleId, input)
+        const updated = await this.repository.updateRole(roleId, input, actor.id)
         return toRoleSummary(updated)
     }
 
-    async deleteRole(roleId: string): Promise<void> {
+    async deleteRole(roleId: string, actor: RbacActor): Promise<void> {
         const role = await this.getRoleOrThrow(roleId)
         if (role.isSystem)
             throw new ApiError('ROLE_IS_SYSTEM', { messageKey: apiMessageKey('rbac.systemRoleNotDeletable') })
@@ -121,10 +132,10 @@ export class RbacService implements PermissionResolver {
             throw new ApiError('ROLE_IN_USE')
         }
 
-        await this.repository.deleteRole(roleId)
+        await this.repository.deleteRole(roleId, actor.id)
     }
 
-    async assignRolePermissions(roleId: string, permissionNames: string[]): Promise<RoleSummary> {
+    async assignRolePermissions(roleId: string, permissionNames: string[], actor: RbacActor): Promise<RoleSummary> {
         const role = await this.getRoleOrThrow(roleId)
         if (role.name === UserRole.SUPER_ADMIN) {
             throw new ApiError('ROLE_IS_SYSTEM', { messageKey: apiMessageKey('rbac.superAdminNotConfigurable') })
@@ -143,13 +154,14 @@ export class RbacService implements PermissionResolver {
         const affectedUserIds = await this.repository.replaceRolePermissions(
             roleId,
             permissions.map((p) => p.id),
+            actor.id,
         )
         this.cache.invalidateUsers(affectedUserIds)
 
         return toRoleSummary(role)
     }
 
-    async createPermission(input: CreatePermissionInput): Promise<PermissionSummary> {
+    async createPermission(input: CreatePermissionInput, actor: RbacActor): Promise<PermissionSummary> {
         const existing = await this.repository.findPermissionByName(input.name)
         if (existing) {
             throw new ApiError('PERMISSION_ALREADY_EXISTS', {
@@ -157,23 +169,31 @@ export class RbacService implements PermissionResolver {
                 messageParams: { permissionName: input.name },
             })
         }
-        const permission = await this.repository.createPermission({
-            name: input.name,
-            displayName: input.displayName,
-            ...this.parsePermissionName(input.name),
-        })
+        const permission = await this.repository.createPermission(
+            {
+                name: input.name,
+                displayName: input.displayName,
+                ...this.parsePermissionName(input.name),
+            },
+            actor.id,
+        )
         return toPermissionSummary(permission)
     }
 
-    async deletePermission(permissionId: string): Promise<void> {
+    async deletePermission(permissionId: string, actor: RbacActor): Promise<void> {
         const permission = await this.repository.findPermissionById(permissionId)
         if (!permission) throw new ApiError('PERMISSION_NOT_FOUND')
-        await this.repository.deletePermission(permissionId)
+        await this.repository.deletePermission(permissionId, actor.id)
         this.cache.invalidateAll()
     }
 
     // Ngăn leo thang đặc quyền: chỉ SUPER_ADMIN mới gán được vai trò SUPER_ADMIN cho người khác.
+    // Tự gán vai trò cho chính mình cũng bị chặn (`CANNOT_MODIFY_SELF`, 422) — cùng luật với
+    // `UsersService.setUserLocked`/`deleteUser`. Giao diện đã ẩn nút cho trường hợp này, nhưng luật phải nằm ở đây để
+    // lời gọi thẳng API không đi vòng qua giao diện.
     async assignRoleToUser(targetUserId: string, roleName: string, actor: RbacActor): Promise<void> {
+        this.assertNotSelf(targetUserId, actor)
+
         const role = await this.getRoleByNameOrThrow(roleName)
 
         if (role.name === UserRole.SUPER_ADMIN && !isSuperAdmin(actor.roles)) {
@@ -184,8 +204,19 @@ export class RbacService implements PermissionResolver {
         this.cache.invalidateUser(targetUserId)
     }
 
+    // Gỡ vai trò của chính mình cũng bị chặn: tự hạ quyền là thao tác không thể tự làm (có thể mất luôn đường quản
+    // trị), cùng lý do với `UsersService.deleteUser`.
     async revokeRoleFromUser(targetUserId: string, roleName: string, actor: RbacActor): Promise<void> {
+        this.assertNotSelf(targetUserId, actor)
+
         const role = await this.getRoleByNameOrThrow(roleName)
+
+        // REQ-USR-011 kịch bản 2: mọi `User` phải còn ít nhất một vai trò — gỡ vai trò cuối cùng làm tài khoản không
+        // còn đường vào nào (kể cả để được cấp lại quyền). Chặn ở đây, không chỉ ở giao diện.
+        const assignedRoles = await this.repository.countUserRoles(targetUserId)
+        if (assignedRoles <= 1) {
+            throw new ApiError('CANNOT_REMOVE_LAST_ROLE')
+        }
 
         await this.repository.revokeUserRole(targetUserId, role.id, role.name, actor.id)
         this.cache.invalidateUser(targetUserId)
@@ -220,6 +251,15 @@ export class RbacService implements PermissionResolver {
     }
 
     // ===== Private helpers =====
+
+    // Không thao tác vai trò trên chính tài khoản đang gọi — chống tự nâng quyền và chống tự khoá đường quản trị của
+    // mình. Cùng mã lỗi và cùng cách xử lý với `UsersService.assertNotSelf`.
+    private assertNotSelf(targetUserId: string, actor: RbacActor): void {
+        if (targetUserId === actor.id) {
+            throw new ApiError('CANNOT_MODIFY_SELF')
+        }
+    }
+
     private async getRoleOrThrow(roleId: string): Promise<SystemRole> {
         const role = await this.repository.findRoleById(roleId)
         if (!role) throw new ApiError('ROLE_NOT_FOUND')

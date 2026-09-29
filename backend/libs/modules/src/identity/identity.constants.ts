@@ -1,7 +1,7 @@
 import * as bcrypt from 'bcryptjs'
 
 import type { PermissionName } from '@timmyhub/contracts'
-import { BCRYPT_COST } from '@timmyhub/contracts'
+import { BCRYPT_COST, UserRole } from '@timmyhub/contracts'
 
 // Hằng số của domain identity (auth + rbac) — coding-standards.md §4.3: không khai báo trong file class.
 
@@ -31,7 +31,17 @@ export const DUMMY_HASH = bcrypt.hashSync('dummy-password-for-timing-safety', BC
 
 export const REGISTERED_VIA = {
     PASSWORD: 'password',
+    // Tài khoản do admin tạo ở màn quản trị người dùng (FEAT-USR-004) — phân biệt được nguồn tạo trong outbox event.
+    ADMIN: 'admin',
 } as const
+
+// ===== Quản trị người dùng (FEAT-USR-004/005) =====
+
+// Vai trò mặc định khi admin tạo tài khoản mà không chọn vai trò — cùng mặc định với `RegisterSchema` (luật #23).
+export const DEFAULT_CREATED_USER_ROLES: readonly UserRole[] = [UserRole.USER]
+
+// Quyền cần có để gán vai trò khác mặc định lúc tạo tài khoản (xem UsersService.assertCanAssignRoles).
+export const ASSIGN_USER_ROLE_PERMISSION: PermissionName = 'identity:users:assign-role'
 
 // ===== RBAC =====
 
@@ -66,6 +76,17 @@ export const AUTH_ROUTE = {
     REFRESH: 'refresh',
     LOGOUT: 'logout',
     LOGOUT_ALL: 'logout-all',
+} as const
+
+export const USERS_ROUTE_PARAM = {
+    USER_ID: 'userId',
+} as const
+
+export const USERS_ROUTE = {
+    ROOT: 'v1/identity/users',
+    USER: `:${USERS_ROUTE_PARAM.USER_ID}`,
+    LOCK: `:${USERS_ROUTE_PARAM.USER_ID}/lock`,
+    UNLOCK: `:${USERS_ROUTE_PARAM.USER_ID}/unlock`,
 } as const
 
 export const RBAC_ROUTE_PARAM = {
