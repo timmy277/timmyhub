@@ -9,6 +9,7 @@ import { LoginSchema } from '@timmyhub/contracts'
 import { Button, FloatInput, IconPath } from '@/components'
 import { BACKEND_UNAVAILABLE_CODE } from '@/constants'
 import { useLogin } from '@/hooks'
+import { toFieldErrors } from '@/utils'
 
 import { LoginError } from '../errors'
 
@@ -37,7 +38,10 @@ export function LoginForm() {
     const loginErrorMessage = (error: unknown): string => {
         const code = error instanceof LoginError ? error.code : null
         if (code === BACKEND_UNAVAILABLE_CODE) return t('loginUnavailable')
-        if (code && tApi.has(code)) return tApi(code as 'INVALID_CREDENTIALS')
+        // Mã lỗi của backend dịch qua catalog `api` — khoá là `error.<MÃ>` (cùng catalog BE dùng để dịch), nên
+        // ACCOUNT_LOCKED / ACCOUNT_BANNED hiện đúng câu thay vì câu chung.
+        const key = `error.${code}`
+        if (code && tApi.has(key)) return tApi(key as 'error.ACCOUNT_LOCKED')
         return t('loginFailed')
     }
 
@@ -48,23 +52,8 @@ export function LoginForm() {
 
         const result = LoginSchema.safeParse(raw)
         if (!result.success) {
-            const fieldErrors: Record<string, string> = {}
-            for (const issue of result.error.issues) {
-                const key = String(issue.path[0])
-                if (!fieldErrors[key]) {
-                    // issue.message là khoá `validation.*` (không phải câu) — dịch qua catalog `api` với tham số
-                    // nội suy (`{minimum}`) đọc từ chính issue như BE làm ở validation-issue.utils.ts.
-                    const minimum: unknown = Reflect.get(issue, 'minimum')
-                    const params =
-                        typeof minimum === 'number' || typeof minimum === 'bigint'
-                            ? ({ minimum: Number(minimum) } as { minimum: number })
-                            : undefined
-                    fieldErrors[key] = tApi.has(issue.message)
-                        ? tApi(issue.message as 'validation.required', params)
-                        : issue.message
-                }
-            }
-            setErrors(fieldErrors)
+            // issue.message là khoá `validation.*` (không phải câu) — dịch qua catalog `api`.
+            setErrors(toFieldErrors(result.error.issues, tApi))
             return
         }
 

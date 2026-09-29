@@ -16,6 +16,13 @@ export const API_ROUTE = {
     IDENTITY: {
         PING: 'v1/identity/ping',
     },
+    // Quản trị người dùng — khớp `USERS_ROUTE` của module identity (FEAT-USR-004/005).
+    USERS: {
+        LIST: 'v1/identity/users',
+        DETAIL: (userId: string) => `v1/identity/users/${encodeURIComponent(userId)}`,
+        LOCK: (userId: string) => `v1/identity/users/${encodeURIComponent(userId)}/lock`,
+        UNLOCK: (userId: string) => `v1/identity/users/${encodeURIComponent(userId)}/unlock`,
+    },
     RBAC: {
         ROLES: 'v1/rbac/roles',
         ROLE: (roleId: string) => `v1/rbac/roles/${encodeURIComponent(roleId)}`,

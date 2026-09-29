@@ -40,6 +40,10 @@ export const floatInputVariants = cva(
 export const LABEL_CUTOUT_CLASS =
     'rounded bg-background px-1 peer-placeholder-shown:bg-transparent peer-placeholder-shown:px-0 peer-focus:bg-background peer-focus:px-1 peer-autofill:bg-background peer-autofill:px-1'
 
+// Field `float-*` đặt trên card (`bg-card`) phải truyền hằng này vào `labelClassName` — chỉ truyền `bg-card` là không
+// đủ, vì label còn phải đổi nền lúc focus và lúc trình duyệt tự điền, nếu không viền ô nhập bị hở một đoạn.
+export const ON_CARD_LABEL_CLASS = 'bg-card peer-focus:bg-card peer-autofill:bg-card'
+
 // Label nổi điều khiển bằng `peer` — dùng chung cho mọi field có input thật đứng ngay trước label
 // (FloatInput, FloatCombobox). Input phải có `placeholder=" "` và class `peer`.
 export const FLOAT_LABEL_CLASS = [

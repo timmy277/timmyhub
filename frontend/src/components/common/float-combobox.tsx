@@ -2,6 +2,7 @@
 
 import { useId } from 'react'
 import { Combobox as ComboboxPrimitive } from '@base-ui/react'
+import type { VariantProps } from 'class-variance-authority'
 import { useTranslations } from 'next-intl'
 
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxItem, ComboboxList, ComboboxTrigger } from '@/components/ui'
@@ -51,6 +52,8 @@ export interface FloatComboboxProps {
     disabled?: boolean
     className?: string
     labelClassName?: string
+    // Cùng thang kích thước với FloatInput (`sm` = h-10) để ô chọn đứng cạnh ô nhập trong thanh công cụ không lệch.
+    size?: VariantProps<typeof floatInputVariants>['size']
 }
 
 // Ô chọn một giá trị có tìm kiếm, label nổi giống FloatInput. Giá trị ra/vào là chuỗi `option.value`
@@ -69,6 +72,7 @@ export function FloatCombobox({
     disabled,
     className,
     labelClassName,
+    size = 'default',
 }: FloatComboboxProps) {
     // ===== Hooks =====
     const t = useTranslations('common')
@@ -78,6 +82,8 @@ export function FloatCombobox({
     const inputId = id ?? generatedId
     const descriptionId = `${inputId}-description`
     const hasDescription = Boolean(error ?? helperText)
+    // Nút mở danh sách nằm trong input nên phải co lại theo cỡ ô, không thì ở cỡ `sm` nó chiếm gần hết chiều cao.
+    const isCompact = size === 'sm'
 
     // ===== Handlers =====
     const handleValueChange = (option: FloatOption | null) => onValueChange?.(option?.value ?? null)
@@ -98,14 +104,17 @@ export function FloatCombobox({
                         placeholder=" "
                         aria-invalid={Boolean(error)}
                         aria-describedby={hasDescription ? descriptionId : undefined}
-                        className={cn(floatInputVariants({ variant: 'outlined', size: 'default' }), 'pr-10')}
+                        className={cn(floatInputVariants({ variant: 'outlined', size }), isCompact ? 'pr-8' : 'pr-10')}
                     />
                     <label htmlFor={inputId} className={cn(FLOAT_LABEL_CLASS, LABEL_CUTOUT_CLASS, labelClassName)}>
                         {label}
                     </label>
                     <ComboboxTrigger
                         aria-label={label}
-                        className="absolute top-1/2 right-2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                        className={cn(
+                            'absolute top-1/2 flex -translate-y-1/2 items-center justify-center rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+                            isCompact ? 'right-1.5 size-5' : 'right-2 size-6',
+                        )}
                     />
                 </div>
                 {/* Mặc định shadcn cho popup rộng hơn input 28px (chừa chỗ nút trigger của InputGroup); ở đây

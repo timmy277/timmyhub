@@ -9,8 +9,15 @@ Hai tầng tách bạch, không trộn:
 
 | Tầng | Ai dịch | Nơi lưu |
 |---|---|---|
-| Giao diện | Frontend, `next-intl` | `frontend/messages/<locale>/<namespace>.json` |
+| Giao diện | Frontend, `next-intl` | `frontend/messages/vi.json`, `frontend/messages/en.json` |
 | Thông điệp nghiệp vụ / lỗi | Backend, mã lỗi + catalog | `docs/01-architecture/i18n-backend.md` |
+
+**Mỗi locale là MỘT file, không phải một thư mục.** Namespace là khoá ở cấp cao nhất bên trong file
+(`userManagement.list.title`), không phải tên file. Thêm namespace = thêm một khoá gốc vào **cả hai** file, không tạo
+file mới. Đừng đi tìm `messages/vi/userManagement.json` — đường dẫn đó không tồn tại.
+
+Namespace hiện có: `metadata`, `common`, `nav`, `theme`, `home`, `login`, `dashboard`, `pagination`, `agGridTable`,
+`userManagement`, `role`.
 
 **Backend không trả câu tiếng Việt cho frontend hiển thị thẳng.** Backend trả `code` + tham số; frontend quyết định
 hiển thị bằng ngôn ngữ nào. Lý do: cùng một lỗi còn đi ra email, push, webhook và log — mỗi kênh một ngôn ngữ khác nhau.
@@ -50,8 +57,9 @@ product.detail.outOfStock           ✅
 product.detail.text1                ❌ (không đọc được ở chỗ khác)
 ```
 
-Namespace theo domain: `common`, `auth`, `product`, `cart`, `order`, `payment`, `seller`, `admin`, `content`, `error`.
-Chuỗi dùng ở ≥ 2 namespace thì chuyển lên `common`, không sao chép.
+Namespace theo domain. Danh sách đang dùng nằm ở mục đầu file — **đọc lại `Object.keys(messages/vi.json)` trước khi
+đặt tên mới**, đừng bịa namespace mới khi đã có cái phù hợp. Chuỗi dùng ở ≥ 2 namespace thì chuyển lên `common`,
+không sao chép.
 
 ## 3. Quy tắc
 
@@ -74,18 +82,41 @@ Chuỗi dùng ở ≥ 2 namespace thì chuyển lên `common`, không sao chép.
 - Tiếng Anh dài hơn tiếng Việt khoảng 30%: kiểm lại nút, chip, tiêu đề cột bảng ở bản `en` xem có vỡ layout không.
 - Thiếu khoá thì báo lỗi ồn ào ở dev và CI, **không** âm thầm hiện tên khoá ra cho người dùng.
 
-## 4. Thêm một ngôn ngữ mới
+## 4. Kiểm tự động — chạy TRƯỚC khi báo xong
+
+Sửa `messages/*.json` mà không chạy bước này là lỗi thường gặp nhất: `tsc` và `eslint` **không** biết gì về hai cây
+JSON, nên thiếu khoá ở `en` vẫn build xanh và chỉ lộ ra khi người dùng đổi ngôn ngữ.
+
+```bash
+pnpm --filter timmyhub-nextjs check:i18n
+# hoặc chạy thẳng: node frontend/scripts/check-i18n.cjs
+```
+
+Script `frontend/scripts/check-i18n.cjs` kiểm ba thứ và **exit 1** nếu có vấn đề:
+
+| Kiểm | Bắt được lỗi gì |
+|---|---|
+| Parity khoá | Khoá có ở `vi` mà thiếu ở `en` (hoặc ngược lại) |
+| Placeholder drift | Cùng khoá nhưng `{count}` ở `vi` lại là `{total}` ở `en` → bản dịch in ra `{count}` trần |
+| Khoá chết | Khoá không được tham chiếu ở `src/**` (thường là tàn dư sau khi đổi tên) |
+
+Bẫy khi tự viết lại phần "khoá chết": đừng dùng `blob.includes(key)` trần — nó khớp cả `closest`/`onClose` và bỏ sót
+khoá chết thật. Phải khớp tên lá **trong dấu nháy** (nháy đơn, nháy kép hoặc backtick), vì code gọi `t('pageInfo')`
+bên trong namespace chứ không viết đủ đường dẫn.
+
+## 5. Thêm một ngôn ngữ mới
 
 1. Thêm mã ngôn ngữ vào cấu hình `next-intl` và middleware.
-2. Chép cây `messages/vi` sang, giữ **nguyên** cấu trúc khoá.
+2. Thêm **một file** `messages/<locale>.json` (vd `messages/en.json`), giữ **nguyên** cấu trúc khoá của `vi.json`.
 3. Dịch; khoá chưa dịch thì rơi về `vi` **và** bị liệt kê trong báo cáo CI, không được im lặng.
 4. Bổ sung catalog thông điệp lỗi phía backend cho ngôn ngữ đó.
 5. Thêm `hreflang`, `sitemap` cho ngôn ngữ mới.
 6. Kiểm thứ tự sắp xếp, định dạng số, định dạng địa chỉ theo locale.
 
-## 5. Bàn giao
+## 6. Bàn giao
 
 - [ ] `grep` không còn chuỗi hiển thị cứng trong phạm vi vừa sửa
+- [ ] **Đã chạy `pnpm --filter timmyhub-nextjs check:i18n` và exit 0** (parity + placeholder + khoá chết)
 - [ ] Mọi khoá có đủ ở **mọi** locale; không khoá thừa không ai dùng
 - [ ] Không ghép chuỗi; số nhiều dùng ICU `plural`
 - [ ] Tiền và ngày dùng `Intl`, không tự viết hàm định dạng

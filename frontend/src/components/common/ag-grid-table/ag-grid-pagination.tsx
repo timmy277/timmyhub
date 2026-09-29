@@ -37,13 +37,15 @@ interface AgGridPaginationProps<TData> {
     disabled?: boolean
 }
 
-// Thanh phân trang thay cho panel mặc định của AG Grid (`suppressPaginationPanel`): bên trái là khoảng dòng đang xem
-// + chọn số dòng mỗi trang, bên phải là các ô số theo mẫu Mantine Pagination của TimmyHub gốc (ô có viền, trang hiện
-// tại tô màu primary, chỉ hiện khi có từ 2 trang). Màn hẹp (< md, tính cả 360 px) rút gọn còn trước · "Trang x/y" · sau
-// để không tràn ngang.
+// Thanh phân trang thay cho panel mặc định của AG Grid (`suppressPaginationPanel`): bên trái là chọn số dòng mỗi
+// trang + khoảng dòng đang xem, bên phải là dãy ô số với bốn nút mũi tên **chỉ có icon** (`«` `‹` `›` `»`). Dùng
+// chung namespace `pagination` với `ServerPagination` — hai thanh phải luôn khớp hình dáng lẫn câu chữ, tách
+// namespace ra là mở đường cho chúng lệch nhau. Hiện **kể cả khi chỉ có một trang**: vẫn thấy ô "1" và bốn nút mũi tên
+// mờ, đúng như panel mặc định của AG Grid. Màn hẹp (< md, tính cả 360 px) rút gọn còn trước · "Trang x/y" · sau để
+// không tràn ngang.
 export function AgGridPagination<TData>({ api, pageSizeOptions, disabled = false }: AgGridPaginationProps<TData>) {
     // ===== Hooks =====
-    const t = useTranslations('agGridTable')
+    const t = useTranslations('pagination')
     const isMobile = useIsMobile()
     const snapshot = useSyncExternalStore(
         (onChange) => {
@@ -83,93 +85,91 @@ export function AgGridPagination<TData>({ api, pageSizeOptions, disabled = false
                 </Select>
                 <span aria-live="polite">{t('pageInfo', { from, to, total: rowCount })}</span>
             </div>
-            {totalPages > 1 && (
-                <Pagination aria-label={t('pagination')} className="mx-0 w-auto">
-                    <PaginationContent className="gap-1.5">
-                        {!isMobile && (
-                            <PaginationItem>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    aria-label={t('firstPage')}
-                                    disabled={disabled || isFirstPage}
-                                    onClick={() => api.paginationGoToFirstPage()}
-                                >
-                                    <ChevronsLeftIcon />
-                                </Button>
-                            </PaginationItem>
-                        )}
+            <Pagination aria-label={t('ariaLabel')} className="mx-0 w-auto">
+                <PaginationContent className="gap-1.5">
+                    {!isMobile && (
                         <PaginationItem>
                             <Button
                                 type="button"
                                 variant="outline"
                                 size="icon"
-                                aria-label={t('previousPage')}
+                                aria-label={t('firstPage')}
                                 disabled={disabled || isFirstPage}
-                                onClick={() => api.paginationGoToPreviousPage()}
+                                onClick={() => api.paginationGoToFirstPage()}
                             >
-                                <ChevronLeftIcon />
+                                <ChevronsLeftIcon />
                             </Button>
                         </PaginationItem>
-                        {isMobile ? (
-                            <PaginationItem>
-                                <span aria-current="page" className="px-2 text-sm font-medium text-foreground">
-                                    {t('pageOf', { page: currentPage + 1, total: totalPages })}
-                                </span>
-                            </PaginationItem>
-                        ) : (
-                            getPageItems(currentPage, totalPages, AG_GRID_MAX_VISIBLE_PAGES).map((item) =>
-                                typeof item === 'number' ? (
-                                    <PaginationItem key={item}>
-                                        <Button
-                                            type="button"
-                                            variant={item === currentPage ? 'default' : 'outline'}
-                                            size="icon"
-                                            aria-label={t('goToPage', { page: item + 1 })}
-                                            aria-current={item === currentPage ? 'page' : undefined}
-                                            disabled={disabled}
-                                            onClick={() => api.paginationGoToPage(item)}
-                                        >
-                                            {item + 1}
-                                        </Button>
-                                    </PaginationItem>
-                                ) : (
-                                    <PaginationItem key={item}>
-                                        <PaginationEllipsis />
-                                    </PaginationItem>
-                                ),
-                            )
-                        )}
+                    )}
+                    <PaginationItem>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            aria-label={t('previousPage')}
+                            disabled={disabled || isFirstPage}
+                            onClick={() => api.paginationGoToPreviousPage()}
+                        >
+                            <ChevronLeftIcon />
+                        </Button>
+                    </PaginationItem>
+                    {isMobile ? (
+                        <PaginationItem>
+                            <span aria-current="page" className="px-2 text-sm font-medium text-foreground">
+                                {t('pageOf', { page: currentPage + 1, total: totalPages })}
+                            </span>
+                        </PaginationItem>
+                    ) : (
+                        getPageItems(currentPage, totalPages, AG_GRID_MAX_VISIBLE_PAGES).map((item) =>
+                            typeof item === 'number' ? (
+                                <PaginationItem key={item}>
+                                    <Button
+                                        type="button"
+                                        variant={item === currentPage ? 'default' : 'outline'}
+                                        size="icon"
+                                        aria-label={t('goToPage', { page: item + 1 })}
+                                        aria-current={item === currentPage ? 'page' : undefined}
+                                        disabled={disabled}
+                                        onClick={() => api.paginationGoToPage(item)}
+                                    >
+                                        {item + 1}
+                                    </Button>
+                                </PaginationItem>
+                            ) : (
+                                <PaginationItem key={item}>
+                                    <PaginationEllipsis />
+                                </PaginationItem>
+                            ),
+                        )
+                    )}
+                    <PaginationItem>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            aria-label={t('nextPage')}
+                            disabled={disabled || isLastPage}
+                            onClick={() => api.paginationGoToNextPage()}
+                        >
+                            <ChevronRightIcon />
+                        </Button>
+                    </PaginationItem>
+                    {!isMobile && (
                         <PaginationItem>
                             <Button
                                 type="button"
                                 variant="outline"
                                 size="icon"
-                                aria-label={t('nextPage')}
+                                aria-label={t('lastPage')}
                                 disabled={disabled || isLastPage}
-                                onClick={() => api.paginationGoToNextPage()}
+                                onClick={() => api.paginationGoToLastPage()}
                             >
-                                <ChevronRightIcon />
+                                <ChevronsRightIcon />
                             </Button>
                         </PaginationItem>
-                        {!isMobile && (
-                            <PaginationItem>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    aria-label={t('lastPage')}
-                                    disabled={disabled || isLastPage}
-                                    onClick={() => api.paginationGoToLastPage()}
-                                >
-                                    <ChevronsRightIcon />
-                                </Button>
-                            </PaginationItem>
-                        )}
-                    </PaginationContent>
-                </Pagination>
-            )}
+                    )}
+                </PaginationContent>
+            </Pagination>
         </div>
     )
 }

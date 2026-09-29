@@ -39,6 +39,14 @@ const eslintConfig = defineConfig([
             ],
         },
     },
+    // Script chạy thẳng bằng `node` (không qua bundler) nên phải là CommonJS — `package.json` không đặt
+    // `"type": "module"`, và `require()`/`__dirname` ở đây là chủ ý chứ không phải sót lại từ thời chưa sang ESM.
+    {
+        files: ['scripts/**/*.cjs'],
+        rules: {
+            '@typescript-eslint/no-require-imports': 'off',
+        },
+    },
     // Override default ignores of eslint-config-next.
     globalIgnores([
         // Default ignores of eslint-config-next:
