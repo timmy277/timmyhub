@@ -8,6 +8,8 @@ import type {
     CreateRoleInput,
     EffectivePermissions,
     GrantUserPermissionInput,
+    PermissionSummary,
+    RoleDetail,
     UpdateRoleInput,
 } from '@timmyhub/contracts'
 import {
@@ -18,7 +20,7 @@ import {
     GrantUserPermissionSchema,
     UpdateRoleSchema,
 } from '@timmyhub/contracts'
-import { CurrentUser, Permissions } from '@timmyhub/modules/platform/auth'
+import { AuthenticatedOnly, CurrentUser, Permissions } from '@timmyhub/modules/platform/auth'
 import type { AuthUser } from '@timmyhub/modules/platform/auth'
 
 import { RBAC_ROUTE, RBAC_ROUTE_PARAM } from '../identity.constants'
@@ -38,14 +40,32 @@ export class RbacController {
         return this.rbacService.listRoles()
     }
 
+    // Chi tiết role kèm tập quyền đang gán — màn chi tiết/sửa role cần để hiện và gán lại quyền. `rbac:roles:read`
+    // (đã có trong catalog) tách khỏi `rbac:roles:list`: xem danh sách không đương nhiên được xem chi tiết.
+    @Permissions('rbac:roles:read')
+    @Get(RBAC_ROUTE.ROLE)
+    getRole(@Param(RBAC_ROUTE_PARAM.ROLE_ID) roleId: string): Promise<RoleDetail> {
+        return this.rbacService.getRoleDetail(roleId)
+    }
+
     @Permissions('rbac:permissions:list')
     @Get(RBAC_ROUTE.PERMISSIONS)
     listPermissions() {
         return this.rbacService.listPermissions()
     }
 
-    // Không gắn @Permissions: xem của chính mình luôn được phép, phạm vi own|any do RbacService quyết định (404 khi
-    // ngoài phạm vi, không 403).
+    // Chi tiết permission. `rbac:permissions:read` tách khỏi `rbac:permissions:list`: xem danh sách không đương nhiên
+    // được xem chi tiết (đối xứng với role).
+    @Permissions('rbac:permissions:read')
+    @Get(RBAC_ROUTE.PERMISSION)
+    getPermission(@Param(RBAC_ROUTE_PARAM.PERMISSION_ID) permissionId: string): Promise<PermissionSummary> {
+        return this.rbacService.getPermissionDetail(permissionId)
+    }
+
+    // `@AuthenticatedOnly()` chứ không `@Permissions(...)`: xem quyền của chính mình luôn được phép, phạm vi own|any
+    // do RbacService quyết định (404 khi ngoài phạm vi, không 403). Nhãn này bắt buộc phải có — thiếu nó thì
+    // PermissionsGuard từ chối và RbacConsistencyChecker chặn khởi động (không còn nhánh fail-open).
+    @AuthenticatedOnly()
     @Get(RBAC_ROUTE.USER_EFFECTIVE_PERMISSIONS)
     getEffectivePermissions(
         @Param(RBAC_ROUTE_PARAM.USER_ID) userId: string,
