@@ -31,7 +31,12 @@ jest.mock('@nestjs/config', () => ({ ConfigService: class ConfigService {} }))
 const RAW_TOKEN = 'raw-refresh-token'
 const RAW_TOKEN_HASH = hashRefreshToken(RAW_TOKEN)
 
-const DEFAULT_USER = { id: 'user-1', email: 'user1@timmyhub.dev', roles: [UserRole.USER] }
+const DEFAULT_USER = {
+    id: 'user-1',
+    email: 'user1@timmyhub.dev',
+    roles: [UserRole.USER],
+    deletedAt: null as Date | null,
+}
 
 function futureDate(): Date {
     return new Date(Date.now() + 60_000)

@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt'
 
 import { PERMISSION_RESOLVER } from '@timmyhub/modules/platform/auth'
 
+import { AuditController, AuditRepository, AuditService } from './audit/index'
 import { AuthController } from './auth.controller'
 import { AuthService } from './auth.service'
 import { IdentityEventsListener } from './events/index'
@@ -15,7 +16,7 @@ import { UsersController, UsersRepository, UsersService } from './users/index'
 @Module({
     // JwtModule.register({}) rỗng: mỗi lần signAsync/verify truyền algorithm + key riêng (RS256, xem auth.service.ts).
     imports: [JwtModule.register({})],
-    controllers: [IdentityController, AuthController, RbacController, UsersController],
+    controllers: [IdentityController, AuthController, RbacController, UsersController, AuditController],
     providers: [
         IdentityService,
         IdentityRepository,
@@ -26,9 +27,11 @@ import { UsersController, UsersRepository, UsersService } from './users/index'
         PermissionCacheService,
         UsersRepository,
         UsersService,
+        AuditRepository,
+        AuditService,
         // Guard/checker của platform/auth chỉ biết token này, không biết RbacService — xem permission-resolver.interface.ts.
         { provide: PERMISSION_RESOLVER, useExisting: RbacService },
     ],
-    exports: [IdentityService, AuthService, RbacService, UsersService, PERMISSION_RESOLVER],
+    exports: [IdentityService, AuthService, RbacService, UsersService, AuditService, PERMISSION_RESOLVER],
 })
 export class IdentityModule {}

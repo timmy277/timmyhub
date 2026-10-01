@@ -82,6 +82,16 @@ export const AUTH_ROUTE = {
     LOGOUT_ALL: 'logout-all',
 } as const
 
+export const AUDIT_ROUTE = {
+    ROOT: 'v1/audit',
+    LOGS: 'logs',
+    LOG: 'logs/:logId',
+} as const
+
+export const AUDIT_ROUTE_PARAM = {
+    LOG_ID: 'logId',
+} as const
+
 export const USERS_ROUTE_PARAM = {
     USER_ID: 'userId',
 } as const

@@ -40,6 +40,9 @@ export const API_MESSAGES_VI = {
     identity: {
         userNotFound: 'Người dùng không tồn tại.',
     },
+    audit: {
+        logNotFound: 'Bản ghi kiểm toán không tồn tại.',
+    },
     rbac: {
         roleNotFoundByName: 'Vai trò "{roleName}" không tồn tại.',
         roleAlreadyExists: 'Vai trò "{roleName}" đã tồn tại.',

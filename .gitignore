@@ -32,3 +32,6 @@ pnpm-debug.log*
 Thumbs.db
 .idea/
 *.swp
+
+# WorkBuddy AI — cấu hình/memory cục bộ, không commit
+.workbuddy-ai/

@@ -37,6 +37,9 @@ export const API_MESSAGES_EN: ApiMessageCatalog = {
     identity: {
         userNotFound: 'The user does not exist.',
     },
+    audit: {
+        logNotFound: 'The audit log entry does not exist.',
+    },
     rbac: {
         roleNotFoundByName: 'Role "{roleName}" does not exist.',
         roleAlreadyExists: 'Role "{roleName}" already exists.',
