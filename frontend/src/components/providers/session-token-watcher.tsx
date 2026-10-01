@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 
 import { ACCESS_TOKEN_TTL_MS, TOKEN_REFRESH_MARGIN_MS } from '@/constants'
 import { setMemoryAccessToken } from '@/services'
+import { withAuthRefreshLock } from '@/utils'
 
 // Access token KHÔNG persist ở bất kỳ storage nào (REQ-IDN-022) — nhưng interceptor axios cần Bearer
 // token ngay lập tức. Watcher giữ token trong RAM:
@@ -34,10 +35,15 @@ export function SessionTokenWatcher() {
             if (cancelled || !token) return
 
             // Lên lịch làm mới phiên trước khi token hết hạn (margin an toàn).
+            // Bọc `update()` trong `withAuthRefreshLock` (Web Locks cross-tab): hai tab load cùng lúc sẽ fire
+            // timer gần như đồng thời — nếu cả hai gọi update() song song, jwt callback bên server chạy refresh
+            // BE đồng thời, một tab thắng CAS, tab thua thấy replacedBy != null → backend hiểu nhầm là token bị
+            // đánh cắp → thu hồi toàn bộ phiên (REQ-IDN-006). Lock đảm bảo chỉ một tab refresh, tab kia đợi rồi
+            // đọc session với cookie mới của tab thắng.
             const wait = Math.max(ACCESS_TOKEN_TTL_MS - TOKEN_REFRESH_MARGIN_MS, 5_000)
             timer = setTimeout(() => {
                 if (cancelled) return
-                void update()
+                void withAuthRefreshLock(() => update())
             }, wait)
         }
 

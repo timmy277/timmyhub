@@ -1,7 +1,8 @@
 // Hằng thuần của AgGridTable, tách khỏi file có AG Grid để nơi dùng import được mà không kéo gói lưới vào bundle.
 
-// Chiều cao mặc định (px) của vùng lưới — skeleton dùng cùng giá trị để không nhảy layout khi lưới hiện ra.
-export const AG_GRID_TABLE_DEFAULT_HEIGHT = 520
+// Chiều cao mặc định của vùng lưới — skeleton dùng cùng giá trị để không nhảy layout khi lưới hiện ra.
+
+export const AG_GRID_TABLE_DEFAULT_HEIGHT = 'clamp(300px, calc(100dvh - 20rem), 520px)'
 
 // Gắn `context: AG_GRID_NO_EXPORT` vào ColDef để bỏ cột đó khỏi file CSV (cột thao tác, ảnh…).
 export const AG_GRID_NO_EXPORT = { excludeFromExport: true } as const

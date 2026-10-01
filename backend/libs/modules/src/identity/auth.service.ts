@@ -66,8 +66,9 @@ export class AuthService {
         const passwordMatches = await bcrypt.compare(input.password, hashToCompare)
 
         // Trả lỗi giống nhau cho "email không tồn tại" và "sai mật khẩu" — không tiết lộ qua nội dung lỗi.
-        if (!user || !passwordMatches) {
-            if (user) {
+        // User bị soft-delete cũng vào nhánh này: không gọi failLogin (tài khoản đã xoá, tăng đếm vô nghĩa).
+        if (!user || !passwordMatches || user.deletedAt) {
+            if (user && !user.deletedAt) {
                 await this.failLogin(user.id, user.failedLoginCount)
             }
             throw new ApiError('INVALID_CREDENTIALS')
@@ -126,7 +127,7 @@ export class AuthService {
         }
 
         const user = await this.identityRepository.findUserById(currentToken.userId)
-        if (!user) {
+        if (!user || user.deletedAt) {
             throw new ApiError('REFRESH_TOKEN_INVALID')
         }
 

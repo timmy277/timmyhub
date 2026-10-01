@@ -172,4 +172,13 @@ describe('AuthService.refresh — REQ-IDN-005 / REQ-IDN-006', () => {
 
         await expect(service.refresh(RAW_TOKEN)).rejects.toMatchObject({ code: 'REFRESH_TOKEN_INVALID' })
     })
+
+    it('token hợp lệ nhưng user bị soft-delete → REFRESH_TOKEN_INVALID', async () => {
+        const { service } = buildService({
+            token: { userId: 'user-1', deviceId: null, expiresAt: futureDate() },
+            user: { ...DEFAULT_USER, deletedAt: new Date() },
+        })
+
+        await expect(service.refresh(RAW_TOKEN)).rejects.toMatchObject({ code: 'REFRESH_TOKEN_INVALID' })
+    })
 })
