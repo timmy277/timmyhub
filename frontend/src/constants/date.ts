@@ -8,6 +8,10 @@ export const CALENDAR_LOCALES: Record<Locale, DateFnsLocale> = { vi, en: enUS }
 // Hiển thị cố định ngày/tháng/năm bằng số ở mọi ngôn ngữ — cùng một định dạng thì gõ tay mới đọc ngược lại được.
 export const DATE_DISPLAY_FORMAT = 'dd/MM/yyyy'
 
+// Mốc thời gian đầy đủ cho các màn quản trị: ngày + giờ:phút:giây. Nhiều bản ghi trong cùng một ngày nên chỉ có ngày là
+// không đủ phân biệt thứ tự; dùng chung một định dạng để mọi module hiển thị giống hệt nhau.
+export const DATE_TIME_DISPLAY_FORMAT = 'dd/MM/yyyy HH:mm:ss'
+
 // Mẫu `date-fns` đọc chuỗi người dùng gõ — chấp nhận thiếu số 0 ở ngày/tháng.
 export const DATE_PARSE_FORMAT = 'd/M/yyyy'
 

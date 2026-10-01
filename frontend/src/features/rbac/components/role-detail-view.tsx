@@ -3,7 +3,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { parseISO } from 'date-fns'
 import { CalendarDaysIcon, FingerprintIcon, KeyRoundIcon, PencilIcon, ShieldCheckIcon, Trash2Icon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
@@ -14,7 +13,7 @@ import { Badge } from '@/components/ui'
 import { RBAC_KIND, RBAC_TAB } from '@/constants'
 import type { RbacPermissionFlags } from '@/constants'
 import { useDeleteRole } from '@/hooks'
-import { formatDisplayDate } from '@/utils'
+import { formatTimestamp } from '@/utils'
 
 import { buildRbacTabsHref, parseRbacTabKeys, withoutRbacTab, type RbacTabItem } from '../rbac-tab-query'
 import { getOpenRbacTabsSnapshot, writeOpenRbacTabs } from '../rbac-tabs-storage'
@@ -144,9 +143,7 @@ export function RoleDetailView({ role, permissions, actorId }: RoleDetailViewPro
 
                 <DetailSection icon={<CalendarDaysIcon />} title={t('detailSectionTimestamps')}>
                     <dl className="grid gap-x-6 gap-y-5">
-                        <DetailItem label={t('columnCreatedAt')}>
-                            {formatDisplayDate(parseISO(role.createdAt))}
-                        </DetailItem>
+                        <DetailItem label={t('columnCreatedAt')}>{formatTimestamp(role.createdAt)}</DetailItem>
                         <DetailItem label={t('columnRoleType')}>
                             <Badge variant={role.isSystem ? 'secondary' : 'outline'}>
                                 {t(role.isSystem ? 'system' : 'custom')}
@@ -159,7 +156,9 @@ export function RoleDetailView({ role, permissions, actorId }: RoleDetailViewPro
                     {permissionGroups.length === 0 ? (
                         <p className="text-sm text-muted-foreground">{t('noPermissionsAssigned')}</p>
                     ) : (
-                        <div className="flex flex-col gap-4">
+                        // Nhóm quyền xếp 2–3 nhóm một hàng: mỗi nhóm chỉ vài dòng, để dọc một hàng một nhóm sẽ kéo dài
+                        // trang vô ích. Trong mỗi nhóm tên quyền vẫn 2 cột để đọc theo cụm.
+                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                             {permissionGroups.map(([moduleName, names]) => (
                                 <div key={moduleName} className="rounded-lg border">
                                     <div className="flex items-center gap-2 border-b bg-muted/30 px-3 py-2">

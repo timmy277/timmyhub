@@ -20,7 +20,7 @@ import {
     USER_STATUS_LABEL_KEY,
     USER_STATUS_TONE,
 } from '@/constants'
-import { compareByLocalDay, formatDisplayDate, getUserDisplayName, rowActionsColumnWidth } from '@/utils'
+import { compareByLocalDay, formatTimestamp, getUserDisplayName, rowActionsColumnWidth } from '@/utils'
 
 type UserManagementTranslator = ReturnType<typeof useTranslations<'userManagement'>>
 type RoleTranslator = ReturnType<typeof useTranslations<'role'>>
@@ -283,7 +283,7 @@ export function createUserColumns({ t, tRole, permissions, actions }: CreateUser
                         <StatusBadge tone={USER_STATUS_TONE[user.status]} label={statusLabel(user.status)} />
                         {temporarilyLocked && lockedUntil && (
                             <span className="text-xs text-muted-foreground">
-                                {t('statusTemporaryLock', { time: formatDisplayDate(lockedUntil) })}
+                                {t('statusTemporaryLock', { time: formatTimestamp(lockedUntil) })}
                             </span>
                         )}
                     </div>
@@ -313,7 +313,7 @@ export function createUserColumns({ t, tRole, permissions, actions }: CreateUser
                 },
             },
             filterValueGetter: (params) => (params.data ? parseISO(params.data.createdAt) : null),
-            valueFormatter: (params) => (params.value ? formatDisplayDate(parseISO(params.value as string)) : ''),
+            valueFormatter: (params) => formatTimestamp(params.value as string),
         },
         {
             headerName: t('columnLastLogin'),
@@ -340,8 +340,7 @@ export function createUserColumns({ t, tRole, permissions, actions }: CreateUser
             filterValueGetter: (params) => (params.data?.lastLoginAt ? parseISO(params.data.lastLoginAt) : null),
             // Chưa từng đăng nhập không phải "ngày 01/01/1970" — hiện chữ mờ để không ai đọc nhầm thành một mốc thật.
             cellClassRules: { 'text-muted-foreground italic': (params) => !params.data?.lastLoginAt },
-            valueFormatter: (params) =>
-                params.value ? formatDisplayDate(parseISO(params.value as string)) : t('never'),
+            valueFormatter: (params) => formatTimestamp(params.value as string) || t('never'),
         },
         // Không ai có nút nào để bấm thì không dựng cột — một cột "Thao tác" rỗng vừa chiếm chỗ vừa gợi ý rằng đáng
         // lẽ phải có gì đó ở đó.

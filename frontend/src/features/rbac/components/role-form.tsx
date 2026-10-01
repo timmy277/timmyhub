@@ -3,11 +3,21 @@
 import { useCallback, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { ChevronDownIcon, Layers3Icon } from 'lucide-react'
 
 import type { PermissionSummary, RoleDetail } from '@timmyhub/contracts'
 import { CreateRoleSchema, UpdateRoleSchema } from '@timmyhub/contracts'
 
-import { Button, Checkbox, FloatInput, FloatTextarea, ON_CARD_LABEL_CLASS } from '@/components'
+import {
+    Button,
+    Checkbox,
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+    FloatInput,
+    FloatTextarea,
+    ON_CARD_LABEL_CLASS,
+} from '@/components'
 import { Badge } from '@/components/ui'
 import { RBAC_KIND, RBAC_TAB } from '@/constants'
 import type { RbacPermissionFlags } from '@/constants'
@@ -226,7 +236,7 @@ export function RoleForm({ role, permissionCatalog, canAssignPermissions, flags,
                             {permissionGroups.length === 0 ? (
                                 <p className="text-sm text-muted-foreground">{t('permissionCatalogEmpty')}</p>
                             ) : (
-                                <div className="flex flex-col gap-4">
+                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                                     {permissionGroups.map(([moduleName, permissions]) => (
                                         <PermissionGroup
                                             key={moduleName}
@@ -317,46 +327,79 @@ function PermissionGroup({
     countLabel: string
     selectAllLabel: string
 }) {
-    const allSelected = permissions.every((permission) => selected.has(permission.name))
+    const [open, setOpen] = useState(false)
+    const selectedCount = permissions.filter((permission) => selected.has(permission.name)).length
+    const allSelected = selectedCount === permissions.length
+    const someSelected = selectedCount > 0 && !allSelected
     const groupId = `rbac-module-${moduleName}`
 
     return (
-        <div className="rounded-lg border">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/30 px-3 py-2">
-                <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{moduleName}</Badge>
-                    <span className="text-xs text-muted-foreground">{countLabel}</span>
-                </div>
-                <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
-                    <Checkbox
-                        checked={allSelected}
-                        disabled={disabled}
-                        aria-label={selectAllLabel}
-                        onCheckedChange={(checked) => onToggleModule(permissions, checked === true)}
+        <Collapsible
+            open={open}
+            onOpenChange={setOpen}
+            className={`h-fit overflow-hidden rounded-xl border transition-colors ${
+                selectedCount > 0 ? 'border-primary/35 bg-primary/[0.025]' : 'bg-card'
+            }`}
+        >
+            <div className="flex min-h-12 items-center gap-1.5 px-2.5 py-2">
+                <CollapsibleTrigger
+                    aria-controls={groupId}
+                    className="flex min-w-0 flex-1 items-center gap-2 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                        <Layers3Icon className="size-3.5" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[13px] font-semibold capitalize">{moduleName}</span>
+                        <span className="block text-[11px] leading-4 text-muted-foreground">{countLabel}</span>
+                    </span>
+                    <ChevronDownIcon
+                        className={`size-3.5 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
+                        aria-hidden="true"
                     />
-                    {selectAllLabel}
-                </label>
+                </CollapsibleTrigger>
+                <Checkbox
+                    checked={someSelected ? 'indeterminate' : allSelected}
+                    disabled={disabled}
+                    aria-label={`${selectAllLabel}: ${moduleName}`}
+                    onCheckedChange={(checked) => onToggleModule(permissions, checked !== false)}
+                />
             </div>
-            <ul className="grid gap-1 p-2 sm:grid-cols-2" id={groupId}>
-                {permissions.map((permission) => (
-                    <li key={permission.id}>
-                        <label className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 hover:bg-muted/50">
-                            <Checkbox
-                                className="mt-0.5"
-                                checked={selected.has(permission.name)}
-                                disabled={disabled}
-                                onCheckedChange={(checked) => onToggle(permission.name, checked === true)}
-                            />
-                            <span className="min-w-0">
-                                <span className="block truncate text-sm">{permission.displayName}</span>
-                                <span className="block truncate font-mono text-xs text-muted-foreground">
-                                    {permission.name}
-                                </span>
-                            </span>
-                        </label>
-                    </li>
-                ))}
-            </ul>
-        </div>
+            <CollapsibleContent id={groupId} className="flex-1 border-t px-2 py-1.5">
+                <ul className="flex flex-col gap-0.5">
+                    {permissions.map((permission) => {
+                        const isSelected = selected.has(permission.name)
+                        return (
+                            <li key={permission.id}>
+                                <label
+                                    className={`group flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-primary/[0.04] ${
+                                        isSelected ? 'bg-primary/[0.06]' : ''
+                                    }`}
+                                >
+                                    <Checkbox
+                                        className="mt-0.5 size-3.5 [&_svg]:size-3"
+                                        checked={isSelected}
+                                        disabled={disabled}
+                                        onCheckedChange={(checked) => onToggle(permission.name, checked === true)}
+                                    />
+                                    <span className="min-w-0 flex-1">
+                                        <span
+                                            className={`block truncate text-[13px] font-medium leading-4 ${
+                                                isSelected ? 'text-primary' : 'text-foreground'
+                                            }`}
+                                        >
+                                            {permission.displayName}
+                                        </span>
+                                        <span className="block truncate font-mono text-[10px] leading-4 text-muted-foreground">
+                                            {permission.name}
+                                        </span>
+                                    </span>
+                                </label>
+                            </li>
+                        )
+                    })}
+                </ul>
+            </CollapsibleContent>
+        </Collapsible>
     )
 }

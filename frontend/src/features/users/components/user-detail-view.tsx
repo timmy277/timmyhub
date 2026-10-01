@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { parseISO } from 'date-fns'
 import {
     CalendarDaysIcon,
     CheckIcon,
@@ -23,7 +22,7 @@ import { Button, ConfirmDialog, RoleBadges, StatusBadge } from '@/components'
 import type { UserPermissionFlags } from '@/constants'
 import { USER_STATUS_LABEL_KEY, USER_STATUS_TONE, USER_TAB } from '@/constants'
 import { useDeleteUser } from '@/hooks'
-import { formatDisplayDate, getUserDisplayName } from '@/utils'
+import { formatTimestamp, getUserDisplayName } from '@/utils'
 
 import { buildUserTabsHref } from '../user-tab-query'
 import { UserLockDialog } from './user-lock-dialog'
@@ -62,8 +61,6 @@ export function UserDetailView({ user, permissions }: UserDetailViewProps) {
     // Mở tab Sửa **thêm một tab** bên cạnh tab Chi tiết đang xem, không thay thế nó: tab Chi tiết vẫn nằm trên thanh
     // tab để quay lại. UserTabs sẽ ghi tab mới vào localStorage khi URL active đổi.
     const editHref = buildUserTabsHref(pathname, searchParams, { tab: USER_TAB.UPDATE, id: user.id })
-
-    const formatTimestamp = (value: string | null) => (value ? formatDisplayDate(parseISO(value)) : t('never'))
 
     return (
         <div className="flex flex-col gap-6">
@@ -166,9 +163,15 @@ export function UserDetailView({ user, permissions }: UserDetailViewProps) {
 
                 <DetailSection icon={<CalendarDaysIcon />} title={t('detailSectionActivity')} className="lg:col-span-2">
                     <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-3">
-                        <DetailItem label={t('columnMemberSince')}>{formatTimestamp(user.createdAt)}</DetailItem>
-                        <DetailItem label={t('detailLastLogin')}>{formatTimestamp(user.lastLoginAt)}</DetailItem>
-                        <DetailItem label={t('detailUpdatedAt')}>{formatTimestamp(user.updatedAt)}</DetailItem>
+                        <DetailItem label={t('columnMemberSince')}>
+                            {formatTimestamp(user.createdAt) || t('never')}
+                        </DetailItem>
+                        <DetailItem label={t('detailLastLogin')}>
+                            {formatTimestamp(user.lastLoginAt) || t('never')}
+                        </DetailItem>
+                        <DetailItem label={t('detailUpdatedAt')}>
+                            {formatTimestamp(user.updatedAt) || t('never')}
+                        </DetailItem>
                     </dl>
                 </DetailSection>
             </section>

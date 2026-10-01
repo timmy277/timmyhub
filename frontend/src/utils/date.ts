@@ -1,4 +1,4 @@
-import { format, isValid, parse } from 'date-fns'
+import { format, isValid, parse, parseISO } from 'date-fns'
 import type { DateRange } from 'react-day-picker'
 
 import {
@@ -7,6 +7,7 @@ import {
     DATE_RANGE_DISPLAY_SEPARATOR,
     DATE_RANGE_SEPARATOR_PATTERN,
     DATE_SUBMIT_FORMAT,
+    DATE_TIME_DISPLAY_FORMAT,
     TYPED_DATE_PATTERN,
 } from '@/constants'
 
@@ -15,6 +16,21 @@ import {
 
 export function formatDisplayDate(date: Date | null | undefined): string {
     return date ? format(date, DATE_DISPLAY_FORMAT) : ''
+}
+
+// Mốc ngày + giờ:phút:giây cho các màn quản trị (bảng, khối chi tiết). Ô nhập ngày vẫn dùng `formatDisplayDate` vì ở đó
+// chỉ có ngày; còn một mốc thời gian đọc từ backend thì luôn hiện đủ giờ phút giây để phân biệt được thứ tự.
+export function formatDisplayDateTime(date: Date | null | undefined): string {
+    return date ? format(date, DATE_TIME_DISPLAY_FORMAT) : ''
+}
+
+// Chuỗi ISO (hoặc `Date`) từ backend → ngày + giờ:phút:giây. Nhận thẳng giá trị của trường (`createdAt`, `lastLoginAt`…)
+// để mọi module gọi cùng một hàm thay vì tự `parseISO` rồi `format` theo cách riêng. Giá trị rỗng/không đọc được trả
+// chuỗi rỗng, nơi gọi tự quyết định câu thay thế ("chưa từng", "chưa cập nhật"…).
+export function formatTimestamp(value: string | Date | null | undefined): string {
+    if (!value) return ''
+    const date = typeof value === 'string' ? parseISO(value) : value
+    return isValid(date) ? formatDisplayDateTime(date) : ''
 }
 
 export function formatSubmitDate(date: Date | null | undefined): string {

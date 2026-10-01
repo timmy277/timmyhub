@@ -76,14 +76,15 @@ export const AVATAR_COLUMN_WIDTH_PX = 80
 // phải ô dữ liệu ("30/09/2026" chỉ ~66px). Tiêu đề "Đăng nhập gần nhất" dài 18 ký tự, ở 14px/600 (theme đặt
 // `headerFontWeight: 600`, `fontSize: 14`) chiếm ~129px, cộng padding tiêu đề 2×16px và chỗ cho mũi tên sắp xếp lẫn
 // nút menu là ~196px — hẹp hơn thì `.ag-header-cell-text` cắt thành "Đăng nhập gần nhấ…", mà cắt tiêu đề thì không
-// còn cách nào biết cột đó là gì. `MEMBER_SINCE` 160px vừa đủ cho "Thành viên từ" (12 ký tự) nên giữ nguyên.
+// còn cách nào biết cột đó là gì. Hai cột mốc thời gian nay hiện cả giờ:phút:giây (`dd/MM/yyyy HH:mm:ss`, 19 ký tự ≈
+// 135px) nên phải nới thêm để giá trị không bị cắt — tiêu đề vẫn là mức sàn như trước.
 export const USER_COLUMN_WIDTH_PX = {
     MIN_NAME: 170,
     MIN_EMAIL: 240,
     MIN_ROLES: 190,
     STATUS: 150,
-    MEMBER_SINCE: 160,
-    LAST_LOGIN: 200,
+    MEMBER_SINCE: 195,
+    LAST_LOGIN: 220,
 } as const
 
 // Bề rộng (px) các nút thanh công cụ trong skeleton — xấp xỉ nút thật để không nhảy layout.

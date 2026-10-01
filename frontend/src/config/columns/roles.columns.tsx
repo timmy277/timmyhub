@@ -1,5 +1,4 @@
 import type { ColDef, ICellRendererParams } from 'ag-grid-community'
-import { parseISO } from 'date-fns'
 import { EyeIcon, PencilIcon, Trash2Icon } from 'lucide-react'
 import type { useTranslations } from 'next-intl'
 
@@ -9,7 +8,7 @@ import { RowActions, type RowAction } from '@/components'
 import { Badge } from '@/components/ui'
 import type { RbacPermissionFlags } from '@/constants'
 import { AG_GRID_NO_EXPORT } from '@/constants'
-import { formatDisplayDate, rowActionsColumnWidth } from '@/utils'
+import { formatTimestamp, rowActionsColumnWidth } from '@/utils'
 
 type RbacTranslator = ReturnType<typeof useTranslations<'rbac'>>
 
@@ -104,9 +103,9 @@ export function createRoleColumns({
         {
             headerName: t('columnCreatedAt'),
             field: 'createdAt',
-            width: 160,
+            width: 195,
             flex: 0,
-            valueFormatter: (params) => formatDisplayDate(parseISO(params.value as string)),
+            valueFormatter: (params) => formatTimestamp(params.value as string),
         },
         ...(actionCount > 0
             ? [
