@@ -1,4 +1,4 @@
-import { HouseIcon, KeyRoundIcon, LayoutGridIcon, ShieldCheckIcon, UsersIcon } from 'lucide-react'
+import { HistoryIcon, HouseIcon, KeyRoundIcon, LayoutGridIcon, ShieldCheckIcon, UsersIcon } from 'lucide-react'
 
 import type { BreadcrumbEntry, NavGroup } from '@/types'
 
@@ -16,6 +16,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
             { titleKey: 'users', url: ROUTE.USERS, icon: UsersIcon },
             { titleKey: 'roles', url: ROUTE.ROLES, icon: ShieldCheckIcon },
             { titleKey: 'permissions', url: ROUTE.PERMISSIONS, icon: KeyRoundIcon },
+            { titleKey: 'audit', url: ROUTE.AUDIT, icon: HistoryIcon },
         ],
     },
 ]
@@ -38,5 +39,9 @@ export const BREADCRUMB_ROUTES: Readonly<Record<string, readonly BreadcrumbEntry
     [ROUTE.PERMISSIONS]: [
         { titleKey: 'home', url: ROUTE.HOME },
         { titleKey: 'permissions', url: ROUTE.PERMISSIONS },
+    ],
+    [ROUTE.AUDIT]: [
+        { titleKey: 'home', url: ROUTE.HOME },
+        { titleKey: 'audit', url: ROUTE.AUDIT },
     ],
 }

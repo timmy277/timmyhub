@@ -5,5 +5,6 @@ export const ROUTE = {
     USERS: '/users',
     ROLES: '/roles',
     PERMISSIONS: '/permissions',
+    AUDIT: '/audit',
     LOGIN: '/login',
 } as const

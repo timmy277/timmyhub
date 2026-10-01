@@ -1,3 +1,4 @@
+export * from './audit.columns'
 export * from './default-col-def'
 export * from './permissions.columns'
 export * from './roles.columns'

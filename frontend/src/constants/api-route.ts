@@ -28,6 +28,12 @@ export const API_ROUTE = {
         LOCK: (userId: string) => `v1/identity/users/${encodeURIComponent(userId)}/lock`,
         UNLOCK: (userId: string) => `v1/identity/users/${encodeURIComponent(userId)}/unlock`,
     },
+    // Tra cứu audit log — khớp `AUDIT_ROUTE` của module identity (FEAT-AUD-004). Bảng AuditLog bất biến (ADR-0011):
+    // chỉ có endpoint đọc, không có đường ghi/sửa/xoá qua API.
+    AUDIT: {
+        LIST: 'v1/audit/logs',
+        DETAIL: (logId: string) => `v1/audit/logs/${encodeURIComponent(logId)}`,
+    },
     RBAC: {
         ROLES: 'v1/rbac/roles',
         ROLE: (roleId: string) => `v1/rbac/roles/${encodeURIComponent(roleId)}`,
