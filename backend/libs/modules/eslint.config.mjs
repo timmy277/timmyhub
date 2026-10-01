@@ -41,4 +41,16 @@ export default [
             'no-restricted-imports': 'off',
         },
     },
+    {
+        // Ngoại lệ ranh giới cho ngữ cảnh audit. `audit-context.ts` là primitive chỉ phụ thuộc `node:async_hooks`,
+        // cố ý KHÔNG nằm trong `identity/index` — vì barrel kéo theo `IdentityEventsListener` →
+        // `@nestjs/event-emitter` (ESM thuần), mà Jest chạy CJS nên `require` file đó sẽ nổ
+        // `createRequireEsmError` và làm sập cả suite (đã tái hiện). `platform` cần *ghi* ngữ cảnh, `writeAuditLog`
+        // cần *đọc*, nên buộc phải import thẳng file nội bộ. Khai ngoại lệ theo **đúng file** thay vì nới glob:
+        // phạm vi hẹp, không mở đường cho import chéo tuỳ tiện ở chỗ khác.
+        files: ['src/platform/auth/interceptors/audit-context.interceptor.ts'],
+        rules: {
+            'no-restricted-imports': 'off',
+        },
+    },
 ]

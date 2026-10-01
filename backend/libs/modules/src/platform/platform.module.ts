@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common'
-import { APP_GUARD, DiscoveryModule } from '@nestjs/core'
+import { APP_GUARD, APP_INTERCEPTOR, DiscoveryModule } from '@nestjs/core'
 import { JwtModule } from '@nestjs/jwt'
 
 import { IdentityModule } from '../identity/index'
+import { AuditContextInterceptor } from './auth/interceptors/index'
 import { RbacConsistencyChecker } from './auth/checkers/index'
 import { JwtAuthGuard, PermissionsGuard, RolesGuard } from './auth/guards/index'
 import { PlatformEventsListener } from './events/index'
@@ -19,6 +20,8 @@ import { PlatformService } from './platform.service'
         PlatformService,
         PlatformEventsListener,
         RbacConsistencyChecker,
+        // Bọc mọi request để audit entry ghi được IP/User-Agent (xem audit-context.interceptor.ts).
+        { provide: APP_INTERCEPTOR, useClass: AuditContextInterceptor },
         // Thứ tự đăng ký = thứ tự chạy: xác thực (layer 0) → role thô (layer 1) → permission động (layer 2).
         { provide: APP_GUARD, useClass: JwtAuthGuard },
         { provide: APP_GUARD, useClass: RolesGuard },

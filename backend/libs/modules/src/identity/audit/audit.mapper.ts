@@ -5,8 +5,11 @@ import type { AuditLog } from '@timmyhub/prisma'
 // Chuyển bản ghi Prisma `AuditLog` sang DTO của `@timmyhub/contracts`. Hàm thuần, không phụ thuộc request.
 // `before`/`after` là JSON tùy ý — trả nguyên dạng cho FE tự render; không có schema nào ràng buộc nội dung
 // vì mỗi hành động nghiệp vụ có hình dạng diff riêng.
+//
+// `actorName` không nằm trong bảng audit (bảng bất biến, chỉ lưu `actorId`) — service tra bảng người dùng rồi
+// truyền vào đây. Tách tham số để mapper vẫn thuần và test được mà không cần DB.
 
-export function toAuditLogSummary(log: AuditLog): AuditLogSummary {
+export function toAuditLogSummary(log: AuditLog, actorName: string | null = null): AuditLogSummary {
     return {
         id: log.id,
         service: log.service,
@@ -14,15 +17,16 @@ export function toAuditLogSummary(log: AuditLog): AuditLogSummary {
         entityType: log.entityType,
         entityId: log.entityId,
         actorId: log.actorId,
+        actorName,
         actorType: log.actorType,
         result: log.result,
         occurredAt: log.occurredAt.toISOString(),
     }
 }
 
-export function toAuditLogDetail(log: AuditLog): AuditLogDetail {
+export function toAuditLogDetail(log: AuditLog, actorName: string | null = null): AuditLogDetail {
     return {
-        ...toAuditLogSummary(log),
+        ...toAuditLogSummary(log, actorName),
         actorIp: log.actorIp,
         userAgent: log.userAgent,
         before: log.before,

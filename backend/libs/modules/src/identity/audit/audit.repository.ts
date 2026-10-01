@@ -54,6 +54,22 @@ export class AuditRepository {
     findAuditLogById(id: string): Promise<AuditLog | null> {
         return this.prisma.auditLog.findUnique({ where: { id } })
     }
+
+    // Tra tên hiển thị (email) cho một loạt `actorId`. AuditLog chỉ lưu id nên phải hỏi bảng người dùng mới hiện
+    // được tên cho người đọc. Chỉ một query cho cả trang (`in`) thay vì N+1 theo từng dòng.
+    //
+    // Người dùng đã bị xoá mềm vẫn trả về: audit trail phải đọc được cả sau khi tài khoản biến mất — nếu lọc
+    // `deletedAt` thì bản ghi cũ sẽ mất tên, đúng thứ audit cần giữ lại.
+    async findActorNames(actorIds: string[]): Promise<Map<string, string>> {
+        const uniqueIds = [...new Set(actorIds.filter(Boolean))]
+        if (uniqueIds.length === 0) return new Map()
+
+        const users = await this.prisma.user.findMany({
+            where: { id: { in: uniqueIds } },
+            select: { id: true, email: true },
+        })
+        return new Map(users.map((user) => [user.id, user.email]))
+    }
 }
 
 // Hàm thuần xây `where` — tách ra để test được mà không cần DB (cùng khuôn với `buildUserListWhere`).

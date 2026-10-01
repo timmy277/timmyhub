@@ -50,6 +50,9 @@ export type AuditLogListQuery = z.infer<typeof AuditLogListQuerySchema>
 // ===== Kiểu phản hồi =====
 
 // Mục tóm tắt trong danh sách — không mang `before`/`after` (JSON nặng, chỉ lấy ở detail).
+// `actorName` là tên hiển thị đã resolve từ `actorId` (email người dùng). AuditLog chỉ lưu id nên backend tra bảng
+// người dùng để bảng hiện tên thay vì một chuỗi cuid vô nghĩa với người đọc; null khi tác nhân là hệ thống hoặc id
+// không còn tồn tại.
 export type AuditLogSummary = {
     id: string
     service: string
@@ -57,6 +60,7 @@ export type AuditLogSummary = {
     entityType: string
     entityId: string
     actorId: string | null
+    actorName: string | null
     actorType: string
     result: string
     occurredAt: string

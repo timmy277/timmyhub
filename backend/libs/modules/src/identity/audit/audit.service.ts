@@ -34,8 +34,14 @@ export class AuditService {
             sort: query.sort,
         })
 
+        const actorNames = await this.repository.findActorNames(
+            items.map((item) => item.actorId).filter((id): id is string => id !== null),
+        )
+
         return {
-            items: items.map(toAuditLogSummary),
+            items: items.map((item) =>
+                toAuditLogSummary(item, item.actorId ? (actorNames.get(item.actorId) ?? null) : null),
+            ),
             pagination: toAuditLogPagination(totalItems, query.page, query.pageSize),
         }
     }
@@ -45,6 +51,7 @@ export class AuditService {
         if (!log) {
             throw new ApiError('NOT_FOUND', { messageKey: apiMessageKey('audit.logNotFound') })
         }
-        return toAuditLogDetail(log)
+        const actorNames = await this.repository.findActorNames(log.actorId ? [log.actorId] : [])
+        return toAuditLogDetail(log, log.actorId ? (actorNames.get(log.actorId) ?? null) : null)
     }
 }

@@ -27,16 +27,24 @@ function buildAuditLog(overrides: Partial<Record<string, unknown>> = {}) {
 }
 
 function buildService(
-    options: { logs?: ReturnType<typeof buildAuditLog>[]; log?: ReturnType<typeof buildAuditLog> | null } = {},
+    options: {
+        logs?: ReturnType<typeof buildAuditLog>[]
+        log?: ReturnType<typeof buildAuditLog> | null
+        actorNames?: Map<string, string>
+    } = {},
 ) {
     const listAuditLogs = jest.fn().mockResolvedValue({
         items: options.logs ?? [buildAuditLog()],
         totalItems: options.logs?.length ?? 1,
     })
     const findAuditLogById = jest.fn().mockResolvedValue(options.log === undefined ? buildAuditLog() : options.log)
+    // Mặc định có tên cho `admin-1` — mapper chỉ nhận tên đã resolve, service lo phần tra cứu.
+    const findActorNames = jest
+        .fn()
+        .mockResolvedValue(options.actorNames ?? new Map([['admin-1', 'admin@timmyhub.dev']]))
 
-    const repository = { listAuditLogs, findAuditLogById } as unknown as AuditRepository
-    return { service: new AuditService(repository), listAuditLogs, findAuditLogById }
+    const repository = { listAuditLogs, findAuditLogById, findActorNames } as unknown as AuditRepository
+    return { service: new AuditService(repository), listAuditLogs, findAuditLogById, findActorNames }
 }
 
 describe('AuditService', () => {
@@ -114,6 +122,50 @@ describe('AuditService', () => {
             expect(result.pagination.hasNext).toBe(false)
             expect(result.pagination.hasPrev).toBe(true)
         })
+
+        it('resolve actorName từ actorId, chỉ hỏi DB một lần cho cả trang', async () => {
+            const { service, findActorNames } = buildService({
+                logs: [
+                    buildAuditLog({ id: 'log-1', actorId: 'admin-1' }),
+                    buildAuditLog({ id: 'log-2', actorId: 'admin-2' }),
+                ],
+                actorNames: new Map([
+                    ['admin-1', 'admin1@timmyhub.dev'],
+                    ['admin-2', 'admin2@timmyhub.dev'],
+                ]),
+            })
+
+            const result = await service.listAuditLogs({ page: 1, pageSize: 20, sort: '-occurredAt' })
+
+            expect(result.items[0]!.actorName).toBe('admin1@timmyhub.dev')
+            expect(result.items[1]!.actorName).toBe('admin2@timmyhub.dev')
+            // Một query `in` cho cả trang, không phải N+1 theo từng dòng.
+            expect(findActorNames).toHaveBeenCalledTimes(1)
+            expect(findActorNames).toHaveBeenCalledWith(['admin-1', 'admin-2'])
+        })
+
+        it('actorId null (hệ thống) → actorName null, không tra DB', async () => {
+            const { service, findActorNames } = buildService({
+                logs: [buildAuditLog({ actorId: null, actorType: 'SYSTEM' })],
+            })
+
+            const result = await service.listAuditLogs({ page: 1, pageSize: 20, sort: '-occurredAt' })
+
+            expect(result.items[0]!.actorName).toBeNull()
+            expect(findActorNames).toHaveBeenCalledWith([])
+        })
+
+        it('actorId không còn trong bảng người dùng → actorName null nhưng vẫn giữ actorId', async () => {
+            const { service } = buildService({
+                logs: [buildAuditLog({ actorId: 'deleted-user' })],
+                actorNames: new Map(),
+            })
+
+            const result = await service.listAuditLogs({ page: 1, pageSize: 20, sort: '-occurredAt' })
+
+            expect(result.items[0]!.actorName).toBeNull()
+            expect(result.items[0]!.actorId).toBe('deleted-user')
+        })
     })
 
     describe('getAuditLog', () => {
@@ -129,6 +181,16 @@ describe('AuditService', () => {
             expect(result.after).toEqual({ email: 'new@example.com' })
             expect(result.actorIp).toBeNull()
             expect(result.errorMessage).toBeNull()
+        })
+
+        it('chi tiết cũng có actorName đã resolve', async () => {
+            const { service } = buildService({
+                actorNames: new Map([['admin-1', 'admin@timmyhub.dev']]),
+            })
+
+            const result = await service.getAuditLog('log-1')
+
+            expect(result.actorName).toBe('admin@timmyhub.dev')
         })
 
         it('NOT_FOUND khi không tìm thấy', async () => {
