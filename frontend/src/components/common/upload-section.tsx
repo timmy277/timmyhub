@@ -270,18 +270,23 @@ export function UploadSection<TValue = string | string[] | MediaAsset | MediaAss
         async (files: File[]) => {
             if (files.length === 0) return
 
-            // Check limit
-            const currentTotal = existingItems.length + queue.length
-            if (currentTotal + files.length > effectiveMaxFiles) {
-                toast.warning(`Chỉ được phép tải lên tối đa ${effectiveMaxFiles} file.`)
-                return
+            // Single file mode (avatar, 1 file): tự động thay thế file cũ, lấy file đầu tiên
+            const filesToProcess = isMultiple ? files : files.slice(0, 1)
+
+            // Check limit chỉ áp dụng khi ở chế độ nhiều file (multiple mode)
+            if (isMultiple) {
+                const currentTotal = existingItems.length + queue.length
+                if (currentTotal + filesToProcess.length > effectiveMaxFiles) {
+                    toast.warning(`Chỉ được phép tải lên tối đa ${effectiveMaxFiles} file.`)
+                    return
+                }
             }
 
             // Create progress queue items
             const newQueueItems: UploadQueueProgressItem[] = []
             const validFiles: File[] = []
 
-            for (const file of files) {
+            for (const file of filesToProcess) {
                 const validationError = validateFile(file)
                 if (validationError) {
                     toast.error(validationError)
