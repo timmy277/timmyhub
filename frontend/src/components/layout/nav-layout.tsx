@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 
 import { SidebarInset, SidebarProvider } from '@/components/ui'
 import { SIDEBAR_STATE_COOKIE_NAME } from '@/constants'
+import { getActor } from '@/lib/actor-permissions'
 
 import { AppSidebar } from './app-sidebar'
 import { Header } from './header'
@@ -16,13 +17,19 @@ interface NavLayoutProps {
 //
 // Server Component: tự đọc cookie `sidebar_state` để render đúng trạng thái đóng/mở ngay lần đầu, không nháy
 // khi hydrate. Chỉ phần thân cuộn — inset bị chặn đúng chiều cao viewport, header là một hàng cố định phía trên.
+//
+// `getActor()` được `cache()` — nếu trang con cũng gọi `getActor()` thì vẫn chỉ là 1 lượt fetch; không lãng phí.
 export async function NavLayout({ children }: NavLayoutProps) {
     const cookieStore = await cookies()
     const defaultOpen = cookieStore.get(SIDEBAR_STATE_COOKIE_NAME)?.value !== 'false'
 
+    // Lấy tập quyền để lọc nav item — chỉ truyền set (serializable thông qua SSR props client component).
+    const actor = await getActor()
+    const permissions = actor?.permissions ?? new Set<string>()
+
     return (
         <SidebarProvider defaultOpen={defaultOpen}>
-            <AppSidebar />
+            <AppSidebar permissions={permissions} />
             <SidebarInset className="h-svh overflow-hidden">
                 <Header />
                 <div className="flex flex-1 flex-col overflow-y-auto overscroll-contain">

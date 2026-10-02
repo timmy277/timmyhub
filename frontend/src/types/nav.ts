@@ -8,6 +8,8 @@ export interface NavItem {
     icon: LucideIcon
     isActive?: boolean
     items?: readonly NavItem[]
+    // Nếu có, nav item chỉ hiện khi người dùng sở hữu quyền này.
+    requirePermission?: string
 }
 
 export interface NavGroup {

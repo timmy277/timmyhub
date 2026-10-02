@@ -63,3 +63,6 @@ export function toRbacPermissionFlags(permissions: ReadonlySet<string>): RbacPer
         ROLE_PERMISSIONS_ASSIGN: permissions.has(RBAC_PERMISSION.ROLE_PERMISSIONS_ASSIGN),
     }
 }
+
+// Quyền xem dashboard / báo cáo toàn sàn — chỉ ADMIN+ mới có `analytics:platform:read`.
+export const DASHBOARD_PERMISSION = 'analytics:platform:read' as const satisfies PermissionName

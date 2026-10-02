@@ -2,7 +2,8 @@
 
 import { useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { BadgeCheckIcon, LogOutIcon } from 'lucide-react'
+import Link from 'next/link'
+import { BadgeCheckIcon, LayoutGridIcon, LogOutIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -18,10 +19,10 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui'
-import { QUERY_KEY } from '@/constants'
+import { DASHBOARD_PERMISSION, QUERY_KEY, ROUTE } from '@/constants'
 import { AccountDialog } from '@/features/account'
 import { getCurrentUserProfileAction } from '@/features/users'
-import { useLogout } from '@/hooks'
+import { useLogout, usePermissions } from '@/hooks'
 import { useUserProfileStore } from '@/stores'
 
 import { UserAvatar } from './user-avatar'
@@ -33,6 +34,9 @@ export function UserMenu() {
     const { data: session } = useSession()
     const { mutate: logout, isPending } = useLogout()
     const profileOverride = useUserProfileStore((state) => state.override)
+
+    const { hasPermission } = usePermissions()
+    const canAccessDashboard = hasPermission(DASHBOARD_PERMISSION)
 
     // Tự động tải profile thực tế từ backend; query key 'users' sẽ tự invalidate khi có mutation sửa user
     const { data: backendProfile } = useQuery({
@@ -107,6 +111,14 @@ export function UserMenu() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
+                        {canAccessDashboard && (
+                            <DropdownMenuItem asChild>
+                                <Link href={ROUTE.DASHBOARD}>
+                                    <LayoutGridIcon aria-hidden />
+                                    {t('dashboard')}
+                                </Link>
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onSelect={handleAccount}>
                             <BadgeCheckIcon aria-hidden />
                             {t('account')}

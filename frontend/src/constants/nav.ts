@@ -1,18 +1,23 @@
-import { HistoryIcon, HouseIcon, KeyRoundIcon, LayoutGridIcon, ShieldCheckIcon, UsersIcon } from 'lucide-react'
+import { HistoryIcon, KeyRoundIcon, LayoutGridIcon, ShieldCheckIcon, UsersIcon } from 'lucide-react'
 
 import type { BreadcrumbEntry, NavGroup } from '@/types'
 
+import { DASHBOARD_PERMISSION } from './permission'
 import { ROUTE } from './route'
 
 // Tên cookie mà `components/ui/sidebar.tsx` ghi khi đóng/mở — NavLayout đọc lại ở server để render đúng trạng thái.
 export const SIDEBAR_STATE_COOKIE_NAME = 'sidebar_state'
 
-// Chỉ liệt kê route đã tồn tại: link tới route chưa dựng là một trang 404 người dùng thấy trước mình.
+// Menu bên thanh điều hướng quản trị (Dashboard/Admin) — không chứa Trang chủ vì Trang chủ là landing độc lập cho người dùng.
 export const NAV_GROUPS: readonly NavGroup[] = [
     {
         items: [
-            { titleKey: 'home', url: ROUTE.HOME, icon: HouseIcon },
-            { titleKey: 'dashboard', url: ROUTE.DASHBOARD, icon: LayoutGridIcon },
+            {
+                titleKey: 'dashboard',
+                url: ROUTE.DASHBOARD,
+                icon: LayoutGridIcon,
+                requirePermission: DASHBOARD_PERMISSION,
+            },
             { titleKey: 'users', url: ROUTE.USERS, icon: UsersIcon },
             { titleKey: 'roles', url: ROUTE.ROLES, icon: ShieldCheckIcon },
             { titleKey: 'permissions', url: ROUTE.PERMISSIONS, icon: KeyRoundIcon },

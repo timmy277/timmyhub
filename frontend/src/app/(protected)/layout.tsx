@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 
-import { NavLayout } from '@/components/layout'
 import { auth } from '@/lib/auth'
 import { ROUTE } from '@/constants'
 import { resolveSafeCallbackUrl } from '@/utils'
@@ -13,10 +13,14 @@ export const metadata: Metadata = {
     robots: { index: false, follow: false },
 }
 
-// Một khung sidebar + header cho mọi trang trong nhóm — Next giữ layout này qua các lần điều hướng nội bộ (PERF-001).
+interface ProtectedLayoutProps {
+    children: ReactNode
+}
+
 // Lớp xác minh thứ hai sau proxy (ADR-0005): proxy đã giải mã phiên bằng auth() và chặn trước, còn ở đây
 // `auth()` đảm bảo không có request nào chạm tới trang khi phiên không hợp lệ.
-export default async function ProtectedLayout({ children }: LayoutProps<'/'>) {
+// Bố cục hiển thị (có sidebar hay chỉ có appbar) do từng nhóm route con `(home)` và `(admin)` tự quyết định.
+export default async function ProtectedLayout({ children }: ProtectedLayoutProps) {
     const session = await auth()
     if (!session?.user?.id) {
         // Đích gốc do proxy gắn vào header `x-original-path` (proxy chạy trước layout); lọc open-redirect
@@ -27,5 +31,5 @@ export default async function ProtectedLayout({ children }: LayoutProps<'/'>) {
         redirect(`${ROUTE.LOGIN}?callbackUrl=${callbackUrl}`)
     }
 
-    return <NavLayout>{children}</NavLayout>
+    return <>{children}</>
 }
