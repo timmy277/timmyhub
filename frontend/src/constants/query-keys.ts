@@ -18,6 +18,8 @@ export const QUERY_KEY = {
         ALL: ['users'] as const,
         LIST: ['users', 'list'] as const,
         DETAIL: (userId: string) => ['users', 'detail', userId] as const,
+        ME: ['users', 'me'] as const,
+        NAVBAR_PROFILE: ['users', 'navbar-profile'] as const,
     },
     AUDIT: {
         ALL: ['audit'] as const,

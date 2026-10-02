@@ -99,6 +99,7 @@ export class UsersService {
             firstName: input.firstName,
             lastName: input.lastName,
             phone: input.phone ?? null,
+            avatar: input.avatar ?? null,
             roles,
             createdBy: actor.id,
         })

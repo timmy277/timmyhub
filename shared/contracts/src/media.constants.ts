@@ -38,13 +38,7 @@ export const ALLOWED_VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov', 'mkv', 'avi'] as 
 export const ALLOWED_ALL_EXTENSIONS = [...ALLOWED_IMAGE_EXTENSIONS, ...ALLOWED_VIDEO_EXTENSIONS] as const
 
 /** Allowed MIME Types */
-export const ALLOWED_IMAGE_MIME_TYPES = [
-    'image/png',
-    'image/jpeg',
-    'image/webp',
-    'image/gif',
-    'image/svg+xml',
-] as const
+export const ALLOWED_IMAGE_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/svg+xml'] as const
 
 export const ALLOWED_VIDEO_MIME_TYPES = [
     'video/mp4',

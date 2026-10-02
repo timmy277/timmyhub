@@ -434,11 +434,12 @@ describe('UsersService — tạo tài khoản', () => {
         const { service, repository } = buildService()
         repository.createUser.mockResolvedValue(buildUser())
 
-        await service.createUser(createInput, ADMIN_ACTOR)
+        await service.createUser({ ...createInput, avatar: 'https://example.com/avatar.png' }, ADMIN_ACTOR)
 
         const written = repository.createUser.mock.calls[0]?.[0]
         expect(written?.roles).toEqual([UserRole.USER])
         expect(written?.email).toBe(createInput.email)
+        expect(written?.avatar).toBe('https://example.com/avatar.png')
         // bcrypt cost ≥ 12 → tiền tố `$2a$12$`/`$2b$12$`; mật khẩu trần không bao giờ được ghi xuống DB.
         expect(written?.passwordHash).toMatch(/^\$2[aby]\$\d{2}\$/)
         expect(written?.passwordHash).not.toBe(createInput.password)

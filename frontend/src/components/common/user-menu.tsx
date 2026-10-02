@@ -1,8 +1,10 @@
 'use client'
 
+import { useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { BadgeCheckIcon, LogOutIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 
@@ -17,6 +19,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui'
 import { QUERY_KEY } from '@/constants'
+import { AccountDialog } from '@/features/account'
 import { getCurrentUserProfileAction } from '@/features/users'
 import { useLogout } from '@/hooks'
 import { useUserProfileStore } from '@/stores'
@@ -33,7 +36,7 @@ export function UserMenu() {
 
     // Tự động tải profile thực tế từ backend; query key 'users' sẽ tự invalidate khi có mutation sửa user
     const { data: backendProfile } = useQuery({
-        queryKey: QUERY_KEY.USERS.DETAIL('me'),
+        queryKey: QUERY_KEY.USERS.NAVBAR_PROFILE,
         queryFn: () => getCurrentUserProfileAction(),
         staleTime: 30_000,
         enabled: Boolean(session?.user?.id),
@@ -55,7 +58,28 @@ export function UserMenu() {
               : session?.user?.image
 
     // ===== Handlers =====
-    const handleAccount = () => toast.info(t('accountComingSoon'))
+    const router = useRouter()
+    const searchParams = useSearchParams()
+    const isAccountOpen = searchParams.get('modal') === 'account'
+
+    const handleAccount = useCallback(() => {
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('modal', 'account')
+        router.push(`?${params.toString()}`, { scroll: false })
+    }, [router, searchParams])
+
+    const handleAccountOpenChange = useCallback(
+        (open: boolean) => {
+            const params = new URLSearchParams(searchParams.toString())
+            if (open) {
+                params.set('modal', 'account')
+            } else {
+                params.delete('modal')
+            }
+            router.push(`?${params.toString()}`, { scroll: false })
+        },
+        [router, searchParams],
+    )
 
     const handleLogOut = () => {
         useUserProfileStore.getState().clearOverride()
@@ -64,35 +88,39 @@ export function UserMenu() {
     }
 
     return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label={t('account')} className="rounded-full">
-                    <UserAvatar name={username} imageUrl={avatar} />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="min-w-56 rounded-lg" align="end" sideOffset={8}>
-                <DropdownMenuLabel className="p-0 font-normal">
-                    <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+        <>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" aria-label={t('account')} className="rounded-full">
                         <UserAvatar name={username} imageUrl={avatar} />
-                        <div className="grid flex-1 leading-tight">
-                            <span className="truncate font-medium">{username}</span>
-                            {email && <span className="truncate text-xs text-muted-foreground">{email}</span>}
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="min-w-56 rounded-lg" align="end" sideOffset={8}>
+                    <DropdownMenuLabel className="p-0 font-normal">
+                        <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                            <UserAvatar name={username} imageUrl={avatar} />
+                            <div className="grid flex-1 leading-tight">
+                                <span className="truncate font-medium">{username}</span>
+                                {email && <span className="truncate text-xs text-muted-foreground">{email}</span>}
+                            </div>
                         </div>
-                    </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                    <DropdownMenuItem onSelect={handleAccount}>
-                        <BadgeCheckIcon aria-hidden />
-                        {t('account')}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                        <DropdownMenuItem onSelect={handleAccount}>
+                            <BadgeCheckIcon aria-hidden />
+                            {t('account')}
+                        </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={handleLogOut} disabled={isPending}>
+                        <LogOutIcon aria-hidden />
+                        {t('logOut')}
                     </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={handleLogOut} disabled={isPending}>
-                    <LogOutIcon aria-hidden />
-                    {t('logOut')}
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            <AccountDialog open={isAccountOpen} onOpenChange={handleAccountOpenChange} />
+        </>
     )
 }

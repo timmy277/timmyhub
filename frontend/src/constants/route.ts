@@ -7,5 +7,6 @@ export const ROUTE = {
     PERMISSIONS: '/permissions',
     AUDIT: '/audit',
     MEDIA: '/media',
+    ACCOUNT: '/account',
     LOGIN: '/login',
 } as const

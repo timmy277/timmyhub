@@ -91,6 +91,7 @@ export const CreateUserSchema = z.object({
     firstName: PersonNameSchema('validation.firstNameRequired'),
     lastName: PersonNameSchema('validation.lastNameRequired'),
     phone: PhoneSchema.optional(),
+    avatar: z.string().trim().nullable().optional(),
     roles: z.array(UserRoleSchema).min(1, apiMessageKey('validation.rolesRequired')).optional(),
 })
 export type CreateUserInput = z.infer<typeof CreateUserSchema>

@@ -75,6 +75,17 @@ export async function getCurrentUserProfileAction(): Promise<{
     }
 }
 
+// Lấy toàn bộ thông tin chi tiết của tài khoản đang đăng nhập (cho trang Account Settings)
+export async function getCurrentUserDetailAction(): Promise<UserDetail | null> {
+    const actor = await getActor()
+    if (!actor) return null
+
+    const result = await fetchBackend<UserDetail>(API_ROUTE.USERS.DETAIL(actor.userId), { token: actor.accessToken })
+    if (!result.ok) return null
+
+    return result.data
+}
+
 // Khoá bắt buộc kèm lý do (REQ-USR-012) — validate lại ở server trước khi gửi, cùng schema với form.
 export async function setUserLockAction(userId: string, locked: boolean, reason?: string): Promise<UserActionResult> {
     const path = locked ? API_ROUTE.USERS.LOCK(userId) : API_ROUTE.USERS.UNLOCK(userId)

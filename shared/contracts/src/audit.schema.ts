@@ -1,7 +1,5 @@
 import { z } from 'zod'
 
-import { apiMessageKey } from './i18n/translate'
-
 // Zod DTO cho API audit log (/v1/audit/logs) — nguồn validation duy nhất (CLAUDE.md luật #15), dùng chung FE/BE.
 // Truy vết: FEAT-AUD-004 (giao diện tra cứu audit log cho admin). Audit log là bảng bất biến (chỉ INSERT/SELECT),
 // không có thao tác ghi qua API — mọi audit entry được sinh trong transaction nghiệp vụ qua `writeAuditLog`.

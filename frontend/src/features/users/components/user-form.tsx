@@ -164,6 +164,7 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
             firstName: values.firstName,
             lastName: values.lastName,
             ...(values.phone.trim() === '' ? {} : { phone: values.phone }),
+            avatar,
             ...(canAssignRole ? { roles: roles as UserRole[] } : {}),
         }
         const parsed = CreateUserSchema.safeParse(raw)
@@ -229,26 +230,24 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
                     )}
 
                     <FormSection title={t('formSectionProfile')} description={t('formProfileDescription')}>
-                        {isEdit && (
-                            <div className="flex w-full justify-center pb-4 pt-1">
-                                <UploadSection
-                                    variant="avatar"
-                                    align="center"
-                                    acceptType="image"
-                                    name={
-                                        [values.firstName, values.lastName].filter(Boolean).join(' ') ||
-                                        values.displayName ||
-                                        user?.email ||
-                                        'User'
-                                    }
-                                    value={avatar}
-                                    onChange={(val) => setAvatar(typeof val === 'string' || val === null ? val : null)}
-                                    ownerType="AVATAR"
-                                    ownerId={userId}
-                                    disabled={isPending}
-                                />
-                            </div>
-                        )}
+                        <div className="flex w-full justify-center pb-4 pt-1">
+                            <UploadSection
+                                variant="avatar"
+                                align="center"
+                                acceptType="image"
+                                name={
+                                    [values.firstName, values.lastName].filter(Boolean).join(' ') ||
+                                    values.displayName ||
+                                    (isEdit ? user?.email : values.email) ||
+                                    'User'
+                                }
+                                value={avatar}
+                                onChange={(val) => setAvatar(typeof val === 'string' || val === null ? val : null)}
+                                ownerType="AVATAR"
+                                ownerId={userId}
+                                disabled={isPending}
+                            />
+                        </div>
                         <div className="grid gap-4 sm:grid-cols-2">
                             <FloatInput
                                 label={t('fieldLastName')}

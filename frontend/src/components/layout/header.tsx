@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { useTranslations } from 'next-intl'
 
 import {
@@ -8,7 +9,7 @@ import {
     ThemeModeToggle,
     UserMenu,
 } from '@/components/common'
-import { Separator, SidebarTrigger } from '@/components/ui'
+import { Separator, SidebarTrigger, Skeleton } from '@/components/ui'
 
 // Server Component: chỉ xếp chỗ, phần tương tác nằm trong các component client con.
 export function Header() {
@@ -26,7 +27,9 @@ export function Header() {
                 <ThemeMenu />
                 <ThemeModeToggle />
                 <NotificationMenu />
-                <UserMenu />
+                <Suspense fallback={<Skeleton className="h-8 w-8 rounded-full" />}>
+                    <UserMenu />
+                </Suspense>
             </div>
         </header>
     )

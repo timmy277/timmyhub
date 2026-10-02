@@ -22,6 +22,7 @@ export type CreateUserRecordInput = {
     firstName: string
     lastName: string
     phone: string | null
+    avatar?: string | null | undefined
     roles: UserRole[]
     createdBy: string
 }
@@ -99,6 +100,7 @@ export class UsersRepository {
                             firstName: input.firstName,
                             lastName: input.lastName,
                             displayName: `${input.firstName} ${input.lastName}`,
+                            avatar: input.avatar ?? null,
                         },
                     },
                 },

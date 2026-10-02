@@ -1,0 +1,6 @@
+export * from './components/account-dialog'
+export * from './components/account-shell'
+export * from './components/profile-tab'
+export * from './components/security-tab'
+export * from './components/addresses-tab'
+export * from './components/notifications-tab'
