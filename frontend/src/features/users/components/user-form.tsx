@@ -89,14 +89,18 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
         router.push(buildUserTabsHref(pathname, searchParams, detailTab))
     }, [actorId, closeCurrentTab, editedUserId, pathname, router, searchParams])
 
-    const handleUpdateSuccess = useCallback(() => {
+    const handleUpdateSuccess = useCallback(async () => {
         if (editedUserId && editedUserId === actorId) {
             const fallbackDisplayName =
                 [values.lastName, values.firstName].filter(Boolean).join(' ') || values.firstName
-            void updateSession({
-                image: avatar,
-                name: values.displayName.trim() || fallbackDisplayName || undefined,
-            })
+            try {
+                await updateSession({
+                    image: avatar,
+                    name: values.displayName.trim() || fallbackDisplayName || undefined,
+                })
+            } catch {
+                // Ignore session update error
+            }
         }
         closeUpdateTab()
     }, [
