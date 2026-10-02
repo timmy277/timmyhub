@@ -103,7 +103,7 @@ export const authConfig = {
     callbacks: {
         // jwt() chạy lúc đăng nhập (user được cấp), lúc client chủ động update, và mỗi lần đọc phiên.
         // Access/refresh token + roles sống trong JWT này — cookie mã hoá HttpOnly, script không đọc được.
-        async jwt({ token, user }) {
+        async jwt({ token, user, trigger, session }) {
             // 1) Đăng nhập thành công — nhét token cấp từ backend vào JWT.
             if (user?.accessToken) {
                 token.accessToken = user.accessToken
@@ -115,9 +115,25 @@ export const authConfig = {
                 return token
             }
 
-            // 2) Client chủ động update (`unstable_update`) — CHỈ re-sign JWT (để làm mới hạn phiên),
-            //    tuyệt đối không merge dữ liệu từ client: cho phép ghi đè roles từ ngoài là lỗ hổng
-            //    nâng quyền. Phiên cũ được giữ nguyên trong token.
+            // 2) Client chủ động update (`unstable_update` hoặc `useSession().update(...)`) —
+            //    CHỈ cho phép cập nhật thông tin hiển thị an toàn (name, avatar/image).
+            //    TUYỆT ĐỐI không merge roles hay permissions từ client để tránh lỗ hổng nâng quyền.
+            if (trigger === 'update' && session) {
+                const nextName =
+                    (session as { name?: string; user?: { name?: string } }).name ??
+                    (session as { user?: { name?: string } }).user?.name
+                const nextImage =
+                    (session as { image?: string | null; user?: { image?: string | null } }).image ??
+                    (session as { user?: { image?: string | null } }).user?.image
+
+                if (typeof nextName === 'string') {
+                    token.name = nextName
+                }
+                if (typeof nextImage === 'string' || nextImage === null) {
+                    token.picture = nextImage
+                }
+                return token
+            }
 
             // 3) Access token sắp hết hạn → refresh server-side bằng refresh token trong JWT.
             //    `accessExpiresAt` chỉ mang MỘT nghĩa: hạn của access token. Việc chống race đa tab nằm ở
@@ -160,8 +176,8 @@ export const authConfig = {
         session({ session, token }) {
             if (token.sub) session.user.id = token.sub
             if (token.accessToken) session.accessToken = token.accessToken
-            if (token.name) session.user.name = token.name
-            if (token.picture) session.user.image = token.picture
+            if (token.name !== undefined) session.user.name = token.name
+            if (token.picture !== undefined) session.user.image = token.picture
             return session
         },
     },

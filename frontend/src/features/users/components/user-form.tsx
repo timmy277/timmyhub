@@ -3,6 +3,7 @@
 import { useCallback, useState, type FormEvent } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { useSession } from 'next-auth/react'
 
 import type { UserRole, UserSummary } from '@timmyhub/contracts'
 import { CreateUserSchema, UpdateUserSchema, USER_ROLES, UserRole as UserRoleValue } from '@timmyhub/contracts'
@@ -64,6 +65,8 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
     const searchParams = useSearchParams()
     const editedUserId = userId
 
+    const { update: updateSession } = useSession()
+
     // Tab của form này. Lưu thành công hoặc Huỷ sẽ gỡ đúng tab hiện tại khỏi localStorage.
     const closeCurrentTab = useCallback(() => {
         const selfTab: UserTabItem = editedUserId
@@ -86,7 +89,26 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
         router.push(buildUserTabsHref(pathname, searchParams, detailTab))
     }, [actorId, closeCurrentTab, editedUserId, pathname, router, searchParams])
 
-    const update = useUpdateUser({ onSucceeded: closeUpdateTab })
+    const handleUpdateSuccess = useCallback(() => {
+        if (editedUserId && editedUserId === actorId) {
+            void updateSession({
+                image: avatar,
+                name: values.displayName || [values.firstName, values.lastName].filter(Boolean).join(' ') || undefined,
+            })
+        }
+        closeUpdateTab()
+    }, [
+        actorId,
+        avatar,
+        closeUpdateTab,
+        editedUserId,
+        updateSession,
+        values.displayName,
+        values.firstName,
+        values.lastName,
+    ])
+
+    const update = useUpdateUser({ onSucceeded: handleUpdateSuccess })
     const isPending = create.isPending || update.isPending
 
     // ===== Derived =====
