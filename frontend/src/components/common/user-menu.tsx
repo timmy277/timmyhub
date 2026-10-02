@@ -16,7 +16,6 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui'
 import { useLogout } from '@/hooks'
-import { MOCK_NAV_USER } from '@/mocks'
 
 import { UserAvatar } from './user-avatar'
 
@@ -29,10 +28,9 @@ export function UserMenu() {
     const { mutate: logout, isPending } = useLogout()
 
     // ===== Derived =====
-    // Fallback mock khi session chưa kịp nạp — tránh nhảy layout. Email/tên thật hiển thị khi có phiên.
-    const name = session?.user?.name ?? MOCK_NAV_USER.name
-    const email = session?.user?.email ?? MOCK_NAV_USER.email
-    const avatar = MOCK_NAV_USER.avatar
+    const email = session?.user?.email ?? ''
+    const name = session?.user?.name || email || t('account')
+    const avatar = session?.user?.image
 
     // ===== Handlers =====
     const handleAccount = () => toast.info(t('accountComingSoon'))
@@ -57,7 +55,9 @@ export function UserMenu() {
                         <UserAvatar name={name} imageUrl={avatar} />
                         <div className="grid flex-1 leading-tight">
                             <span className="truncate font-medium">{name}</span>
-                            <span className="truncate text-xs text-muted-foreground">{email}</span>
+                            {email && name !== email && (
+                                <span className="truncate text-xs text-muted-foreground">{email}</span>
+                            )}
                         </div>
                     </div>
                 </DropdownMenuLabel>

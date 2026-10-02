@@ -13,7 +13,14 @@ import {
     type FloatOption,
 } from '@/components'
 import { ROUTE } from '@/constants'
-import { DEMO_CATEGORIES } from '@/mocks'
+
+// Danh mục mẫu cho khu demo field trên trang chủ — `labelKey` thuộc namespace i18n `home`.
+const DEMO_CATEGORIES = [
+    { value: 'fashion', labelKey: 'categoryFashion' },
+    { value: 'electronics', labelKey: 'categoryElectronics' },
+    { value: 'home', labelKey: 'categoryHome' },
+    { value: 'beauty', labelKey: 'categoryBeauty' },
+] as const
 
 // Trang chủ khu quản trị bản demo: lối tắt tới các màn đã dựng + khu thử các field label nổi. Server Component —
 // chỉ các field là client.

@@ -28,7 +28,6 @@ const eslintConfig = defineConfig([
                                 '@/types/*',
                                 '@/utils/*',
                                 '@/config/*',
-                                '@/mocks/*',
                                 '@/features/*/*',
                             ],
                             message:
