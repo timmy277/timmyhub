@@ -5,7 +5,7 @@ import { AUTH_BACKGROUND_BLOCKS } from '@/constants'
 // Khung của các màn auth (login, sau này là register): nền lưới, khối màu, card đặt giữa.
 export function AuthLayout({ children }: { children: ReactNode }) {
     return (
-        <div className="auth-grid relative flex min-h-svh flex-1 items-center justify-center overflow-hidden px-4 py-10">
+        <main className="auth-grid relative flex min-h-svh flex-1 items-center justify-center overflow-hidden px-4 py-10">
             <div aria-hidden className="pointer-events-none absolute inset-0">
                 {AUTH_BACKGROUND_BLOCKS.map((block) => (
                     <div
@@ -25,6 +25,6 @@ export function AuthLayout({ children }: { children: ReactNode }) {
             </div>
 
             <div className="relative w-full max-w-150">{children}</div>
-        </div>
+        </main>
     )
 }
