@@ -91,9 +91,11 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
 
     const handleUpdateSuccess = useCallback(() => {
         if (editedUserId && editedUserId === actorId) {
+            const fallbackDisplayName =
+                [values.lastName, values.firstName].filter(Boolean).join(' ') || values.firstName
             void updateSession({
                 image: avatar,
-                name: values.displayName || [values.firstName, values.lastName].filter(Boolean).join(' ') || undefined,
+                name: values.displayName.trim() || fallbackDisplayName || undefined,
             })
         }
         closeUpdateTab()
@@ -125,10 +127,12 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
 
         if (userId) {
             if (!user) return
+            const fallbackDisplayName =
+                [values.lastName, values.firstName].filter(Boolean).join(' ') || values.firstName
             const raw = {
                 firstName: values.firstName,
                 lastName: values.lastName,
-                ...(values.displayName.trim() === '' ? {} : { displayName: values.displayName }),
+                displayName: values.displayName.trim() || fallbackDisplayName,
                 ...(values.phone.trim() === '' ? {} : { phone: values.phone }),
                 ...(canEditRoles ? { roles } : {}),
                 avatar,
@@ -173,7 +177,7 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
 
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
                 <div className="flex min-w-0 flex-col gap-6">
-                    {!isEdit && (
+                    {!isEdit ? (
                         <FormSection title={t('formSectionAccount')} description={t('formAccountDescription')}>
                             <FloatInput
                                 label={t('fieldEmail')}
@@ -196,6 +200,18 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
                                 onChange={setField('password')}
                                 error={fieldErrors.password}
                                 disabled={isPending}
+                                labelClassName={ON_CARD_LABEL_CLASS}
+                            />
+                        </FormSection>
+                    ) : (
+                        <FormSection title={t('formSectionAccount')} description={t('formSideUpdate')}>
+                            <FloatInput
+                                label={t('fieldEmail')}
+                                type="email"
+                                name="email"
+                                value={user?.email ?? ''}
+                                disabled
+                                helperText={t('formSideUpdate')}
                                 labelClassName={ON_CARD_LABEL_CLASS}
                             />
                         </FormSection>
