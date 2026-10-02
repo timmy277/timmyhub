@@ -1,6 +1,6 @@
 'use client'
 
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
@@ -13,6 +13,7 @@ import type {
     UpdateRoleInput,
 } from '@timmyhub/contracts'
 
+import { QUERY_KEY } from '@/constants'
 import type { RbacActionFailureCode, RbacActionResult } from '@/features/rbac'
 import type { CreateRoleResult, UpdateRoleResult } from '@/features/rbac'
 import {
@@ -47,6 +48,7 @@ function failureMessage(
 function useRbacActionFeedback() {
     // ===== Hooks =====
     const router = useRouter()
+    const queryClient = useQueryClient()
     const t = useTranslations('rbac')
     const tApi = useTranslations('api')
 
@@ -57,6 +59,7 @@ function useRbacActionFeedback() {
             return
         }
         toast.success(successMessage)
+        queryClient.invalidateQueries({ queryKey: QUERY_KEY.RBAC.ALL })
         router.refresh()
         options?.onSucceeded?.(result.data)
     }
@@ -67,6 +70,7 @@ function useRbacActionFeedback() {
 function useRoleWriteFeedback(options?: MutationOptions<RoleSummary>) {
     // ===== Hooks =====
     const router = useRouter()
+    const queryClient = useQueryClient()
     const t = useTranslations('rbac')
     const tApi = useTranslations('api')
 
@@ -78,6 +82,7 @@ function useRoleWriteFeedback(options?: MutationOptions<RoleSummary>) {
         }
         if (result.permissionsAssigned) toast.success(successMessage)
         else toast.warning(t('roleSavedPermissionsFailed'))
+        queryClient.invalidateQueries({ queryKey: QUERY_KEY.RBAC.ALL })
         router.refresh()
         options?.onSucceeded?.(result.data)
     }

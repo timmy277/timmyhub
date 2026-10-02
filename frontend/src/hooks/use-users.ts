@@ -1,12 +1,13 @@
 'use client'
 
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 
 import type { CreateUserInput, UpdateUserInput } from '@timmyhub/contracts'
 
+import { QUERY_KEY } from '@/constants'
 import type { UserActionFailureCode, UserActionResult } from '@/features/users'
 import {
     assignUserRoleAction,
@@ -29,6 +30,7 @@ type MutationOptions = {
 function useUserActionFeedback() {
     // ===== Hooks =====
     const router = useRouter()
+    const queryClient = useQueryClient()
     const t = useTranslations('userManagement')
     const tApi = useTranslations('api')
 
@@ -43,12 +45,21 @@ function useUserActionFeedback() {
         return t('actionFailed')
     }
 
-    const settle = (result: UserActionResult, successMessage: string, options?: MutationOptions) => {
+    const settle = (
+        result: UserActionResult,
+        successMessage: string,
+        options?: MutationOptions,
+        additionalInvalidateKeys: (readonly unknown[])[] = [],
+    ) => {
         if (!result.ok) {
             toast.error(messageFor(result.code))
             return
         }
         toast.success(successMessage)
+        queryClient.invalidateQueries({ queryKey: QUERY_KEY.USERS.ALL })
+        for (const key of additionalInvalidateKeys) {
+            queryClient.invalidateQueries({ queryKey: key })
+        }
         router.refresh()
         options?.onSucceeded?.()
     }
@@ -98,13 +109,21 @@ export function useUserRole(options?: MutationOptions) {
     const assign = useMutation({
         mutationFn: ({ userId, roleName }: { userId: string; roleName: string }) =>
             assignUserRoleAction(userId, roleName),
-        onSuccess: (result, variables) => settle(result, t('roleGranted', { role: variables.roleName }), options),
+        onSuccess: (result, variables) =>
+            settle(result, t('roleGranted', { role: variables.roleName }), options, [
+                QUERY_KEY.RBAC.USER_PERMISSIONS(variables.userId),
+                QUERY_KEY.RBAC.ALL,
+            ]),
     })
 
     const revoke = useMutation({
         mutationFn: ({ userId, roleName }: { userId: string; roleName: string }) =>
             revokeUserRoleAction(userId, roleName),
-        onSuccess: (result, variables) => settle(result, t('roleRevoked', { role: variables.roleName }), options),
+        onSuccess: (result, variables) =>
+            settle(result, t('roleRevoked', { role: variables.roleName }), options, [
+                QUERY_KEY.RBAC.USER_PERMISSIONS(variables.userId),
+                QUERY_KEY.RBAC.ALL,
+            ]),
     })
 
     return { assign, revoke }

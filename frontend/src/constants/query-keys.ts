@@ -1,0 +1,27 @@
+// Query Key Factory tập trung cho React Query (ADR / Coding Standards).
+// Quy tắc phân tầng: [scope, entity, ...params].
+// Invalidate query cha (vd QUERY_KEY.RBAC.ALL) sẽ tự động làm mới tất cả query con (ROLES, PERMISSIONS, USER_PERMISSIONS).
+export const QUERY_KEY = {
+    AUTH: {
+        ALL: ['auth'] as const,
+        SESSION: ['auth', 'session'] as const,
+    },
+    RBAC: {
+        ALL: ['rbac'] as const,
+        ROLES: ['rbac', 'roles'] as const,
+        ROLE_DETAIL: (roleId: string) => ['rbac', 'roles', roleId] as const,
+        PERMISSIONS: ['rbac', 'permissions'] as const,
+        PERMISSION_DETAIL: (permissionId: string) => ['rbac', 'permissions', permissionId] as const,
+        USER_PERMISSIONS: (userId?: string) => ['rbac', 'user-permissions', userId] as const,
+    },
+    USERS: {
+        ALL: ['users'] as const,
+        LIST: ['users', 'list'] as const,
+        DETAIL: (userId: string) => ['users', 'detail', userId] as const,
+    },
+    AUDIT: {
+        ALL: ['audit'] as const,
+        LIST: ['audit', 'list'] as const,
+        DETAIL: (logId: string) => ['audit', 'detail', logId] as const,
+    },
+} as const

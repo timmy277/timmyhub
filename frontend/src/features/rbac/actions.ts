@@ -67,6 +67,7 @@ export async function createRoleAction(
     }
 
     revalidatePath(ROUTE.ROLES)
+    revalidatePath(ROUTE.USERS)
     return { ok: true, data: created.data, permissionsAssigned }
 }
 
@@ -108,11 +109,18 @@ export async function updateRoleAction(
     }
 
     revalidatePath(ROUTE.ROLES)
+    revalidatePath(ROUTE.USERS)
     return { ok: true, data: updated.data, permissionsAssigned }
 }
 
 export async function deleteRoleAction(roleId: string): Promise<RbacActionResult> {
-    return run(ROUTE.ROLES, (token) => fetchBackend(API_ROUTE.RBAC.ROLE(roleId), { token, method: 'DELETE' }))
+    return run<undefined>(ROUTE.ROLES, async (token) => {
+        const result = await fetchBackend<undefined>(API_ROUTE.RBAC.ROLE(roleId), { token, method: 'DELETE' })
+        if (result.ok) {
+            revalidatePath(ROUTE.USERS)
+        }
+        return result
+    })
 }
 
 export async function createPermissionAction(

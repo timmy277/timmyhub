@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react'
 
 import type { EffectivePermissions, PermissionName } from '@timmyhub/contracts'
 
-import { API_ROUTE } from '@/constants'
+import { API_ROUTE, QUERY_KEY } from '@/constants'
 import { apiClient } from '@/services'
 
 // Lấy danh sách quyền hiệu lực (effective permissions) của người dùng hiện tại từ backend RBAC service.
@@ -16,7 +16,7 @@ export function usePermissions() {
     const userId = session?.user?.id
 
     const query = useQuery({
-        queryKey: ['user-permissions', userId],
+        queryKey: QUERY_KEY.RBAC.USER_PERMISSIONS(userId),
         queryFn: async (): Promise<string[]> => {
             if (!userId) return []
             const response = await apiClient.get<EffectivePermissions>(
