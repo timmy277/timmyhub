@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl'
 import type { UserRole, UserSummary } from '@timmyhub/contracts'
 import { CreateUserSchema, UpdateUserSchema, USER_ROLES, UserRole as UserRoleValue } from '@timmyhub/contracts'
 
-import { Button, FloatInput, FloatMultiSelect, ON_CARD_LABEL_CLASS } from '@/components'
+import { Button, FloatInput, FloatMultiSelect, ON_CARD_LABEL_CLASS, UploadSection } from '@/components'
 import { ROLE_LABEL_KEY, USER_TAB } from '@/constants'
 import type { UserPermissionFlags } from '@/constants'
 import { useCreateUser, useUpdateUser } from '@/hooks'
@@ -52,6 +52,7 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
         phone: user?.phone ?? '',
     })
     const [roles, setRoles] = useState<UserRole[]>(user ? [...user.roles] : [UserRoleValue.USER])
+    const [avatar, setAvatar] = useState<string | null>(user?.profile?.avatar ?? null)
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
     // ===== Hooks =====
@@ -108,6 +109,7 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
                 ...(values.displayName.trim() === '' ? {} : { displayName: values.displayName }),
                 ...(values.phone.trim() === '' ? {} : { phone: values.phone }),
                 ...(canEditRoles ? { roles } : {}),
+                avatar,
             }
             const parsed = UpdateUserSchema.safeParse(raw)
             if (!parsed.success) {
@@ -178,6 +180,26 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
                     )}
 
                     <FormSection title={t('formSectionProfile')} description={t('formProfileDescription')}>
+                        {isEdit && (
+                            <div className="flex w-full justify-center pb-4 pt-1">
+                                <UploadSection
+                                    variant="avatar"
+                                    align="center"
+                                    acceptType="image"
+                                    name={
+                                        [values.firstName, values.lastName].filter(Boolean).join(' ') ||
+                                        values.displayName ||
+                                        user?.email ||
+                                        'User'
+                                    }
+                                    value={avatar}
+                                    onChange={(val) => setAvatar(typeof val === 'string' || val === null ? val : null)}
+                                    ownerType="AVATAR"
+                                    ownerId={userId}
+                                    disabled={isPending}
+                                />
+                            </div>
+                        )}
                         <div className="grid gap-4 sm:grid-cols-2">
                             <FloatInput
                                 label={t('fieldLastName')}

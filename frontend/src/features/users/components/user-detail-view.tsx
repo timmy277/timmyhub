@@ -18,7 +18,7 @@ import { useTranslations } from 'next-intl'
 import type { UserDetail } from '@timmyhub/contracts'
 import { UserStatus } from '@timmyhub/contracts'
 
-import { Button, ConfirmDialog, RoleBadges, StatusBadge } from '@/components'
+import { Button, ConfirmDialog, RoleBadges, StatusBadge, UserAvatar } from '@/components'
 import type { UserPermissionFlags } from '@/constants'
 import { USER_STATUS_LABEL_KEY, USER_STATUS_TONE, USER_TAB } from '@/constants'
 import { useDeleteUser } from '@/hooks'
@@ -51,12 +51,6 @@ export function UserDetailView({ user, permissions }: UserDetailViewProps) {
     // ===== Derived =====
     const isLocked = user.status === UserStatus.LOCKED
     const displayName = getUserDisplayName(user) ?? user.email
-    const initials = displayName
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((part) => part[0])
-        .join('')
-        .toLocaleUpperCase()
 
     // Mở tab Sửa **thêm một tab** bên cạnh tab Chi tiết đang xem, không thay thế nó: tab Chi tiết vẫn nằm trên thanh
     // tab để quay lại. UserTabs sẽ ghi tab mới vào localStorage khi URL active đổi.
@@ -66,12 +60,12 @@ export function UserDetailView({ user, permissions }: UserDetailViewProps) {
         <div className="flex flex-col gap-6">
             <section className="flex flex-col gap-5 rounded-xl border bg-muted/20 p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-center gap-4">
-                    <div
-                        className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-lg font-semibold text-primary"
-                        aria-hidden="true"
-                    >
-                        {initials || <UserRoundIcon className="size-6" />}
-                    </div>
+                    <UserAvatar
+                        name={displayName}
+                        imageUrl={user.profile?.avatar}
+                        className="size-14 shrink-0 rounded-2xl"
+                        fallbackClassName="rounded-2xl text-lg font-semibold"
+                    />
                     <div className="min-w-0">
                         <div className="flex min-w-0 flex-wrap items-center gap-2">
                             <h1 className="truncate text-xl font-semibold tracking-tight">{displayName}</h1>

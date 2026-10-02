@@ -21,7 +21,7 @@ import {
 } from '@timmyhub/contracts'
 
 import { MEDIA_EVENT } from './media.constants'
-import { MediaRepository } from './media.repository'
+import { MediaRepository, UpdateMediaAssetInput } from './media.repository'
 import { StorageService } from './storage.service'
 
 export interface UploadFileInput {
@@ -33,15 +33,14 @@ export interface UploadFileInput {
 
 @Injectable()
 export class MediaService {
+    // ===== Dependencies =====
     constructor(
         private readonly mediaRepository: MediaRepository,
         private readonly storageService: StorageService,
         private readonly eventEmitter: EventEmitter2,
     ) {}
 
-    /**
-     * Uploads single or multiple files directly to storage and records them in DB.
-     */
+    // ===== Commands =====
     async uploadFiles(
         files: UploadFileInput[],
         actorId: string,
@@ -62,20 +61,19 @@ export class MediaService {
             const ext = path.extname(file.originalname).toLowerCase() || (isVideo ? '.mp4' : '.jpg')
             const uniqueKey = `${mediaType.toLowerCase()}s/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${randomUUID()}${ext}`
 
-            // Store file
             const publicUrl = await this.storageService.uploadFile({
                 key: uniqueKey,
                 buffer: file.buffer,
                 mimeType: file.mimetype,
             })
 
-            // Save record to DB
             const asset = await this.mediaRepository.createAsset({
                 ownerId: ownerId || actorId,
                 ownerType,
                 type: mediaType,
                 status: MEDIA_STATUS.READY,
                 originalUrl: publicUrl,
+                // Ảnh dùng originalUrl làm thumbnail tạm, video cần transcode mới có thumbnail riêng
                 thumbnailUrl: isVideo ? null : publicUrl,
                 sizeBytes: file.size,
             })
@@ -88,12 +86,10 @@ export class MediaService {
     }
 
     /**
-     * Creates a presigned upload URL for direct client-side S3/Supabase upload.
+     * Tạo presigned URL cho client upload thẳng lên S3/Supabase (bỏ qua server).
+     * Asset được tạo ngay với status UPLOADING, sau khi client PUT xong sẽ gọi confirmUpload.
      */
-    async createPresignedUrl(
-        dto: CreatePresignedUrlDto,
-        actorId: string,
-    ): Promise<PresignedUrlResponse> {
+    async createPresignedUrl(dto: CreatePresignedUrlDto, actorId: string): Promise<PresignedUrlResponse> {
         this.validateFile(dto.mimeType, dto.sizeBytes)
 
         const isVideo = (ALLOWED_VIDEO_MIME_TYPES as readonly string[]).includes(dto.mimeType)
@@ -101,7 +97,21 @@ export class MediaService {
         const ext = path.extname(dto.filename).toLowerCase() || (isVideo ? '.mp4' : '.jpg')
         const uniqueKey = `${mediaType.toLowerCase()}s/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${randomUUID()}${ext}`
 
-        // Create asset record in UPLOADING status
+        // Khi không có S3 (local dev fallback), không tạo asset record trong DB ở bước này
+        // để tránh sinh orphan record (endpoint /media/upload sẽ tạo record READY thực tế).
+        if (!this.storageService.isConfigured) {
+            const presignedResult = await this.storageService.getPresignedUploadUrl(uniqueKey, dto.mimeType)
+            return {
+                assetId: 'local-fallback',
+                uploadUrl: presignedResult.uploadUrl,
+                publicUrl: presignedResult.publicUrl,
+                key: uniqueKey,
+                headers: presignedResult.headers,
+                expiresInSeconds: presignedResult.expiresInSeconds,
+            }
+        }
+
+        // Create asset record in UPLOADING status for S3 direct upload
         const asset = await this.mediaRepository.createAsset({
             ownerId: dto.ownerId || actorId,
             ownerType: dto.ownerType || MEDIA_OWNER_TYPE.GENERAL,
@@ -123,7 +133,8 @@ export class MediaService {
     }
 
     /**
-     * Confirms direct upload and marks media asset as READY.
+     * Đánh dấu asset là READY sau khi client PUT thành công — nguồn sự thật URL cuối cùng
+     * lấy từ client vì server không biết URL thực tế của S3/Supabase presigned.
      */
     async confirmUpload(dto: ConfirmMediaUploadDto): Promise<MediaAsset> {
         const asset = await this.mediaRepository.findAssetById(dto.assetId)
@@ -131,7 +142,7 @@ export class MediaService {
             throw new NotFoundException(`Media asset with ID "${dto.assetId}" not found`)
         }
 
-        const updatePayload: Record<string, unknown> = {
+        const updatePayload: UpdateMediaAssetInput = {
             status: MEDIA_STATUS.READY,
             originalUrl: dto.publicUrl,
         }
@@ -145,14 +156,16 @@ export class MediaService {
         if (dto.height !== undefined) updatePayload.height = dto.height
         if (dto.durationMs !== undefined) updatePayload.durationMs = dto.durationMs
 
-        const updated = await this.mediaRepository.updateAsset(dto.assetId, updatePayload as never)
+        const updated = await this.mediaRepository.updateAsset(dto.assetId, updatePayload)
 
         this.eventEmitter.emit(MEDIA_EVENT.ASSET_CREATED, updated)
         return updated
     }
 
+    // ===== Queries =====
+
     /**
-     * Retrieves single media asset by ID.
+     * Lấy một asset theo ID, ném 404 nếu không tồn tại.
      */
     async getAssetById(id: string): Promise<MediaAsset> {
         const asset = await this.mediaRepository.findAssetById(id)
@@ -163,7 +176,7 @@ export class MediaService {
     }
 
     /**
-     * Queries media assets with pagination and filters.
+     * Truy vấn danh sách asset có phân trang và bộ lọc.
      */
     async listAssets(filters: MediaFilterDto): Promise<MediaListResponse> {
         const { items, total } = await this.mediaRepository.listAssets(filters)
@@ -203,8 +216,11 @@ export class MediaService {
         return deleted
     }
 
+    // ===== Private helpers =====
+
     /**
-     * Validates MIME type and file size.
+     * Kiểm tra MIME type và dung lượng — tập trung validation để tránh lặp lại
+     * ở cả uploadFiles lẫn createPresignedUrl.
      */
     private validateFile(mimeType: string, sizeBytes: number): void {
         if (!(ALLOWED_ALL_MIME_TYPES as readonly string[]).includes(mimeType)) {

@@ -103,6 +103,7 @@ export const UpdateUserSchema = z.object({
     lastName: PersonNameSchema('validation.lastNameRequired').optional(),
     displayName: z.string().trim().min(1, apiMessageKey('validation.displayNameRequired')).max(100).optional(),
     phone: PhoneSchema.nullable().optional(),
+    avatar: z.string().trim().nullable().optional(),
     roles: z.array(UserRoleSchema).min(1, apiMessageKey('validation.rolesRequired')).optional(),
 })
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>

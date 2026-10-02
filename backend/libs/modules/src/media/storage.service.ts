@@ -30,12 +30,24 @@ export class StorageService {
     private readonly localStorageDir: string
 
     constructor(private readonly configService: ConfigService) {
-        const endpoint = this.configService.get<string>('S3_ENDPOINT') || this.configService.get<string>('SUPABASE_STORAGE_S3_ENDPOINT')
-        const region = this.configService.get<string>('S3_REGION') || this.configService.get<string>('AWS_REGION') || 'auto'
-        const accessKeyId = this.configService.get<string>('S3_ACCESS_KEY_ID') || this.configService.get<string>('AWS_ACCESS_KEY_ID')
-        const secretAccessKey = this.configService.get<string>('S3_SECRET_ACCESS_KEY') || this.configService.get<string>('AWS_SECRET_ACCESS_KEY')
-        this.bucketName = this.configService.get<string>('S3_BUCKET') || this.configService.get<string>('SUPABASE_STORAGE_BUCKET') || 'media'
-        this.publicUrlPrefix = this.configService.get<string>('S3_PUBLIC_URL_PREFIX') || this.configService.get<string>('MEDIA_PUBLIC_URL_PREFIX') || ''
+        const endpoint =
+            this.configService.get<string>('S3_ENDPOINT') ||
+            this.configService.get<string>('SUPABASE_STORAGE_S3_ENDPOINT')
+        const region =
+            this.configService.get<string>('S3_REGION') || this.configService.get<string>('AWS_REGION') || 'auto'
+        const accessKeyId =
+            this.configService.get<string>('S3_ACCESS_KEY_ID') || this.configService.get<string>('AWS_ACCESS_KEY_ID')
+        const secretAccessKey =
+            this.configService.get<string>('S3_SECRET_ACCESS_KEY') ||
+            this.configService.get<string>('AWS_SECRET_ACCESS_KEY')
+        this.bucketName =
+            this.configService.get<string>('S3_BUCKET') ||
+            this.configService.get<string>('SUPABASE_STORAGE_BUCKET') ||
+            'media'
+        this.publicUrlPrefix =
+            this.configService.get<string>('S3_PUBLIC_URL_PREFIX') ||
+            this.configService.get<string>('MEDIA_PUBLIC_URL_PREFIX') ||
+            ''
 
         // Local storage fallback directory
         this.localStorageDir = path.resolve(process.cwd(), 'uploads')
@@ -62,6 +74,13 @@ export class StorageService {
             this.isS3Configured = false
             this.logger.warn(`No S3 credentials found. Falling back to local storage at: ${this.localStorageDir}`)
         }
+    }
+
+    /**
+     * Kiểm tra hệ thống lưu trữ S3/Supabase đã được cấu hình hay đang chạy fallback đĩa cục bộ.
+     */
+    get isConfigured(): boolean {
+        return this.isS3Configured
     }
 
     /**
@@ -164,12 +183,12 @@ export class StorageService {
      */
     getPublicUrl(key: string): string {
         if (this.publicUrlPrefix) {
-            const prefix = this.publicUrlPrefix.endsWith('/')
-                ? this.publicUrlPrefix.slice(0, -1)
-                : this.publicUrlPrefix
+            const prefix = this.publicUrlPrefix.endsWith('/') ? this.publicUrlPrefix.slice(0, -1) : this.publicUrlPrefix
             return `${prefix}/${key}`
         }
-        const endpoint = this.configService.get<string>('S3_ENDPOINT') || this.configService.get<string>('SUPABASE_STORAGE_S3_ENDPOINT')
+        const endpoint =
+            this.configService.get<string>('S3_ENDPOINT') ||
+            this.configService.get<string>('SUPABASE_STORAGE_S3_ENDPOINT')
         if (endpoint) {
             return `${endpoint}/${this.bucketName}/${key}`
         }

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '@timmyhub/prisma'
-import { MediaAsset, MediaFilterDto } from '@timmyhub/contracts'
+import { MediaAsset, MediaFilterDto, MEDIA_STATUS } from '@timmyhub/contracts'
 
 export interface CreateMediaAssetInput {
     id?: string
@@ -30,67 +30,19 @@ export interface UpdateMediaAssetInput {
 
 @Injectable()
 export class MediaRepository {
+    // ===== Dependencies =====
     constructor(private readonly prisma: PrismaService) {}
 
-    async createAsset(data: CreateMediaAssetInput): Promise<MediaAsset> {
-        const createData: Record<string, unknown> = {
-            ownerId: data.ownerId,
-            ownerType: data.ownerType,
-            type: data.type,
-            status: data.status ?? 'READY',
-            originalUrl: data.originalUrl ?? null,
-            thumbnailUrl: data.thumbnailUrl ?? null,
-            sizeBytes: data.sizeBytes ?? null,
-            width: data.width ?? null,
-            height: data.height ?? null,
-            durationMs: data.durationMs ?? null,
-        }
-        if (data.id) {
-            createData.id = data.id
-        }
-
-        const created = await this.prisma.mediaAsset.create({
-            data: createData as never,
-            include: {
-                variants: true,
-            },
-        })
-
-        return created as unknown as MediaAsset
-    }
+    // ===== Queries =====
 
     async findAssetById(id: string): Promise<MediaAsset | null> {
         const asset = await this.prisma.mediaAsset.findUnique({
             where: { id },
-            include: {
-                variants: true,
-            },
+            include: { variants: true },
         })
-
+        // Prisma bao gồm `variants` dạng mảng quan hệ; MediaAsset trong contracts
+        // khai báo kiểu tổng quát hơn — cast an toàn vì include đúng với shape.
         return (asset as unknown as MediaAsset) ?? null
-    }
-
-    async updateAsset(id: string, data: UpdateMediaAssetInput): Promise<MediaAsset> {
-        const updated = await this.prisma.mediaAsset.update({
-            where: { id },
-            data,
-            include: {
-                variants: true,
-            },
-        })
-
-        return updated as unknown as MediaAsset
-    }
-
-    async deleteAsset(id: string): Promise<MediaAsset> {
-        const deleted = await this.prisma.mediaAsset.delete({
-            where: { id },
-            include: {
-                variants: true,
-            },
-        })
-
-        return deleted as unknown as MediaAsset
     }
 
     async listAssets(filters: MediaFilterDto): Promise<{ items: MediaAsset[]; total: number }> {
@@ -99,7 +51,8 @@ export class MediaRepository {
 
         const where: Record<string, unknown> = {}
         if (type) where.type = type
-        if (status) where.status = status
+        // Mặc định chỉ hiển thị các asset đã sẵn sàng (READY) — không trả về asset đang tải (UPLOADING) hoặc hỏng
+        where.status = status || MEDIA_STATUS.READY
         if (ownerType) where.ownerType = ownerType
         if (ownerId) where.ownerId = ownerId
         if (search) {
@@ -120,9 +73,53 @@ export class MediaRepository {
             this.prisma.mediaAsset.count({ where }),
         ])
 
-        return {
-            items: items as unknown as MediaAsset[],
-            total,
+        return { items: items as unknown as MediaAsset[], total }
+    }
+
+    // ===== Commands =====
+
+    async createAsset(data: CreateMediaAssetInput): Promise<MediaAsset> {
+        const createData: Record<string, unknown> = {
+            ownerId: data.ownerId,
+            ownerType: data.ownerType,
+            type: data.type,
+            status: data.status ?? 'READY',
+            originalUrl: data.originalUrl ?? null,
+            thumbnailUrl: data.thumbnailUrl ?? null,
+            sizeBytes: data.sizeBytes ?? null,
+            width: data.width ?? null,
+            height: data.height ?? null,
+            durationMs: data.durationMs ?? null,
         }
+        // id tuỳ chọn — thường để Prisma tự sinh UUID, chỉ truyền khi cần idempotency
+        if (data.id) {
+            createData.id = data.id
+        }
+
+        const created = await this.prisma.mediaAsset.create({
+            data: createData as never,
+            include: { variants: true },
+        })
+
+        return created as unknown as MediaAsset
+    }
+
+    async updateAsset(id: string, data: UpdateMediaAssetInput): Promise<MediaAsset> {
+        const updated = await this.prisma.mediaAsset.update({
+            where: { id },
+            data,
+            include: { variants: true },
+        })
+
+        return updated as unknown as MediaAsset
+    }
+
+    async deleteAsset(id: string): Promise<MediaAsset> {
+        const deleted = await this.prisma.mediaAsset.delete({
+            where: { id },
+            include: { variants: true },
+        })
+
+        return deleted as unknown as MediaAsset
     }
 }

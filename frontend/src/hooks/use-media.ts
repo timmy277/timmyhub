@@ -91,7 +91,11 @@ export function useUploadMedia() {
 }
 
 /**
- * Hook for S3 / Supabase Direct Presigned URL upload
+ * Hook for S3 / Supabase Direct Presigned URL upload.
+ *
+ * Local dev fallback: khi không có S3 credentials, backend trả uploadUrl trỏ về
+ * /api/v1/media/upload (multipart POST). Hook tự detect và chuyển sang FormData
+ * thay vì PUT để tránh 404 trong môi trường development.
  */
 export function usePresignedUpload() {
     const queryClient = useQueryClient()
@@ -113,7 +117,41 @@ export function usePresignedUpload() {
             )
             const { assetId, uploadUrl, publicUrl, headers } = presignedRes.data
 
-            // Step 2: Upload directly to S3 / Supabase Storage using PUT
+            // Step 2: Upload file
+            // Nếu uploadUrl trỏ về /media/upload hoặc assetId là 'local-fallback'
+            // -> Đây là local dev fallback, dùng FormData multipart thay vì PUT.
+            const isLocalFallback = uploadUrl.includes('/media/upload') || assetId === 'local-fallback'
+
+            if (isLocalFallback) {
+                // Local fallback: multipart POST giống useUploadMedia
+                const formData = new FormData()
+                formData.append('files', file)
+                if (ownerType) formData.append('ownerType', ownerType)
+                if (ownerId) formData.append('ownerId', ownerId)
+
+                const uploadRes = await apiClient.post<MediaAsset[]>(API_ROUTE.MEDIA.UPLOAD, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                    onUploadProgress: (progressEvent) => {
+                        if (progressEvent.total && onProgress) {
+                            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+                            onProgress(percent)
+                        }
+                    },
+                })
+
+                // Direct upload endpoint đã lưu DB và trả MediaAsset READY — không cần confirm
+                const asset = uploadRes.data[0]
+                if (!asset) throw new Error('Upload không trả về media asset')
+
+                // Dọn orphan asset chỉ khi trước đó backend cũ từng tạo record UPLOADING thật
+                if (assetId && assetId !== 'local-fallback') {
+                    void apiClient.delete(API_ROUTE.MEDIA.DELETE(assetId)).catch(() => {})
+                }
+
+                return asset
+            }
+
+            // S3 / Supabase: PUT trực tiếp lên presigned URL
             await axios.put(uploadUrl, file, {
                 headers: {
                     'Content-Type': file.type,
@@ -127,17 +165,14 @@ export function usePresignedUpload() {
                 },
             })
 
-            // Step 3: Confirm upload with Backend to activate MediaAsset
+            // Step 3: Confirm upload với Backend để kích hoạt MediaAsset
             const confirmPayload: ConfirmMediaUploadDto = {
                 assetId,
                 publicUrl,
                 sizeBytes: file.size,
             }
 
-            const confirmRes = await apiClient.post<MediaAsset>(
-                API_ROUTE.MEDIA.CONFIRM,
-                confirmPayload,
-            )
+            const confirmRes = await apiClient.post<MediaAsset>(API_ROUTE.MEDIA.CONFIRM, confirmPayload)
 
             return confirmRes.data
         },

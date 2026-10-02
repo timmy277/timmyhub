@@ -30,6 +30,7 @@ export type UpdateUserRecordInput = {
     firstName?: string | undefined
     lastName?: string | undefined
     displayName?: string | undefined
+    avatar?: string | null | undefined
     phone?: string | null | undefined
     roles?: UserRole[] | undefined
 }
@@ -138,6 +139,7 @@ export class UsersRepository {
             if (input.firstName !== undefined) profileData.firstName = input.firstName
             if (input.lastName !== undefined) profileData.lastName = input.lastName
             if (input.displayName !== undefined) profileData.displayName = input.displayName
+            if (input.avatar !== undefined) profileData.avatar = input.avatar
 
             if (Object.keys(profileData).length > 0) {
                 await tx.profile.upsert({
@@ -149,6 +151,7 @@ export class UsersRepository {
                         firstName: input.firstName ?? '',
                         lastName: input.lastName ?? '',
                         displayName: input.displayName ?? null,
+                        avatar: input.avatar ?? null,
                     },
                 })
             }

@@ -1,16 +1,7 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
-import {
-    UploadCloud,
-    Film,
-    Image as ImageIcon,
-    Sparkles,
-    Trash2,
-    CheckCircle2,
-    Loader2,
-    Plus,
-} from 'lucide-react'
+import { UploadCloud, Film, Image as ImageIcon, Sparkles, Trash2, CheckCircle2, Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import {
     ALLOWED_IMAGE_EXTENSIONS,
@@ -48,15 +39,19 @@ export function MediaUploader({
     className = '',
     uploadMode = 'presigned',
 }: MediaUploaderProps) {
+    // ===== State =====
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [queue, setQueue] = useState<UploadQueueItem[]>([])
     const [isDragging, setIsDragging] = useState(false)
     const [lightboxItem, setLightboxItem] = useState<MediaLightboxItem | null>(null)
 
+    // ===== Hooks =====
     const uploadMediaMutation = useUploadMedia()
     const presignedUploadMutation = usePresignedUpload()
 
-    // Determine accepted MIME types string
+    // ===== Derived =====
+    // acceptMimeString: xây từ prop acceptType để truyền vào input[accept],
+    // tránh hardcode chuỗi MIME trong JSX
     const acceptMimeString =
         acceptType === 'image'
             ? ALLOWED_IMAGE_MIME_TYPES.join(',')
@@ -64,7 +59,7 @@ export function MediaUploader({
               ? ALLOWED_VIDEO_MIME_TYPES.join(',')
               : [...ALLOWED_IMAGE_MIME_TYPES, ...ALLOWED_VIDEO_MIME_TYPES].join(',')
 
-    // Handle files validation and adding to queue
+    // ===== Handlers =====
     const handleAddFiles = useCallback(
         (files: FileList | File[]) => {
             const fileArray = Array.from(files)
@@ -96,15 +91,11 @@ export function MediaUploader({
 
                 // Check size limits
                 if (isImage && file.size > MAX_IMAGE_SIZE_BYTES) {
-                    toast.error(
-                        `"${file.name}" vượt quá giới hạn ảnh ${MAX_IMAGE_SIZE_BYTES / 1024 / 1024}MB`,
-                    )
+                    toast.error(`"${file.name}" vượt quá giới hạn ảnh ${MAX_IMAGE_SIZE_BYTES / 1024 / 1024}MB`)
                     continue
                 }
                 if (isVideo && file.size > MAX_VIDEO_SIZE_BYTES) {
-                    toast.error(
-                        `"${file.name}" vượt quá giới hạn video ${MAX_VIDEO_SIZE_BYTES / 1024 / 1024}MB`,
-                    )
+                    toast.error(`"${file.name}" vượt quá giới hạn video ${MAX_VIDEO_SIZE_BYTES / 1024 / 1024}MB`)
                     continue
                 }
 
@@ -170,9 +161,7 @@ export function MediaUploader({
 
     // Upload single item via S3 presigned URL
     const uploadSinglePresigned = async (item: UploadQueueItem): Promise<MediaAsset | null> => {
-        setQueue((prev) =>
-            prev.map((i) => (i.id === item.id ? { ...i, status: 'uploading', progress: 5 } : i)),
-        )
+        setQueue((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: 'uploading', progress: 5 } : i)))
 
         try {
             const asset = await presignedUploadMutation.mutateAsync({
@@ -180,9 +169,7 @@ export function MediaUploader({
                 ownerType,
                 ownerId,
                 onProgress: (percent) => {
-                    setQueue((prev) =>
-                        prev.map((i) => (i.id === item.id ? { ...i, progress: percent } : i)),
-                    )
+                    setQueue((prev) => prev.map((i) => (i.id === item.id ? { ...i, progress: percent } : i)))
                 },
             })
 
@@ -202,11 +189,7 @@ export function MediaUploader({
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Tải lên thất bại'
             setQueue((prev) =>
-                prev.map((i) =>
-                    i.id === item.id
-                        ? { ...i, status: 'error', progress: 0, errorMessage: message }
-                        : i,
-                ),
+                prev.map((i) => (i.id === item.id ? { ...i, status: 'error', progress: 0, errorMessage: message } : i)),
             )
             return null
         }
@@ -232,7 +215,9 @@ export function MediaUploader({
             try {
                 const files = pendingItems.map((i) => i.file)
                 setQueue((prev) =>
-                    prev.map((i) => (pendingItems.some((p) => p.id === i.id) ? { ...i, status: 'uploading', progress: 20 } : i)),
+                    prev.map((i) =>
+                        pendingItems.some((p) => p.id === i.id) ? { ...i, status: 'uploading', progress: 20 } : i,
+                    ),
                 )
 
                 const assets = await uploadMediaMutation.mutateAsync({
@@ -241,7 +226,9 @@ export function MediaUploader({
                     ownerId,
                     onProgress: (percent) => {
                         setQueue((prev) =>
-                            prev.map((i) => (pendingItems.some((p) => p.id === i.id) ? { ...i, progress: percent } : i)),
+                            prev.map((i) =>
+                                pendingItems.some((p) => p.id === i.id) ? { ...i, progress: percent } : i,
+                            ),
                         )
                     },
                 })
@@ -263,9 +250,7 @@ export function MediaUploader({
                 const message = err instanceof Error ? err.message : 'Tải lên thất bại'
                 setQueue((prev) =>
                     prev.map((i) =>
-                        pendingItems.some((p) => p.id === i.id)
-                            ? { ...i, status: 'error', errorMessage: message }
-                            : i,
+                        pendingItems.some((p) => p.id === i.id) ? { ...i, status: 'error', errorMessage: message } : i,
                     ),
                 )
                 toast.error(message)
@@ -312,10 +297,13 @@ export function MediaUploader({
 
                     <div>
                         <p className="text-base font-semibold text-neutral-800 dark:text-neutral-100 flex items-center justify-center gap-1.5">
-                            Kéo thả media vào đây hoặc <span className="text-sky-500 underline underline-offset-4">chọn tập tin</span>
+                            Kéo thả media vào đây hoặc{' '}
+                            <span className="text-sky-500 underline underline-offset-4">chọn tập tin</span>
                         </p>
                         <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                            Hỗ trợ tải lên nhiều tập tin: Ảnh ({ALLOWED_IMAGE_EXTENSIONS.join(', ')} tối đa {MAX_IMAGE_SIZE_BYTES / 1024 / 1024}MB) • Video ({ALLOWED_VIDEO_EXTENSIONS.join(', ')} tối đa {MAX_VIDEO_SIZE_BYTES / 1024 / 1024}MB)
+                            Hỗ trợ tải lên nhiều tập tin: Ảnh ({ALLOWED_IMAGE_EXTENSIONS.join(', ')} tối đa{' '}
+                            {MAX_IMAGE_SIZE_BYTES / 1024 / 1024}MB) • Video ({ALLOWED_VIDEO_EXTENSIONS.join(', ')} tối
+                            đa {MAX_VIDEO_SIZE_BYTES / 1024 / 1024}MB)
                         </p>
                     </div>
 
@@ -347,11 +335,7 @@ export function MediaUploader({
                                 <CheckCircle2 className="w-3.5 h-3.5" /> {successCount} đã xong
                             </span>
                         )}
-                        {pendingCount > 0 && (
-                            <span className="text-amber-500">
-                                ({pendingCount} chờ tải lên)
-                            </span>
-                        )}
+                        {pendingCount > 0 && <span className="text-amber-500">({pendingCount} chờ tải lên)</span>}
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -405,19 +389,14 @@ export function MediaUploader({
                                 const target = queue.find((i) => i.id === id)
                                 if (target) void uploadSinglePresigned(target)
                             }}
-                            onOpenLightbox={(url, type, title) =>
-                                setLightboxItem({ url, type, title })
-                            }
+                            onOpenLightbox={(url, type, title) => setLightboxItem({ url, type, title })}
                         />
                     ))}
                 </div>
             )}
 
             {/* Lightbox Modal */}
-            <MediaLightbox
-                item={lightboxItem}
-                onClose={() => setLightboxItem(null)}
-            />
+            <MediaLightbox item={lightboxItem} onClose={() => setLightboxItem(null)} />
         </div>
     )
 }

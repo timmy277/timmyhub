@@ -35,3 +35,6 @@ Thumbs.db
 
 # WorkBuddy AI — cấu hình/memory cục bộ, không commit
 .workbuddy-ai/
+
+# Antigravity local config
+.agents/mcp_config.json

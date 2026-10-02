@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import {
     Search,
     Grid,
@@ -17,12 +18,25 @@ import {
 import { toast } from 'sonner'
 import type { MediaOwnerType, MediaType } from '@timmyhub/contracts'
 
-import { useDeleteMedia, useMediaList } from '@/hooks'
-import { formatBytes, formatTimestamp } from '@/utils'
+import { useDeleteMedia, useMediaList, useDebouncedValue } from '@/hooks'
+import { SEARCH_DEBOUNCE_MS } from '@/constants'
+import { formatBytes, formatTimestamp, resolveMediaUrl } from '@/utils'
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components'
+
 import { MediaLightbox, type MediaLightboxItem } from './media-lightbox'
 import { MediaUploader } from './media-uploader'
 
 export function MediaLibrary() {
+    // ===== State =====
     const [search, setSearch] = useState('')
     const [selectedType, setSelectedType] = useState<MediaType | ''>('')
     const [selectedOwnerType, setSelectedOwnerType] = useState<MediaOwnerType | ''>('')
@@ -30,26 +44,38 @@ export function MediaLibrary() {
     const [showUploader, setShowUploader] = useState(false)
     const [lightboxItem, setLightboxItem] = useState<MediaLightboxItem | null>(null)
     const [copiedId, setCopiedId] = useState<string | null>(null)
+    // pendingDeleteId: giữ ID đang chờ xác nhận xoá — cần thiết vì AlertDialog render
+    // ở ngoài vòng lặp map, không thể dùng event stopPropagation trực tiếp
+    const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
 
+    // ===== Hooks =====
+    const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS)
     const { data, isLoading, refetch, isFetching } = useMediaList({
         page: 1,
         limit: 50,
         type: selectedType ? selectedType : undefined,
         ownerType: selectedOwnerType ? selectedOwnerType : undefined,
-        search: search || undefined,
+        search: debouncedSearch || undefined,
     })
-
     const deleteMediaMutation = useDeleteMedia()
 
-    const handleDelete = async (id: string, e: React.MouseEvent) => {
-        e.stopPropagation()
-        if (!confirm('Bạn có chắc chắn muốn xoá tập tin media này?')) return
+    // ===== Derived =====
+    // Chỉ hiển thị các asset đã sẵn sàng (READY) và có đường dẫn hợp lệ,
+    // loại bỏ các bản ghi tạm thời đang tải dở (UPLOADING) nếu có race condition
+    const assets = (data?.data ?? []).filter(
+        (asset) => asset.status === 'READY' || (!asset.status && Boolean(asset.originalUrl)),
+    )
 
+    // ===== Handlers =====
+    const handleDeleteConfirm = async () => {
+        if (!pendingDeleteId) return
         try {
-            await deleteMediaMutation.mutateAsync(id)
+            await deleteMediaMutation.mutateAsync(pendingDeleteId)
             toast.success('Đã xoá tập tin media thành công!')
         } catch {
             toast.error('Không thể xoá tập tin media')
+        } finally {
+            setPendingDeleteId(null)
         }
     }
 
@@ -66,15 +92,13 @@ export function MediaLibrary() {
         }
     }
 
-    const assets = data?.data || []
-
     return (
         <div className="w-full flex flex-col gap-6">
             {/* Header Toolbar */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-2xl bg-white/70 dark:bg-neutral-900/70 border border-neutral-200/80 dark:border-neutral-800 backdrop-blur-xl shadow-sm">
                 <div>
                     <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-50 tracking-tight flex items-center gap-2">
-                        <HardDrive className="w-5 h-5 text-sky-500" /> Thư viện Media & Tải lên
+                        <HardDrive className="w-5 h-5 text-sky-500" /> Thư viện Media &amp; Tải lên
                     </h1>
                     <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
                         Quản lý toàn bộ tài nguyên hình ảnh và video sản phẩm, bài đăng chuẩn S3 / Supabase
@@ -112,7 +136,7 @@ export function MediaLibrary() {
                 <div className="p-6 rounded-2xl bg-white/90 dark:bg-neutral-900/90 border border-sky-500/30 dark:border-sky-500/20 shadow-xl backdrop-blur-xl animate-in slide-in-from-top-4 duration-300">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 flex items-center gap-2">
-                            <UploadCloud className="w-4 h-4 text-sky-500" /> Tải lên nhiều Ảnh & Video
+                            <UploadCloud className="w-4 h-4 text-sky-500" /> Tải lên nhiều Ảnh &amp; Video
                         </h2>
                     </div>
                     <MediaUploader
@@ -276,13 +300,17 @@ export function MediaLibrary() {
                                             </div>
                                         </div>
                                     </div>
-                                ) : (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img
-                                        src={asset.thumbnailUrl || asset.originalUrl || ''}
+                                ) : // Chỉ render Image khi có URL — next/image crash với src=''
+                                resolveMediaUrl(asset.thumbnailUrl || asset.originalUrl) ? (
+                                    <Image
+                                        src={resolveMediaUrl(asset.thumbnailUrl || asset.originalUrl)!}
                                         alt={asset.id}
-                                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                        fill
+                                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
+                                        className="object-cover transition-transform duration-300 group-hover:scale-105"
                                     />
+                                ) : (
+                                    <ImageIcon className="w-8 h-8 text-neutral-600" />
                                 )}
 
                                 {/* Hover overlay action buttons */}
@@ -302,7 +330,10 @@ export function MediaLibrary() {
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={(e) => handleDelete(asset.id, e)}
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setPendingDeleteId(asset.id)
+                                            }}
                                             className="p-1.5 rounded-lg bg-rose-950/80 text-rose-300 hover:bg-rose-900 transition-colors"
                                             title="Xoá tập tin"
                                         >
@@ -322,7 +353,10 @@ export function MediaLibrary() {
                             {/* Details footer */}
                             <div className="p-2.5 flex flex-col gap-1">
                                 <div className="flex items-center justify-between text-[11px]">
-                                    <span className="font-mono text-neutral-600 dark:text-neutral-400 truncate max-w-[100px]" title={asset.id}>
+                                    <span
+                                        className="font-mono text-neutral-600 dark:text-neutral-400 truncate max-w-[100px]"
+                                        title={asset.id}
+                                    >
                                         {asset.id.substring(0, 10)}...
                                     </span>
                                     <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
@@ -367,17 +401,24 @@ export function MediaLibrary() {
                                         >
                                             {asset.type === 'VIDEO' ? (
                                                 <Film className="w-5 h-5 text-amber-400" />
-                                            ) : (
-                                                // eslint-disable-next-line @next/next/no-img-element
-                                                <img
-                                                    src={asset.thumbnailUrl || asset.originalUrl || ''}
+                                            ) : resolveMediaUrl(asset.thumbnailUrl || asset.originalUrl) ? (
+                                                <Image
+                                                    src={resolveMediaUrl(asset.thumbnailUrl || asset.originalUrl)!}
                                                     alt={asset.id}
+                                                    width={40}
+                                                    height={40}
+                                                    sizes="40px"
                                                     className="w-full h-full object-cover"
                                                 />
+                                            ) : (
+                                                <ImageIcon className="w-5 h-5 text-neutral-600" />
                                             )}
                                         </div>
                                     </td>
-                                    <td className="p-3 font-mono text-neutral-800 dark:text-neutral-200 max-w-[200px] truncate" title={asset.id}>
+                                    <td
+                                        className="p-3 font-mono text-neutral-800 dark:text-neutral-200 max-w-[200px] truncate"
+                                        title={asset.id}
+                                    >
                                         {asset.id}
                                     </td>
                                     <td className="p-3">
@@ -391,15 +432,11 @@ export function MediaLibrary() {
                                             {asset.type}
                                         </span>
                                     </td>
-                                    <td className="p-3 text-neutral-600 dark:text-neutral-400">
-                                        {asset.ownerType}
-                                    </td>
+                                    <td className="p-3 text-neutral-600 dark:text-neutral-400">{asset.ownerType}</td>
                                     <td className="p-3 font-mono text-neutral-600 dark:text-neutral-400">
                                         {formatBytes(asset.sizeBytes)}
                                     </td>
-                                    <td className="p-3 text-neutral-500">
-                                        {formatTimestamp(asset.createdAt)}
-                                    </td>
+                                    <td className="p-3 text-neutral-500">{formatTimestamp(asset.createdAt)}</td>
                                     <td className="p-3 text-right">
                                         <div className="flex items-center justify-end gap-1.5">
                                             <button
@@ -416,7 +453,7 @@ export function MediaLibrary() {
                                             </button>
                                             <button
                                                 type="button"
-                                                onClick={(e) => handleDelete(asset.id, e)}
+                                                onClick={() => setPendingDeleteId(asset.id)}
                                                 className="p-1.5 rounded-md hover:bg-rose-500/10 text-rose-500 transition-colors"
                                                 title="Xoá tập tin"
                                             >
@@ -432,10 +469,33 @@ export function MediaLibrary() {
             )}
 
             {/* Lightbox Viewer */}
-            <MediaLightbox
-                item={lightboxItem}
-                onClose={() => setLightboxItem(null)}
-            />
+            <MediaLightbox item={lightboxItem} onClose={() => setLightboxItem(null)} />
+
+            {/* Delete Confirmation Dialog — nằm ngoài vòng lặp để tránh multiple DOM nodes */}
+            <AlertDialog
+                open={Boolean(pendingDeleteId)}
+                onOpenChange={(open) => {
+                    if (!open) setPendingDeleteId(null)
+                }}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Xoá tập tin media?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Hành động này không thể hoàn tác. Tập tin sẽ bị xoá khỏi hệ thống lưu trữ vĩnh viễn.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Huỷ</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => void handleDeleteConfirm()}
+                            className="bg-rose-600 hover:bg-rose-700 text-white"
+                        >
+                            Xoá
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     )
 }

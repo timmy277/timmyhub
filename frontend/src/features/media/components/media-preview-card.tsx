@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import React, { useRef, useState } from 'react'
 import {
     Play,
@@ -39,17 +40,13 @@ interface MediaPreviewCardProps {
     onOpenLightbox?: (url: string, type: 'IMAGE' | 'VIDEO', title: string) => void
 }
 
-
-export function MediaPreviewCard({
-    item,
-    onRemove,
-    onRetry,
-    onOpenLightbox,
-}: MediaPreviewCardProps) {
+export function MediaPreviewCard({ item, onRemove, onRetry, onOpenLightbox }: MediaPreviewCardProps) {
+    // ===== State =====
     const videoRef = useRef<HTMLVideoElement>(null)
     const [isPlaying, setIsPlaying] = useState(false)
     const [isMuted, setIsMuted] = useState(true)
 
+    // ===== Handlers =====
     const togglePlay = (e: React.MouseEvent) => {
         e.stopPropagation()
         if (!videoRef.current) return
@@ -113,11 +110,17 @@ export function MediaPreviewCard({
                     </div>
                 ) : item.type === 'IMAGE' ? (
                     <div className="relative w-full h-full">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                        {/*
+                         * previewUrl là blob URL từ createObjectURL — không qua
+                         * Next.js image optimization server, dùng unoptimized
+                         */}
+                        <Image
                             src={item.previewUrl}
                             alt={item.file.name}
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            fill
+                            unoptimized
+                            sizes="(max-width: 768px) 100vw, 50vw"
+                            className="object-cover transition-transform duration-300 group-hover:scale-105"
                         />
                         <span className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-black/70 text-sky-300 backdrop-blur-sm flex items-center gap-1">
                             <ImageIcon className="w-3 h-3" /> Ảnh
@@ -135,13 +138,7 @@ export function MediaPreviewCard({
                     {onOpenLightbox && (item.publicUrl || item.previewUrl) && (
                         <button
                             type="button"
-                            onClick={() =>
-                                onOpenLightbox(
-                                    item.publicUrl || item.previewUrl,
-                                    item.type,
-                                    item.file.name,
-                                )
-                            }
+                            onClick={() => onOpenLightbox(item.publicUrl || item.previewUrl, item.type, item.file.name)}
                             className="p-1.5 rounded-lg bg-neutral-900/80 text-white hover:bg-neutral-800 transition-colors backdrop-blur-md shadow"
                             title="Phóng to"
                             aria-label="Phóng to"
@@ -186,7 +183,10 @@ export function MediaPreviewCard({
             <div className="p-3 flex flex-col gap-2">
                 <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold text-neutral-800 dark:text-neutral-100 truncate" title={item.file.name}>
+                        <p
+                            className="text-xs font-semibold text-neutral-800 dark:text-neutral-100 truncate"
+                            title={item.file.name}
+                        >
                             {item.file.name}
                         </p>
                         <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-neutral-500 dark:text-neutral-400">
@@ -198,7 +198,9 @@ export function MediaPreviewCard({
                             {item.speedBytesPerSec && item.status === 'uploading' && (
                                 <>
                                     <span>•</span>
-                                    <span className="text-sky-500 font-mono">{formatBytes(item.speedBytesPerSec)}/s</span>
+                                    <span className="text-sky-500 font-mono">
+                                        {formatBytes(item.speedBytesPerSec)}/s
+                                    </span>
                                 </>
                             )}
                         </div>

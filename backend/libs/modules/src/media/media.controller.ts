@@ -23,11 +23,7 @@ import type {
     MediaListResponse,
     PresignedUrlResponse,
 } from '@timmyhub/contracts'
-import {
-    ConfirmMediaUploadSchema,
-    CreatePresignedUrlSchema,
-    MediaFilterSchema,
-} from '@timmyhub/contracts'
+import { ConfirmMediaUploadSchema, CreatePresignedUrlSchema, MediaFilterSchema } from '@timmyhub/contracts'
 import { CurrentUser, Permissions } from '@timmyhub/modules/platform/auth'
 import type { AuthUser } from '@timmyhub/modules/platform/auth'
 
@@ -38,7 +34,10 @@ import type { UploadFileInput } from './media.service'
 @ApiBearerAuth()
 @Controller('media')
 export class MediaController {
+    // ===== Dependencies =====
     constructor(private readonly mediaService: MediaService) {}
+
+    // ===== Commands =====
 
     @ApiOperation({ summary: 'Direct multipart upload for one or multiple media files' })
     @ApiConsumes('multipart/form-data')
@@ -97,6 +96,8 @@ export class MediaController {
         return this.mediaService.confirmUpload(dto)
     }
 
+    // ===== Queries =====
+
     @ApiOperation({ summary: 'List media assets with filtering and pagination' })
     @Permissions('media:files:list')
     @Get()
@@ -120,4 +121,3 @@ export class MediaController {
         return this.mediaService.deleteAsset(id)
     }
 }
-
