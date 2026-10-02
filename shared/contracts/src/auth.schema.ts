@@ -54,5 +54,7 @@ export type AuthResult = AuthTokens & {
         id: string
         email: string
         roles: UserRole[]
+        displayName?: string | null
+        avatar?: string | null
     }
 }

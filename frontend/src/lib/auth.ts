@@ -87,6 +87,8 @@ export const authConfig = {
                         id: data.user.id,
                         email: data.user.email,
                         roles: data.user.roles,
+                        name: data.user.displayName,
+                        image: data.user.avatar,
                         accessToken: data.accessToken,
                         refreshToken: data.refreshToken,
                     }
@@ -107,6 +109,8 @@ export const authConfig = {
                 token.accessToken = user.accessToken
                 token.refreshToken = user.refreshToken
                 token.roles = user.roles
+                token.name = user.name
+                token.picture = user.image
                 token.accessExpiresAt = Date.now() + ACCESS_TOKEN_TTL_MS
                 return token
             }
@@ -130,6 +134,8 @@ export const authConfig = {
                 token.accessToken = data.accessToken
                 token.refreshToken = data.refreshToken
                 token.roles = data.user.roles
+                token.name = data.user.displayName
+                token.picture = data.user.avatar
                 token.accessExpiresAt = Date.now() + ACCESS_TOKEN_TTL_MS
                 return token
             }
@@ -154,6 +160,8 @@ export const authConfig = {
         session({ session, token }) {
             if (token.sub) session.user.id = token.sub
             if (token.accessToken) session.accessToken = token.accessToken
+            if (token.name) session.user.name = token.name
+            if (token.picture) session.user.image = token.picture
             return session
         },
     },

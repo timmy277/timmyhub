@@ -29,7 +29,7 @@ export function UserMenu() {
 
     // ===== Derived =====
     const email = session?.user?.email ?? ''
-    const name = session?.user?.name || email || t('account')
+    const username = session?.user?.name || (email ? email.split('@')[0] : '') || t('account')
     const avatar = session?.user?.image
 
     // ===== Handlers =====
@@ -46,16 +46,16 @@ export function UserMenu() {
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label={t('account')} className="rounded-full">
-                    <UserAvatar name={name} imageUrl={avatar} />
+                    <UserAvatar name={username} imageUrl={avatar} />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="min-w-56 rounded-lg" align="end" sideOffset={8}>
                 <DropdownMenuLabel className="p-0 font-normal">
                     <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                        <UserAvatar name={name} imageUrl={avatar} />
+                        <UserAvatar name={username} imageUrl={avatar} />
                         <div className="grid flex-1 leading-tight">
-                            <span className="truncate font-medium">{name}</span>
-                            {email && name !== email && (
+                            <span className="truncate font-medium">{username}</span>
+                            {email && (
                                 <span className="truncate text-xs text-muted-foreground">{email}</span>
                             )}
                         </div>

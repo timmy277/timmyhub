@@ -86,7 +86,22 @@ export class AuthService {
         const device = await this.identityRepository.upsertDevice(user.id, context.userAgent, context.ip)
         const tokens = await this.issueTokens(user.id, user.email, user.roles, device.id)
 
-        return { ...tokens, user: { id: user.id, email: user.email, roles: user.roles } }
+        const displayName =
+            user.profile?.displayName ||
+            (user.profile ? `${user.profile.firstName} ${user.profile.lastName}`.trim() : null) ||
+            null
+        const avatar = user.profile?.avatar ?? null
+
+        return {
+            ...tokens,
+            user: {
+                id: user.id,
+                email: user.email,
+                roles: user.roles,
+                displayName,
+                avatar,
+            },
+        }
     }
 
     // REQ-IDN-005 / REQ-IDN-006
@@ -132,10 +147,22 @@ export class AuthService {
         }
 
         const accessToken = await this.signAccessToken(user.id, user.email, user.roles)
+        const displayName =
+            user.profile?.displayName ||
+            (user.profile ? `${user.profile.firstName} ${user.profile.lastName}`.trim() : null) ||
+            null
+        const avatar = user.profile?.avatar ?? null
+
         return {
             accessToken,
             refreshToken: rawNextToken,
-            user: { id: user.id, email: user.email, roles: user.roles },
+            user: {
+                id: user.id,
+                email: user.email,
+                roles: user.roles,
+                displayName,
+                avatar,
+            },
         }
     }
 

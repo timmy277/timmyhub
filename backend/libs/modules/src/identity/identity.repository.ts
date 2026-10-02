@@ -3,11 +3,13 @@ import { randomUUID } from 'node:crypto'
 import { Injectable } from '@nestjs/common'
 
 import { OUTBOX_AGGREGATE, OUTBOX_EVENT, UserRole } from '@timmyhub/contracts'
-import type { User } from '@timmyhub/prisma'
+import type { Prisma, User } from '@timmyhub/prisma'
 import { PrismaService } from '@timmyhub/prisma'
 
 import { writeOutboxEvent } from './events/index'
 import { REGISTERED_VIA } from './identity.constants'
+
+export type UserWithProfile = Prisma.UserGetPayload<{ include: { profile: true } }>
 
 export type RegisterUserInput = {
     email: string
@@ -33,12 +35,18 @@ export class IdentityRepository {
         return this.prisma.user.count()
     }
 
-    findUserByEmail(email: string): Promise<User | null> {
-        return this.prisma.user.findUnique({ where: { email } })
+    findUserByEmail(email: string): Promise<UserWithProfile | null> {
+        return this.prisma.user.findUnique({
+            where: { email },
+            include: { profile: true },
+        })
     }
 
-    findUserById(id: string): Promise<User | null> {
-        return this.prisma.user.findUnique({ where: { id } })
+    findUserById(id: string): Promise<UserWithProfile | null> {
+        return this.prisma.user.findUnique({
+            where: { id },
+            include: { profile: true },
+        })
     }
 
     findRefreshTokenByHash(tokenHash: string) {

@@ -11,6 +11,8 @@ declare module 'next-auth' {
         accessToken?: string
         refreshToken?: string
         roles?: UserRole[]
+        displayName?: string | null
+        avatar?: string | null
     }
 
     interface Session {
@@ -28,6 +30,8 @@ declare module '@auth/core/jwt' {
         accessToken?: string
         refreshToken?: string
         roles?: UserRole[]
+        name?: string | null
+        picture?: string | null
         /** Thời điểm access token hết hạn (epoch ms) — jwt callback dùng để chủ động refresh trước hạn. */
         accessExpiresAt?: number
     }
