@@ -12,6 +12,7 @@ import { Button, FloatInput, FloatMultiSelect, ON_CARD_LABEL_CLASS, UploadSectio
 import { ROLE_LABEL_KEY, USER_TAB } from '@/constants'
 import type { UserPermissionFlags } from '@/constants'
 import { useCreateUser, useUpdateUser } from '@/hooks'
+import { useUserProfileStore } from '@/stores'
 import { toFieldErrors } from '@/utils'
 
 import {
@@ -65,7 +66,7 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
     const searchParams = useSearchParams()
     const editedUserId = userId
 
-    const { update: updateSession } = useSession()
+    const { data: session, update: updateSession } = useSession()
 
     // Tab của form này. Lưu thành công hoặc Huỷ sẽ gỡ đúng tab hiện tại khỏi localStorage.
     const closeCurrentTab = useCallback(() => {
@@ -90,13 +91,18 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
     }, [actorId, closeCurrentTab, editedUserId, pathname, router, searchParams])
 
     const handleUpdateSuccess = useCallback(async () => {
-        if (editedUserId && editedUserId === actorId) {
+        if (editedUserId && (editedUserId === actorId || editedUserId === session?.user?.id)) {
             const fallbackDisplayName =
                 [values.lastName, values.firstName].filter(Boolean).join(' ') || values.firstName
+            const nextName = values.displayName.trim() || fallbackDisplayName
+            useUserProfileStore.getState().setOverride({
+                displayName: nextName,
+                avatar,
+            })
             try {
                 await updateSession({
                     image: avatar,
-                    name: values.displayName.trim() || fallbackDisplayName || undefined,
+                    name: nextName,
                 })
             } catch {
                 // Ignore session update error
@@ -108,6 +114,7 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
         avatar,
         closeUpdateTab,
         editedUserId,
+        session?.user?.id,
         updateSession,
         values.displayName,
         values.firstName,

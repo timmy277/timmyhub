@@ -10,6 +10,8 @@ import { getActor } from '@/lib/actor-permissions'
 import type { BackendResult } from '@/lib/api-server'
 import { fetchBackend } from '@/lib/api-server'
 
+import { unstable_update } from '@/lib/auth'
+
 // Thao tác ghi đi qua Server Action: client không bao giờ cầm access token (REQ-IDN-022), và backend vẫn là nơi quyết
 // định cuối cùng (mỗi endpoint kiểm `identity:users:*` bằng permission hiệu lực).
 //
@@ -29,9 +31,48 @@ export async function updateUserAction(userId: string, input: UpdateUserInput): 
     const parsed = UpdateUserSchema.safeParse(input)
     if (!parsed.success) return { ok: false, code: 'VALIDATION_FAILED' }
 
-    return run((token) =>
-        fetchBackend<UserDetail>(API_ROUTE.USERS.DETAIL(userId), { token, method: 'PATCH', body: parsed.data }),
-    )
+    const actor = await getActor()
+    if (!actor) return { ok: false, code: 'UNAUTHORIZED' }
+
+    const result = await fetchBackend<UserDetail>(API_ROUTE.USERS.DETAIL(userId), {
+        token: actor.accessToken,
+        method: 'PATCH',
+        body: parsed.data,
+    })
+    if (!result.ok) return { ok: false, code: result.code }
+
+    if (actor.userId === userId) {
+        try {
+            await unstable_update({
+                user: {
+                    name: result.data.profile?.displayName ?? undefined,
+                    image: result.data.profile?.avatar ?? undefined,
+                },
+            })
+        } catch {
+            // NextAuth unstable_update fallback
+        }
+    }
+
+    revalidatePath(ROUTE.USERS)
+    return { ok: true }
+}
+
+// Lấy thông tin hiển thị của tài khoản đang đăng nhập từ backend (cho Navbar)
+export async function getCurrentUserProfileAction(): Promise<{
+    displayName: string | null
+    avatar: string | null
+} | null> {
+    const actor = await getActor()
+    if (!actor) return null
+
+    const result = await fetchBackend<UserDetail>(API_ROUTE.USERS.DETAIL(actor.userId), { token: actor.accessToken })
+    if (!result.ok) return null
+
+    return {
+        displayName: result.data.profile?.displayName ?? null,
+        avatar: result.data.profile?.avatar ?? null,
+    }
 }
 
 // Khoá bắt buộc kèm lý do (REQ-USR-012) — validate lại ở server trước khi gửi, cùng schema với form.
