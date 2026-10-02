@@ -3,3 +3,4 @@
 // (luật 15 CLAUDE.md), không khai báo lại ở đây. Nơi khác trong repo chỉ import qua `@/schemas`.
 export * from './theme-config.schema'
 export * from './account.schema'
+export * from './rbac.schema'

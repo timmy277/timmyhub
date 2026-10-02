@@ -1,6 +1,8 @@
 'use client'
 
-import { useCallback, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import { type Resolver, useForm, useWatch } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { ChevronDownIcon, Layers3Icon } from 'lucide-react'
@@ -22,7 +24,7 @@ import { Badge } from '@/components/ui'
 import { RBAC_KIND, RBAC_TAB } from '@/constants'
 import type { RbacPermissionFlags } from '@/constants'
 import { useCreateRole, useUpdateRole } from '@/hooks'
-import { toFieldErrors } from '@/utils'
+import { toFieldErrorMessage } from '@/utils'
 
 import {
     addRbacTab,
@@ -52,17 +54,17 @@ interface RoleFormProps {
 // (`fieldErrors` dưới từng ô, lỗi nghiệp vụ hiện toast ở hook) · không có quyền (tab không hiện — nơi gọi quyết định,
 // phần gán quyền ẩn khi thiếu `canAssignPermissions`) · vô hiệu hoá (đang gửi) · thành công (toast + tab tự đóng,
 // bảng đã dựng lại qua `revalidatePath`).
+interface RoleFormValues {
+    name: string
+    displayName: string
+    description: string
+    selectedPermissions: string[]
+}
+
+// Form tạo/sửa vai trò, dùng chung cho tab "Tạo" và tab "Cập nhật" (giống `UserForm`). Validate bằng chính schema của
+// `@timmyhub/contracts` (luật #15) — cùng luật với backend, cùng câu lỗi qua catalog `api`.
 export function RoleForm({ role, permissionCatalog, canAssignPermissions, flags, actorId }: RoleFormProps) {
     const isEdit = Boolean(role)
-
-    // ===== State =====
-    const [values, setValues] = useState({
-        name: role?.name ?? '',
-        displayName: role?.displayName ?? '',
-        description: role?.description ?? '',
-    })
-    const [selectedPermissions, setSelectedPermissions] = useState<string[]>(role ? [...role.permissionNames] : [])
-    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
     // ===== Hooks =====
     const t = useTranslations('rbac')
@@ -71,6 +73,31 @@ export function RoleForm({ role, permissionCatalog, canAssignPermissions, flags,
     const pathname = usePathname()
     const searchParams = useSearchParams()
     const editedRoleId = role?.id
+
+    const resolver = useMemo(
+        () => zodResolver(role ? UpdateRoleSchema : CreateRoleSchema) as unknown as Resolver<RoleFormValues>,
+        [role],
+    )
+
+    const {
+        register,
+        handleSubmit,
+        control,
+        setValue,
+        formState: { errors },
+    } = useForm<RoleFormValues>({
+        resolver,
+        mode: 'onChange',
+        defaultValues: {
+            name: role?.name ?? '',
+            displayName: role?.displayName ?? '',
+            description: role?.description ?? '',
+            selectedPermissions: role ? [...role.permissionNames] : [],
+        },
+    })
+
+    const selectedPermissionsRaw = useWatch({ control, name: 'selectedPermissions' })
+    const selectedPermissions = useMemo(() => selectedPermissionsRaw ?? [], [selectedPermissionsRaw])
 
     // Tab của form này. Lưu thành công hoặc Huỷ sẽ gỡ đúng tab hiện tại khỏi localStorage.
     const closeCurrentTab = useCallback(() => {
@@ -100,8 +127,6 @@ export function RoleForm({ role, permissionCatalog, canAssignPermissions, flags,
     const isPending = create.isPending || update.isPending
 
     // ===== Derived =====
-    // Nhóm quyền theo `module` để màn hình đọc được theo cụm (`identity`, `rbac`, `catalog`…) thay vì một dãy phẳng
-    // vài chục dòng. Giữ thứ tự backend trả (đã sắp theo module → resource → action) nên không cần sort lại.
     const permissionGroups = useMemo(() => {
         const groups = new Map<string, PermissionSummary[]>()
         for (const permission of permissionCatalog) {
@@ -113,8 +138,6 @@ export function RoleForm({ role, permissionCatalog, canAssignPermissions, flags,
     }, [permissionCatalog])
 
     const selectedSet = useMemo(() => new Set(selectedPermissions), [selectedPermissions])
-    // Chỉ gửi tập quyền khi nó THẬT SỰ đổi: gửi thừa một lời gọi `PUT …/permissions` sẽ hỏng với người chỉ có
-    // `rbac:roles:update` (thiếu `rbac:role-permissions:assign`) và biến một lần lưu thành công thành cảnh báo.
     const permissionsChanged = useMemo(() => {
         if (!role) return selectedPermissions.length > 0
         const original = new Set(role.permissionNames)
@@ -122,70 +145,46 @@ export function RoleForm({ role, permissionCatalog, canAssignPermissions, flags,
     }, [role, selectedPermissions])
 
     // ===== Handlers =====
-    const setInputField = (field: 'name' | 'displayName') => (event: ChangeEvent<HTMLInputElement>) => {
-        setValues((previous) => ({ ...previous, [field]: event.target.value }))
-    }
-
-    const setDescription = (event: ChangeEvent<HTMLTextAreaElement>) => {
-        setValues((previous) => ({ ...previous, description: event.target.value }))
-    }
-
     const togglePermission = (name: string, checked: boolean) => {
-        setSelectedPermissions((previous) => (checked ? [...previous, name] : previous.filter((item) => item !== name)))
+        const next = checked ? [...selectedPermissions, name] : selectedPermissions.filter((item) => item !== name)
+        setValue('selectedPermissions', next, { shouldDirty: true, shouldValidate: true })
     }
 
     const toggleModule = (permissions: PermissionSummary[], checked: boolean) => {
         const names = permissions.map((permission) => permission.name)
-        setSelectedPermissions((previous) =>
-            checked
-                ? [...previous, ...names.filter((name) => !previous.includes(name))]
-                : previous.filter((name) => !names.includes(name)),
-        )
+        const next = checked
+            ? [...selectedPermissions, ...names.filter((name) => !selectedPermissions.includes(name))]
+            : selectedPermissions.filter((name) => !names.includes(name))
+        setValue('selectedPermissions', next, { shouldDirty: true, shouldValidate: true })
     }
 
-    const onSubmit = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault()
-
-        // Ô "mô tả" để trống nghĩa là **không đụng tới** trường đó, chứ không phải xoá về rỗng: schema khai
-        // `description` là optional nên chuỗi rỗng đi thẳng xuống backend thành giá trị rỗng.
-        const description = values.description.trim() === '' ? undefined : values.description
+    const onSubmit = (data: RoleFormValues) => {
+        const description = data.description.trim() === '' ? undefined : data.description.trim()
 
         if (role) {
-            const parsed = UpdateRoleSchema.safeParse({
-                displayName: values.displayName,
-                ...(description === undefined ? {} : { description }),
-            })
-            if (!parsed.success) {
-                setFieldErrors(toFieldErrors(parsed.error.issues, tApi))
-                return
-            }
-            setFieldErrors({})
             update.mutate({
                 roleId: role.id,
-                input: parsed.data,
+                input: {
+                    displayName: data.displayName,
+                    ...(description === undefined ? {} : { description }),
+                },
                 ...(canAssignPermissions && permissionsChanged ? { permissionNames: selectedPermissions } : {}),
             })
             return
         }
 
-        const parsed = CreateRoleSchema.safeParse({
-            name: values.name,
-            displayName: values.displayName,
-            ...(description === undefined ? {} : { description }),
-        })
-        if (!parsed.success) {
-            setFieldErrors(toFieldErrors(parsed.error.issues, tApi))
-            return
-        }
-        setFieldErrors({})
         create.mutate({
-            input: parsed.data,
+            input: {
+                name: data.name,
+                displayName: data.displayName,
+                ...(description === undefined ? {} : { description }),
+            },
             permissionNames: canAssignPermissions ? selectedPermissions : [],
         })
     }
 
     return (
-        <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6" noValidate>
             <header className="flex flex-col gap-1 border-b pb-5">
                 <h1 className="text-xl font-semibold tracking-tight">
                     {t(isEdit ? 'roleFormTitleUpdate' : 'roleFormTitleCreate')}
@@ -200,34 +199,31 @@ export function RoleForm({ role, permissionCatalog, canAssignPermissions, flags,
                     <FormSection title={t('roleSectionInfo')} description={t('roleInfoDescription')}>
                         <FloatInput
                             label={t('fieldRoleName')}
-                            name="name"
-                            value={values.name}
-                            onChange={setInputField('name')}
                             helperText={isEdit ? t('fieldRoleNameImmutable') : t('fieldRoleNameHint')}
-                            error={fieldErrors.name}
+                            error={toFieldErrorMessage(errors.name?.message, tApi)}
+                            reserveErrorSpace
                             // `name` là khoá nghiệp vụ và `UpdateRoleSchema` không nhận nó ⇒ sửa thì chỉ đọc.
                             disabled={isPending || isEdit}
                             className="font-mono"
                             labelClassName={ON_CARD_LABEL_CLASS}
+                            {...register('name')}
                         />
                         <FloatInput
                             label={t('fieldRoleDisplayName')}
-                            name="displayName"
-                            value={values.displayName}
-                            onChange={setInputField('displayName')}
-                            error={fieldErrors.displayName}
+                            error={toFieldErrorMessage(errors.displayName?.message, tApi)}
+                            reserveErrorSpace
                             disabled={isPending}
                             labelClassName={ON_CARD_LABEL_CLASS}
+                            {...register('displayName')}
                         />
                         <FloatTextarea
                             label={t('fieldRoleDescription')}
-                            name="description"
-                            value={values.description}
-                            onChange={setDescription}
-                            error={fieldErrors.description}
+                            error={toFieldErrorMessage(errors.description?.message, tApi)}
+                            reserveErrorSpace
                             disabled={isPending}
                             rows={3}
                             labelClassName={ON_CARD_LABEL_CLASS}
+                            {...register('description')}
                         />
                     </FormSection>
 

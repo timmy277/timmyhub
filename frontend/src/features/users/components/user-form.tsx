@@ -1,6 +1,8 @@
 'use client'
 
-import { useCallback, useState, type FormEvent } from 'react'
+import { useCallback, useMemo } from 'react'
+import { type Resolver, useForm, useWatch } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useSession } from 'next-auth/react'
@@ -13,7 +15,7 @@ import { ROLE_LABEL_KEY, USER_TAB } from '@/constants'
 import type { UserPermissionFlags } from '@/constants'
 import { useCreateUser, useUpdateUser } from '@/hooks'
 import { useUserProfileStore } from '@/stores'
-import { toFieldErrors } from '@/utils'
+import { toFieldErrorMessage } from '@/utils'
 
 import {
     addUserTab,
@@ -34,28 +36,21 @@ interface UserFormProps {
     permissions?: UserPermissionFlags
 }
 
+interface UserFormValues {
+    email: string
+    password: string
+    firstName: string
+    lastName: string
+    displayName: string
+    phone: string
+    avatar: string | null
+    roles: UserRole[]
+}
+
 // Form tạo/sửa người dùng, dùng chung cho tab "Tạo" và tab "Cập nhật". Validate bằng chính schema của
 // `@timmyhub/contracts` (luật #15) — cùng luật với backend, cùng câu lỗi qua catalog `api`.
-//
-// Trước đây form nằm trong hộp thoại; chuyển thành tab nên bỏ vỏ `Dialog`, phần thân giữ nguyên.
-// 7 trạng thái: mặc định · đang tải (nút lưu quay, khoá form) · rỗng (N/A) · lỗi (`fieldErrors` dưới từng ô, lỗi
-// nghiệp vụ hiện toast ở hook) · không có quyền (tab không hiện — nơi gọi quyết định) · vô hiệu hoá (đang gửi) ·
-// thành công (toast + tab tự đóng, bảng đã dựng lại qua `revalidatePath`).
 export function UserForm({ userId, user, canAssignRole, actorId, permissions }: UserFormProps) {
     const isEdit = Boolean(userId)
-
-    // ===== State =====
-    const [values, setValues] = useState({
-        email: '',
-        password: '',
-        firstName: user?.profile?.firstName ?? '',
-        lastName: user?.profile?.lastName ?? '',
-        displayName: user?.profile?.displayName ?? '',
-        phone: user?.phone ?? '',
-    })
-    const [roles, setRoles] = useState<UserRole[]>(user ? [...user.roles] : [UserRoleValue.USER])
-    const [avatar, setAvatar] = useState<string | null>(user?.profile?.avatar ?? null)
-    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
     // ===== Hooks =====
     const t = useTranslations('userManagement')
@@ -67,6 +62,39 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
     const editedUserId = userId
 
     const { data: session, update: updateSession } = useSession()
+
+    const resolver = useMemo(
+        () => zodResolver(isEdit ? UpdateUserSchema : CreateUserSchema) as unknown as Resolver<UserFormValues>,
+        [isEdit],
+    )
+
+    const {
+        register,
+        handleSubmit,
+        control,
+        setValue,
+        formState: { errors },
+    } = useForm<UserFormValues>({
+        resolver,
+        mode: 'onChange',
+        defaultValues: {
+            email: '',
+            password: '',
+            firstName: user?.profile?.firstName ?? '',
+            lastName: user?.profile?.lastName ?? '',
+            displayName: user?.profile?.displayName ?? '',
+            phone: user?.phone ?? '',
+            avatar: user?.profile?.avatar ?? null,
+            roles: user ? [...user.roles] : [UserRoleValue.USER],
+        },
+    })
+
+    const avatar = useWatch({ control, name: 'avatar' })
+    const roles = useWatch({ control, name: 'roles' })
+    const firstName = useWatch({ control, name: 'firstName' })
+    const lastName = useWatch({ control, name: 'lastName' })
+    const displayName = useWatch({ control, name: 'displayName' })
+    const email = useWatch({ control, name: 'email' })
 
     // Tab của form này. Lưu thành công hoặc Huỷ sẽ gỡ đúng tab hiện tại khỏi localStorage.
     const closeCurrentTab = useCallback(() => {
@@ -92,9 +120,8 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
 
     const handleUpdateSuccess = useCallback(async () => {
         if (editedUserId && (editedUserId === actorId || editedUserId === session?.user?.id)) {
-            const fallbackDisplayName =
-                [values.lastName, values.firstName].filter(Boolean).join(' ') || values.firstName
-            const nextName = values.displayName.trim() || fallbackDisplayName
+            const fallbackDisplayName = [lastName, firstName].filter(Boolean).join(' ') || firstName
+            const nextName = displayName.trim() || fallbackDisplayName
             useUserProfileStore.getState().setOverride({
                 displayName: nextName,
                 avatar,
@@ -113,12 +140,12 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
         actorId,
         avatar,
         closeUpdateTab,
+        displayName,
         editedUserId,
+        firstName,
+        lastName,
         session?.user?.id,
         updateSession,
-        values.displayName,
-        values.firstName,
-        values.lastName,
     ])
 
     const update = useUpdateUser({ onSucceeded: handleUpdateSuccess })
@@ -128,56 +155,36 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
     const roleOptions = USER_ROLES.map((role) => ({ value: role, label: tRole(ROLE_LABEL_KEY[role]) }))
     const canEditRoles = Boolean(permissions?.ASSIGN_ROLE && userId && actorId !== userId)
 
-    // ===== Handlers =====
-    const setField = (field: keyof typeof values) => (event: React.ChangeEvent<HTMLInputElement>) => {
-        setValues((previous) => ({ ...previous, [field]: event.target.value }))
-    }
-
-    const onSubmit = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault()
-
+    const onSubmit = (data: UserFormValues) => {
         if (userId) {
             if (!user) return
-            const fallbackDisplayName =
-                [values.lastName, values.firstName].filter(Boolean).join(' ') || values.firstName
+            const fallbackDisplayName = [data.lastName, data.firstName].filter(Boolean).join(' ') || data.firstName
             const raw = {
-                firstName: values.firstName,
-                lastName: values.lastName,
-                displayName: values.displayName.trim() || fallbackDisplayName,
-                ...(values.phone.trim() === '' ? {} : { phone: values.phone }),
-                ...(canEditRoles ? { roles } : {}),
-                avatar,
+                firstName: data.firstName,
+                lastName: data.lastName,
+                displayName: data.displayName.trim() || fallbackDisplayName,
+                ...(data.phone.trim() === '' ? {} : { phone: data.phone }),
+                ...(canEditRoles ? { roles: data.roles } : {}),
+                avatar: data.avatar,
             }
-            const parsed = UpdateUserSchema.safeParse(raw)
-            if (!parsed.success) {
-                setFieldErrors(toFieldErrors(parsed.error.issues, tApi))
-                return
-            }
-            setFieldErrors({})
-            update.mutate({ userId, input: parsed.data })
+            update.mutate({ userId, input: raw })
             return
         }
 
         const raw = {
-            email: values.email,
-            password: values.password,
-            firstName: values.firstName,
-            lastName: values.lastName,
-            ...(values.phone.trim() === '' ? {} : { phone: values.phone }),
-            avatar,
-            ...(canAssignRole ? { roles: roles as UserRole[] } : {}),
+            email: data.email,
+            password: data.password,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            ...(data.phone.trim() === '' ? {} : { phone: data.phone }),
+            avatar: data.avatar,
+            ...(canAssignRole ? { roles: data.roles } : {}),
         }
-        const parsed = CreateUserSchema.safeParse(raw)
-        if (!parsed.success) {
-            setFieldErrors(toFieldErrors(parsed.error.issues, tApi))
-            return
-        }
-        setFieldErrors({})
-        create.mutate(parsed.data)
+        create.mutate(raw)
     }
 
     return (
-        <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6" noValidate>
             <header className="flex flex-col gap-1 border-b pb-5">
                 <h1 className="text-xl font-semibold tracking-tight">
                     {t(isEdit ? 'formTitleUpdate' : 'formTitleCreate')}
@@ -194,25 +201,23 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
                             <FloatInput
                                 label={t('fieldEmail')}
                                 type="email"
-                                name="email"
                                 autoComplete="off"
-                                value={values.email}
-                                onChange={setField('email')}
-                                error={fieldErrors.email}
+                                error={toFieldErrorMessage(errors.email?.message, tApi)}
+                                reserveErrorSpace
                                 disabled={isPending}
                                 labelClassName={ON_CARD_LABEL_CLASS}
+                                {...register('email')}
                             />
                             <FloatInput
                                 label={t('fieldPassword')}
                                 type="password"
-                                name="password"
                                 autoComplete="new-password"
                                 helperText={t('fieldPasswordHint')}
-                                value={values.password}
-                                onChange={setField('password')}
-                                error={fieldErrors.password}
+                                error={toFieldErrorMessage(errors.password?.message, tApi)}
+                                reserveErrorSpace
                                 disabled={isPending}
                                 labelClassName={ON_CARD_LABEL_CLASS}
+                                {...register('password')}
                             />
                         </FormSection>
                     ) : (
@@ -220,10 +225,10 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
                             <FloatInput
                                 label={t('fieldEmail')}
                                 type="email"
-                                name="email"
                                 value={user?.email ?? ''}
                                 disabled
                                 helperText={t('formSideUpdate')}
+                                reserveErrorSpace
                                 labelClassName={ON_CARD_LABEL_CLASS}
                             />
                         </FormSection>
@@ -236,13 +241,18 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
                                 align="center"
                                 acceptType="image"
                                 name={
-                                    [values.firstName, values.lastName].filter(Boolean).join(' ') ||
-                                    values.displayName ||
-                                    (isEdit ? user?.email : values.email) ||
+                                    [firstName, lastName].filter(Boolean).join(' ') ||
+                                    displayName ||
+                                    (isEdit ? user?.email : email) ||
                                     'User'
                                 }
                                 value={avatar}
-                                onChange={(val) => setAvatar(typeof val === 'string' || val === null ? val : null)}
+                                onChange={(val) =>
+                                    setValue('avatar', typeof val === 'string' || val === null ? val : null, {
+                                        shouldDirty: true,
+                                        shouldValidate: true,
+                                    })
+                                }
                                 ownerType="AVATAR"
                                 ownerId={userId}
                                 disabled={isPending}
@@ -251,44 +261,40 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
                         <div className="grid gap-4 sm:grid-cols-2">
                             <FloatInput
                                 label={t('fieldLastName')}
-                                name="lastName"
-                                value={values.lastName}
-                                onChange={setField('lastName')}
-                                error={fieldErrors.lastName}
+                                error={toFieldErrorMessage(errors.lastName?.message, tApi)}
+                                reserveErrorSpace
                                 disabled={isPending}
                                 labelClassName={ON_CARD_LABEL_CLASS}
+                                {...register('lastName')}
                             />
                             <FloatInput
                                 label={t('fieldFirstName')}
-                                name="firstName"
-                                value={values.firstName}
-                                onChange={setField('firstName')}
-                                error={fieldErrors.firstName}
+                                error={toFieldErrorMessage(errors.firstName?.message, tApi)}
+                                reserveErrorSpace
                                 disabled={isPending}
                                 labelClassName={ON_CARD_LABEL_CLASS}
+                                {...register('firstName')}
                             />
                         </div>
                         {isEdit && (
                             <FloatInput
                                 label={t('fieldDisplayName')}
-                                name="displayName"
-                                value={values.displayName}
-                                onChange={setField('displayName')}
-                                error={fieldErrors.displayName}
+                                error={toFieldErrorMessage(errors.displayName?.message, tApi)}
+                                reserveErrorSpace
                                 disabled={isPending}
                                 labelClassName={ON_CARD_LABEL_CLASS}
+                                {...register('displayName')}
                             />
                         )}
                         <FloatInput
                             label={t('fieldPhone')}
-                            name="phone"
                             type="tel"
                             inputMode="numeric"
-                            value={values.phone}
-                            onChange={setField('phone')}
-                            error={fieldErrors.phone}
+                            error={toFieldErrorMessage(errors.phone?.message, tApi)}
+                            reserveErrorSpace
                             disabled={isPending}
                             labelClassName={ON_CARD_LABEL_CLASS}
+                            {...register('phone')}
                         />
                     </FormSection>
 
@@ -298,8 +304,14 @@ export function UserForm({ userId, user, canAssignRole, actorId, permissions }: 
                                 label={t('fieldRoles')}
                                 options={roleOptions}
                                 value={roles}
-                                onValueChange={(next) => setRoles(next as UserRole[])}
-                                error={fieldErrors.roles}
+                                onValueChange={(next) =>
+                                    setValue('roles', next as UserRole[], {
+                                        shouldDirty: true,
+                                        shouldValidate: true,
+                                    })
+                                }
+                                error={toFieldErrorMessage(errors.roles?.message, tApi)}
+                                reserveErrorSpace
                                 disabled={isPending || (isEdit ? !canEditRoles : !canAssignRole)}
                                 labelClassName={ON_CARD_LABEL_CLASS}
                             />

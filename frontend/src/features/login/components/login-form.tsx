@@ -1,15 +1,17 @@
 'use client'
 
-import { type FormEvent, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 
+import type { LoginInput } from '@timmyhub/contracts'
 import { LoginSchema } from '@timmyhub/contracts'
 
 import { Button, FloatInput, IconPath } from '@/components'
 import { BACKEND_UNAVAILABLE_CODE } from '@/constants'
 import { useLogin } from '@/hooks'
-import { toFieldErrors } from '@/utils'
+import { toFieldErrorMessage } from '@/utils'
 
 import { LoginError } from '../errors'
 
@@ -18,14 +20,24 @@ const ON_CARD_LABEL = 'bg-card peer-focus:bg-card peer-autofill:bg-card'
 
 // Zod message là khoá i18n (`validation.*`) — BE trả qua catalog `api` (i18n/request.ts gắn sẵn).
 export function LoginForm() {
-    // ===== State =====
-    const [errors, setErrors] = useState<Record<string, string>>({})
-
     // ===== Hooks =====
     const t = useTranslations('login')
     // Zod message là khoá thông điệp (`validation.*`) — dịch qua catalog `api` gắn sẵn trong i18n/request.ts.
     const tApi = useTranslations('api')
     const login = useLogin()
+
+    const {
+        register,
+        handleSubmit,
+        formState: { errors },
+    } = useForm<LoginInput>({
+        resolver: zodResolver(LoginSchema),
+        mode: 'onChange',
+        defaultValues: {
+            email: '',
+            password: '',
+        },
+    })
 
     // ===== Handlers =====
     const notConnected = () => {
@@ -45,20 +57,8 @@ export function LoginForm() {
         return t('loginFailed')
     }
 
-    const onSubmit = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault()
-        const formData = new FormData(event.currentTarget)
-        const raw = { email: formData.get('email') as string, password: formData.get('password') as string }
-
-        const result = LoginSchema.safeParse(raw)
-        if (!result.success) {
-            // issue.message là khoá `validation.*` (không phải câu) — dịch qua catalog `api`.
-            setErrors(toFieldErrors(result.error.issues, tApi))
-            return
-        }
-
-        setErrors({})
-        login.mutate(result.data, {
+    const onSubmit = (data: LoginInput) => {
+        login.mutate(data, {
             onError: (error) => {
                 toast.error(loginErrorMessage(error))
             },
@@ -66,29 +66,27 @@ export function LoginForm() {
     }
 
     return (
-        <form onSubmit={onSubmit} className="space-y-4" noValidate>
-            <div>
-                <FloatInput
-                    type="email"
-                    name="email"
-                    label={t('email')}
-                    autoComplete="email"
-                    labelClassName={ON_CARD_LABEL}
-                    aria-invalid={!!errors.email}
-                />
-                {errors.email && <p className="mt-1 text-xs text-destructive">{errors.email}</p>}
-            </div>
-            <div>
-                <FloatInput
-                    type="password"
-                    name="password"
-                    label={t('password')}
-                    autoComplete="current-password"
-                    labelClassName={ON_CARD_LABEL}
-                    aria-invalid={!!errors.password}
-                />
-                {errors.password && <p className="mt-1 text-xs text-destructive">{errors.password}</p>}
-            </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+            <FloatInput
+                type="email"
+                label={t('email')}
+                autoComplete="email"
+                labelClassName={ON_CARD_LABEL}
+                error={toFieldErrorMessage(errors.email?.message, tApi)}
+                reserveErrorSpace
+                disabled={login.isPending}
+                {...register('email')}
+            />
+            <FloatInput
+                type="password"
+                label={t('password')}
+                autoComplete="current-password"
+                labelClassName={ON_CARD_LABEL}
+                error={toFieldErrorMessage(errors.password?.message, tApi)}
+                reserveErrorSpace
+                disabled={login.isPending}
+                {...register('password')}
+            />
 
             <div className="flex justify-end">
                 <Button

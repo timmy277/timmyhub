@@ -55,6 +55,7 @@ export function ProfileTab({ user, onProfileUpdated }: ProfileTabProps) {
         formState: { errors, isDirty },
     } = useForm<ProfileFormValues>({
         resolver: zodResolver(ProfileFormSchema),
+        mode: 'onChange',
         defaultValues,
     })
 
@@ -151,6 +152,7 @@ export function ProfileTab({ user, onProfileUpdated }: ProfileTabProps) {
                             required
                             labelClassName={ON_CARD_LABEL_CLASS}
                             disabled={isPending}
+                            reserveErrorSpace
                             error={getErrorText(errors.lastName?.message)}
                             {...register('lastName')}
                         />
@@ -160,6 +162,7 @@ export function ProfileTab({ user, onProfileUpdated }: ProfileTabProps) {
                             required
                             labelClassName={ON_CARD_LABEL_CLASS}
                             disabled={isPending}
+                            reserveErrorSpace
                             error={getErrorText(errors.firstName?.message)}
                             {...register('firstName')}
                         />
@@ -170,6 +173,7 @@ export function ProfileTab({ user, onProfileUpdated }: ProfileTabProps) {
                         labelClassName={ON_CARD_LABEL_CLASS}
                         helperText={t('displayNameHint')}
                         disabled={isPending}
+                        reserveErrorSpace
                         error={getErrorText(errors.displayName?.message)}
                         {...register('displayName')}
                     />
@@ -183,6 +187,7 @@ export function ProfileTab({ user, onProfileUpdated }: ProfileTabProps) {
                                 disabled
                                 labelClassName={ON_CARD_LABEL_CLASS}
                                 helperText={t('emailHint')}
+                                reserveErrorSpace
                             />
                             <div className="absolute right-3 top-3.5 flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                                 <CheckCircle2Icon className="h-4 w-4" />
@@ -195,6 +200,7 @@ export function ProfileTab({ user, onProfileUpdated }: ProfileTabProps) {
                             labelClassName={ON_CARD_LABEL_CLASS}
                             helperText={t('phoneHint')}
                             disabled={isPending}
+                            reserveErrorSpace
                             error={getErrorText(errors.phone?.message)}
                             {...register('phone')}
                         />

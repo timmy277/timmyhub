@@ -1,15 +1,16 @@
 'use client'
 
-import { useCallback, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
+import { useCallback, type ReactNode } from 'react'
+import { type Resolver, Controller, useForm, useWatch } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-
-import { CreatePermissionSchema } from '@timmyhub/contracts'
 
 import { Button, Checkbox, FloatInput, ON_CARD_LABEL_CLASS } from '@/components'
 import { RBAC_KIND, RBAC_TAB } from '@/constants'
 import { useCreatePermission } from '@/hooks'
-import { toFieldErrors } from '@/utils'
+import { PermissionFormSchema, type PermissionFormValues } from '@/schemas'
+import { toFieldErrorMessage } from '@/utils'
 
 import { buildRbacTabCloseHref, parseRbacTabKeys, type RbacTabItem, withoutRbacTab } from '../rbac-tab-query'
 import { getOpenRbacTabsSnapshot, writeOpenRbacTabs } from '../rbac-tabs-storage'
@@ -18,27 +19,37 @@ interface PermissionFormProps {
     actorId: string
 }
 
-// Form tạo quyền (chỉ có tạo — backend chưa có endpoint sửa permission). Validate bằng chính `CreatePermissionSchema`
-// của `@timmyhub/contracts` (luật #15): tên quyền phải đúng dạng `module:resource:action[:any]`.
-//
-// Tên quyền được **ghép từ các phần** thay vì bắt người dùng gõ cả chuỗi: dạng `module:resource:action` rất dễ gõ sai
-// (thiếu dấu hai chấm, viết hoa, khoảng trắng) mà sai thì regex của schema chặn ngay ở bước lưu — ghép sẵn thì không
-// còn gì để gõ sai, và phần xem trước cho biết chính xác chuỗi sẽ được gửi đi.
-// 7 trạng thái: mặc định · đang tải (nút lưu quay, khoá form) · rỗng (N/A) · lỗi (`fieldErrors` dưới từng ô, lỗi
-// nghiệp vụ hiện toast ở hook) · không có quyền (tab không hiện — nơi gọi quyết định) · vô hiệu hoá (đang gửi) ·
-// thành công (toast + tab tự đóng, bảng đã dựng lại qua `revalidatePath`).
+// Form tạo quyền (chỉ có tạo — backend chưa có endpoint sửa permission). Validate bằng schema
+// `PermissionFormSchema` từ `@/schemas` theo chuẩn react-hook-form + zod.
 export function PermissionForm({ actorId }: PermissionFormProps) {
-    // ===== State =====
-    const [values, setValues] = useState({ module: '', resource: '', action: '', displayName: '' })
-    const [scopedToAny, setScopedToAny] = useState(false)
-    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
-
     // ===== Hooks =====
     const t = useTranslations('rbac')
     const tApi = useTranslations('api')
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
+
+    const {
+        register,
+        handleSubmit,
+        control,
+        formState: { errors },
+    } = useForm<PermissionFormValues>({
+        resolver: zodResolver(PermissionFormSchema) as Resolver<PermissionFormValues>,
+        mode: 'onChange',
+        defaultValues: {
+            module: '',
+            resource: '',
+            action: '',
+            scopedToAny: false,
+            displayName: '',
+        },
+    })
+
+    const moduleVal = useWatch({ control, name: 'module' }) ?? ''
+    const resourceVal = useWatch({ control, name: 'resource' }) ?? ''
+    const actionVal = useWatch({ control, name: 'action' }) ?? ''
+    const scopedToAny = useWatch({ control, name: 'scopedToAny' }) ?? false
 
     const closeCurrentTab = useCallback(() => {
         const selfTab: RbacTabItem = { tab: RBAC_TAB.CREATE }
@@ -54,8 +65,7 @@ export function PermissionForm({ actorId }: PermissionFormProps) {
     const create = useCreatePermission({ onSucceeded: closeCurrentTab })
 
     // ===== Derived =====
-    // Hậu tố phạm vi `:any` (vd `identity:devices:list:any`) chỉ hợp lệ khi là `any` — schema chốt như vậy.
-    const permissionName = [values.module, values.resource, values.action]
+    const permissionName = [moduleVal, resourceVal, actionVal]
         .map((part) => part.trim())
         .filter((part) => part !== '')
         .join(':')
@@ -63,24 +73,21 @@ export function PermissionForm({ actorId }: PermissionFormProps) {
     const namePreview = permissionName === '' ? t('permissionNamePreviewEmpty') : permissionName
 
     // ===== Handlers =====
-    const setField = (field: keyof typeof values) => (event: ChangeEvent<HTMLInputElement>) => {
-        setValues((previous) => ({ ...previous, [field]: event.target.value }))
-    }
+    const onSubmit = (data: PermissionFormValues) => {
+        const fullName = [data.module, data.resource, data.action]
+            .map((part) => part.trim())
+            .filter((part) => part !== '')
+            .join(':')
+            .concat(data.scopedToAny ? ':any' : '')
 
-    const onSubmit = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault()
-
-        const parsed = CreatePermissionSchema.safeParse({ name: permissionName, displayName: values.displayName })
-        if (!parsed.success) {
-            setFieldErrors(toFieldErrors(parsed.error.issues, tApi))
-            return
-        }
-        setFieldErrors({})
-        create.mutate(parsed.data)
+        create.mutate({
+            name: fullName,
+            displayName: data.displayName.trim(),
+        })
     }
 
     return (
-        <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6" noValidate>
             <header className="flex flex-col gap-1 border-b pb-5">
                 <h1 className="text-xl font-semibold tracking-tight">{t('permissionFormTitleCreate')}</h1>
                 <p className="text-sm text-muted-foreground">{t('permissionFormDescriptionCreate')}</p>
@@ -92,38 +99,43 @@ export function PermissionForm({ actorId }: PermissionFormProps) {
                         <div className="grid gap-4 sm:grid-cols-3">
                             <FloatInput
                                 label={t('fieldPermissionModule')}
-                                name="module"
-                                value={values.module}
-                                onChange={setField('module')}
-                                error={fieldErrors.name}
+                                error={toFieldErrorMessage(errors.module?.message, tApi)}
+                                reserveErrorSpace
                                 disabled={create.isPending}
                                 className="font-mono"
                                 labelClassName={ON_CARD_LABEL_CLASS}
+                                {...register('module')}
                             />
                             <FloatInput
                                 label={t('fieldPermissionResource')}
-                                name="resource"
-                                value={values.resource}
-                                onChange={setField('resource')}
+                                error={toFieldErrorMessage(errors.resource?.message, tApi)}
+                                reserveErrorSpace
                                 disabled={create.isPending}
                                 className="font-mono"
                                 labelClassName={ON_CARD_LABEL_CLASS}
+                                {...register('resource')}
                             />
                             <FloatInput
                                 label={t('fieldPermissionAction')}
-                                name="action"
-                                value={values.action}
-                                onChange={setField('action')}
+                                error={toFieldErrorMessage(errors.action?.message, tApi)}
+                                reserveErrorSpace
                                 disabled={create.isPending}
                                 className="font-mono"
                                 labelClassName={ON_CARD_LABEL_CLASS}
+                                {...register('action')}
                             />
                         </div>
                         <label className="flex cursor-pointer items-center gap-2 text-sm">
-                            <Checkbox
-                                checked={scopedToAny}
-                                disabled={create.isPending}
-                                onCheckedChange={(checked) => setScopedToAny(checked === true)}
+                            <Controller
+                                control={control}
+                                name="scopedToAny"
+                                render={({ field }) => (
+                                    <Checkbox
+                                        checked={field.value}
+                                        disabled={create.isPending}
+                                        onCheckedChange={(checked) => field.onChange(checked === true)}
+                                    />
+                                )}
                             />
                             {t('fieldPermissionScopeAny')}
                         </label>
@@ -136,12 +148,11 @@ export function PermissionForm({ actorId }: PermissionFormProps) {
                     <FormSection title={t('permissionSectionInfo')} description={t('permissionInfoDescription')}>
                         <FloatInput
                             label={t('fieldPermissionDisplayName')}
-                            name="displayName"
-                            value={values.displayName}
-                            onChange={setField('displayName')}
-                            error={fieldErrors.displayName}
+                            error={toFieldErrorMessage(errors.displayName?.message, tApi)}
+                            reserveErrorSpace
                             disabled={create.isPending}
                             labelClassName={ON_CARD_LABEL_CLASS}
+                            {...register('displayName')}
                         />
                     </FormSection>
                 </div>

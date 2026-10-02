@@ -44,6 +44,7 @@ export interface FloatMultiSelectProps {
     disabled?: boolean
     className?: string
     labelClassName?: string
+    reserveErrorSpace?: boolean
 }
 
 const toOptions = (options: readonly FloatOption[], values: readonly string[] | undefined) =>
@@ -64,6 +65,7 @@ export function FloatMultiSelect({
     disabled,
     className,
     labelClassName,
+    reserveErrorSpace,
 }: FloatMultiSelectProps) {
     // ===== Hooks =====
     const t = useTranslations('common')
@@ -141,7 +143,12 @@ export function FloatMultiSelect({
                     </ComboboxList>
                 </ComboboxContent>
             </Combobox>
-            <FloatFieldDescription id={descriptionId} error={error} helperText={helperText} />
+            <FloatFieldDescription
+                id={descriptionId}
+                error={error}
+                helperText={helperText}
+                reserveErrorSpace={reserveErrorSpace}
+            />
         </div>
     )
 }

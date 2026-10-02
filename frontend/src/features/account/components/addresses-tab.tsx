@@ -70,6 +70,7 @@ export function AddressesTab() {
         formState: { errors, isSubmitting },
     } = useForm<AddressFormValues>({
         resolver: zodResolver(AddressFormSchema),
+        mode: 'onChange',
         defaultValues: {
             fullName: '',
             phone: '',
@@ -253,6 +254,7 @@ export function AddressesTab() {
                                     label={t('fullName')}
                                     required
                                     size="sm"
+                                    reserveErrorSpace
                                     error={getErrorText(errors.fullName?.message)}
                                     {...register('fullName')}
                                 />
@@ -260,6 +262,7 @@ export function AddressesTab() {
                                     label={t('phone')}
                                     required
                                     size="sm"
+                                    reserveErrorSpace
                                     error={getErrorText(errors.phone?.message)}
                                     {...register('phone')}
                                 />
@@ -270,6 +273,7 @@ export function AddressesTab() {
                                     label={t('province')}
                                     required
                                     size="sm"
+                                    reserveErrorSpace
                                     error={getErrorText(errors.provinceName?.message)}
                                     {...register('provinceName')}
                                 />
@@ -277,6 +281,7 @@ export function AddressesTab() {
                                     label={t('district')}
                                     required
                                     size="sm"
+                                    reserveErrorSpace
                                     error={getErrorText(errors.districtName?.message)}
                                     {...register('districtName')}
                                 />
@@ -284,6 +289,7 @@ export function AddressesTab() {
                                     label={t('ward')}
                                     required
                                     size="sm"
+                                    reserveErrorSpace
                                     error={getErrorText(errors.wardName?.message)}
                                     {...register('wardName')}
                                 />
@@ -293,6 +299,7 @@ export function AddressesTab() {
                                 label={t('addressLine1')}
                                 required
                                 size="sm"
+                                reserveErrorSpace
                                 error={getErrorText(errors.addressLine1?.message)}
                                 {...register('addressLine1')}
                             />

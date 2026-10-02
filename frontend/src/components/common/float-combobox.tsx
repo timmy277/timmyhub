@@ -21,18 +21,31 @@ function findOption(options: readonly FloatOption[], value: string | null | unde
     return options.find((option) => option.value === value) ?? null
 }
 
-// Dòng mô tả/lỗi dưới field — dùng chung cho FloatCombobox và FloatMultiSelect.
-export function FloatFieldDescription({ id, error, helperText }: { id: string; error?: string; helperText?: string }) {
+export function FloatFieldDescription({
+    id,
+    error,
+    helperText,
+    reserveErrorSpace,
+}: {
+    id: string
+    error?: string
+    helperText?: string
+    reserveErrorSpace?: boolean
+}) {
     const description = error ?? helperText
-    if (!description) return null
+    if (!description && !reserveErrorSpace) return null
 
     return (
         <p
             id={id}
-            className={cn('mt-1.5 text-left text-xs', error ? 'text-destructive' : 'text-muted-foreground')}
+            className={cn(
+                'mt-1.5 text-left text-xs min-h-[1.25rem] leading-relaxed transition-colors',
+                error ? 'text-destructive' : 'text-muted-foreground',
+                !description && 'invisible select-none',
+            )}
             role={error ? 'alert' : undefined}
         >
-            {description}
+            {description || '\u00A0'}
         </p>
     )
 }

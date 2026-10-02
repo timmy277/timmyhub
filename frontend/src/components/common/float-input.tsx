@@ -63,6 +63,7 @@ export interface FloatInputProps
     icon?: ReactNode
     labelClassName?: string
     ref?: Ref<HTMLInputElement>
+    reserveErrorSpace?: boolean
 }
 
 // Input có label nổi (Material-style): label nằm giữa khi rỗng, thu nhỏ lên viền khi focus hoặc có giá trị.
@@ -80,6 +81,7 @@ export function FloatInput({
     id,
     disabled,
     ref,
+    reserveErrorSpace,
     ...props
 }: FloatInputProps) {
     // ===== State =====
@@ -144,13 +146,17 @@ export function FloatInput({
                 )}
             </div>
 
-            {description && (
+            {(description || reserveErrorSpace) && (
                 <p
                     id={descriptionId}
-                    className={cn('mt-1.5 text-left text-xs', error ? 'text-destructive' : 'text-muted-foreground')}
+                    className={cn(
+                        'mt-1.5 text-left text-xs min-h-[1.25rem] leading-relaxed transition-colors',
+                        error ? 'text-destructive' : 'text-muted-foreground',
+                        !description && 'invisible select-none',
+                    )}
                     role={error ? 'alert' : undefined}
                 >
-                    {description}
+                    {description || '\u00A0'}
                 </p>
             )}
         </div>

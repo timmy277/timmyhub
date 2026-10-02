@@ -84,6 +84,7 @@ export function SecurityTab({ user }: SecurityTabProps) {
                             label={t('currentPassword')}
                             required
                             labelClassName={ON_CARD_LABEL_CLASS}
+                            reserveErrorSpace
                             error={getErrorText(errors.currentPassword?.message)}
                             {...register('currentPassword')}
                         />
@@ -94,6 +95,7 @@ export function SecurityTab({ user }: SecurityTabProps) {
                                 label={t('newPassword')}
                                 required
                                 labelClassName={ON_CARD_LABEL_CLASS}
+                                reserveErrorSpace
                                 error={getErrorText(errors.newPassword?.message)}
                                 {...register('newPassword')}
                             />
@@ -103,6 +105,7 @@ export function SecurityTab({ user }: SecurityTabProps) {
                                 label={t('confirmPassword')}
                                 required
                                 labelClassName={ON_CARD_LABEL_CLASS}
+                                reserveErrorSpace
                                 error={getErrorText(errors.confirmPassword?.message)}
                                 {...register('confirmPassword')}
                             />

@@ -28,6 +28,7 @@ export function NotificationsTab() {
         formState: { isSubmitting },
     } = useForm<NotificationPreferencesValues>({
         resolver: zodResolver(NotificationPreferencesSchema),
+        mode: 'onChange',
         defaultValues: {
             orderInApp: true,
             orderEmail: true,

@@ -28,3 +28,8 @@ export function toFieldErrors(issues: readonly ValidationIssue[], t: MessageLook
 
     return fieldErrors
 }
+
+export function toFieldErrorMessage(message: string | undefined, t: MessageLookup): string | undefined {
+    if (!message) return undefined
+    return t.has(message) ? t(message) : message
+}

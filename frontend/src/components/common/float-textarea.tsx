@@ -52,6 +52,7 @@ export interface FloatTextareaProps
     icon?: ReactNode
     labelClassName?: string
     ref?: Ref<HTMLTextAreaElement>
+    reserveErrorSpace?: boolean
 }
 
 // Textarea có label nổi, cùng họ với FloatInput. Dùng `placeholder=" "` + `peer-placeholder-shown` nên không cần
@@ -69,6 +70,7 @@ export function FloatTextarea({
     disabled,
     rows = 4,
     ref,
+    reserveErrorSpace,
     ...props
 }: FloatTextareaProps) {
     // ===== Hooks =====
@@ -106,13 +108,17 @@ export function FloatTextarea({
                 </label>
             </div>
 
-            {description && (
+            {(description || reserveErrorSpace) && (
                 <p
                     id={descriptionId}
-                    className={cn('mt-1.5 text-left text-xs', error ? 'text-destructive' : 'text-muted-foreground')}
+                    className={cn(
+                        'mt-1.5 text-left text-xs min-h-[1.25rem] leading-relaxed transition-colors',
+                        error ? 'text-destructive' : 'text-muted-foreground',
+                        !description && 'invisible select-none',
+                    )}
                     role={error ? 'alert' : undefined}
                 >
-                    {description}
+                    {description || '\u00A0'}
                 </p>
             )}
         </div>
