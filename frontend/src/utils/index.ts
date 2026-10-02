@@ -1,5 +1,6 @@
 export * from './cn'
 export * from './date'
+export * from './file'
 export * from './initials'
 export * from './pagination'
 export * from './random'

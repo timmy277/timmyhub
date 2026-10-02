@@ -170,7 +170,10 @@ const ENGAGEMENT_CHAT_NOTIFICATION = [
 // §4.10 search · media · analytics · audit · masterdata
 const SEARCH_MEDIA_ANALYTICS_AUDIT_MASTERDATA = [
     perm('search', 'index', 'reindex', 'Chạy reindex', [UserRole.ADMIN]),
-    perm('media', 'files', 'upload', 'Tải tệp lên', [UserRole.USER]),
+    perm('media', 'files', 'upload', 'Tải tệp lên', [UserRole.USER, UserRole.SELLER, UserRole.BRAND]),
+    perm('media', 'files', 'confirm', 'Xác nhận upload presigned', [UserRole.USER, UserRole.SELLER, UserRole.BRAND]),
+    perm('media', 'files', 'list', 'Xem danh sách tệp đã upload', [UserRole.USER, UserRole.SELLER, UserRole.ADMIN]),
+    perm('media', 'files', 'read', 'Xem chi tiết tệp', [UserRole.USER, UserRole.SELLER, UserRole.ADMIN]),
     perm('media', 'files', 'delete:any', 'Xoá tệp bất kỳ', [UserRole.ADMIN]),
     perm('analytics', 'shop', 'read', 'Xem báo cáo shop của mình', [UserRole.SELLER]),
     perm('analytics', 'platform', 'read', 'Xem báo cáo toàn sàn', [UserRole.ADMIN]),

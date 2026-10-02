@@ -4,6 +4,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter'
 
 import { CatalogModule } from '@timmyhub/modules/catalog'
 import { IdentityModule } from '@timmyhub/modules/identity'
+import { MediaModule } from '@timmyhub/modules/media'
 import { PlatformModule } from '@timmyhub/modules/platform'
 import { PrismaModule } from '@timmyhub/prisma'
 
@@ -15,6 +16,7 @@ import { PrismaModule } from '@timmyhub/prisma'
         PlatformModule,
         IdentityModule,
         CatalogModule,
+        MediaModule,
     ],
 })
 export class AppModule {}

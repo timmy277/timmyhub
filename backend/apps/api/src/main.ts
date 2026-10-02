@@ -1,4 +1,7 @@
+import { resolve } from 'node:path'
+
 import { NestFactory } from '@nestjs/core'
+import { NestExpressApplication } from '@nestjs/platform-express'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 
 import { ApiExceptionFilter } from '@timmyhub/common'
@@ -6,7 +9,7 @@ import { ApiExceptionFilter } from '@timmyhub/common'
 import { AppModule } from './app.module'
 
 async function bootstrap(): Promise<void> {
-    const app = await NestFactory.create(AppModule)
+    const app = await NestFactory.create<NestExpressApplication>(AppModule)
     // Chạy OnModuleDestroy/OnApplicationShutdown khi nhận SIGTERM/SIGINT — PrismaService ngắt kết nối DB êm.
     app.enableShutdownHooks()
     app.useGlobalFilters(new ApiExceptionFilter())
@@ -15,6 +18,9 @@ async function bootstrap(): Promise<void> {
         .map((origin) => origin.trim())
         .filter(Boolean)
     app.enableCors({ origin: corsOrigins, credentials: true })
+
+    // Serve static uploads folder for local development (fallback khi không dùng Supabase/R2)
+    app.useStaticAssets(resolve(process.cwd(), 'uploads'), { prefix: '/uploads' })
 
     // Chỉ bật Swagger UI ngoài production — /docs không nên lộ ra môi trường thật.
     if (process.env.NODE_ENV !== 'production') {

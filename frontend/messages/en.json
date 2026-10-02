@@ -183,7 +183,8 @@
     "loggedOut": "Logged out",
     "roles": "Roles",
     "permissions": "Permissions",
-    "audit": "Audit log"
+    "audit": "Audit log",
+    "media": "Media & Uploads"
   },
   "theme": {
     "triggerLabel": "Open theme customizer",

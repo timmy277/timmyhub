@@ -24,4 +24,9 @@ export const QUERY_KEY = {
         LIST: ['audit', 'list'] as const,
         DETAIL: (logId: string) => ['audit', 'detail', logId] as const,
     },
+    MEDIA: {
+        ALL: ['media'] as const,
+        LIST: (filters?: Record<string, unknown>) => ['media', 'list', filters] as const,
+        DETAIL: (id: string) => ['media', 'detail', id] as const,
+    },
 } as const

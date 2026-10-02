@@ -2,4 +2,5 @@
 // Import domain qua subpath riêng (@timmyhub/modules/identity, /catalog, /platform), đây chỉ export phần dùng chung.
 export { IdentityModule, IdentityService } from './identity/index'
 export { CatalogModule, CatalogService } from './catalog/index'
+export { MediaModule, MediaService } from './media/index'
 export { PlatformModule, PlatformService } from './platform/index'

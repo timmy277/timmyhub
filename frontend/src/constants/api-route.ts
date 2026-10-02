@@ -47,4 +47,12 @@ export const API_ROUTE = {
         USER_EFFECTIVE_PERMISSIONS: (userId: string) =>
             `v1/rbac/users/${encodeURIComponent(userId)}/effective-permissions`,
     },
+    MEDIA: {
+        UPLOAD: 'media/upload',
+        PRESIGNED_URL: 'media/presigned-url',
+        CONFIRM: 'media/confirm',
+        LIST: 'media',
+        DETAIL: (id: string) => `media/${encodeURIComponent(id)}`,
+        DELETE: (id: string) => `media/${encodeURIComponent(id)}`,
+    },
 } as const
