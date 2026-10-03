@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { LayoutGridIcon } from 'lucide-react'
+import { LayoutGridIcon, StoreIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 
 import { LocaleSwitcher, NotificationMenu, ThemeMenu, ThemeModeToggle, UserMenu } from '@/components/common'
@@ -10,11 +10,15 @@ import { getActor } from '@/lib/actor-permissions'
 
 // AppBar độc lập trên trang chủ — không bị bọc trong sidebar.
 // Hiển thị logo TimmyHub, các công cụ đổi theme/ngôn ngữ, thông báo, menu tài khoản.
-// Nếu tài khoản có quyền vào dashboard (ADMIN+), hiển thị thêm nút chuyển nhanh vào Dashboard.
+// Luôn hiển thị nút vào Kênh Người Bán / Đăng ký bán hàng cho người dùng,
+// và nếu tài khoản có quyền vào dashboard (ADMIN+), hiển thị thêm nút Dashboard.
 export async function HomeHeader() {
     const t = await getTranslations('nav')
     const actor = await getActor()
     const canAccessDashboard = actor?.permissions.has(DASHBOARD_PERMISSION) ?? false
+    const isSeller = actor?.permissions.has('seller:shops:update') ?? false
+    const sellerRoute = isSeller ? ROUTE.SELLER_PORTAL : ROUTE.SELLER_REGISTER
+    const sellerLabel = isSeller ? t('sellerPortal') : t('becomeSeller')
 
     return (
         <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 px-4 sm:px-6 backdrop-blur-md">
@@ -28,6 +32,13 @@ export async function HomeHeader() {
                     </div>
                     <span className="tracking-tight">{t('brand')}</span>
                 </Link>
+
+                <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex gap-1.5 h-8">
+                    <Link href={sellerRoute}>
+                        <StoreIcon className="size-3.5 text-muted-foreground" />
+                        <span>{sellerLabel}</span>
+                    </Link>
+                </Button>
 
                 {canAccessDashboard && (
                     <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex gap-1.5 h-8">

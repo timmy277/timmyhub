@@ -3,7 +3,7 @@
 import { useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
-import { BadgeCheckIcon, LayoutGridIcon, LogOutIcon } from 'lucide-react'
+import { BadgeCheckIcon, LayoutGridIcon, LogOutIcon, StoreIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -37,6 +37,9 @@ export function UserMenu() {
 
     const { hasPermission } = usePermissions()
     const canAccessDashboard = hasPermission(DASHBOARD_PERMISSION)
+    const isSeller = hasPermission('seller:shops:update')
+    const sellerRoute = isSeller ? ROUTE.SELLER_PORTAL : ROUTE.SELLER_REGISTER
+    const sellerLabel = isSeller ? t('sellerPortal') : t('becomeSeller')
 
     // Tự động tải profile thực tế từ backend; query key 'users' sẽ tự invalidate khi có mutation sửa user
     const { data: backendProfile } = useQuery({
@@ -111,6 +114,12 @@ export function UserMenu() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
+                        <DropdownMenuItem asChild>
+                            <Link href={sellerRoute}>
+                                <StoreIcon aria-hidden />
+                                {sellerLabel}
+                            </Link>
+                        </DropdownMenuItem>
                         {canAccessDashboard && (
                             <DropdownMenuItem asChild>
                                 <Link href={ROUTE.DASHBOARD}>
