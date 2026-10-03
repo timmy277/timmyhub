@@ -3,4 +3,5 @@
 export { IdentityModule, IdentityService } from './identity/index'
 export { CatalogModule, CatalogService } from './catalog/index'
 export { MediaModule, MediaService } from './media/index'
+export { SellerModule, SellerService } from './seller/index'
 export { PlatformModule, PlatformService } from './platform/index'

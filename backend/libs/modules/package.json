@@ -22,6 +22,10 @@
       "types": "./dist/media/index.d.ts",
       "default": "./dist/media/index.js"
     },
+    "./seller": {
+      "types": "./dist/seller/index.d.ts",
+      "default": "./dist/seller/index.js"
+    },
     "./platform": {
       "types": "./dist/platform/index.d.ts",
       "default": "./dist/platform/index.js"
