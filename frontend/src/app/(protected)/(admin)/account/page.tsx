@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
 import { AccountShell } from '@/features/account'
+import { getCurrentUserDetailAction } from '@/features/users'
 
 export const metadata: Metadata = {
     title: 'Cài đặt tài khoản · TimmyHub',
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
     },
 }
 
-export default function AccountPage() {
-    return <AccountShell />
+export default async function AccountPage() {
+    const user = await getCurrentUserDetailAction()
+    return <AccountShell initialUser={user} />
 }

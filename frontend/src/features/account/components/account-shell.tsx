@@ -6,6 +6,8 @@ import { BellIcon, CalendarIcon, CheckCircle2Icon, LockIcon, MapPinIcon, ShieldC
 import { useTranslations } from 'next-intl'
 import { useSession } from 'next-auth/react'
 
+import type { UserDetail } from '@timmyhub/contracts'
+
 import { UserAvatar } from '@/components/common'
 import { Badge, Button, Card, Skeleton } from '@/components/ui'
 import { QUERY_KEY } from '@/constants'
@@ -30,7 +32,11 @@ const NAV_ITEMS: {
     { key: 'notifications', labelKey: 'tabs.notifications', icon: BellIcon },
 ]
 
-export function AccountShell() {
+export interface AccountShellProps {
+    initialUser?: UserDetail | null
+}
+
+export function AccountShell({ initialUser }: AccountShellProps = {}) {
     const t = useTranslations('account')
     const tCommon = useTranslations('common')
     const { data: session } = useSession()
@@ -45,6 +51,7 @@ export function AccountShell() {
     } = useQuery({
         queryKey: QUERY_KEY.USERS.ME,
         queryFn: () => getCurrentUserDetailAction(),
+        initialData: initialUser ?? undefined,
         staleTime: 30_000,
         enabled: Boolean(session?.user?.id),
     })
@@ -132,7 +139,7 @@ export function AccountShell() {
                                     </div>
                                 )}
                                 <div className="flex items-center gap-1.5">
-                                    {(user.roles ?? []).map((role) => (
+                                    {(user.roles ?? []).map((role: string) => (
                                         <Badge
                                             key={role}
                                             variant="secondary"

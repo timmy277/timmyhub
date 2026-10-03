@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
@@ -10,7 +10,7 @@ import { toast } from 'sonner'
 import type { CreateSellerApplicationInput, SellerApplicationDetail } from '@timmyhub/contracts'
 import { CreateSellerApplicationSchema, ResourceStatus } from '@timmyhub/contracts'
 
-import { ROUTE } from '@/constants'
+import { QUERY_KEY, ROUTE } from '@/constants'
 import {
     Alert,
     AlertDescription,
@@ -26,7 +26,7 @@ import {
     FloatTextarea,
 } from '@/components'
 
-import { submitSellerApplicationAction } from '../actions'
+import { getMyApplicationsAction, submitSellerApplicationAction } from '../actions'
 
 interface SellerRegistrationFormProps {
     initialApplications?: SellerApplicationDetail[]
@@ -37,11 +37,34 @@ export function SellerRegistrationForm({
     initialApplications = [],
     isAlreadySeller = false,
 }: SellerRegistrationFormProps) {
-    // ===== State =====
-    const [applications, setApplications] = useState<SellerApplicationDetail[]>(initialApplications)
-    const [submitting, setSubmitting] = useState(false)
-
     // ===== Hooks =====
+    const queryClient = useQueryClient()
+
+    const { data: applications = initialApplications } = useQuery({
+        queryKey: QUERY_KEY.SELLER.APPLICATIONS,
+        queryFn: async () => {
+            const res = await getMyApplicationsAction()
+            return res.ok && res.data ? res.data : []
+        },
+        initialData: initialApplications,
+    })
+
+    const submitMutation = useMutation({
+        mutationFn: submitSellerApplicationAction,
+        onSuccess: (res) => {
+            if (res.ok) {
+                toast.success('Đã gửi đơn đăng ký bán hàng thành công! Vui lòng chờ quản trị viên phê duyệt.')
+                void queryClient.invalidateQueries({ queryKey: QUERY_KEY.SELLER.APPLICATIONS })
+                form.reset()
+            } else {
+                toast.error(res.message || 'Không thể gửi đơn đăng ký. Vui lòng kiểm tra lại thông tin.')
+            }
+        },
+        onError: () => {
+            toast.error('Đã xảy ra lỗi khi gửi đơn đăng ký. Vui lòng thử lại sau.')
+        },
+    })
+
     const form = useForm<CreateSellerApplicationInput>({
         resolver: zodResolver(CreateSellerApplicationSchema),
         defaultValues: {
@@ -58,22 +81,8 @@ export function SellerRegistrationForm({
     const latestApp = applications[0]
 
     // ===== Handlers =====
-    const onSubmit = async (values: CreateSellerApplicationInput) => {
-        setSubmitting(true)
-        try {
-            const res = await submitSellerApplicationAction(values)
-            if (res.ok) {
-                toast.success('Đã gửi đơn đăng ký bán hàng thành công! Vui lòng chờ quản trị viên phê duyệt.')
-                setApplications((prev) => [res.data, ...prev])
-                form.reset()
-            } else {
-                toast.error(res.message || 'Không thể gửi đơn đăng ký. Vui lòng kiểm tra lại thông tin.')
-            }
-        } catch {
-            toast.error('Đã xảy ra lỗi khi gửi đơn đăng ký. Vui lòng thử lại sau.')
-        } finally {
-            setSubmitting(false)
-        }
+    const onSubmit = (values: CreateSellerApplicationInput) => {
+        submitMutation.mutate(values)
     }
 
     if (isAlreadySeller) {
@@ -194,9 +203,13 @@ export function SellerRegistrationForm({
 
                             {/* Submit Button */}
                             <div className="pt-4 flex justify-end">
-                                <Button type="submit" disabled={submitting} className="rounded-xl px-6 gap-2">
+                                <Button
+                                    type="submit"
+                                    disabled={submitMutation.isPending}
+                                    className="rounded-xl px-6 gap-2"
+                                >
                                     <Send className="size-4" />
-                                    <span>{submitting ? 'Đang gửi đơn…' : 'Gửi đơn đăng ký'}</span>
+                                    <span>{submitMutation.isPending ? 'Đang gửi đơn…' : 'Gửi đơn đăng ký'}</span>
                                 </Button>
                             </div>
                         </form>
