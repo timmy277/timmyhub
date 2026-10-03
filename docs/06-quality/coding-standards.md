@@ -203,7 +203,7 @@ export class RbacService {
 | Quy tắc | Lý do |
 |---|---|
 | Mặc định là Server Component; `'use client'` đặt ở **lá** nhỏ nhất | Giảm JS gửi xuống |
-| Không `useEffect` để lấy dữ liệu | Dùng RSC hoặc TanStack Query |
+| Mọi data fetching bắt buộc qua Server Component hoặc TanStack Query; cấm fetch trong `useEffect` | Dùng RSC truyền `initialData` hoặc `useQuery` kết hợp `QUERY_KEY` factory |
 | Không giữ state máy chủ trong Zustand | Zustand chỉ cho UI state (mở/đóng, bộ lọc chưa áp dụng) |
 | Mọi form qua `react-hook-form` + `zodResolver`, dùng **chung schema** với backend | Một nguồn quy tắc |
 | Mọi danh sách có trạng thái: loading, rỗng, lỗi, không có quyền | Bản cũ thiếu toàn bộ |

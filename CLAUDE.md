@@ -65,7 +65,7 @@ Mục lục đầy đủ và lối đọc theo vai trò: `docs/README.md`.
 10. Chỉ dùng token của design system. Animation chỉ `transform` và `opacity`. Tôn trọng `prefers-reduced-motion`.
 11. WCAG 2.2 AA: tương phản ≥ 4.5:1, vùng bấm ≥ 24×24 px, dùng được bằng bàn phím, ưu tiên primitive Radix.
 12. Thư viện nặng (TipTap, Uppy, `hls.js`, AG Grid, Recharts, Motion) **phải** `next/dynamic` — 0 KB vào gói chung.
-13. Mặc định là Server Component; `'use client'` đặt ở phạm vi nhỏ nhất. Không fetch dữ liệu trong `useEffect`.
+13. Mặc định là Server Component; `'use client'` đặt ở phạm vi nhỏ nhất. Mọi việc lấy dữ liệu (data fetching) BẮT BUỘC thực hiện ở Server Component (`page.tsx` fetch và truyền `initialData`) hoặc dùng TanStack Query (`useQuery` kết hợp `QUERY_KEY` factory). Tuyệt đối cấm dùng `useEffect` + `useState(loading)` hoặc gọi API client thủ công.
 
 **Chung**
 
