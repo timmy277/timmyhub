@@ -8,6 +8,13 @@ export const OUTBOX_EVENT = {
     USER_ROLE_GRANTED: 'user.role-granted',
     USER_ROLE_REVOKED: 'user.role-revoked',
     RBAC_PERMISSIONS_CHANGED: 'rbac.permissions.changed',
+    // domain seller — docs/03-specs/seller-onboarding/design.md §3
+    SELLER_APPLICATION_SUBMITTED: 'seller.application.submitted',
+    SELLER_APPLICATION_APPROVED: 'seller.application.approved',
+    SELLER_APPLICATION_REJECTED: 'seller.application.rejected',
+    SELLER_SHOP_UPDATED: 'seller.shop.updated',
+    SELLER_SHOP_SUSPENDED: 'seller.shop.suspended',
+    SELLER_SHOP_RESTORED: 'seller.shop.restored',
 } as const
 
 export type OutboxEventType = (typeof OUTBOX_EVENT)[keyof typeof OUTBOX_EVENT]
@@ -15,6 +22,7 @@ export type OutboxEventType = (typeof OUTBOX_EVENT)[keyof typeof OUTBOX_EVENT]
 // aggregateType của outbox = service sở hữu aggregate (service-catalog.md).
 export const OUTBOX_AGGREGATE = {
     IDENTITY: 'identity',
+    SELLER: 'seller',
 } as const
 
 export type OutboxAggregateType = (typeof OUTBOX_AGGREGATE)[keyof typeof OUTBOX_AGGREGATE]

@@ -28,6 +28,14 @@ export const API_MESSAGES_EN: ApiMessageCatalog = {
         PERMISSION_ALREADY_EXISTS: 'The permission already exists.',
         CANNOT_ESCALATE_PRIVILEGE: 'You cannot grant more than your own privileges.',
         CANNOT_REMOVE_LAST_ROLE: 'A user must keep at least one role.',
+        SELLER_APPLICATION_NOT_FOUND: 'Seller application not found.',
+        SELLER_APPLICATION_ALREADY_PENDING: 'You already have a pending seller application.',
+        ALREADY_A_SELLER: 'Your account is already a seller (shop already approved).',
+        SELLER_APPLICATION_NOT_PENDING: 'The application is not in pending status.',
+        SELLER_APPLICATION_COOLDOWN: 'Please wait 24 hours from the last rejection before reapplying.',
+        SELLER_SHOP_NOT_FOUND: 'Shop not found.',
+        SELLER_SHOP_ALREADY_EXISTS: 'Shop name or slug already exists.',
+        SELLER_SHOP_SUSPENDED: 'The shop is currently suspended due to policy violations.',
     },
     auth: {
         missingAccessToken: 'The access token is missing.',
@@ -36,6 +44,17 @@ export const API_MESSAGES_EN: ApiMessageCatalog = {
     },
     identity: {
         userNotFound: 'The user does not exist.',
+    },
+    seller: {
+        applicationNotFound: 'Seller application not found.',
+        applicationAlreadyPending: 'You already have a pending seller application.',
+        alreadyASeller: 'Your account is already a seller (shop already approved).',
+        applicationNotPending: 'The application is not in pending status.',
+        applicationCooldown: 'Please wait 24 hours from the last rejection before reapplying.',
+        reviewNoteRequiredOnReject: 'A reason is required when rejecting an application.',
+        shopNotFound: 'Shop not found.',
+        shopAlreadyExists: 'Shop name or slug already exists, please choose another name.',
+        shopSuspended: 'The shop is currently suspended due to policy violations.',
     },
     audit: {
         logNotFound: 'The audit log entry does not exist.',

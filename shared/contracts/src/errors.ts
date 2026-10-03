@@ -32,6 +32,15 @@ export const API_ERROR_CODES = {
     PERMISSION_ALREADY_EXISTS: { status: 409 },
     CANNOT_ESCALATE_PRIVILEGE: { status: 403 },
     CANNOT_REMOVE_LAST_ROLE: { status: 422 },
+    // domain seller — docs/03-specs/seller-onboarding/design.md
+    SELLER_APPLICATION_NOT_FOUND: { status: 404 },
+    SELLER_APPLICATION_ALREADY_PENDING: { status: 409 },
+    ALREADY_A_SELLER: { status: 409 },
+    SELLER_APPLICATION_NOT_PENDING: { status: 409 },
+    SELLER_APPLICATION_COOLDOWN: { status: 429 },
+    SELLER_SHOP_NOT_FOUND: { status: 404 },
+    SELLER_SHOP_ALREADY_EXISTS: { status: 409 },
+    SELLER_SHOP_SUSPENDED: { status: 403 },
 } as const
 
 export type ApiErrorCode = keyof typeof API_ERROR_CODES

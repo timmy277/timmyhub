@@ -31,6 +31,14 @@ export const API_MESSAGES_VI = {
         PERMISSION_ALREADY_EXISTS: 'Permission đã tồn tại.',
         CANNOT_ESCALATE_PRIVILEGE: 'Không thể cấp quyền vượt quá quyền của bạn.',
         CANNOT_REMOVE_LAST_ROLE: 'Người dùng phải còn ít nhất một vai trò.',
+        SELLER_APPLICATION_NOT_FOUND: 'Không tìm thấy đơn đăng ký bán hàng.',
+        SELLER_APPLICATION_ALREADY_PENDING: 'Bạn đã có đơn đăng ký bán hàng đang chờ xét duyệt.',
+        ALREADY_A_SELLER: 'Tài khoản của bạn đã là người bán (shop đã được duyệt).',
+        SELLER_APPLICATION_NOT_PENDING: 'Đơn đăng ký không ở trạng thái chờ duyệt.',
+        SELLER_APPLICATION_COOLDOWN: 'Vui lòng đợi 24 giờ kể từ lần bị từ chối gần nhất trước khi nộp lại đơn.',
+        SELLER_SHOP_NOT_FOUND: 'Không tìm thấy thông tin shop.',
+        SELLER_SHOP_ALREADY_EXISTS: 'Tên shop hoặc đường dẫn (slug) đã tồn tại.',
+        SELLER_SHOP_SUSPENDED: 'Shop hiện đang bị tạm ngưng hoạt động do vi phạm chính sách.',
     } satisfies Record<ApiErrorCode, string>,
     auth: {
         missingAccessToken: 'Thiếu access token.',
@@ -39,6 +47,17 @@ export const API_MESSAGES_VI = {
     },
     identity: {
         userNotFound: 'Người dùng không tồn tại.',
+    },
+    seller: {
+        applicationNotFound: 'Không tìm thấy đơn đăng ký bán hàng.',
+        applicationAlreadyPending: 'Bạn đã có đơn đăng ký bán hàng đang chờ xét duyệt.',
+        alreadyASeller: 'Tài khoản của bạn đã là người bán (shop đã được duyệt).',
+        applicationNotPending: 'Đơn đăng ký không ở trạng thái chờ duyệt.',
+        applicationCooldown: 'Vui lòng đợi 24 giờ kể từ lần bị từ chối gần nhất trước khi nộp lại đơn.',
+        reviewNoteRequiredOnReject: 'Bắt buộc nhập lý do khi từ chối đơn đăng ký.',
+        shopNotFound: 'Không tìm thấy thông tin shop.',
+        shopAlreadyExists: 'Tên shop hoặc đường dẫn (slug) đã tồn tại, vui lòng chọn tên khác.',
+        shopSuspended: 'Shop hiện đang bị tạm ngưng hoạt động do vi phạm chính sách.',
     },
     audit: {
         logNotFound: 'Bản ghi kiểm toán không tồn tại.',
