@@ -1,0 +1,94 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ['CI']
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target Deployment Environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+concurrency:
+  group: cd-${{ github.ref }}-${{ inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' && inputs.environment == 'staging' ||
+      github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    environment:
+      name: staging
+      url: https://staging.timmyhub.dev
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter @timmyhub/prisma prisma:generate
+
+      - name: Build Application Artifacts
+        run: pnpm build
+
+      - name: Deploy Staging Application
+        run: |
+          echo "Deploying TimmyHub to Staging environment..."
+          # Ready for deployment scripts / container push / webhook
+          echo "Staging deployment completed successfully."
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'production'
+    environment:
+      name: production
+      url: https://timmyhub.dev
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter @timmyhub/prisma prisma:generate
+
+      - name: Build Application Artifacts
+        run: pnpm build
+
+      - name: Deploy Production Application
+        run: |
+          echo "Deploying TimmyHub to Production environment..."
+          # Ready for production deployment scripts / container push / webhook
+          echo "Production deployment completed successfully."

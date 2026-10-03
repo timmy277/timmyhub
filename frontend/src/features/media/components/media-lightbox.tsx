@@ -1,15 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import {
-    X,
-    Download,
-    Copy,
-    Check,
-    Film,
-    Image as ImageIcon,
-    ExternalLink,
-} from 'lucide-react'
+import { X, Download, Copy, Check, Film, Image as ImageIcon, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 
 export interface MediaLightboxItem {
