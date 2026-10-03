@@ -2,6 +2,7 @@
 // viết dựng trên các primitive này (field `float-*`, `ag-grid-table`, `ConfirmDialog`…) nằm ở `components/common/`.
 // File này KHÔNG do `shadcn add` tự sinh/cập nhật — mỗi lần thêm component mới bằng CLI phải tự thêm một dòng export
 // tương ứng ở đây.
+export * from './alert'
 export * from './alert-dialog'
 export * from './avatar'
 export * from './badge'

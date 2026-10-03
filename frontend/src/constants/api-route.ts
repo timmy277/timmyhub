@@ -55,4 +55,17 @@ export const API_ROUTE = {
         DETAIL: (id: string) => `media/${encodeURIComponent(id)}`,
         DELETE: (id: string) => `media/${encodeURIComponent(id)}`,
     },
+    SELLER: {
+        APPLICATIONS: 'v1/seller/applications',
+        APPLICATIONS_ME: 'v1/seller/applications/me',
+        SHOP_ME: 'v1/seller/shop/me',
+        PUBLIC_SHOP: (slug: string) => `v1/shops/${encodeURIComponent(slug)}`,
+        ADMIN_APPLICATIONS: 'v1/admin/seller/applications',
+        ADMIN_APPLICATION_DETAIL: (id: string) => `v1/admin/seller/applications/${encodeURIComponent(id)}`,
+        ADMIN_APPLICATION_APPROVE: (id: string) => `v1/admin/seller/applications/${encodeURIComponent(id)}/approve`,
+        ADMIN_APPLICATION_REJECT: (id: string) => `v1/admin/seller/applications/${encodeURIComponent(id)}/reject`,
+        ADMIN_SHOP_VERIFY: (id: string) => `v1/admin/seller/shops/${encodeURIComponent(id)}/verify`,
+        ADMIN_SHOP_SUSPEND: (id: string) => `v1/admin/seller/shops/${encodeURIComponent(id)}/suspend`,
+        ADMIN_SHOP_RESTORE: (id: string) => `v1/admin/seller/shops/${encodeURIComponent(id)}/restore`,
+    },
 } as const

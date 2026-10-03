@@ -66,3 +66,6 @@ export function toRbacPermissionFlags(permissions: ReadonlySet<string>): RbacPer
 
 // Quyền xem dashboard / báo cáo toàn sàn — chỉ ADMIN+ mới có `analytics:platform:read`.
 export const DASHBOARD_PERMISSION = 'analytics:platform:read' as const satisfies PermissionName
+
+// Quyền quản lý duyệt đơn đăng ký người bán — dành cho ADMIN
+export const SELLER_APPLICATIONS_PERMISSION = 'seller:applications:list' as const satisfies PermissionName

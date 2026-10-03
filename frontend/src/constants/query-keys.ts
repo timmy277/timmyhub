@@ -31,4 +31,10 @@ export const QUERY_KEY = {
         LIST: (filters?: Record<string, unknown>) => ['media', 'list', filters] as const,
         DETAIL: (id: string) => ['media', 'detail', id] as const,
     },
+    SELLER: {
+        ALL: ['seller'] as const,
+        MY_SHOP: ['seller', 'my-shop'] as const,
+        APPLICATIONS: ['seller', 'applications'] as const,
+        APPLICATION_DETAIL: (id: string) => ['seller', 'applications', id] as const,
+    },
 } as const

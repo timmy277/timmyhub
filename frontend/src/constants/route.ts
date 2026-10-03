@@ -9,4 +9,7 @@ export const ROUTE = {
     MEDIA: '/media',
     ACCOUNT: '/account',
     LOGIN: '/login',
+    SELLER_REGISTER: '/seller/register',
+    SELLER_PORTAL: '/seller/portal',
+    ADMIN_SELLER_APPLICATIONS: '/seller-applications',
 } as const
