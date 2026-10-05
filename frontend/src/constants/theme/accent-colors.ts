@@ -7,14 +7,14 @@
 import type { AccentColor } from '@/types'
 
 export const ACCENT_COLORS = [
-    { id: 'nova', label: 'Nova', swatch: '#00a76f', foreground: '#031a10' },
-    { id: 'sky', label: 'Sky', swatch: '#0284c7', foreground: '#0a0a0a' },
+    { id: 'nova', label: 'Nova', swatch: '#00a76f', foreground: '#ffffff' },
+    { id: 'sky', label: 'Sky', swatch: '#0284c7', foreground: '#ffffff' },
     { id: 'indigo', label: 'Indigo', swatch: '#4f46e5', foreground: '#ffffff' },
     { id: 'violet', label: 'Violet', swatch: '#7c3aed', foreground: '#ffffff' },
     { id: 'rose', label: 'Rose', swatch: '#e11d48', foreground: '#ffffff' },
-    { id: 'orange', label: 'Orange', swatch: '#ea580c', foreground: '#0a0a0a' },
-    { id: 'teal', label: 'Teal', swatch: '#0d9488', foreground: '#0a0a0a' },
-    { id: 'amber', label: 'Amber', swatch: '#d97706', foreground: '#0a0a0a' },
+    { id: 'orange', label: 'Orange', swatch: '#ea580c', foreground: '#ffffff' },
+    { id: 'teal', label: 'Teal', swatch: '#0d9488', foreground: '#ffffff' },
+    { id: 'amber', label: 'Amber', swatch: '#d97706', foreground: '#ffffff' },
 ] as const satisfies readonly AccentColor[]
 
 export type AccentColorId = (typeof ACCENT_COLORS)[number]['id']
