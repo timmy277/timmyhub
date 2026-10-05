@@ -74,15 +74,24 @@ export function HomeFooter() {
             <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
                 <div className="absolute -top-24 left-1/4 size-96 rounded-full bg-primary/10 blur-[100px]" />
                 <div className="absolute bottom-0 right-1/4 size-80 rounded-full bg-primary/10 blur-[90px]" />
-                <IconPath name="gemini-star" className="absolute top-10 left-12 size-5 text-primary/30 animate-pulse" />
-                <IconPath
-                    name="gemini-star"
-                    className="absolute top-20 right-20 size-6 text-primary/25 animate-pulse [animation-duration:3s]"
-                />
-                <IconPath
-                    name="gemini-star"
-                    className="absolute bottom-16 left-1/3 size-4 text-amber-400/30 animate-pulse [animation-duration:4s]"
-                />
+                <div className="group pointer-events-auto absolute top-10 left-12 cursor-pointer select-none transition-transform duration-300 hover:scale-150">
+                    <IconPath
+                        name="gemini-star"
+                        className="size-5 text-primary/30 transition-all duration-300 group-hover:text-primary group-hover:drop-shadow-[0_0_14px_var(--color-primary)] animate-pulse group-hover:[animation-play-state:paused]"
+                    />
+                </div>
+                <div className="group pointer-events-auto absolute top-20 right-20 cursor-pointer select-none transition-transform duration-300 hover:scale-150">
+                    <IconPath
+                        name="gemini-star"
+                        className="size-6 text-primary/25 transition-all duration-300 group-hover:text-primary group-hover:drop-shadow-[0_0_16px_var(--color-primary)] animate-pulse [animation-duration:3s] group-hover:[animation-play-state:paused]"
+                    />
+                </div>
+                <div className="group pointer-events-auto absolute bottom-16 left-1/3 cursor-pointer select-none transition-transform duration-300 hover:scale-150">
+                    <IconPath
+                        name="gemini-star"
+                        className="size-4 text-amber-400/30 transition-all duration-300 group-hover:text-amber-300 group-hover:drop-shadow-[0_0_14px_rgba(251,191,36,0.95)] animate-pulse [animation-duration:4s] group-hover:[animation-play-state:paused]"
+                    />
+                </div>
             </div>
 
             {/* Newsletter Section */}
@@ -92,12 +101,18 @@ export function HomeFooter() {
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
                             <div className="lg:col-span-7 space-y-2">
                                 <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                                    <IconPath name="gemini-star" className="size-3.5 text-primary animate-pulse" />
+                                    <IconPath
+                                        name="gemini-star"
+                                        className="size-3.5 text-primary animate-pulse transition-transform duration-300 hover:scale-125 hover:rotate-12 hover:drop-shadow-[0_0_10px_var(--color-primary)] cursor-pointer"
+                                    />
                                     Bản tin ưu đãi VIP 2026
                                 </div>
                                 <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
                                     Đăng ký nhận voucher giảm đến 50%
-                                    <IconPath name="gemini-star" className="size-5 text-amber-400 shrink-0" />
+                                    <IconPath
+                                        name="gemini-star"
+                                        className="size-5 text-amber-400 shrink-0 transition-transform duration-300 hover:scale-125 hover:rotate-12 hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.95)] cursor-pointer"
+                                    />
                                 </h3>
                                 <p className="text-sm text-muted-foreground max-w-xl">
                                     Đừng bỏ lỡ các đợt flash sale siêu chớp, deal công nghệ độc quyền và xu hướng mua
@@ -150,7 +165,10 @@ export function HomeFooter() {
                                 variant="outline"
                                 className="gap-1 border-primary/40 bg-primary/10 text-primary text-[10px] font-semibold"
                             >
-                                <IconPath name="gemini-star" className="size-3 text-primary animate-pulse" />
+                                <IconPath
+                                    name="gemini-star"
+                                    className="size-3 text-primary animate-pulse transition-transform duration-300 hover:scale-125 hover:rotate-12 hover:drop-shadow-[0_0_10px_var(--color-primary)] cursor-pointer"
+                                />
                                 Sàn TMĐT 2026
                             </Badge>
                         </Link>
@@ -181,7 +199,10 @@ export function HomeFooter() {
                     {/* Links: Về TimmyHub */}
                     <div className="lg:col-span-2 space-y-3">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                            <IconPath name="gemini-star" className="size-3 text-primary" />
+                            <IconPath
+                                name="gemini-star"
+                                className="size-3 text-primary transition-transform duration-300 hover:scale-125 hover:rotate-12 hover:drop-shadow-[0_0_10px_var(--color-primary)] cursor-pointer"
+                            />
                             Về TimmyHub
                         </h4>
                         <ul className="space-y-2 text-xs text-muted-foreground">

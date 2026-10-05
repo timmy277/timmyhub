@@ -1,6 +1,6 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { IconPath } from '@/components/icons'
 
 /* Deterministic PRNG algorithm (Mulberry32) ensuring 100% identical SSR & Client hydration */
@@ -20,6 +20,7 @@ interface BackgroundStar {
     left: string
     size: string
     color: string
+    glow: string
     rot: number
     duration: string
     delay: string
@@ -38,32 +39,47 @@ interface MicroStar {
 const { BACKGROUND_STARS, MICRO_STARS } = (() => {
     const rand = createSeededPRNG(20261005)
 
-    const sizes = ['size-2.5', 'size-3', 'size-3.5', 'size-4', 'size-5', 'size-6']
-    const colors = [
-        'text-amber-400/60 dark:text-amber-300/70',
-        'text-primary/50 dark:text-primary/70',
-        'text-emerald-400/50 dark:text-emerald-300/70',
-        'text-amber-400/50 dark:text-amber-400/60',
-        'text-primary/45 dark:text-primary/65',
-        'text-cyan-400/50 dark:text-cyan-300/70',
+    const sizes = ['size-2.5', 'size-3', 'size-3.5', 'size-4', 'size-5', 'size-5.5']
+    const colorPalettes = [
+        {
+            color: 'text-amber-400/70 dark:text-amber-300/80',
+            glow: 'drop-shadow-[0_0_16px_rgba(251,191,36,0.95)]',
+        },
+        {
+            color: 'text-primary/60 dark:text-primary/80',
+            glow: 'drop-shadow-[0_0_18px_var(--color-primary)]',
+        },
+        {
+            color: 'text-emerald-400/60 dark:text-emerald-300/80',
+            glow: 'drop-shadow-[0_0_16px_rgba(52,211,153,0.95)]',
+        },
+        {
+            color: 'text-amber-400/60 dark:text-amber-400/70',
+            glow: 'drop-shadow-[0_0_14px_rgba(251,191,36,0.95)]',
+        },
+        {
+            color: 'text-primary/55 dark:text-primary/75',
+            glow: 'drop-shadow-[0_0_18px_var(--color-primary)]',
+        },
+        {
+            color: 'text-cyan-400/60 dark:text-cyan-300/80',
+            glow: 'drop-shadow-[0_0_16px_rgba(34,211,238,0.95)]',
+        },
     ]
 
-    // 75 Gemini 4-point star icons spread across 0–100% of viewport
+    // 56 Gemini 4-point star icons spread along side margins and ambient spaces
     const geminiList: BackgroundStar[] = []
-    const totalGemini = 75
+    const totalGemini = 56
     for (let i = 0; i < totalGemini; i++) {
-        const color = colors[Math.floor(rand() * colors.length)]
+        const pal = colorPalettes[Math.floor(rand() * colorPalettes.length)]
         const size = sizes[Math.floor(rand() * sizes.length)]
-        const topPct = (i / (totalGemini - 1)) * 97 + rand() * 3 - 1.5
+        const topPct = (i / (totalGemini - 1)) * 96 + rand() * 3 - 1.5
 
         let leftPct: number
-        const side = rand()
-        if (side < 0.42) {
-            leftPct = rand() * 20 + 1
-        } else if (side < 0.84) {
-            leftPct = rand() * 21 + 76
+        if (i % 2 === 0) {
+            leftPct = rand() * 14 + 1 // 1% to 15% (left gutter)
         } else {
-            leftPct = rand() * 50 + 25
+            leftPct = rand() * 14 + 85 // 85% to 99% (right gutter)
         }
 
         const rot = Math.round(rand() * 90 - 45)
@@ -76,7 +92,8 @@ const { BACKGROUND_STARS, MICRO_STARS } = (() => {
             top: `${topPct.toFixed(2)}%`,
             left: `${leftPct.toFixed(2)}%`,
             size,
-            color,
+            color: pal.color,
+            glow: pal.glow,
             rot,
             duration,
             delay,
@@ -101,9 +118,43 @@ const { BACKGROUND_STARS, MICRO_STARS } = (() => {
 
 /**
  * Full-viewport fixed starry background.
- * Sits at -z-10 — purely decorative, never intercepts pointer events.
+ * Strictly positioned at -z-10 so it NEVER overlays any content, cards, tables, or buttons
+ * on Dashboard or any other page.
+ * Uses passive pointer tracking so stars glow, rotate 45°, and scale up smoothly when hovered!
  */
 export const StarryBackground = memo(function StarryBackground() {
+    const [hoveredStarId, setHoveredStarId] = useState<number | null>(null)
+
+    useEffect(() => {
+        const handlePointerMove = (e: PointerEvent) => {
+            const vw = window.innerWidth
+            const vh = window.innerHeight
+            const mouseX = e.clientX
+            const mouseY = e.clientY
+
+            let foundId: number | null = null
+            for (const star of BACKGROUND_STARS) {
+                const starX = (parseFloat(star.left) / 100) * vw
+                const starY = (parseFloat(star.top) / 100) * vh
+                const dist = Math.hypot(mouseX - starX, mouseY - starY)
+                if (dist < 34) {
+                    foundId = star.id
+                    break
+                }
+            }
+            setHoveredStarId(foundId)
+        }
+
+        const handlePointerLeave = () => setHoveredStarId(null)
+
+        window.addEventListener('pointermove', handlePointerMove, { passive: true })
+        window.addEventListener('pointerleave', handlePointerLeave)
+        return () => {
+            window.removeEventListener('pointermove', handlePointerMove)
+            window.removeEventListener('pointerleave', handlePointerLeave)
+        }
+    }, [])
+
     return (
         <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
             {/* Dot texture */}
@@ -144,28 +195,40 @@ export const StarryBackground = memo(function StarryBackground() {
                 />
             ))}
 
-            {/* Gemini Stars — ambient decoration only */}
-            {BACKGROUND_STARS.map((star) => (
-                <div
-                    key={star.id}
-                    aria-hidden
-                    style={{
-                        top: star.top,
-                        left: star.left,
-                        animationDuration: star.duration,
-                        animationDelay: star.delay,
-                    }}
-                    className={`absolute animate-pulse ${star.color} ${
-                        star.isExtraNightStar ? 'opacity-35 dark:opacity-65' : 'opacity-55 dark:opacity-80'
-                    }`}
-                >
-                    <IconPath
-                        name="gemini-star"
-                        className={star.size}
-                        style={{ transform: `rotate(${star.rot}deg)` }}
-                    />
-                </div>
-            ))}
+            {/* Gemini Stars Constellation — strictly at -z-10 so it NEVER covers dashboard elements */}
+            {BACKGROUND_STARS.map((star) => {
+                const isHovered = hoveredStarId === star.id
+                return (
+                    <div
+                        key={star.id}
+                        style={{
+                            top: star.top,
+                            left: star.left,
+                            transform: isHovered
+                                ? `scale(1.75) rotate(${star.rot + 45}deg)`
+                                : `scale(1) rotate(${star.rot}deg)`,
+                        }}
+                        className={`absolute select-none transition-all duration-300 ease-out ${star.color} ${
+                            isHovered
+                                ? '!opacity-100'
+                                : star.isExtraNightStar
+                                  ? 'opacity-40 dark:opacity-70'
+                                  : 'opacity-60 dark:opacity-85'
+                        }`}
+                    >
+                        <IconPath
+                            name="gemini-star"
+                            style={{
+                                animationDuration: star.duration,
+                                animationDelay: star.delay,
+                            }}
+                            className={`${star.size} transition-all duration-300 animate-pulse ${
+                                isHovered ? `${star.glow} [animation-play-state:paused]` : ''
+                            }`}
+                        />
+                    </div>
+                )
+            })}
         </div>
     )
 })
