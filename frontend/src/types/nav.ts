@@ -8,8 +8,10 @@ export interface NavItem {
     icon: LucideIcon
     isActive?: boolean
     items?: readonly NavItem[]
-    // Nếu có, nav item chỉ hiện khi người dùng sở hữu quyền này.
-    requirePermission?: string
+    // Nếu có, nav item chỉ hiện khi người dùng sở hữu quyền này (hoặc 1 trong các quyền nếu là mảng).
+    requirePermission?: string | readonly string[]
+    // Nếu có, nav item sẽ bị ẩn khi người dùng sở hữu quyền này (hoặc 1 trong các quyền nếu là mảng).
+    excludePermission?: string | readonly string[]
 }
 
 export interface NavGroup {

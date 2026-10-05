@@ -187,7 +187,9 @@
     "audit": "Nhật ký",
     "media": "Media & Tải lên",
     "sellerPortal": "Kênh Người Bán",
-    "becomeSeller": "Trở thành Người Bán"
+    "becomeSeller": "Trở thành Người Bán",
+    "adminSection": "Quản trị hệ thống",
+    "sellerSection": "Kênh Người Bán"
   },
   "theme": {
     "triggerLabel": "Mở tuỳ chỉnh giao diện",

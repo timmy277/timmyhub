@@ -69,3 +69,9 @@ export const DASHBOARD_PERMISSION = 'analytics:platform:read' as const satisfies
 
 // Quyền quản lý duyệt đơn đăng ký người bán — dành cho ADMIN
 export const SELLER_APPLICATIONS_PERMISSION = 'seller:applications:list' as const satisfies PermissionName
+
+// Quyền tra cứu nhật ký kiểm toán nằm ở `constants/audit.ts` (AUDIT_PERMISSION.LIST).
+
+// Quyền quản lý shop của người bán — SELLER, BRAND có `seller:shops:update`.
+export const SELLER_SHOP_PERMISSION = 'seller:shops:update' as const satisfies PermissionName
+export const SELLER_SHOP_ANY_PERMISSION = 'seller:shops:update:any' as const satisfies PermissionName

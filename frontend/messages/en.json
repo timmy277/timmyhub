@@ -187,7 +187,9 @@
     "audit": "Audit log",
     "media": "Media & Uploads",
     "sellerPortal": "Seller Channel",
-    "becomeSeller": "Become a Seller"
+    "becomeSeller": "Become a Seller",
+    "adminSection": "System Administration",
+    "sellerSection": "Seller Channel"
   },
   "theme": {
     "triggerLabel": "Open theme customizer",

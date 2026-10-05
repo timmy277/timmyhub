@@ -52,12 +52,24 @@ import { getMyShopAction, updateMyShopAction } from '../actions'
 
 interface SellerPortalViewProps {
     initialShop?: SellerProfileDetail | null
+    initialTab?: string
 }
 
-export function SellerPortalView({ initialShop }: SellerPortalViewProps = {}) {
+export function SellerPortalView({ initialShop, initialTab = 'overview' }: SellerPortalViewProps = {}) {
     const t = useTranslations('seller.portal')
     const queryClient = useQueryClient()
-    const [activeTab, setActiveTab] = useState('overview')
+    const [activeTab, setActiveTab] = useState(
+        ['overview', 'products', 'orders', 'settings'].includes(initialTab) ? initialTab : 'overview',
+    )
+
+    const handleTabChange = (tab: string) => {
+        setActiveTab(tab)
+        if (typeof window !== 'undefined') {
+            const url = new URL(window.location.href)
+            url.searchParams.set('tab', tab)
+            window.history.replaceState({}, '', url.toString())
+        }
+    }
 
     // ===== Query =====
     const { data: shop = initialShop } = useQuery({
@@ -269,7 +281,7 @@ export function SellerPortalView({ initialShop }: SellerPortalViewProps = {}) {
             {/* ═══════════════════════════════════════════════════════════════════
              * 3. TABBED OPERATIONS MODULE
              * ═══════════════════════════════════════════════════════════════════ */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
                 <TabsList className="h-11 rounded-2xl bg-card/70 p-1 border border-border/70 backdrop-blur-md shadow-sm grid grid-cols-4 max-w-xl">
                     <TabsTrigger value="overview" className="rounded-xl text-xs font-semibold">
                         {t('tabOverview')}

@@ -2,15 +2,24 @@ import { HistoryIcon, KeyRoundIcon, LayoutGridIcon, ShieldCheckIcon, StoreIcon, 
 
 import type { BreadcrumbEntry, NavGroup } from '@/types'
 
-import { DASHBOARD_PERMISSION, SELLER_APPLICATIONS_PERMISSION } from './permission'
+import { AUDIT_PERMISSION } from './audit'
+import {
+    DASHBOARD_PERMISSION,
+    RBAC_PERMISSION,
+    SELLER_APPLICATIONS_PERMISSION,
+    SELLER_SHOP_ANY_PERMISSION,
+    SELLER_SHOP_PERMISSION,
+    USER_PERMISSION,
+} from './permission'
 import { ROUTE } from './route'
 
 // Tên cookie mà `components/ui/sidebar.tsx` ghi khi đóng/mở — NavLayout đọc lại ở server để render đúng trạng thái.
 export const SIDEBAR_STATE_COOKIE_NAME = 'sidebar_state'
 
-// Menu bên thanh điều hướng quản trị (Dashboard/Admin) — không chứa Trang chủ vì Trang chủ là landing độc lập cho người dùng.
+// Menu bên thanh điều hướng (Admin/Dashboard & Kênh Người Bán) — lọc động theo quyền của người dùng.
 export const NAV_GROUPS: readonly NavGroup[] = [
     {
+        labelKey: 'adminSection',
         items: [
             {
                 titleKey: 'dashboard',
@@ -18,16 +27,53 @@ export const NAV_GROUPS: readonly NavGroup[] = [
                 icon: LayoutGridIcon,
                 requirePermission: DASHBOARD_PERMISSION,
             },
-            { titleKey: 'users', url: ROUTE.USERS, icon: UsersIcon },
-            { titleKey: 'roles', url: ROUTE.ROLES, icon: ShieldCheckIcon },
-            { titleKey: 'permissions', url: ROUTE.PERMISSIONS, icon: KeyRoundIcon },
+            {
+                titleKey: 'users',
+                url: ROUTE.USERS,
+                icon: UsersIcon,
+                requirePermission: USER_PERMISSION.LIST,
+            },
+            {
+                titleKey: 'roles',
+                url: ROUTE.ROLES,
+                icon: ShieldCheckIcon,
+                requirePermission: RBAC_PERMISSION.ROLES_LIST,
+            },
+            {
+                titleKey: 'permissions',
+                url: ROUTE.PERMISSIONS,
+                icon: KeyRoundIcon,
+                requirePermission: RBAC_PERMISSION.PERMISSIONS_LIST,
+            },
             {
                 titleKey: 'sellerApplications',
                 url: ROUTE.ADMIN_SELLER_APPLICATIONS,
                 icon: StoreIcon,
                 requirePermission: SELLER_APPLICATIONS_PERMISSION,
             },
-            { titleKey: 'audit', url: ROUTE.AUDIT, icon: HistoryIcon },
+            {
+                titleKey: 'audit',
+                url: ROUTE.AUDIT,
+                icon: HistoryIcon,
+                requirePermission: AUDIT_PERMISSION.LIST,
+            },
+        ],
+    },
+    {
+        labelKey: 'sellerSection',
+        items: [
+            {
+                titleKey: 'sellerPortal',
+                url: ROUTE.SELLER_PORTAL,
+                icon: StoreIcon,
+                requirePermission: [SELLER_SHOP_PERMISSION, SELLER_SHOP_ANY_PERMISSION],
+            },
+            {
+                titleKey: 'becomeSeller',
+                url: ROUTE.SELLER_REGISTER,
+                icon: StoreIcon,
+                excludePermission: [SELLER_SHOP_PERMISSION, SELLER_SHOP_ANY_PERMISSION],
+            },
         ],
     },
 ]
@@ -58,5 +104,13 @@ export const BREADCRUMB_ROUTES: Readonly<Record<string, readonly BreadcrumbEntry
     [ROUTE.AUDIT]: [
         { titleKey: 'home', url: ROUTE.HOME },
         { titleKey: 'audit', url: ROUTE.AUDIT },
+    ],
+    [ROUTE.SELLER_PORTAL]: [
+        { titleKey: 'home', url: ROUTE.HOME },
+        { titleKey: 'sellerPortal', url: ROUTE.SELLER_PORTAL },
+    ],
+    [ROUTE.SELLER_REGISTER]: [
+        { titleKey: 'home', url: ROUTE.HOME },
+        { titleKey: 'becomeSeller', url: ROUTE.SELLER_REGISTER },
     ],
 }

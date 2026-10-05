@@ -1,19 +1,22 @@
 import type { ReactNode } from 'react'
+import { redirect } from 'next/navigation'
 
-import { HomeFooter, HomeHeader } from '@/components/layout'
+import { NavLayout } from '@/components/layout'
+import { ROUTE } from '@/constants'
+import { getActor } from '@/lib/actor-permissions'
 
 interface SellerLayoutProps {
     children: ReactNode
 }
 
 // Layout cho các trang Người bán (Đăng ký bán hàng, Kênh Người Bán):
-// Bọc thanh Header/Navbar ở trên cùng và Footer ở dưới cùng.
-export default function SellerLayout({ children }: SellerLayoutProps) {
-    return (
-        <div className="flex min-h-svh flex-col">
-            <HomeHeader />
-            <main className="flex-1">{children}</main>
-            <HomeFooter />
-        </div>
-    )
+// Sử dụng chung hệ thống thanh bên (AppSidebar) và Header thông qua NavLayout.
+// Thanh bên tự động lọc chỉ hiển thị những mục nằm trong quyền hạn của người dùng (SELLER xem Kênh người bán, ADMIN xem thêm Quản trị).
+export default async function SellerLayout({ children }: SellerLayoutProps) {
+    const actor = await getActor()
+    if (!actor) {
+        redirect(ROUTE.LOGIN)
+    }
+
+    return <NavLayout>{children}</NavLayout>
 }

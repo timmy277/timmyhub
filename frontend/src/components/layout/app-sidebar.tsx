@@ -24,9 +24,28 @@ import {
     useSidebar,
 } from '@/components/ui'
 import { NAV_GROUPS, ROUTE } from '@/constants'
+import type { NavItem } from '@/types'
 
 function isRouteActive(pathname: string, url: string): boolean {
     return pathname === url || (url !== ROUTE.HOME && pathname.startsWith(`${url}/`))
+}
+
+function hasNavPermission(item: NavItem, permissions: ReadonlySet<string>): boolean {
+    if (item.excludePermission) {
+        const isExcluded =
+            typeof item.excludePermission === 'string'
+                ? permissions.has(item.excludePermission)
+                : item.excludePermission.some((perm) => permissions.has(perm))
+        if (isExcluded) return false
+    }
+
+    if (!item.requirePermission) return true
+
+    if (typeof item.requirePermission === 'string') {
+        return permissions.has(item.requirePermission)
+    }
+
+    return item.requirePermission.some((perm) => permissions.has(perm))
 }
 
 interface AppSidebarProps {
@@ -64,10 +83,8 @@ export function AppSidebar({ permissions }: AppSidebarProps) {
             </SidebarHeader>
             <SidebarContent className="overflow-x-hidden">
                 {NAV_GROUPS.map((group) => {
-                    // Lọc bỏ item yêu cầu quyền mà người dùng không có.
-                    const visibleItems = group.items.filter(
-                        (item) => !item.requirePermission || permissions.has(item.requirePermission),
-                    )
+                    // Lọc bỏ item yêu cầu quyền mà người dùng không có hoặc bị loại trừ.
+                    const visibleItems = group.items.filter((item) => hasNavPermission(item, permissions))
                     if (visibleItems.length === 0) return null
 
                     return (
@@ -77,7 +94,11 @@ export function AppSidebar({ permissions }: AppSidebarProps) {
                                 {visibleItems.map((item) => {
                                     const label = t(item.titleKey)
 
-                                    if (item.items?.length) {
+                                    const visibleSubItems = item.items?.filter((subItem) =>
+                                        hasNavPermission(subItem, permissions),
+                                    )
+
+                                    if (visibleSubItems?.length) {
                                         return (
                                             <Collapsible
                                                 key={item.titleKey}
@@ -101,7 +122,7 @@ export function AppSidebar({ permissions }: AppSidebarProps) {
                                                     </CollapsibleTrigger>
                                                     <CollapsibleContent>
                                                         <SidebarMenuSub>
-                                                            {item.items.map((subItem) => (
+                                                            {visibleSubItems.map((subItem) => (
                                                                 <SidebarMenuSubItem key={subItem.titleKey}>
                                                                     <SidebarMenuSubButton
                                                                         asChild
