@@ -11,6 +11,7 @@ import {
     Toaster,
     TooltipProvider,
 } from '@/components'
+import { StarryBackground } from '@/components/common'
 import { FONT_VARIABLE_CLASS_NAMES, THEME_INIT_SCRIPT } from '@/constants'
 
 import './globals.css'
@@ -39,6 +40,7 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
                         <AuthProvider>
                             <QueryProvider>
                                 <TooltipProvider>
+                                    <StarryBackground />
                                     <SessionTokenWatcher />
                                     <ThemeAttributesSync />
                                     {children}

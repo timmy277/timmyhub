@@ -51,443 +51,123 @@ function formatNumber(num: number): string {
  * MOCK DATA: Đầy đủ các section theo timmyhub gốc
  * ───────────────────────────────────────────────────────────────────────────── */
 
-/* Constellation of interactive background Gemini Stars */
+/* Deterministic PRNG algorithm (Mulberry32) ensuring 100% identical SSR & Client hydration */
+function createSeededPRNG(seed: number) {
+    let s = seed
+    return function rand() {
+        let t = (s += 0x6d2b79f5)
+        t = Math.imul(t ^ (t >>> 15), t | 1)
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+    }
+}
+
+/* Constellation of interactive background Gemini Stars with natural random properties */
 interface BackgroundStar {
     id: number
-    top?: string
-    bottom?: string
-    left?: string
-    right?: string
+    top: string
+    left: string
     size: string
     color: string
     glow: string
+    rot: number
     duration: string
-    delay?: string
+    delay: string
+    isExtraNightStar: boolean
 }
 
-const BACKGROUND_STARS: BackgroundStar[] = [
-    // Top / Hero section
-    {
-        id: 1,
-        top: '24px',
-        left: '6%',
-        size: 'size-6',
-        color: 'text-primary/60 group-hover:text-primary',
-        glow: 'group-hover:drop-shadow-[0_0_16px_var(--color-primary)]',
-        duration: '3.2s',
-    },
-    {
-        id: 2,
-        top: '65px',
-        left: '16%',
-        size: 'size-3.5',
-        color: 'text-amber-400/70 group-hover:text-amber-300',
-        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(251,191,36,0.95)]',
-        duration: '2.4s',
-        delay: '0.4s',
-    },
-    {
-        id: 3,
-        top: '120px',
-        left: '2%',
-        size: 'size-4',
-        color: 'text-emerald-400/60 group-hover:text-emerald-300',
-        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(52,211,153,0.95)]',
-        duration: '3.8s',
-        delay: '0.8s',
-    },
-    {
-        id: 4,
-        top: '35px',
-        right: '11%',
-        size: 'size-7',
-        color: 'text-primary/55 group-hover:text-primary',
-        glow: 'group-hover:drop-shadow-[0_0_18px_var(--color-primary)]',
-        duration: '4.1s',
-    },
-    {
-        id: 5,
-        top: '90px',
-        right: '4%',
-        size: 'size-4',
-        color: 'text-amber-400/65 group-hover:text-amber-300',
-        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(251,191,36,0.95)]',
-        duration: '3.1s',
-        delay: '0.6s',
-    },
-    {
-        id: 6,
-        top: '210px',
-        right: '17%',
-        size: 'size-3',
-        color: 'text-cyan-400/60 group-hover:text-cyan-300',
-        glow: 'group-hover:drop-shadow-[0_0_12px_rgba(34,211,238,0.95)]',
-        duration: '2.6s',
-    },
-    {
-        id: 7,
-        top: '320px',
-        left: '11%',
-        size: 'size-5',
-        color: 'text-primary/50 group-hover:text-primary',
-        glow: 'group-hover:drop-shadow-[0_0_15px_var(--color-primary)]',
-        duration: '3.5s',
-        delay: '0.3s',
-    },
-    {
-        id: 8,
-        top: '440px',
-        right: '8%',
-        size: 'size-6',
-        color: 'text-rose-400/60 group-hover:text-rose-300',
-        glow: 'group-hover:drop-shadow-[0_0_15px_rgba(251,113,133,0.95)]',
-        duration: '4.4s',
-        delay: '0.9s',
-    },
-    {
-        id: 9,
-        top: '530px',
-        left: '4%',
-        size: 'size-3.5',
-        color: 'text-amber-400/60 group-hover:text-amber-300',
-        glow: 'group-hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.95)]',
-        duration: '2.8s',
-        delay: '0.5s',
-    },
-    {
-        id: 10,
-        top: '620px',
-        right: '19%',
-        size: 'size-4',
-        color: 'text-purple-400/60 group-hover:text-purple-300',
-        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(192,132,252,0.95)]',
-        duration: '3.7s',
-    },
+/* Tiny stardust / micro-stars (sao bé li ti) */
+interface MicroStar {
+    id: number
+    top: string
+    left: string
+    size: string
+    duration: string
+    delay: string
+}
 
-    // Features & Categories
-    {
-        id: 11,
-        top: '710px',
-        left: '15%',
-        size: 'size-4',
-        color: 'text-cyan-400/55 group-hover:text-cyan-300',
-        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(34,211,238,0.95)]',
-        duration: '3.3s',
-        delay: '0.7s',
-    },
-    {
-        id: 12,
-        top: '800px',
-        left: '3%',
-        size: 'size-6',
-        color: 'text-primary/50 group-hover:text-primary',
-        glow: 'group-hover:drop-shadow-[0_0_16px_var(--color-primary)]',
-        duration: '4.2s',
-    },
-    {
-        id: 13,
-        top: '880px',
-        left: '12%',
-        size: 'size-3.5',
-        color: 'text-amber-400/60 group-hover:text-amber-300',
-        glow: 'group-hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.95)]',
-        duration: '2.7s',
-        delay: '0.2s',
-    },
-    {
-        id: 14,
-        top: '770px',
-        right: '14%',
-        size: 'size-5',
-        color: 'text-emerald-400/60 group-hover:text-emerald-300',
-        glow: 'group-hover:drop-shadow-[0_0_15px_rgba(52,211,153,0.95)]',
-        duration: '3.6s',
-        delay: '0.8s',
-    },
-    {
-        id: 15,
-        top: '940px',
-        right: '5%',
-        size: 'size-7',
-        color: 'text-primary/45 group-hover:text-primary',
-        glow: 'group-hover:drop-shadow-[0_0_18px_var(--color-primary)]',
-        duration: '4.8s',
-    },
-    {
-        id: 16,
-        top: '1040px',
-        right: '16%',
-        size: 'size-4',
-        color: 'text-purple-400/60 group-hover:text-purple-300',
-        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(192,132,252,0.95)]',
-        duration: '3.0s',
-        delay: '0.4s',
-    },
-    {
-        id: 17,
-        top: '1120px',
-        left: '7%',
-        size: 'size-4.5',
-        color: 'text-amber-400/55 group-hover:text-amber-300',
-        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(251,191,36,0.95)]',
-        duration: '3.4s',
-    },
-    {
-        id: 18,
-        top: '1190px',
-        right: '10%',
-        size: 'size-3.5',
-        color: 'text-cyan-400/60 group-hover:text-cyan-300',
-        glow: 'group-hover:drop-shadow-[0_0_12px_rgba(34,211,238,0.95)]',
-        duration: '2.9s',
-        delay: '0.5s',
-    },
+const { BACKGROUND_STARS, MICRO_STARS } = (() => {
+    const rand = createSeededPRNG(20261005)
 
-    // Flash Sale & Vouchers
-    {
-        id: 19,
-        top: '1270px',
-        right: '9%',
-        size: 'size-5',
-        color: 'text-destructive/60 group-hover:text-destructive',
-        glow: 'group-hover:drop-shadow-[0_0_16px_rgba(239,68,68,0.95)]',
-        duration: '2.9s',
-    },
-    {
-        id: 20,
-        top: '1350px',
-        left: '2%',
-        size: 'size-6',
-        color: 'text-primary/50 group-hover:text-primary',
-        glow: 'group-hover:drop-shadow-[0_0_16px_var(--color-primary)]',
-        duration: '4.3s',
-        delay: '0.6s',
-    },
-    {
-        id: 21,
-        top: '1430px',
-        left: '17%',
-        size: 'size-3.5',
-        color: 'text-amber-400/60 group-hover:text-amber-300',
-        glow: 'group-hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.95)]',
-        duration: '2.5s',
-    },
-    {
-        id: 22,
-        top: '1510px',
-        right: '3%',
-        size: 'size-7',
-        color: 'text-primary/45 group-hover:text-primary',
-        glow: 'group-hover:drop-shadow-[0_0_18px_var(--color-primary)]',
-        duration: '4.6s',
-        delay: '0.9s',
-    },
-    {
-        id: 23,
-        top: '1610px',
-        right: '14%',
-        size: 'size-4',
-        color: 'text-emerald-400/60 group-hover:text-emerald-300',
-        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(52,211,153,0.95)]',
-        duration: '3.1s',
-    },
-    {
-        id: 24,
-        top: '1690px',
-        left: '6%',
-        size: 'size-5',
-        color: 'text-primary/50 group-hover:text-primary',
-        glow: 'group-hover:drop-shadow-[0_0_15px_var(--color-primary)]',
-        duration: '3.7s',
-        delay: '0.3s',
-    },
-    {
-        id: 25,
-        top: '1750px',
-        right: '18%',
-        size: 'size-3.5',
-        color: 'text-amber-400/55 group-hover:text-amber-300',
-        glow: 'group-hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.95)]',
-        duration: '2.8s',
-    },
+    const sizes = ['size-2.5', 'size-3', 'size-3.5', 'size-4', 'size-5', 'size-6']
+    const palettes = [
+        {
+            color: 'text-amber-400/60 dark:text-amber-300/70',
+            glow: 'group-hover:drop-shadow-[0_0_10px_rgba(251,191,36,0.8)]',
+        },
+        {
+            color: 'text-primary/50 dark:text-primary/70',
+            glow: 'group-hover:drop-shadow-[0_0_10px_var(--color-primary)]',
+        },
+        {
+            color: 'text-emerald-400/50 dark:text-emerald-300/70',
+            glow: 'group-hover:drop-shadow-[0_0_10px_rgba(52,211,153,0.8)]',
+        },
+        {
+            color: 'text-amber-400/50 dark:text-amber-400/60',
+            glow: 'group-hover:drop-shadow-[0_0_10px_rgba(251,191,36,0.8)]',
+        },
+        {
+            color: 'text-primary/45 dark:text-primary/65',
+            glow: 'group-hover:drop-shadow-[0_0_10px_var(--color-primary)]',
+        },
+        {
+            color: 'text-cyan-400/50 dark:text-cyan-300/70',
+            glow: 'group-hover:drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]',
+        },
+    ]
 
-    // Community Videos & Posts
-    {
-        id: 26,
-        top: '1820px',
-        right: '7%',
-        size: 'size-6',
-        color: 'text-purple-400/60 group-hover:text-purple-300',
-        glow: 'group-hover:drop-shadow-[0_0_16px_rgba(192,132,252,0.95)]',
-        duration: '4.0s',
-        delay: '0.4s',
-    },
-    {
-        id: 27,
-        top: '1910px',
-        left: '14%',
-        size: 'size-3.5',
-        color: 'text-amber-400/65 group-hover:text-amber-300',
-        glow: 'group-hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.95)]',
-        duration: '2.6s',
-    },
-    {
-        id: 28,
-        top: '2010px',
-        right: '16%',
-        size: 'size-4',
-        color: 'text-cyan-400/55 group-hover:text-cyan-300',
-        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(34,211,238,0.95)]',
-        duration: '3.5s',
-        delay: '0.7s',
-    },
-    {
-        id: 29,
-        top: '2090px',
-        left: '3%',
-        size: 'size-7',
-        color: 'text-primary/45 group-hover:text-primary',
-        glow: 'group-hover:drop-shadow-[0_0_18px_var(--color-primary)]',
-        duration: '5.0s',
-    },
-    {
-        id: 30,
-        top: '2210px',
-        right: '5%',
-        size: 'size-4.5',
-        color: 'text-amber-400/60 group-hover:text-amber-300',
-        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(251,191,36,0.95)]',
-        duration: '3.2s',
-        delay: '0.5s',
-    },
-    {
-        id: 31,
-        top: '2290px',
-        left: '10%',
-        size: 'size-4',
-        color: 'text-emerald-400/50 group-hover:text-emerald-300',
-        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(52,211,153,0.95)]',
-        duration: '3.4s',
-    },
+    // 1. 75 Gemini 4-point star icons with organic random tilts, positions and colors
+    const geminiList: BackgroundStar[] = []
+    const totalGemini = 75
+    for (let i = 0; i < totalGemini; i++) {
+        const pal = palettes[Math.floor(rand() * palettes.length)]
+        const size = sizes[Math.floor(rand() * sizes.length)]
+        const topPx = Math.round(25 + (i / (totalGemini - 1)) * 3450 + (rand() * 40 - 20))
 
-    // Product Recommendations / Feed
-    {
-        id: 32,
-        top: '2370px',
-        left: '8%',
-        size: 'size-6',
-        color: 'text-primary/45 group-hover:text-primary',
-        glow: 'group-hover:drop-shadow-[0_0_16px_var(--color-primary)]',
-        duration: '4.5s',
-        delay: '0.8s',
-    },
-    {
-        id: 33,
-        top: '2470px',
-        right: '12%',
-        size: 'size-5',
-        color: 'text-emerald-400/55 group-hover:text-emerald-300',
-        glow: 'group-hover:drop-shadow-[0_0_15px_rgba(52,211,153,0.95)]',
-        duration: '3.8s',
-    },
-    {
-        id: 34,
-        top: '2580px',
-        left: '16%',
-        size: 'size-3.5',
-        color: 'text-amber-400/60 group-hover:text-amber-300',
-        glow: 'group-hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.95)]',
-        duration: '2.8s',
-        delay: '0.3s',
-    },
-    {
-        id: 35,
-        top: '2670px',
-        right: '4%',
-        size: 'size-6',
-        color: 'text-primary/40 group-hover:text-primary',
-        glow: 'group-hover:drop-shadow-[0_0_16px_var(--color-primary)]',
-        duration: '4.2s',
-    },
-    {
-        id: 36,
-        top: '2790px',
-        left: '5%',
-        size: 'size-5',
-        color: 'text-rose-400/55 group-hover:text-rose-300',
-        glow: 'group-hover:drop-shadow-[0_0_15px_rgba(251,113,133,0.95)]',
-        duration: '3.6s',
-        delay: '0.6s',
-    },
-    {
-        id: 37,
-        top: '2910px',
-        right: '15%',
-        size: 'size-4',
-        color: 'text-cyan-400/60 group-hover:text-cyan-300',
-        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(34,211,238,0.95)]',
-        duration: '3.0s',
-    },
-    {
-        id: 38,
-        top: '3040px',
-        left: '11%',
-        size: 'size-6',
-        color: 'text-primary/45 group-hover:text-primary',
-        glow: 'group-hover:drop-shadow-[0_0_16px_var(--color-primary)]',
-        duration: '4.7s',
-        delay: '0.4s',
-    },
-    {
-        id: 39,
-        top: '3170px',
-        right: '7%',
-        size: 'size-4',
-        color: 'text-amber-400/55 group-hover:text-amber-300',
-        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(251,191,36,0.95)]',
-        duration: '3.3s',
-    },
+        let leftPct: number
+        const side = rand()
+        if (side < 0.42) {
+            leftPct = Math.round(2 + rand() * 20)
+        } else if (side < 0.84) {
+            leftPct = Math.round(76 + rand() * 21)
+        } else {
+            leftPct = Math.round(25 + rand() * 50)
+        }
 
-    // Bottom Ambient near Footer
-    {
-        id: 40,
-        bottom: '260px',
-        left: '14%',
-        size: 'size-4.5',
-        color: 'text-amber-400/60 group-hover:text-amber-300',
-        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(251,191,36,0.95)]',
-        duration: '3.1s',
-    },
-    {
-        id: 41,
-        bottom: '160px',
-        right: '12%',
-        size: 'size-6',
-        color: 'text-primary/50 group-hover:text-primary',
-        glow: 'group-hover:drop-shadow-[0_0_16px_var(--color-primary)]',
-        duration: '3.9s',
-        delay: '0.7s',
-    },
-    {
-        id: 42,
-        bottom: '70px',
-        left: '6%',
-        size: 'size-5',
-        color: 'text-emerald-400/55 group-hover:text-emerald-300',
-        glow: 'group-hover:drop-shadow-[0_0_15px_rgba(52,211,153,0.95)]',
-        duration: '3.5s',
-    },
-    {
-        id: 43,
-        bottom: '35px',
-        right: '18%',
-        size: 'size-3.5',
-        color: 'text-amber-400/65 group-hover:text-amber-300',
-        glow: 'group-hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.95)]',
-        duration: '2.5s',
-        delay: '0.2s',
-    },
-]
+        const rot = Math.round(rand() * 90 - 45)
+        const duration = `${(2.0 + rand() * 2.5).toFixed(1)}s`
+        const delay = `${(rand() * 2.5).toFixed(1)}s`
+        const isExtraNightStar = i % 3 === 0
+
+        geminiList.push({
+            id: i + 1,
+            top: `${topPx}px`,
+            left: `${leftPct}%`,
+            size,
+            color: pal.color,
+            glow: pal.glow,
+            rot,
+            duration,
+            delay,
+            isExtraNightStar,
+        })
+    }
+
+    // 2. 140 tiny stardust dots (sao bé li ti) creating deep cosmic depth
+    const microList: MicroStar[] = []
+    const totalMicro = 140
+    for (let i = 0; i < totalMicro; i++) {
+        const top = `${Math.round(rand() * 3500)}px`
+        const left = `${(rand() * 98 + 1).toFixed(1)}%`
+        const size = `${(rand() * 1.5 + 1.0).toFixed(1)}px`
+        const duration = `${(rand() * 3 + 2).toFixed(1)}s`
+        const delay = `${(rand() * 3).toFixed(1)}s`
+        microList.push({ id: i + 1, top, left, size, duration, delay })
+    }
+
+    return { BACKGROUND_STARS: geminiList, MICRO_STARS: microList }
+})()
 
 /* 1. Hero Slides */
 const HERO_SLIDES = [
@@ -1132,35 +812,58 @@ export function HomePage() {
                 {/* Middle-lower radiant aura along Product Suggestions */}
                 <div className="absolute top-[2300px] left-1/4 size-[600px] rounded-full bg-primary/15 blur-[160px]" />
 
-                {/* Bottom ambient aura */}
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[450px] w-full max-w-6xl rounded-full bg-gradient-to-t from-primary/25 to-transparent blur-[130px]" />
+                {/* Deep starry sky aura & nebula gradient in dark mode */}
+                <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 bg-transparent dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.22),transparent)]"
+                />
 
-                {/* Floating Gemini Stars (4 cánh) - Interactive constellation with Hover Glow & Quarter-Spin */}
+                {/* Sao bé li ti (Micro-stars / Cosmic stardust) tạo chiều sâu không gian */}
+                {MICRO_STARS.map((s) => (
+                    <span
+                        key={s.id}
+                        aria-hidden
+                        style={{
+                            top: s.top,
+                            left: s.left,
+                            width: s.size,
+                            height: s.size,
+                            animationDuration: s.duration,
+                            animationDelay: s.delay,
+                        }}
+                        className="pointer-events-none absolute rounded-full bg-foreground/30 dark:bg-white/70 animate-pulse [animation-duration:inherit]"
+                    />
+                ))}
+
+                {/* Floating Gemini Stars (4 cánh) - Interactive Constellation with Random Tilts & Luminescent Hover Glow */}
                 {BACKGROUND_STARS.map((star) => (
                     <div
                         key={star.id}
                         style={{
                             top: star.top,
-                            bottom: star.bottom,
                             left: star.left,
-                            right: star.right,
                         }}
-                        className="group pointer-events-auto absolute cursor-pointer select-none transition-transform duration-500 ease-out hover:scale-175 hover:rotate-90 hover:z-30"
-                        title="⭐ TimmyHub Sparkle"
+                        className={`group pointer-events-auto absolute cursor-pointer select-none transition-all duration-500 ease-out hover:scale-150 hover:z-20 ${star.color} ${
+                            star.isExtraNightStar ? 'opacity-35 dark:opacity-65' : 'opacity-55 dark:opacity-80'
+                        } hover:!opacity-100`}
+                        title="⭐ TimmyHub Star"
                     >
-                        <IconPath
-                            name="gemini-star"
+                        {/* Core Gemini Star Icon with natural random tilt & smooth hover rotation */}
+                        <div
                             style={{
-                                animationDuration: star.duration,
-                                animationDelay: star.delay || '0s',
+                                transform: `rotate(${star.rot}deg)`,
                             }}
-                            className={`${star.size} ${star.color} transition-all duration-300 group-hover:opacity-100 ${star.glow} animate-pulse group-hover:[animation-play-state:paused]`}
-                        />
-                        {/* Micro-sparkle glow halo blooming on hover */}
-                        <span
-                            aria-hidden
-                            className="pointer-events-none absolute inset-0 -m-2 rounded-full bg-current opacity-0 blur-md transition-all duration-300 group-hover:opacity-60 group-hover:scale-125"
-                        />
+                            className="transition-transform duration-500 ease-out group-hover:rotate-[45deg]"
+                        >
+                            <IconPath
+                                name="gemini-star"
+                                style={{
+                                    animationDuration: star.duration,
+                                    animationDelay: star.delay,
+                                }}
+                                className={`${star.size} transition-all duration-300 ${star.glow} animate-pulse group-hover:[animation-play-state:paused]`}
+                            />
+                        </div>
                     </div>
                 ))}
             </div>

@@ -267,6 +267,19 @@ export function HomeFooter() {
                     </div>
                 </div>
             </div>
+
+            {/* Chân trời silhouette dãy núi huyền ảo theo mẫu */}
+            <div
+                aria-hidden
+                className="pointer-events-none absolute bottom-0 left-0 right-0 h-28 sm:h-36 overflow-hidden -z-10 opacity-70 dark:opacity-90"
+            >
+                <IconPath
+                    name="mountain-silhouette"
+                    className="w-full h-full object-cover"
+                    fill="none"
+                    preserveAspectRatio="none"
+                />
+            </div>
         </footer>
     )
 }

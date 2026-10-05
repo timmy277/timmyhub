@@ -108,6 +108,25 @@ const ICONS = {
             />
         ),
     },
+    'mountain-silhouette': {
+        viewBox: '0 0 1440 280',
+        width: 1440,
+        height: 280,
+        render: () => (
+            <>
+                {/* Dãy núi phía xa */}
+                <path
+                    d="M0,280 L0,180 L160,110 L340,195 L560,85 L790,190 L1020,95 L1260,175 L1440,80 L1440,280 Z"
+                    className="fill-primary/5 dark:fill-[#0c122b]/85 transition-colors"
+                />
+                {/* Dãy núi cận cảnh phía trước */}
+                <path
+                    d="M0,280 L0,225 L210,150 L460,235 L700,140 L930,225 L1180,145 L1440,210 L1440,280 Z"
+                    className="fill-primary/10 dark:fill-[#030511] transition-colors"
+                />
+            </>
+        ),
+    },
 } satisfies Record<string, IconDefinition>
 
 export type IconName = keyof typeof ICONS
@@ -115,14 +134,16 @@ export type IconName = keyof typeof ICONS
 export interface IconPathProps extends Omit<SVGProps<SVGSVGElement>, 'width' | 'height' | 'viewBox'> {
     name: IconName
     size?: number
+    width?: number | string
+    height?: number | string
     label?: string
 }
 
-export function IconPath({ name, size, label, ...rest }: IconPathProps) {
+export function IconPath({ name, size, width: customWidth, height: customHeight, label, ...rest }: IconPathProps) {
     const uid = useId()
     const icon: IconDefinition = ICONS[name]
-    const width = size ?? icon.width
-    const height = (width * icon.height) / icon.width
+    const width = customWidth ?? size ?? icon.width
+    const height = customHeight ?? (typeof width === 'number' ? (width * icon.height) / icon.width : icon.height)
 
     const a11yProps = label ? { role: 'img' as const, 'aria-label': label } : { 'aria-hidden': true as const }
 
