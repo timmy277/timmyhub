@@ -21,7 +21,6 @@ import {
 } from '@/components/ui'
 import { DASHBOARD_PERMISSION, QUERY_KEY, ROUTE, SELLER_SHOP_ANY_PERMISSION, SELLER_SHOP_PERMISSION } from '@/constants'
 import { AccountDialog } from '@/features/account'
-import { getMyShopAction } from '@/features/seller'
 import { getCurrentUserProfileAction } from '@/features/users'
 import { useLogout, useMounted, usePermissions } from '@/hooks'
 import { useUserProfileStore } from '@/stores'
@@ -40,17 +39,7 @@ export function UserMenu() {
 
     const { hasPermission } = usePermissions()
     const canAccessDashboard = hasPermission(DASHBOARD_PERMISSION)
-    const isSellerByPermission = hasPermission(SELLER_SHOP_PERMISSION) || hasPermission(SELLER_SHOP_ANY_PERMISSION)
-    const { data: myShop } = useQuery({
-        queryKey: QUERY_KEY.SELLER.MY_SHOP,
-        queryFn: async () => {
-            const res = await getMyShopAction()
-            return res.ok && res.data ? res.data : null
-        },
-        enabled: Boolean(session?.user?.id) && !isSellerByPermission,
-        staleTime: 60_000,
-    })
-    const isSeller = isSellerByPermission || Boolean(myShop)
+    const isSeller = hasPermission(SELLER_SHOP_PERMISSION) || hasPermission(SELLER_SHOP_ANY_PERMISSION)
     const sellerRoute = isSeller ? ROUTE.SELLER_PORTAL : ROUTE.SELLER_REGISTER
     const sellerLabel = isSeller ? t('sellerPortal') : t('becomeSeller')
 

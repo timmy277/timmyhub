@@ -12,7 +12,8 @@ import { writeOutboxEvent } from '../events/outbox-writer'
 import { writeAuditLog } from '../audit-log.writer'
 
 export type UserWithRbac = {
-    userRoles: { role: { permissions: { permission: Permission }[] } }[]
+    roles: UserRole[]
+    userRoles: { role: { name: string; permissions: { permission: Permission }[] } }[]
     userPermissions: { permission: Permission; isGranted: boolean }[]
 } | null
 
@@ -31,8 +32,9 @@ export class RbacRepository {
         return this.prisma.user.findUnique({
             where: { id: userId },
             select: {
+                roles: true,
                 userRoles: {
-                    select: { role: { select: { permissions: { select: { permission: true } } } } },
+                    select: { role: { select: { name: true, permissions: { select: { permission: true } } } } },
                 },
                 userPermissions: {
                     select: { permission: true, isGranted: true },
@@ -51,6 +53,13 @@ export class RbacRepository {
 
     findRoleByName(name: string): Promise<SystemRole | null> {
         return this.prisma.systemRole.findUnique({ where: { name } })
+    }
+
+    findRolesWithPermissionsByNames(names: string[]): Promise<RoleWithPermissions[]> {
+        return this.prisma.systemRole.findMany({
+            where: { name: { in: names } },
+            include: { permissions: { include: { permission: true } } },
+        })
     }
 
     // Một query duy nhất lấy role + permission đang gán (join `RolePermission`), không đọc-rồi-lọc (luật cứng #7).

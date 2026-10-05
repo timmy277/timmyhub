@@ -50,6 +50,18 @@ export class RbacService implements PermissionResolver {
                 effective.add(rolePermission.permission.name)
             }
         }
+
+        const existingRoleNames = new Set(user.userRoles.map((ur) => ur.role.name))
+        const missingRoleNames = user.roles.filter((r) => !existingRoleNames.has(r))
+        if (missingRoleNames.length > 0) {
+            const fallbackRoles = await this.repository.findRolesWithPermissionsByNames(missingRoleNames)
+            for (const r of fallbackRoles) {
+                for (const rp of r.permissions) {
+                    effective.add(rp.permission.name)
+                }
+            }
+        }
+
         for (const userPermission of user.userPermissions) {
             if (userPermission.isGranted) {
                 effective.add(userPermission.permission.name)

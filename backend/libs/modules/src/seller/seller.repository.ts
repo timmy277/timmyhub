@@ -216,6 +216,15 @@ export class SellerRepository {
                 })
             }
 
+            const sellerRole = await tx.systemRole.findUnique({ where: { name: UserRole.SELLER } })
+            if (sellerRole) {
+                await tx.userSystemRole.upsert({
+                    where: { userId_roleId: { userId: user.id, roleId: sellerRole.id } },
+                    update: {},
+                    create: { userId: user.id, roleId: sellerRole.id },
+                })
+            }
+
             // Ghi OutboxEvent cho seller.application.approved
             await tx.outboxEvent.create({
                 data: {

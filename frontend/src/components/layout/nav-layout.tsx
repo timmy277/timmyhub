@@ -2,7 +2,8 @@ import type { ReactNode } from 'react'
 import { cookies } from 'next/headers'
 
 import { SidebarInset, SidebarProvider } from '@/components/ui'
-import { SIDEBAR_STATE_COOKIE_NAME } from '@/constants'
+import { SELLER_SHOP_PERMISSION, SIDEBAR_STATE_COOKIE_NAME } from '@/constants'
+import { getMyShopAction } from '@/features/seller'
 import { getActor } from '@/lib/actor-permissions'
 
 import { AppSidebar } from './app-sidebar'
@@ -25,7 +26,13 @@ export async function NavLayout({ children }: NavLayoutProps) {
 
     // Lấy tập quyền để lọc nav item — chỉ truyền set (serializable thông qua SSR props client component).
     const actor = await getActor()
-    const permissions = actor?.permissions ?? new Set<string>()
+    const permissions = new Set(actor?.permissions ?? [])
+    if (!permissions.has(SELLER_SHOP_PERMISSION) && actor) {
+        const shopRes = await getMyShopAction()
+        if (shopRes.ok && Boolean(shopRes.data)) {
+            permissions.add(SELLER_SHOP_PERMISSION)
+        }
+    }
 
     return (
         <SidebarProvider defaultOpen={defaultOpen}>

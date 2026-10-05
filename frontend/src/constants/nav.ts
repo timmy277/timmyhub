@@ -68,12 +68,6 @@ export const NAV_GROUPS: readonly NavGroup[] = [
                 icon: StoreIcon,
                 requirePermission: [SELLER_SHOP_PERMISSION, SELLER_SHOP_ANY_PERMISSION],
             },
-            {
-                titleKey: 'becomeSeller',
-                url: ROUTE.SELLER_REGISTER,
-                icon: StoreIcon,
-                excludePermission: [SELLER_SHOP_PERMISSION, SELLER_SHOP_ANY_PERMISSION],
-            },
         ],
     },
 ]
