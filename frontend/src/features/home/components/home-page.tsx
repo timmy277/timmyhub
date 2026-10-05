@@ -51,6 +51,444 @@ function formatNumber(num: number): string {
  * MOCK DATA: Đầy đủ các section theo timmyhub gốc
  * ───────────────────────────────────────────────────────────────────────────── */
 
+/* Constellation of interactive background Gemini Stars */
+interface BackgroundStar {
+    id: number
+    top?: string
+    bottom?: string
+    left?: string
+    right?: string
+    size: string
+    color: string
+    glow: string
+    duration: string
+    delay?: string
+}
+
+const BACKGROUND_STARS: BackgroundStar[] = [
+    // Top / Hero section
+    {
+        id: 1,
+        top: '24px',
+        left: '6%',
+        size: 'size-6',
+        color: 'text-primary/60 group-hover:text-primary',
+        glow: 'group-hover:drop-shadow-[0_0_16px_var(--color-primary)]',
+        duration: '3.2s',
+    },
+    {
+        id: 2,
+        top: '65px',
+        left: '16%',
+        size: 'size-3.5',
+        color: 'text-amber-400/70 group-hover:text-amber-300',
+        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(251,191,36,0.95)]',
+        duration: '2.4s',
+        delay: '0.4s',
+    },
+    {
+        id: 3,
+        top: '120px',
+        left: '2%',
+        size: 'size-4',
+        color: 'text-emerald-400/60 group-hover:text-emerald-300',
+        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(52,211,153,0.95)]',
+        duration: '3.8s',
+        delay: '0.8s',
+    },
+    {
+        id: 4,
+        top: '35px',
+        right: '11%',
+        size: 'size-7',
+        color: 'text-primary/55 group-hover:text-primary',
+        glow: 'group-hover:drop-shadow-[0_0_18px_var(--color-primary)]',
+        duration: '4.1s',
+    },
+    {
+        id: 5,
+        top: '90px',
+        right: '4%',
+        size: 'size-4',
+        color: 'text-amber-400/65 group-hover:text-amber-300',
+        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(251,191,36,0.95)]',
+        duration: '3.1s',
+        delay: '0.6s',
+    },
+    {
+        id: 6,
+        top: '210px',
+        right: '17%',
+        size: 'size-3',
+        color: 'text-cyan-400/60 group-hover:text-cyan-300',
+        glow: 'group-hover:drop-shadow-[0_0_12px_rgba(34,211,238,0.95)]',
+        duration: '2.6s',
+    },
+    {
+        id: 7,
+        top: '320px',
+        left: '11%',
+        size: 'size-5',
+        color: 'text-primary/50 group-hover:text-primary',
+        glow: 'group-hover:drop-shadow-[0_0_15px_var(--color-primary)]',
+        duration: '3.5s',
+        delay: '0.3s',
+    },
+    {
+        id: 8,
+        top: '440px',
+        right: '8%',
+        size: 'size-6',
+        color: 'text-rose-400/60 group-hover:text-rose-300',
+        glow: 'group-hover:drop-shadow-[0_0_15px_rgba(251,113,133,0.95)]',
+        duration: '4.4s',
+        delay: '0.9s',
+    },
+    {
+        id: 9,
+        top: '530px',
+        left: '4%',
+        size: 'size-3.5',
+        color: 'text-amber-400/60 group-hover:text-amber-300',
+        glow: 'group-hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.95)]',
+        duration: '2.8s',
+        delay: '0.5s',
+    },
+    {
+        id: 10,
+        top: '620px',
+        right: '19%',
+        size: 'size-4',
+        color: 'text-purple-400/60 group-hover:text-purple-300',
+        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(192,132,252,0.95)]',
+        duration: '3.7s',
+    },
+
+    // Features & Categories
+    {
+        id: 11,
+        top: '710px',
+        left: '15%',
+        size: 'size-4',
+        color: 'text-cyan-400/55 group-hover:text-cyan-300',
+        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(34,211,238,0.95)]',
+        duration: '3.3s',
+        delay: '0.7s',
+    },
+    {
+        id: 12,
+        top: '800px',
+        left: '3%',
+        size: 'size-6',
+        color: 'text-primary/50 group-hover:text-primary',
+        glow: 'group-hover:drop-shadow-[0_0_16px_var(--color-primary)]',
+        duration: '4.2s',
+    },
+    {
+        id: 13,
+        top: '880px',
+        left: '12%',
+        size: 'size-3.5',
+        color: 'text-amber-400/60 group-hover:text-amber-300',
+        glow: 'group-hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.95)]',
+        duration: '2.7s',
+        delay: '0.2s',
+    },
+    {
+        id: 14,
+        top: '770px',
+        right: '14%',
+        size: 'size-5',
+        color: 'text-emerald-400/60 group-hover:text-emerald-300',
+        glow: 'group-hover:drop-shadow-[0_0_15px_rgba(52,211,153,0.95)]',
+        duration: '3.6s',
+        delay: '0.8s',
+    },
+    {
+        id: 15,
+        top: '940px',
+        right: '5%',
+        size: 'size-7',
+        color: 'text-primary/45 group-hover:text-primary',
+        glow: 'group-hover:drop-shadow-[0_0_18px_var(--color-primary)]',
+        duration: '4.8s',
+    },
+    {
+        id: 16,
+        top: '1040px',
+        right: '16%',
+        size: 'size-4',
+        color: 'text-purple-400/60 group-hover:text-purple-300',
+        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(192,132,252,0.95)]',
+        duration: '3.0s',
+        delay: '0.4s',
+    },
+    {
+        id: 17,
+        top: '1120px',
+        left: '7%',
+        size: 'size-4.5',
+        color: 'text-amber-400/55 group-hover:text-amber-300',
+        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(251,191,36,0.95)]',
+        duration: '3.4s',
+    },
+    {
+        id: 18,
+        top: '1190px',
+        right: '10%',
+        size: 'size-3.5',
+        color: 'text-cyan-400/60 group-hover:text-cyan-300',
+        glow: 'group-hover:drop-shadow-[0_0_12px_rgba(34,211,238,0.95)]',
+        duration: '2.9s',
+        delay: '0.5s',
+    },
+
+    // Flash Sale & Vouchers
+    {
+        id: 19,
+        top: '1270px',
+        right: '9%',
+        size: 'size-5',
+        color: 'text-destructive/60 group-hover:text-destructive',
+        glow: 'group-hover:drop-shadow-[0_0_16px_rgba(239,68,68,0.95)]',
+        duration: '2.9s',
+    },
+    {
+        id: 20,
+        top: '1350px',
+        left: '2%',
+        size: 'size-6',
+        color: 'text-primary/50 group-hover:text-primary',
+        glow: 'group-hover:drop-shadow-[0_0_16px_var(--color-primary)]',
+        duration: '4.3s',
+        delay: '0.6s',
+    },
+    {
+        id: 21,
+        top: '1430px',
+        left: '17%',
+        size: 'size-3.5',
+        color: 'text-amber-400/60 group-hover:text-amber-300',
+        glow: 'group-hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.95)]',
+        duration: '2.5s',
+    },
+    {
+        id: 22,
+        top: '1510px',
+        right: '3%',
+        size: 'size-7',
+        color: 'text-primary/45 group-hover:text-primary',
+        glow: 'group-hover:drop-shadow-[0_0_18px_var(--color-primary)]',
+        duration: '4.6s',
+        delay: '0.9s',
+    },
+    {
+        id: 23,
+        top: '1610px',
+        right: '14%',
+        size: 'size-4',
+        color: 'text-emerald-400/60 group-hover:text-emerald-300',
+        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(52,211,153,0.95)]',
+        duration: '3.1s',
+    },
+    {
+        id: 24,
+        top: '1690px',
+        left: '6%',
+        size: 'size-5',
+        color: 'text-primary/50 group-hover:text-primary',
+        glow: 'group-hover:drop-shadow-[0_0_15px_var(--color-primary)]',
+        duration: '3.7s',
+        delay: '0.3s',
+    },
+    {
+        id: 25,
+        top: '1750px',
+        right: '18%',
+        size: 'size-3.5',
+        color: 'text-amber-400/55 group-hover:text-amber-300',
+        glow: 'group-hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.95)]',
+        duration: '2.8s',
+    },
+
+    // Community Videos & Posts
+    {
+        id: 26,
+        top: '1820px',
+        right: '7%',
+        size: 'size-6',
+        color: 'text-purple-400/60 group-hover:text-purple-300',
+        glow: 'group-hover:drop-shadow-[0_0_16px_rgba(192,132,252,0.95)]',
+        duration: '4.0s',
+        delay: '0.4s',
+    },
+    {
+        id: 27,
+        top: '1910px',
+        left: '14%',
+        size: 'size-3.5',
+        color: 'text-amber-400/65 group-hover:text-amber-300',
+        glow: 'group-hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.95)]',
+        duration: '2.6s',
+    },
+    {
+        id: 28,
+        top: '2010px',
+        right: '16%',
+        size: 'size-4',
+        color: 'text-cyan-400/55 group-hover:text-cyan-300',
+        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(34,211,238,0.95)]',
+        duration: '3.5s',
+        delay: '0.7s',
+    },
+    {
+        id: 29,
+        top: '2090px',
+        left: '3%',
+        size: 'size-7',
+        color: 'text-primary/45 group-hover:text-primary',
+        glow: 'group-hover:drop-shadow-[0_0_18px_var(--color-primary)]',
+        duration: '5.0s',
+    },
+    {
+        id: 30,
+        top: '2210px',
+        right: '5%',
+        size: 'size-4.5',
+        color: 'text-amber-400/60 group-hover:text-amber-300',
+        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(251,191,36,0.95)]',
+        duration: '3.2s',
+        delay: '0.5s',
+    },
+    {
+        id: 31,
+        top: '2290px',
+        left: '10%',
+        size: 'size-4',
+        color: 'text-emerald-400/50 group-hover:text-emerald-300',
+        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(52,211,153,0.95)]',
+        duration: '3.4s',
+    },
+
+    // Product Recommendations / Feed
+    {
+        id: 32,
+        top: '2370px',
+        left: '8%',
+        size: 'size-6',
+        color: 'text-primary/45 group-hover:text-primary',
+        glow: 'group-hover:drop-shadow-[0_0_16px_var(--color-primary)]',
+        duration: '4.5s',
+        delay: '0.8s',
+    },
+    {
+        id: 33,
+        top: '2470px',
+        right: '12%',
+        size: 'size-5',
+        color: 'text-emerald-400/55 group-hover:text-emerald-300',
+        glow: 'group-hover:drop-shadow-[0_0_15px_rgba(52,211,153,0.95)]',
+        duration: '3.8s',
+    },
+    {
+        id: 34,
+        top: '2580px',
+        left: '16%',
+        size: 'size-3.5',
+        color: 'text-amber-400/60 group-hover:text-amber-300',
+        glow: 'group-hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.95)]',
+        duration: '2.8s',
+        delay: '0.3s',
+    },
+    {
+        id: 35,
+        top: '2670px',
+        right: '4%',
+        size: 'size-6',
+        color: 'text-primary/40 group-hover:text-primary',
+        glow: 'group-hover:drop-shadow-[0_0_16px_var(--color-primary)]',
+        duration: '4.2s',
+    },
+    {
+        id: 36,
+        top: '2790px',
+        left: '5%',
+        size: 'size-5',
+        color: 'text-rose-400/55 group-hover:text-rose-300',
+        glow: 'group-hover:drop-shadow-[0_0_15px_rgba(251,113,133,0.95)]',
+        duration: '3.6s',
+        delay: '0.6s',
+    },
+    {
+        id: 37,
+        top: '2910px',
+        right: '15%',
+        size: 'size-4',
+        color: 'text-cyan-400/60 group-hover:text-cyan-300',
+        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(34,211,238,0.95)]',
+        duration: '3.0s',
+    },
+    {
+        id: 38,
+        top: '3040px',
+        left: '11%',
+        size: 'size-6',
+        color: 'text-primary/45 group-hover:text-primary',
+        glow: 'group-hover:drop-shadow-[0_0_16px_var(--color-primary)]',
+        duration: '4.7s',
+        delay: '0.4s',
+    },
+    {
+        id: 39,
+        top: '3170px',
+        right: '7%',
+        size: 'size-4',
+        color: 'text-amber-400/55 group-hover:text-amber-300',
+        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(251,191,36,0.95)]',
+        duration: '3.3s',
+    },
+
+    // Bottom Ambient near Footer
+    {
+        id: 40,
+        bottom: '260px',
+        left: '14%',
+        size: 'size-4.5',
+        color: 'text-amber-400/60 group-hover:text-amber-300',
+        glow: 'group-hover:drop-shadow-[0_0_14px_rgba(251,191,36,0.95)]',
+        duration: '3.1s',
+    },
+    {
+        id: 41,
+        bottom: '160px',
+        right: '12%',
+        size: 'size-6',
+        color: 'text-primary/50 group-hover:text-primary',
+        glow: 'group-hover:drop-shadow-[0_0_16px_var(--color-primary)]',
+        duration: '3.9s',
+        delay: '0.7s',
+    },
+    {
+        id: 42,
+        bottom: '70px',
+        left: '6%',
+        size: 'size-5',
+        color: 'text-emerald-400/55 group-hover:text-emerald-300',
+        glow: 'group-hover:drop-shadow-[0_0_15px_rgba(52,211,153,0.95)]',
+        duration: '3.5s',
+    },
+    {
+        id: 43,
+        bottom: '35px',
+        right: '18%',
+        size: 'size-3.5',
+        color: 'text-amber-400/65 group-hover:text-amber-300',
+        glow: 'group-hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.95)]',
+        duration: '2.5s',
+        delay: '0.2s',
+    },
+]
+
 /* 1. Hero Slides */
 const HERO_SLIDES = [
     {
@@ -697,66 +1135,34 @@ export function HomePage() {
                 {/* Bottom ambient aura */}
                 <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[450px] w-full max-w-6xl rounded-full bg-gradient-to-t from-primary/25 to-transparent blur-[130px]" />
 
-                {/* Floating Gemini Stars (4 cánh) */}
-                <IconPath
-                    name="gemini-star"
-                    className="absolute top-20 left-[7%] size-6 text-primary/50 animate-pulse [animation-duration:3s]"
-                />
-                <IconPath
-                    name="gemini-star"
-                    className="absolute top-36 left-[18%] size-3.5 text-amber-400/60 animate-pulse [animation-duration:2.5s]"
-                />
-                <IconPath
-                    name="gemini-star"
-                    className="absolute top-24 right-[10%] size-7 text-primary/45 animate-pulse [animation-duration:4s]"
-                />
-                <IconPath
-                    name="gemini-star"
-                    className="absolute top-44 right-[5%] size-4 text-emerald-400/50 animate-pulse [animation-duration:3.2s]"
-                />
-
-                <IconPath
-                    name="gemini-star"
-                    className="absolute top-[820px] left-[4%] size-6 text-primary/40 animate-pulse [animation-duration:4.5s]"
-                />
-                <IconPath
-                    name="gemini-star"
-                    className="absolute top-[900px] left-[13%] size-3.5 text-amber-400/50 animate-pulse [animation-duration:2.8s]"
-                />
-                <IconPath
-                    name="gemini-star"
-                    className="absolute top-[1100px] right-[6%] size-5 text-primary/45 animate-pulse [animation-duration:3.6s]"
-                />
-
-                <IconPath
-                    name="gemini-star"
-                    className="absolute top-[1600px] right-[5%] size-7 text-primary/40 animate-pulse [animation-duration:4.2s]"
-                />
-                <IconPath
-                    name="gemini-star"
-                    className="absolute top-[1720px] right-[15%] size-4 text-amber-400/50 animate-pulse [animation-duration:3s]"
-                />
-                <IconPath
-                    name="gemini-star"
-                    className="absolute top-[1880px] left-[5%] size-5 text-primary/40 animate-pulse [animation-duration:3.7s]"
-                />
-
-                <IconPath
-                    name="gemini-star"
-                    className="absolute top-[2400px] left-[8%] size-6 text-primary/35 animate-pulse [animation-duration:5s]"
-                />
-                <IconPath
-                    name="gemini-star"
-                    className="absolute top-[2550px] right-[7%] size-5 text-primary/40 animate-pulse [animation-duration:4s]"
-                />
-                <IconPath
-                    name="gemini-star"
-                    className="absolute bottom-28 left-[14%] size-4 text-amber-400/45 animate-pulse [animation-duration:3.2s]"
-                />
-                <IconPath
-                    name="gemini-star"
-                    className="absolute bottom-16 right-[16%] size-6 text-primary/40 animate-pulse [animation-duration:3.8s]"
-                />
+                {/* Floating Gemini Stars (4 cánh) - Interactive constellation with Hover Glow & Quarter-Spin */}
+                {BACKGROUND_STARS.map((star) => (
+                    <div
+                        key={star.id}
+                        style={{
+                            top: star.top,
+                            bottom: star.bottom,
+                            left: star.left,
+                            right: star.right,
+                        }}
+                        className="group pointer-events-auto absolute cursor-pointer select-none transition-transform duration-500 ease-out hover:scale-175 hover:rotate-90 hover:z-30"
+                        title="⭐ TimmyHub Sparkle"
+                    >
+                        <IconPath
+                            name="gemini-star"
+                            style={{
+                                animationDuration: star.duration,
+                                animationDelay: star.delay || '0s',
+                            }}
+                            className={`${star.size} ${star.color} transition-all duration-300 group-hover:opacity-100 ${star.glow} animate-pulse group-hover:[animation-play-state:paused]`}
+                        />
+                        {/* Micro-sparkle glow halo blooming on hover */}
+                        <span
+                            aria-hidden
+                            className="pointer-events-none absolute inset-0 -m-2 rounded-full bg-current opacity-0 blur-md transition-all duration-300 group-hover:opacity-60 group-hover:scale-125"
+                        />
+                    </div>
+                ))}
             </div>
 
             <div className="relative mx-auto max-w-7xl space-y-12 px-4 py-6 pb-20 sm:px-6">
