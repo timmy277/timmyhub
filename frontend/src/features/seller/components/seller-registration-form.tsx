@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -55,8 +56,15 @@ export function SellerRegistrationForm({
     isAlreadySeller = false,
 }: SellerRegistrationFormProps) {
     const t = useTranslations('seller.register')
+    const router = useRouter()
     const queryClient = useQueryClient()
     const [selectedDocPreset, setSelectedDocPreset] = useState<'cccd' | 'gpkd' | 'custom'>('cccd')
+
+    useEffect(() => {
+        if (isAlreadySeller) {
+            router.replace(ROUTE.SELLER_PORTAL)
+        }
+    }, [isAlreadySeller, router])
 
     // ===== Query =====
     const { data: applications = initialApplications } = useQuery({

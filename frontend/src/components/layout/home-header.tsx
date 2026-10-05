@@ -5,7 +5,8 @@ import { getTranslations } from 'next-intl/server'
 
 import { LocaleSwitcher, NotificationMenu, ThemeMenu, ThemeModeToggle, UserMenu } from '@/components/common'
 import { Button, Skeleton } from '@/components/ui'
-import { DASHBOARD_PERMISSION, ROUTE } from '@/constants'
+import { DASHBOARD_PERMISSION, ROUTE, SELLER_SHOP_ANY_PERMISSION, SELLER_SHOP_PERMISSION } from '@/constants'
+import { getMyShopAction } from '@/features/seller'
 import { getActor } from '@/lib/actor-permissions'
 
 // AppBar độc lập trên trang chủ — không bị bọc trong sidebar.
@@ -16,7 +17,15 @@ export async function HomeHeader() {
     const t = await getTranslations('nav')
     const actor = await getActor()
     const canAccessDashboard = actor?.permissions.has(DASHBOARD_PERMISSION) ?? false
-    const isSeller = actor?.permissions.has('seller:shops:update') ?? false
+    const isSellerByPermission =
+        (actor?.permissions.has(SELLER_SHOP_PERMISSION) || actor?.permissions.has(SELLER_SHOP_ANY_PERMISSION)) ?? false
+    let isSeller = isSellerByPermission
+    if (!isSeller && actor) {
+        const shopRes = await getMyShopAction()
+        if (shopRes.ok && Boolean(shopRes.data)) {
+            isSeller = true
+        }
+    }
     const sellerRoute = isSeller ? ROUTE.SELLER_PORTAL : ROUTE.SELLER_REGISTER
     const sellerLabel = isSeller ? t('sellerPortal') : t('becomeSeller')
 

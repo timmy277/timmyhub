@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useQuery } from '@tanstack/react-query'
 import {
     ChevronRightIcon,
     HeadphonesIcon,
@@ -16,7 +17,9 @@ import { toast } from 'sonner'
 
 import { IconPath } from '@/components/icons'
 import { Badge, Button, Input } from '@/components/ui'
-import { ROUTE } from '@/constants'
+import { QUERY_KEY, ROUTE, SELLER_SHOP_ANY_PERMISSION, SELLER_SHOP_PERMISSION } from '@/constants'
+import { getMyShopAction } from '@/features/seller'
+import { usePermissions } from '@/hooks'
 
 const FOOTER_LINKS = {
     about: [
@@ -55,6 +58,20 @@ const FOOTER_LINKS = {
 
 export function HomeFooter() {
     const [email, setEmail] = useState('')
+    const { hasPermission } = usePermissions()
+    const isSellerByPermission = hasPermission(SELLER_SHOP_PERMISSION) || hasPermission(SELLER_SHOP_ANY_PERMISSION)
+    const { data: myShop } = useQuery({
+        queryKey: QUERY_KEY.SELLER.MY_SHOP,
+        queryFn: async () => {
+            const res = await getMyShopAction()
+            return res.ok && res.data ? res.data : null
+        },
+        enabled: !isSellerByPermission,
+        staleTime: 60_000,
+    })
+    const isSeller = isSellerByPermission || Boolean(myShop)
+    const sellerHref = isSeller ? ROUTE.SELLER_PORTAL : ROUTE.SELLER_REGISTER
+    const sellerText = isSeller ? 'Kênh người bán (Seller)' : 'Trở thành Người Bán'
 
     const handleSubscribe = (e: React.FormEvent) => {
         e.preventDefault()
@@ -206,16 +223,20 @@ export function HomeFooter() {
                             Về TimmyHub
                         </h4>
                         <ul className="space-y-2 text-xs text-muted-foreground">
-                            {FOOTER_LINKS.about.map((link) => (
-                                <li key={link.label}>
-                                    <Link
-                                        href={link.href}
-                                        className="transition-colors hover:text-primary hover:underline underline-offset-4"
-                                    >
-                                        {link.label}
-                                    </Link>
-                                </li>
-                            ))}
+                            {FOOTER_LINKS.about.map((link) => {
+                                const href = link.href === ROUTE.SELLER_PORTAL ? sellerHref : link.href
+                                const label = link.href === ROUTE.SELLER_PORTAL ? sellerText : link.label
+                                return (
+                                    <li key={link.label}>
+                                        <Link
+                                            href={href}
+                                            className="transition-colors hover:text-primary hover:underline underline-offset-4"
+                                        >
+                                            {label}
+                                        </Link>
+                                    </li>
+                                )
+                            })}
                         </ul>
                     </div>
 

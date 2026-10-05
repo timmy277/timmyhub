@@ -37,11 +37,15 @@ import {
     WatchIcon,
     ZapIcon,
 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 
 import { IconPath } from '@/components/icons'
 import { Badge, Button } from '@/components/ui'
-import { ROUTE } from '@/constants'
+import { QUERY_KEY, ROUTE, SELLER_SHOP_ANY_PERMISSION, SELLER_SHOP_PERMISSION } from '@/constants'
+import { getMyShopAction } from '@/features/seller'
+import { usePermissions } from '@/hooks'
 
 function formatNumber(num: number): string {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
@@ -591,6 +595,22 @@ const Product3DCard = memo(function Product3DCard({ product: p, isLiked, onToggl
  * MAIN HOMEPAGE COMPONENT
  * ───────────────────────────────────────────────────────────────────────────── */
 export function HomePage() {
+    const tNav = useTranslations('nav')
+    const { hasPermission } = usePermissions()
+    const isSellerByPermission = hasPermission(SELLER_SHOP_PERMISSION) || hasPermission(SELLER_SHOP_ANY_PERMISSION)
+    const { data: myShop } = useQuery({
+        queryKey: QUERY_KEY.SELLER.MY_SHOP,
+        queryFn: async () => {
+            const res = await getMyShopAction()
+            return res.ok && res.data ? res.data : null
+        },
+        enabled: !isSellerByPermission,
+        staleTime: 60_000,
+    })
+    const isSeller = isSellerByPermission || Boolean(myShop)
+    const sellerRoute = isSeller ? ROUTE.SELLER_PORTAL : ROUTE.SELLER_REGISTER
+    const sellerLabel = isSeller ? tNav('sellerPortal') : tNav('becomeSeller')
+
     // 1. Hero Carousel State
     const [currentSlide, setCurrentSlide] = useState(0)
     const [isPaused, setIsPaused] = useState(false)
@@ -1431,13 +1451,13 @@ export function HomePage() {
                                     <PlayIcon className="size-4 fill-current text-white" />
                                     Google Play
                                 </Button>
-                                <Link href={ROUTE.SELLER_PORTAL}>
+                                <Link href={sellerRoute}>
                                     <Button
                                         size="lg"
                                         className="rounded-xl font-semibold gap-2 bg-primary text-white hover:bg-primary/90 shadow-sm"
                                     >
                                         <StoreIcon className="size-4 text-white" />
-                                        Đăng ký bán hàng
+                                        {sellerLabel}
                                     </Button>
                                 </Link>
                             </div>
