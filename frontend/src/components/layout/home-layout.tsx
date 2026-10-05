@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { HomeHeader } from './home-header'
+import { HomeFooter } from './home-footer'
 
 interface HomeLayoutProps {
     children: ReactNode
@@ -13,6 +14,7 @@ export function HomeLayout({ children }: HomeLayoutProps) {
         <div className="flex min-h-svh flex-col bg-background">
             <HomeHeader />
             <main className="flex-1">{children}</main>
+            <HomeFooter />
         </div>
     )
 }

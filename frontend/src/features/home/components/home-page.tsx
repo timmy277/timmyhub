@@ -1,6 +1,7 @@
 'use client'
 
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import {
     ArrowRightIcon,
@@ -26,7 +27,6 @@ import {
     Share2Icon,
     ShieldCheckIcon,
     ShoppingBagIcon,
-    ShoppingCartIcon,
     SmartphoneIcon,
     SparklesIcon,
     StarIcon,
@@ -39,8 +39,13 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { IconPath } from '@/components/icons'
 import { Badge, Button } from '@/components/ui'
 import { ROUTE } from '@/constants'
+
+function formatNumber(num: number): string {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+}
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * MOCK DATA: Đầy đủ các section theo timmyhub gốc
@@ -57,7 +62,7 @@ const HERO_SLIDES = [
         action: 'Khám phá ngay',
         href: '#products-section',
         stats: { sold: '15.4K+', rating: '4.9★', label: 'Bán chạy nhất' },
-        gradient: 'from-emerald-950 via-teal-900 to-slate-950',
+        image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1600&q=80',
     },
     {
         id: 2,
@@ -68,7 +73,7 @@ const HERO_SLIDES = [
         action: 'Xem bộ sưu tập',
         href: '#products-section',
         stats: { sold: '8.9K+', rating: '5.0★', label: 'Hàng mới về' },
-        gradient: 'from-blue-950 via-indigo-950 to-slate-950',
+        image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1600&q=80',
     },
     {
         id: 3,
@@ -79,7 +84,7 @@ const HERO_SLIDES = [
         action: 'Mua sắm ngay',
         href: '#products-section',
         stats: { sold: '12.1K+', rating: '4.8★', label: 'Deal hot tuần' },
-        gradient: 'from-stone-950 via-purple-950 to-neutral-950',
+        image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1600&q=80',
     },
 ]
 
@@ -197,6 +202,8 @@ const FLASH_SALE_PRODUCTS = [
         id: 'fs-1',
         title: 'iPhone 15 Pro Max 256GB Titan Tự Nhiên',
         category: 'Điện thoại',
+        shop: 'Apple Authorized Store',
+        verified: true,
         price: '28.990.000',
         originalPrice: '34.990.000',
         discount: 17,
@@ -210,6 +217,8 @@ const FLASH_SALE_PRODUCTS = [
         id: 'fs-2',
         title: 'Tai nghe Sony WH-1000XM5 Chống Ồn Cao Cấp',
         category: 'Âm thanh',
+        shop: 'Sony Official Store',
+        verified: true,
         price: '6.490.000',
         originalPrice: '8.990.000',
         discount: 28,
@@ -223,6 +232,8 @@ const FLASH_SALE_PRODUCTS = [
         id: 'fs-3',
         title: 'Đồng Hồ Apple Watch Series 9 GPS 45mm',
         category: 'Đồng hồ',
+        shop: 'Apple Flagship Store',
+        verified: true,
         price: '8.290.000',
         originalPrice: '11.590.000',
         discount: 28,
@@ -236,6 +247,8 @@ const FLASH_SALE_PRODUCTS = [
         id: 'fs-4',
         title: 'Bàn phím cơ không dây Keychron Q1 Pro RGB',
         category: 'Gaming',
+        shop: 'Keychron Official VN',
+        verified: true,
         price: '3.650.000',
         originalPrice: '4.890.000',
         discount: 25,
@@ -446,6 +459,134 @@ const TimerBlock = memo(function TimerBlock({ val, label }: { val: string; label
     )
 })
 
+interface Product3DCardProps {
+    product: (typeof ALL_PRODUCTS)[0]
+    isLiked: boolean
+    onToggleWishlist: (id: string, name: string) => void
+}
+
+/* Product Card with Interactive 3D Tilt, Dynamic Glare, and Depth Stacking */
+const Product3DCard = memo(function Product3DCard({ product: p, isLiked, onToggleWishlist }: Product3DCardProps) {
+    const [tilt, setTilt] = useState({ x: 0, y: 0 })
+    const [glare, setGlare] = useState<{ x: number; y: number; opacity: number }>({ x: 50, y: 50, opacity: 0 })
+    const cardRef = useRef<HTMLDivElement>(null)
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!cardRef.current) return
+        const rect = cardRef.current.getBoundingClientRect()
+        const x = e.clientX - rect.left
+        const y = e.clientY - rect.top
+        const centerX = rect.width / 2
+        const centerY = rect.height / 2
+        const rotateX = Number((((y - centerY) / centerY) * -8).toFixed(2))
+        const rotateY = Number((((x - centerX) / centerX) * 8).toFixed(2))
+        setTilt({ x: rotateX, y: rotateY })
+        setGlare({
+            x: Math.round((x / rect.width) * 100),
+            y: Math.round((y / rect.height) * 100),
+            opacity: 0.18,
+        })
+    }
+
+    const handleMouseLeave = () => {
+        setTilt({ x: 0, y: 0 })
+        setGlare((prev) => ({ ...prev, opacity: 0 }))
+    }
+
+    const isHovered = tilt.x !== 0 || tilt.y !== 0
+
+    return (
+        <div className="[perspective:1000px] h-full">
+            <article
+                ref={cardRef}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+                style={{
+                    transform: isHovered
+                        ? `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateY(-6px) scale3d(1.02, 1.02, 1.02)`
+                        : 'rotateX(0deg) rotateY(0deg) translateY(0px) scale3d(1, 1, 1)',
+                    transition: isHovered ? 'transform 0.1s ease-out' : 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)',
+                }}
+                className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card p-3.5 shadow-sm hover:shadow-xl hover:shadow-primary/15 hover:border-primary/50 [transform-style:preserve-3d] select-none"
+            >
+                {/* 3D Glare Light Sweep Layer */}
+                <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 z-20 rounded-2xl transition-opacity duration-300"
+                    style={{
+                        background: `radial-gradient(circle 240px at ${glare.x}% ${glare.y}%, rgba(255, 255, 255, ${glare.opacity}), transparent)`,
+                    }}
+                />
+
+                {/* Product Image & Badges with 3D Popout */}
+                <div className="relative flex h-40 items-center justify-center rounded-xl bg-muted/40 overflow-hidden transition-all duration-300 group-hover:bg-primary/5 [transform:translateZ(20px)]">
+                    <span className="text-6xl transition-transform duration-500 ease-out group-hover:scale-115 group-hover:rotate-3 select-none drop-shadow-sm">
+                        {p.emoji}
+                    </span>
+                    {p.discount > 0 && (
+                        <span className="absolute top-2 left-2 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-6deg]">
+                            -{p.discount}%
+                        </span>
+                    )}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            onToggleWishlist(p.id, p.name)
+                        }}
+                        aria-label="Thêm vào yêu thích"
+                        className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-background/80 text-foreground/80 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-125 active:scale-90 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40 z-30"
+                    >
+                        <HeartIcon
+                            className={`size-3.5 transition-colors duration-200 ${isLiked ? 'fill-rose-500 text-rose-500' : ''}`}
+                        />
+                    </button>
+                </div>
+
+                {/* Product Details with 3D Depth */}
+                <div className="mt-3 flex flex-1 flex-col gap-1.5 [transform:translateZ(14px)]">
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">{p.category}</span>
+                    <h3 className="line-clamp-2 text-xs font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
+                        {p.name}
+                    </h3>
+
+                    <div className="mt-auto pt-2 space-y-2">
+                        <div className="flex items-baseline gap-1.5">
+                            <span className="text-sm sm:text-base font-extrabold text-primary transition-transform duration-300 group-hover:scale-105 origin-left inline-block">
+                                ₫{p.price}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground line-through">₫{p.originalPrice}</span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                            <span className="flex items-center gap-0.5">
+                                <StarIcon className="size-3 fill-amber-400 text-amber-400 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
+                                <span className="font-semibold text-foreground/90">{p.rating}</span>
+                                <span>({p.reviews})</span>
+                            </span>
+                            <span suppressHydrationWarning>Đã bán {formatNumber(p.sold)}</span>
+                        </div>
+
+                        {/* Seller Footer */}
+                        <div className="pt-2.5 border-t border-border/60 flex items-center justify-between gap-1.5 text-xs">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                                <div className="flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
+                                    <StoreIcon className="size-3" />
+                                </div>
+                                <span className="truncate text-[11px] font-semibold text-foreground group-hover:text-primary transition-colors">
+                                    {p.shop}
+                                </span>
+                                {p.verified && (
+                                    <CheckCircle2Icon className="size-3.5 text-primary shrink-0 transition-transform duration-300 group-hover:scale-125" />
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </div>
+    )
+})
+
 /* ─────────────────────────────────────────────────────────────────────────────
  * MAIN HOMEPAGE COMPONENT
  * ───────────────────────────────────────────────────────────────────────────── */
@@ -528,16 +669,6 @@ export function HomePage() {
         })
     }, [])
 
-    const handleAddToCart = useCallback((name: string) => {
-        toast.success(`Đã thêm vào giỏ hàng`, {
-            description: name,
-            action: {
-                label: 'Xem giỏ',
-                onClick: () => {},
-            },
-        })
-    }, [])
-
     const filteredProducts = useMemo(() => {
         if (productTab === 'new') return ALL_PRODUCTS.filter((p) => p.isNew)
         if (productTab === 'best') return ALL_PRODUCTS.filter((p) => p.isBest)
@@ -545,797 +676,873 @@ export function HomePage() {
     }, [productTab])
 
     return (
-        <div className="mx-auto max-w-7xl space-y-12 px-4 py-6 pb-20 sm:px-6">
-            {/* ═══════════════════════════════════════════════════════════════════
-             * 1. HERO CAROUSEL BANNER (Có 3D Perspective + Indicator & Controls)
-             * ═══════════════════════════════════════════════════════════════════ */}
-            <section
-                aria-label="Khuyến mãi nổi bật"
-                className="relative overflow-hidden rounded-3xl border border-border/70 bg-card shadow-lg"
-                onMouseEnter={() => setIsPaused(true)}
-                onMouseLeave={() => setIsPaused(false)}
-            >
-                <div className="relative min-h-[460px] sm:min-h-[500px] w-full overflow-hidden">
-                    {HERO_SLIDES.map((slide, index) => {
-                        const isActive = index === currentSlide
-                        return (
-                            <div
-                                key={slide.id}
-                                className={`absolute inset-0 flex flex-col justify-between p-6 sm:p-12 transition-all duration-700 ease-out bg-gradient-to-br ${slide.gradient} ${
-                                    isActive
-                                        ? 'opacity-100 translate-x-0 z-10'
-                                        : 'opacity-0 translate-x-8 pointer-events-none z-0'
-                                }`}
-                            >
-                                {/* Background Decorative Elements */}
-                                <div
-                                    aria-hidden
-                                    className="pointer-events-none absolute -right-24 -top-24 size-96 rounded-full bg-primary/20 blur-3xl"
-                                />
-                                <div
-                                    aria-hidden
-                                    className="pointer-events-none absolute bottom-0 right-1/4 size-64 rounded-full bg-primary/10 blur-2xl"
-                                />
+        <div className="relative min-h-screen w-full isolate overflow-hidden bg-gradient-to-b from-primary/[0.08] via-primary/[0.03] to-primary/[0.06]">
+            {/* Ambient Dynamic Background & Glowing Orbs */}
+            <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+                {/* Subtle primary dot texture across the background */}
+                <div className="absolute inset-0 bg-[radial-gradient(var(--color-primary)_1px,transparent_1px)] [background-size:24px_24px] opacity-10" />
 
-                                {/* Slide Top Info */}
-                                <div className="relative z-10 flex items-center justify-between">
-                                    <span
-                                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur-md ${slide.badgeColor}`}
-                                    >
-                                        <SparklesIcon className="size-3" />
-                                        {slide.tag}
-                                    </span>
-                                    <div className="hidden sm:flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-md border border-white/10">
-                                        <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-                                        {slide.stats.label}: {slide.stats.sold} đơn
+                {/* Top radiant bloom */}
+                <div className="absolute -top-32 left-1/2 -translate-x-1/2 h-[650px] w-full max-w-7xl rounded-full bg-gradient-to-b from-primary/30 via-primary/15 to-transparent blur-[120px]" />
+
+                {/* Left side floating orb along Flash Sale & Categories */}
+                <div className="absolute top-[750px] -left-32 size-[500px] rounded-full bg-primary/20 blur-[140px]" />
+
+                {/* Right side floating orb along Community & Videos */}
+                <div className="absolute top-[1500px] -right-32 size-[550px] rounded-full bg-primary/20 blur-[150px]" />
+
+                {/* Middle-lower radiant aura along Product Suggestions */}
+                <div className="absolute top-[2300px] left-1/4 size-[600px] rounded-full bg-primary/15 blur-[160px]" />
+
+                {/* Bottom ambient aura */}
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[450px] w-full max-w-6xl rounded-full bg-gradient-to-t from-primary/25 to-transparent blur-[130px]" />
+
+                {/* Floating Gemini Stars (4 cánh) */}
+                <IconPath
+                    name="gemini-star"
+                    className="absolute top-20 left-[7%] size-6 text-primary/50 animate-pulse [animation-duration:3s]"
+                />
+                <IconPath
+                    name="gemini-star"
+                    className="absolute top-36 left-[18%] size-3.5 text-amber-400/60 animate-pulse [animation-duration:2.5s]"
+                />
+                <IconPath
+                    name="gemini-star"
+                    className="absolute top-24 right-[10%] size-7 text-primary/45 animate-pulse [animation-duration:4s]"
+                />
+                <IconPath
+                    name="gemini-star"
+                    className="absolute top-44 right-[5%] size-4 text-emerald-400/50 animate-pulse [animation-duration:3.2s]"
+                />
+
+                <IconPath
+                    name="gemini-star"
+                    className="absolute top-[820px] left-[4%] size-6 text-primary/40 animate-pulse [animation-duration:4.5s]"
+                />
+                <IconPath
+                    name="gemini-star"
+                    className="absolute top-[900px] left-[13%] size-3.5 text-amber-400/50 animate-pulse [animation-duration:2.8s]"
+                />
+                <IconPath
+                    name="gemini-star"
+                    className="absolute top-[1100px] right-[6%] size-5 text-primary/45 animate-pulse [animation-duration:3.6s]"
+                />
+
+                <IconPath
+                    name="gemini-star"
+                    className="absolute top-[1600px] right-[5%] size-7 text-primary/40 animate-pulse [animation-duration:4.2s]"
+                />
+                <IconPath
+                    name="gemini-star"
+                    className="absolute top-[1720px] right-[15%] size-4 text-amber-400/50 animate-pulse [animation-duration:3s]"
+                />
+                <IconPath
+                    name="gemini-star"
+                    className="absolute top-[1880px] left-[5%] size-5 text-primary/40 animate-pulse [animation-duration:3.7s]"
+                />
+
+                <IconPath
+                    name="gemini-star"
+                    className="absolute top-[2400px] left-[8%] size-6 text-primary/35 animate-pulse [animation-duration:5s]"
+                />
+                <IconPath
+                    name="gemini-star"
+                    className="absolute top-[2550px] right-[7%] size-5 text-primary/40 animate-pulse [animation-duration:4s]"
+                />
+                <IconPath
+                    name="gemini-star"
+                    className="absolute bottom-28 left-[14%] size-4 text-amber-400/45 animate-pulse [animation-duration:3.2s]"
+                />
+                <IconPath
+                    name="gemini-star"
+                    className="absolute bottom-16 right-[16%] size-6 text-primary/40 animate-pulse [animation-duration:3.8s]"
+                />
+            </div>
+
+            <div className="relative mx-auto max-w-7xl space-y-12 px-4 py-6 pb-20 sm:px-6">
+                {/* ═══════════════════════════════════════════════════════════════════
+                 * 1. HERO CAROUSEL BANNER (Có 3D Perspective + Indicator & Controls)
+                 * ═══════════════════════════════════════════════════════════════════ */}
+                <section
+                    aria-label="Khuyến mãi nổi bật"
+                    className="relative overflow-hidden rounded-3xl border border-border/70 bg-card shadow-lg"
+                    onMouseEnter={() => setIsPaused(true)}
+                    onMouseLeave={() => setIsPaused(false)}
+                >
+                    <div className="relative min-h-[460px] sm:min-h-[500px] w-full overflow-hidden">
+                        {HERO_SLIDES.map((slide, index) => {
+                            const isActive = index === currentSlide
+                            return (
+                                <div
+                                    key={slide.id}
+                                    className={`absolute inset-0 flex flex-col justify-between p-6 sm:p-12 transition-all duration-700 ease-out ${
+                                        isActive
+                                            ? 'opacity-100 translate-x-0 z-10'
+                                            : 'opacity-0 translate-x-8 pointer-events-none z-0'
+                                    }`}
+                                >
+                                    {/* High-quality Next.js Image Banner Background with dark overlays */}
+                                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                                        <Image
+                                            src={slide.image}
+                                            alt={slide.title.replace('\n', ' ')}
+                                            fill
+                                            priority={index === 0}
+                                            sizes="(max-width: 1280px) 100vw, 1280px"
+                                            className="object-cover scale-105 transition-transform duration-1000 ease-out"
+                                            unoptimized
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/75 to-black/45" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/35" />
                                     </div>
-                                </div>
 
-                                {/* Slide Body & 3D Interactive Card Preview */}
-                                <div className="relative z-10 my-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-4">
-                                    <div className="lg:col-span-7 space-y-4 max-w-xl text-white">
-                                        <h1 className="font-heading text-3xl sm:text-5xl font-extrabold tracking-tight leading-[1.15] whitespace-pre-line drop-shadow-sm">
-                                            {slide.title}
-                                        </h1>
-                                        <p className="text-sm sm:text-base text-white/80 leading-relaxed max-w-lg">
-                                            {slide.desc}
-                                        </p>
-                                        <div className="pt-2 flex flex-wrap items-center gap-3">
-                                            <a href={slide.href}>
-                                                <Button
-                                                    size="lg"
-                                                    className="rounded-xl font-semibold gap-2 shadow-lg hover:shadow-primary/25 text-white"
-                                                >
-                                                    <ShoppingBagIcon className="size-4 text-white" />
-                                                    {slide.action}
-                                                    <ArrowRightIcon className="size-4 text-white" />
-                                                </Button>
-                                            </a>
-                                            <Link href={ROUTE.SELLER_PORTAL}>
-                                                <Button
-                                                    size="lg"
-                                                    variant="outline"
-                                                    className="rounded-xl font-semibold gap-2 border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white backdrop-blur-sm"
-                                                >
-                                                    <StoreIcon className="size-4 text-white" />
-                                                    Kênh người bán
-                                                </Button>
-                                            </Link>
+                                    {/* Background Decorative Elements */}
+                                    <div
+                                        aria-hidden
+                                        className="pointer-events-none absolute -right-24 -top-24 size-96 rounded-full bg-primary/20 blur-3xl"
+                                    />
+                                    <div
+                                        aria-hidden
+                                        className="pointer-events-none absolute bottom-0 right-1/4 size-64 rounded-full bg-primary/10 blur-2xl"
+                                    />
+
+                                    {/* Slide Top Info */}
+                                    <div className="relative z-10 flex items-center justify-between">
+                                        <span
+                                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur-md ${slide.badgeColor}`}
+                                        >
+                                            <IconPath name="gemini-star" className="size-3 text-white animate-pulse" />
+                                            {slide.tag}
+                                        </span>
+                                        <div className="hidden sm:flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-md border border-white/10">
+                                            <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+                                            {slide.stats.label}: {slide.stats.sold} đơn
                                         </div>
                                     </div>
 
-                                    {/* 3D Isometric Floating Showcase Card */}
-                                    <div className="hidden lg:flex lg:col-span-5 justify-center [perspective:1000px]">
-                                        <div className="w-80 rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-md shadow-2xl text-white transition-all duration-500 ease-out hover:scale-105 [transform:rotateY(-8deg)_rotateX(6deg)] hover:[transform:rotateY(0deg)_rotateX(0deg)] motion-reduce:transform-none select-none">
-                                            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-white font-bold text-xs">
-                                                        T
-                                                    </span>
-                                                    <span className="font-bold text-xs tracking-wider uppercase text-white">
-                                                        TimmyHub Choice
+                                    {/* Slide Body & 3D Interactive Card Preview */}
+                                    <div className="relative z-10 my-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-4">
+                                        <div className="lg:col-span-7 space-y-4 max-w-xl text-white">
+                                            <h1 className="font-heading text-3xl sm:text-5xl font-extrabold tracking-tight leading-[1.15] whitespace-pre-line drop-shadow-sm">
+                                                {slide.title}
+                                            </h1>
+                                            <p className="text-sm sm:text-base text-white/80 leading-relaxed max-w-lg">
+                                                {slide.desc}
+                                            </p>
+                                            <div className="pt-2 flex flex-wrap items-center gap-3">
+                                                <a href={slide.href}>
+                                                    <Button
+                                                        size="lg"
+                                                        className="rounded-xl font-semibold gap-2 shadow-lg hover:shadow-primary/25 text-white"
+                                                    >
+                                                        <ShoppingBagIcon className="size-4 text-white" />
+                                                        {slide.action}
+                                                        <ArrowRightIcon className="size-4 text-white" />
+                                                    </Button>
+                                                </a>
+                                                <Link href={ROUTE.SELLER_PORTAL}>
+                                                    <Button
+                                                        size="lg"
+                                                        variant="outline"
+                                                        className="rounded-xl font-semibold gap-2 border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white backdrop-blur-sm"
+                                                    >
+                                                        <StoreIcon className="size-4 text-white" />
+                                                        Kênh người bán
+                                                    </Button>
+                                                </Link>
+                                            </div>
+                                        </div>
+
+                                        {/* 3D Isometric Floating Showcase Card */}
+                                        <div className="hidden lg:flex lg:col-span-5 justify-center [perspective:1000px]">
+                                            <div className="w-80 rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-md shadow-2xl text-white transition-all duration-500 ease-out hover:scale-105 [transform:rotateY(-8deg)_rotateX(6deg)] hover:[transform:rotateY(0deg)_rotateX(0deg)] motion-reduce:transform-none select-none">
+                                                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-white font-bold text-xs">
+                                                            T
+                                                        </span>
+                                                        <span className="font-bold text-xs tracking-wider uppercase text-white">
+                                                            TimmyHub Choice
+                                                        </span>
+                                                    </div>
+                                                    <Badge className="bg-primary text-white text-[10px] font-semibold gap-1">
+                                                        <IconPath name="gemini-star" className="size-2.5 text-white" />
+                                                        Ưu đãi 2026
+                                                    </Badge>
+                                                </div>
+                                                <div className="my-6 text-center space-y-2">
+                                                    <div className="text-6xl drop-shadow-md">🎁</div>
+                                                    <p className="text-base font-bold text-white">
+                                                        Deal Độc Quyền Hôm Nay
+                                                    </p>
+                                                    <p className="text-xs text-white/70">
+                                                        Cam kết 100% chính hãng · Miễn phí đổi trả 7 ngày
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center justify-between rounded-xl bg-black/30 p-2.5 text-xs text-white/90 border border-white/10">
+                                                    <span>Đánh giá từ khách</span>
+                                                    <span className="flex items-center gap-1 font-bold text-amber-400">
+                                                        <StarIcon className="size-3.5 fill-amber-400" />
+                                                        {slide.stats.rating}
                                                     </span>
                                                 </div>
-                                                <Badge className="bg-primary text-white text-[10px] font-semibold">
-                                                    Ưu đãi 2026
-                                                </Badge>
-                                            </div>
-                                            <div className="my-6 text-center space-y-2">
-                                                <div className="text-6xl drop-shadow-md">🎁</div>
-                                                <p className="text-base font-bold text-white">Deal Độc Quyền Hôm Nay</p>
-                                                <p className="text-xs text-white/70">
-                                                    Cam kết 100% chính hãng · Miễn phí đổi trả 7 ngày
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center justify-between rounded-xl bg-black/30 p-2.5 text-xs text-white/90 border border-white/10">
-                                                <span>Đánh giá từ khách</span>
-                                                <span className="flex items-center gap-1 font-bold text-amber-400">
-                                                    <StarIcon className="size-3.5 fill-amber-400" />
-                                                    {slide.stats.rating}
-                                                </span>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* Slide Bottom Controls & Dots */}
-                                <div className="relative z-10 flex items-center justify-between pt-4">
-                                    <div className="flex items-center gap-2">
-                                        {HERO_SLIDES.map((_, dotIndex) => (
-                                            <button
-                                                key={dotIndex}
-                                                onClick={() => setCurrentSlide(dotIndex)}
-                                                aria-label={`Chuyển tới slide ${dotIndex + 1}`}
-                                                className={`h-2 rounded-full transition-all duration-300 ${
-                                                    dotIndex === currentSlide
-                                                        ? 'w-8 bg-primary'
-                                                        : 'w-2 bg-white/40 hover:bg-white/70'
-                                                }`}
-                                            />
-                                        ))}
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <button
-                                            onClick={() =>
-                                                setCurrentSlide(
-                                                    (prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length,
-                                                )
-                                            }
-                                            aria-label="Slide trước"
-                                            className="flex size-8 items-center justify-center rounded-full bg-black/40 text-white/80 hover:bg-black/60 hover:text-white transition-colors backdrop-blur-md border border-white/10"
-                                        >
-                                            <ChevronLeftIcon className="size-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length)}
-                                            aria-label="Slide tiếp theo"
-                                            className="flex size-8 items-center justify-center rounded-full bg-black/40 text-white/80 hover:bg-black/60 hover:text-white transition-colors backdrop-blur-md border border-white/10"
-                                        >
-                                            <ChevronRightIcon className="size-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )
-                    })}
-                </div>
-            </section>
-
-            {/* ═══════════════════════════════════════════════════════════════════
-             * 2. FEATURE SECTION: CAM KẾT DỊCH VỤ SÀN (4 CAM KẾT)
-             * ═══════════════════════════════════════════════════════════════════ */}
-            <section aria-label="Cam kết dịch vụ" className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {FEATURES.map((f) => (
-                    <div
-                        key={f.title}
-                        className="group flex flex-col sm:flex-row items-start sm:items-center gap-3.5 rounded-2xl border border-border/70 bg-card p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-md hover:border-primary/40"
-                    >
-                        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                            <f.icon className="size-6 transition-transform group-hover:scale-110" aria-hidden />
-                        </div>
-                        <div className="min-w-0">
-                            <h2 className="text-sm font-bold text-foreground leading-tight">{f.title}</h2>
-                            <p className="mt-0.5 text-xs text-muted-foreground leading-snug">{f.desc}</p>
-                        </div>
-                    </div>
-                ))}
-            </section>
-
-            {/* ═══════════════════════════════════════════════════════════════════
-             * 3. CATEGORY SECTION: DANH MỤC NGÀNH HÀNG NỔI BẬT
-             * ═══════════════════════════════════════════════════════════════════ */}
-            <section aria-labelledby="categories-heading" className="space-y-4">
-                <div className="flex items-center justify-between border-b border-border/60 pb-3">
-                    <div className="flex items-center gap-2">
-                        <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <LayoutGridIcon className="size-4" />
-                        </div>
-                        <h2 id="categories-heading" className="text-xl font-bold tracking-tight text-foreground">
-                            Danh mục sản phẩm
-                        </h2>
-                    </div>
-                    <button
-                        onClick={() => toast.info('Xem tất cả danh mục hàng hoá')}
-                        className="group flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-                    >
-                        Xem tất cả
-                        <ChevronRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-                    </button>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-3">
-                    {CATEGORIES.map((cat) => (
-                        <button
-                            key={cat.name}
-                            onClick={() => setProductTab('all')}
-                            className="group flex flex-col items-center gap-2 rounded-2xl border border-border/70 bg-card p-3 text-center transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:shadow-md active:scale-95"
-                        >
-                            <div
-                                className={`flex size-12 items-center justify-center rounded-xl ${cat.color} transition-transform group-hover:scale-110`}
-                            >
-                                <cat.icon className="size-6" aria-hidden />
-                            </div>
-                            <div>
-                                <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors leading-tight">
-                                    {cat.name}
-                                </p>
-                                <p className="text-[10px] text-muted-foreground mt-0.5">{cat.count}</p>
-                            </div>
-                        </button>
-                    ))}
-                </div>
-            </section>
-
-            {/* ═══════════════════════════════════════════════════════════════════
-             * 4. VOUCHER SECTION: MÃ GIẢM GIÁ CHO BẠN (VOUCHER TICKET CARDS)
-             * ═══════════════════════════════════════════════════════════════════ */}
-            <section aria-labelledby="vouchers-heading" className="space-y-4">
-                <div className="flex items-center justify-between border-b border-border/60 pb-3">
-                    <div className="flex items-center gap-2">
-                        <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <BadgePercentIcon className="size-4" />
-                        </div>
-                        <div>
-                            <h2 id="vouchers-heading" className="text-xl font-bold tracking-tight text-foreground">
-                                Mã giảm giá cho bạn
-                            </h2>
-                        </div>
-                        <Badge className="ml-2 hidden sm:inline-flex text-[10px] bg-primary text-white border-transparent">
-                            Tiết kiệm tối đa
-                        </Badge>
-                    </div>
-                    <span className="text-xs text-muted-foreground">Được tài trợ bởi TimmyHub</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {INITIAL_VOUCHERS.map((v) => {
-                        const isSaved = savedVouchers.has(v.id)
-                        return (
-                            <div
-                                key={v.id}
-                                className={`relative flex items-center justify-between overflow-hidden rounded-2xl border-2 border-dashed p-4 transition-all duration-200 hover:shadow-md ${
-                                    isSaved
-                                        ? 'border-primary/50 bg-primary/5'
-                                        : 'border-border/80 bg-card hover:border-primary/40'
-                                }`}
-                            >
-                                {/* Left Ticket Content */}
-                                <div className="space-y-1.5 min-w-0 pr-3">
-                                    <div className="flex items-center gap-1.5">
-                                        <Badge className="text-[10px] px-2 py-0.5 bg-primary text-white border-transparent font-medium">
-                                            {v.badge}
-                                        </Badge>
-                                        <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-0.5">
-                                            <ClockIcon className="size-2.5" />
-                                            {v.expiry}
-                                        </span>
-                                    </div>
-                                    <p className="text-base font-extrabold text-foreground truncate">{v.title}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                        Đơn tối thiểu{' '}
-                                        <span className="font-semibold text-foreground">{v.minSpend}</span>
-                                    </p>
-                                    <div className="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground pt-0.5">
-                                        <span>Mã:</span>
-                                        <span className="rounded bg-muted px-1.5 py-0.5 font-bold text-foreground">
-                                            {v.code}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Right Ticket Action */}
-                                <div className="shrink-0 flex flex-col items-end gap-2 border-l border-dashed border-border pl-4">
-                                    <span className="font-extrabold text-lg text-primary">{v.value}</span>
-                                    <Button
-                                        size="sm"
-                                        variant={isSaved ? 'outline' : 'default'}
-                                        onClick={() => handleSaveVoucher(v.id, v.code)}
-                                        className={`h-8 rounded-lg text-xs font-semibold px-3 ${
-                                            isSaved
-                                                ? 'border-primary/40 text-primary hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40'
-                                                : 'bg-primary text-white hover:bg-primary/90'
-                                        }`}
-                                    >
-                                        {isSaved ? (
-                                            <>
-                                                <CheckIcon className="size-3.5 mr-1 text-primary" />
-                                                Đã lưu
-                                            </>
-                                        ) : (
-                                            'Lưu mã'
-                                        )}
-                                    </Button>
-                                </div>
-                            </div>
-                        )
-                    })}
-                </div>
-            </section>
-
-            {/* ═══════════════════════════════════════════════════════════════════
-             * 5. FLASH SALE SECTION: ĐẾM NGƯỢC THỜI GIAN THỰC & SẢN PHẨM DEAL SỐC
-             * ═══════════════════════════════════════════════════════════════════ */}
-            <section
-                aria-label="Flash Sale chớp nhoáng"
-                className="overflow-hidden rounded-3xl border border-destructive/20 bg-gradient-to-br from-destructive/5 via-card to-card p-5 sm:p-7 shadow-sm space-y-6"
-            >
-                {/* Flash Sale Header with Live Clock */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-5">
-                    <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex items-center gap-1.5 rounded-xl bg-destructive px-3.5 py-1.5 text-white shadow-sm">
-                            <FlameIcon className="size-4 animate-bounce text-white" />
-                            <span className="text-sm font-black tracking-wider uppercase text-white">FLASH SALE</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                            <span>Kết thúc sau:</span>
-                            <div className="flex items-center gap-1.5">
-                                <TimerBlock val={timeLeft.h} label="Giờ" />
-                                <span className="font-bold text-foreground">:</span>
-                                <TimerBlock val={timeLeft.m} label="Phút" />
-                                <span className="font-bold text-foreground">:</span>
-                                <TimerBlock val={timeLeft.s} label="Giây" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <a
-                        href="#products-section"
-                        className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
-                    >
-                        Xem tất cả deal sốc
-                        <ChevronRightIcon className="size-3.5" />
-                    </a>
-                </div>
-
-                {/* Flash Sale Deals Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {FLASH_SALE_PRODUCTS.map((item) => {
-                        const progressPercent = Math.round((item.sold / item.totalStock) * 100)
-                        return (
-                            <div
-                                key={item.id}
-                                className="group relative flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-destructive/40"
-                            >
-                                {/* Discount Badge */}
-                                <div className="absolute top-3 left-3 z-10 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm">
-                                    -{item.discount}%
-                                </div>
-
-                                {/* Emoji & Visual */}
-                                <div className="relative flex h-36 items-center justify-center rounded-xl bg-muted/40 transition-transform duration-300 group-hover:scale-105">
-                                    <span className="text-6xl drop-shadow-sm select-none">{item.emoji}</span>
-                                </div>
-
-                                {/* Details */}
-                                <div className="mt-3 flex flex-1 flex-col gap-1.5">
-                                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">
-                                        {item.category}
-                                    </span>
-                                    <p className="line-clamp-2 text-xs font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
-                                        {item.title}
-                                    </p>
-
-                                    <div className="mt-auto pt-2 space-y-2">
-                                        <div className="flex items-baseline gap-1.5">
-                                            <span className="text-base font-extrabold text-destructive">
-                                                ₫{item.price}
-                                            </span>
-                                            <span className="text-[10px] text-muted-foreground line-through">
-                                                ₫{item.originalPrice}
-                                            </span>
-                                        </div>
-
-                                        {/* Sold Progress Bar */}
-                                        <div className="space-y-1">
-                                            <div className="h-2 w-full overflow-hidden rounded-full bg-destructive/15">
-                                                <div
-                                                    className="h-full rounded-full bg-gradient-to-r from-amber-500 to-destructive transition-all duration-500"
-                                                    style={{ width: `${progressPercent}%` }}
+                                    {/* Slide Bottom Controls & Dots */}
+                                    <div className="relative z-10 flex items-center justify-between pt-4">
+                                        <div className="flex items-center gap-2">
+                                            {HERO_SLIDES.map((_, dotIndex) => (
+                                                <button
+                                                    key={dotIndex}
+                                                    onClick={() => setCurrentSlide(dotIndex)}
+                                                    aria-label={`Chuyển tới slide ${dotIndex + 1}`}
+                                                    className={`h-2 rounded-full transition-all duration-300 ${
+                                                        dotIndex === currentSlide
+                                                            ? 'w-8 bg-primary'
+                                                            : 'w-2 bg-white/40 hover:bg-white/70'
+                                                    }`}
                                                 />
-                                            </div>
-                                            <div className="flex items-center justify-between text-[10px] text-muted-foreground font-semibold">
-                                                <span className="text-destructive">Đã bán {item.sold}</span>
-                                                <span>Còn {item.totalStock - item.sold}</span>
-                                            </div>
+                                            ))}
                                         </div>
-
-                                        <Button
-                                            size="sm"
-                                            onClick={() => handleAddToCart(item.title)}
-                                            className="w-full gap-1.5 rounded-xl text-xs font-semibold h-8 text-white"
-                                        >
-                                            <ShoppingCartIcon className="size-3.5 text-white" />
-                                            Thêm vào giỏ
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        )
-                    })}
-                </div>
-            </section>
-
-            {/* ═══════════════════════════════════════════════════════════════════
-             * 6. POST FEED SECTION: VIDEO & BÀI VIẾT CỘNG ĐỒNG SÁNG TẠO
-             * ═══════════════════════════════════════════════════════════════════ */}
-            <section aria-labelledby="posts-heading" className="space-y-4">
-                <div className="flex items-center justify-between border-b border-border/60 pb-3">
-                    <div className="flex items-center gap-2">
-                        <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <PlayIcon className="size-4 fill-primary" />
-                        </div>
-                        <div>
-                            <h2 id="posts-heading" className="text-xl font-bold tracking-tight text-foreground">
-                                Video & Bài viết cộng đồng
-                            </h2>
-                        </div>
-                    </div>
-                    <button
-                        onClick={() => toast.info('Xem thêm video cộng đồng')}
-                        className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
-                    >
-                        Xem tất cả
-                        <ChevronRightIcon className="size-3.5" />
-                    </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    {COMMUNITY_POSTS.map((post) => (
-                        <article
-                            key={post.id}
-                            className="group flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-primary/40"
-                        >
-                            {/* Video Simulated Thumbnail */}
-                            <div
-                                className={`relative h-44 w-full bg-gradient-to-br ${post.accent} flex items-center justify-center overflow-hidden border-b border-border/50`}
-                            >
-                                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-                                <div className="relative flex size-12 items-center justify-center rounded-full bg-primary text-white shadow-lg transition-transform duration-200 group-hover:scale-110">
-                                    <PlayIcon className="size-5 fill-current ml-0.5 text-white" />
-                                </div>
-                                <span className="absolute bottom-2.5 right-2.5 rounded-md bg-black/70 px-2 py-0.5 font-mono text-[10px] font-bold text-white">
-                                    {post.videoDuration}
-                                </span>
-                                <span className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90">
-                                    <EyeIcon className="size-3" />
-                                    {post.views} lượt xem
-                                </span>
-                            </div>
-
-                            {/* Post Meta */}
-                            <div className="flex flex-1 flex-col p-4 space-y-3">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xs ring-1 ring-primary/30">
-                                        {post.avatar}
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-1">
-                                            <p className="font-bold text-xs text-foreground truncate">{post.creator}</p>
-                                            <CheckCircle2Icon className="size-3 text-primary shrink-0" />
-                                        </div>
-                                        <p className="text-[10px] text-muted-foreground">{post.role}</p>
-                                    </div>
-                                </div>
-
-                                <h3 className="line-clamp-2 text-sm font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
-                                    {post.title}
-                                </h3>
-                                <p className="line-clamp-2 text-xs text-muted-foreground leading-relaxed">
-                                    {post.desc}
-                                </p>
-
-                                {/* Tagged Product Link */}
-                                <div className="mt-auto rounded-xl bg-muted/50 p-2.5 border border-border/60 flex items-center justify-between text-xs">
-                                    <div className="min-w-0 pr-2">
-                                        <p className="truncate font-semibold text-foreground text-[11px]">
-                                            Gắn sản phẩm: {post.taggedProduct}
-                                        </p>
-                                        <p className="font-extrabold text-primary text-xs">{post.productPrice}</p>
-                                    </div>
-                                    <Button
-                                        size="sm"
-                                        className="h-7 text-[10px] rounded-lg px-2.5 shrink-0 bg-primary text-white hover:bg-primary/90 font-medium"
-                                    >
-                                        Xem SP
-                                    </Button>
-                                </div>
-
-                                {/* Engagement Counters */}
-                                <div className="flex items-center justify-between pt-2 border-t border-border/40 text-xs text-muted-foreground">
-                                    <span className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer">
-                                        <ThumbsUpIcon className="size-3.5" />
-                                        {post.likes.toLocaleString()}
-                                    </span>
-                                    <span className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer">
-                                        <MessageCircleIcon className="size-3.5" />
-                                        {post.comments}
-                                    </span>
-                                    <span className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer">
-                                        <Share2Icon className="size-3.5" />
-                                        Chia sẻ
-                                    </span>
-                                </div>
-                            </div>
-                        </article>
-                    ))}
-                </div>
-            </section>
-
-            {/* ═══════════════════════════════════════════════════════════════════
-             * 7. PRODUCTS SECTION: GỢI Ý HÔM NAY (TODAY SUGGESTION TABS + GRID)
-             * ═══════════════════════════════════════════════════════════════════ */}
-            <section id="products-section" aria-labelledby="today-heading" className="space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-4">
-                    <div className="flex items-center gap-2">
-                        <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <SparklesIcon className="size-4" />
-                        </div>
-                        <h2 id="today-heading" className="text-xl font-bold tracking-tight text-foreground">
-                            Gợi ý hôm nay
-                        </h2>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        {/* Tab Pills */}
-                        <div className="flex rounded-xl bg-muted p-1 border border-border/60 text-xs font-semibold">
-                            <button
-                                onClick={() => setProductTab('all')}
-                                className={`rounded-lg px-3 py-1.5 transition-colors ${
-                                    productTab === 'all'
-                                        ? 'bg-primary text-white shadow-sm'
-                                        : 'text-muted-foreground hover:text-foreground'
-                                }`}
-                            >
-                                Tất cả
-                            </button>
-                            <button
-                                onClick={() => setProductTab('new')}
-                                className={`rounded-lg px-3 py-1.5 transition-colors ${
-                                    productTab === 'new'
-                                        ? 'bg-primary text-white shadow-sm'
-                                        : 'text-muted-foreground hover:text-foreground'
-                                }`}
-                            >
-                                Mới nhất
-                            </button>
-                            <button
-                                onClick={() => setProductTab('best')}
-                                className={`rounded-lg px-3 py-1.5 transition-colors ${
-                                    productTab === 'best'
-                                        ? 'bg-primary text-white shadow-sm'
-                                        : 'text-muted-foreground hover:text-foreground'
-                                }`}
-                            >
-                                Bán chạy
-                            </button>
-                        </div>
-
-                        {/* View Mode Toggle */}
-                        <div className="flex rounded-xl border border-border/60 bg-muted/40 p-1">
-                            <button
-                                onClick={() => setViewMode('grid')}
-                                aria-label="Xem dạng lưới"
-                                className={`flex size-7 items-center justify-center rounded-lg transition-colors ${
-                                    viewMode === 'grid'
-                                        ? 'bg-background text-foreground shadow-sm'
-                                        : 'text-muted-foreground hover:text-foreground'
-                                }`}
-                            >
-                                <LayoutGridIcon className="size-3.5" />
-                            </button>
-                            <button
-                                onClick={() => setViewMode('list')}
-                                aria-label="Xem dạng danh sách"
-                                className={`flex size-7 items-center justify-center rounded-lg transition-colors ${
-                                    viewMode === 'list'
-                                        ? 'bg-background text-foreground shadow-sm'
-                                        : 'text-muted-foreground hover:text-foreground'
-                                }`}
-                            >
-                                <ListIcon className="size-3.5" />
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Products Grid or List View */}
-                {viewMode === 'grid' ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {filteredProducts.map((p) => {
-                            const isLiked = wishlist.has(p.id)
-                            return (
-                                <article
-                                    key={p.id}
-                                    className="group relative flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card p-3.5 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-primary/40"
-                                >
-                                    {/* Product Image & Badges */}
-                                    <div className="relative flex h-40 items-center justify-center rounded-xl bg-muted/40 overflow-hidden">
-                                        <span className="text-6xl transition-transform duration-300 group-hover:scale-110 select-none drop-shadow-sm">
-                                            {p.emoji}
-                                        </span>
-                                        {p.discount > 0 && (
-                                            <span className="absolute top-2 left-2 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm">
-                                                -{p.discount}%
-                                            </span>
-                                        )}
-                                        <button
-                                            onClick={() => handleToggleWishlist(p.id, p.name)}
-                                            aria-label="Thêm vào yêu thích"
-                                            className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-background/80 text-foreground/80 shadow-sm backdrop-blur-sm transition-transform hover:scale-110"
-                                        >
-                                            <HeartIcon
-                                                className={`size-3.5 ${isLiked ? 'fill-rose-500 text-rose-500' : ''}`}
-                                            />
-                                        </button>
-                                    </div>
-
-                                    {/* Product Details */}
-                                    <div className="mt-3 flex flex-1 flex-col gap-1.5">
-                                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                                            <span className="truncate">{p.shop}</span>
-                                            {p.verified && (
-                                                <CheckCircle2Icon className="size-3 text-primary shrink-0" />
-                                            )}
-                                        </div>
-                                        <h3 className="line-clamp-2 text-xs font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
-                                            {p.name}
-                                        </h3>
-
-                                        <div className="mt-auto pt-2 space-y-1.5">
-                                            <div className="flex items-baseline gap-1.5">
-                                                <span className="text-sm sm:text-base font-extrabold text-primary">
-                                                    ₫{p.price}
-                                                </span>
-                                                <span className="text-[10px] text-muted-foreground line-through">
-                                                    ₫{p.originalPrice}
-                                                </span>
-                                            </div>
-
-                                            <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t border-border/40">
-                                                <span className="flex items-center gap-0.5">
-                                                    <StarIcon className="size-3 fill-amber-400 text-amber-400" />
-                                                    <span className="font-semibold text-foreground/90">{p.rating}</span>
-                                                </span>
-                                                <span>Đã bán {p.sold.toLocaleString('vi-VN')}</span>
-                                            </div>
-
-                                            <Button
-                                                size="sm"
-                                                onClick={() => handleAddToCart(p.name)}
-                                                className="w-full gap-1.5 rounded-xl text-xs font-semibold h-8 text-white"
+                                        <div className="flex items-center gap-1.5">
+                                            <button
+                                                onClick={() =>
+                                                    setCurrentSlide(
+                                                        (prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length,
+                                                    )
+                                                }
+                                                aria-label="Slide trước"
+                                                className="flex size-8 items-center justify-center rounded-full bg-black/40 text-white/80 hover:bg-black/60 hover:text-white transition-colors backdrop-blur-md border border-white/10"
                                             >
-                                                <ShoppingCartIcon className="size-3.5 text-white" />
-                                                Thêm vào giỏ
-                                            </Button>
+                                                <ChevronLeftIcon className="size-4" />
+                                            </button>
+                                            <button
+                                                onClick={() =>
+                                                    setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length)
+                                                }
+                                                aria-label="Slide tiếp theo"
+                                                className="flex size-8 items-center justify-center rounded-full bg-black/40 text-white/80 hover:bg-black/60 hover:text-white transition-colors backdrop-blur-md border border-white/10"
+                                            >
+                                                <ChevronRightIcon className="size-4" />
+                                            </button>
                                         </div>
                                     </div>
-                                </article>
+                                </div>
                             )
                         })}
                     </div>
-                ) : (
-                    <div className="space-y-3">
-                        {filteredProducts.map((p) => (
-                            <article
-                                key={p.id}
-                                className="group flex flex-col sm:flex-row items-center gap-4 rounded-2xl border border-border/70 bg-card p-4 transition-all duration-200 hover:shadow-md hover:border-primary/40"
+                </section>
+
+                {/* ═══════════════════════════════════════════════════════════════════
+                 * 2. FEATURE SECTION: CAM KẾT DỊCH VỤ SÀN (4 CAM KẾT)
+                 * ═══════════════════════════════════════════════════════════════════ */}
+                <section aria-label="Cam kết dịch vụ" className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {FEATURES.map((f) => (
+                        <div
+                            key={f.title}
+                            className="group flex flex-col sm:flex-row items-start sm:items-center gap-3.5 rounded-2xl border border-border/70 bg-card p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-md hover:border-primary/40"
+                        >
+                            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                                <f.icon className="size-6 transition-transform group-hover:scale-110" aria-hidden />
+                            </div>
+                            <div className="min-w-0">
+                                <h2 className="text-sm font-bold text-foreground leading-tight">{f.title}</h2>
+                                <p className="mt-0.5 text-xs text-muted-foreground leading-snug">{f.desc}</p>
+                            </div>
+                        </div>
+                    ))}
+                </section>
+
+                {/* ═══════════════════════════════════════════════════════════════════
+                 * 3. CATEGORY SECTION: DANH MỤC NGÀNH HÀNG NỔI BẬT
+                 * ═══════════════════════════════════════════════════════════════════ */}
+                <section aria-labelledby="categories-heading" className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                        <div className="flex items-center gap-2">
+                            <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <LayoutGridIcon className="size-4" />
+                            </div>
+                            <h2
+                                id="categories-heading"
+                                className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2"
                             >
-                                <div className="flex size-24 shrink-0 items-center justify-center rounded-xl bg-muted/40 text-4xl select-none">
-                                    {p.emoji}
+                                <span>Danh mục sản phẩm</span>
+                                <IconPath name="gemini-star" className="size-4 text-primary/70 animate-pulse" />
+                            </h2>
+                        </div>
+                        <button
+                            onClick={() => toast.info('Xem tất cả danh mục hàng hoá')}
+                            className="group flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                        >
+                            Xem tất cả
+                            <ChevronRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-3">
+                        {CATEGORIES.map((cat) => (
+                            <button
+                                key={cat.name}
+                                onClick={() => setProductTab('all')}
+                                className="group flex flex-col items-center gap-2 rounded-2xl border border-border/70 bg-card p-3 text-center transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:shadow-md active:scale-95"
+                            >
+                                <div
+                                    className={`flex size-12 items-center justify-center rounded-xl ${cat.color} transition-transform group-hover:scale-110`}
+                                >
+                                    <cat.icon className="size-6" aria-hidden />
                                 </div>
-                                <div className="flex-1 min-w-0 space-y-1">
-                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                        <span className="font-semibold">{p.category}</span>
-                                        <span>•</span>
-                                        <span>{p.shop}</span>
-                                        {p.verified && <CheckCircle2Icon className="size-3.5 text-primary" />}
+                                <div>
+                                    <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors leading-tight">
+                                        {cat.name}
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground mt-0.5">{cat.count}</p>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </section>
+
+                {/* ═══════════════════════════════════════════════════════════════════
+                 * 4. VOUCHER SECTION: MÃ GIẢM GIÁ CHO BẠN (VOUCHER TICKET CARDS)
+                 * ═══════════════════════════════════════════════════════════════════ */}
+                <section aria-labelledby="vouchers-heading" className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                        <div className="flex items-center gap-2">
+                            <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <BadgePercentIcon className="size-4" />
+                            </div>
+                            <div>
+                                <h2
+                                    id="vouchers-heading"
+                                    className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2"
+                                >
+                                    <span>Mã giảm giá cho bạn</span>
+                                    <IconPath name="gemini-star" className="size-4 text-amber-400 animate-pulse" />
+                                </h2>
+                            </div>
+                            <Badge className="ml-2 hidden sm:inline-flex text-[10px] bg-primary text-white border-transparent">
+                                Tiết kiệm tối đa
+                            </Badge>
+                        </div>
+                        <span className="text-xs text-muted-foreground">Được tài trợ bởi TimmyHub</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {INITIAL_VOUCHERS.map((v) => {
+                            const isSaved = savedVouchers.has(v.id)
+                            return (
+                                <div
+                                    key={v.id}
+                                    className={`relative flex items-center justify-between overflow-hidden rounded-2xl border-2 border-dashed p-4 transition-all duration-200 hover:shadow-md ${
+                                        isSaved
+                                            ? 'border-primary/50 bg-primary/5'
+                                            : 'border-border/80 bg-card hover:border-primary/40'
+                                    }`}
+                                >
+                                    {/* Left Ticket Content */}
+                                    <div className="space-y-1.5 min-w-0 pr-3">
+                                        <div className="flex items-center gap-1.5">
+                                            <Badge className="text-[10px] px-2 py-0.5 bg-primary text-white border-transparent font-medium">
+                                                {v.badge}
+                                            </Badge>
+                                            <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-0.5">
+                                                <ClockIcon className="size-2.5" />
+                                                {v.expiry}
+                                            </span>
+                                        </div>
+                                        <p className="text-base font-extrabold text-foreground truncate">{v.title}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Đơn tối thiểu{' '}
+                                            <span className="font-semibold text-foreground">{v.minSpend}</span>
+                                        </p>
+                                        <div className="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground pt-0.5">
+                                            <span>Mã:</span>
+                                            <span className="rounded bg-muted px-1.5 py-0.5 font-bold text-foreground">
+                                                {v.code}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
-                                        {p.name}
-                                    </h3>
-                                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                        <span className="flex items-center gap-1">
-                                            <StarIcon className="size-3.5 fill-amber-400 text-amber-400" />
-                                            <span className="font-bold text-foreground">{p.rating}</span>
-                                            <span>({p.reviews})</span>
+
+                                    {/* Right Ticket Action */}
+                                    <div className="shrink-0 flex flex-col items-end gap-2 border-l border-dashed border-border pl-4">
+                                        <span className="font-extrabold text-lg text-primary">{v.value}</span>
+                                        <Button
+                                            size="sm"
+                                            variant={isSaved ? 'outline' : 'default'}
+                                            onClick={() => handleSaveVoucher(v.id, v.code)}
+                                            className={`h-8 rounded-lg text-xs font-semibold px-3 ${
+                                                isSaved
+                                                    ? 'border-primary/40 text-primary hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40'
+                                                    : 'bg-primary text-white hover:bg-primary/90'
+                                            }`}
+                                        >
+                                            {isSaved ? (
+                                                <>
+                                                    <CheckIcon className="size-3.5 mr-1 text-primary" />
+                                                    Đã lưu
+                                                </>
+                                            ) : (
+                                                'Lưu mã'
+                                            )}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </section>
+
+                {/* ═══════════════════════════════════════════════════════════════════
+                 * 5. FLASH SALE SECTION: ĐẾM NGƯỢC THỜI GIAN THỰC & SẢN PHẨM DEAL SỐC
+                 * ═══════════════════════════════════════════════════════════════════ */}
+                <section
+                    aria-label="Flash Sale chớp nhoáng"
+                    className="overflow-hidden rounded-3xl border border-destructive/20 bg-gradient-to-br from-destructive/5 via-card to-card p-5 sm:p-7 shadow-sm space-y-6"
+                >
+                    {/* Flash Sale Header with Live Clock */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-5">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex items-center gap-1.5 rounded-xl bg-destructive px-3.5 py-1.5 text-white shadow-sm">
+                                <FlameIcon className="size-4 animate-bounce text-white" />
+                                <span className="text-sm font-black tracking-wider uppercase text-white">
+                                    FLASH SALE
+                                </span>
+                                <IconPath name="gemini-star" className="size-3.5 text-amber-300 animate-pulse" />
+                            </div>
+                            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                                <span>Kết thúc sau:</span>
+                                <div className="flex items-center gap-1.5">
+                                    <TimerBlock val={timeLeft.h} label="Giờ" />
+                                    <span className="font-bold text-foreground">:</span>
+                                    <TimerBlock val={timeLeft.m} label="Phút" />
+                                    <span className="font-bold text-foreground">:</span>
+                                    <TimerBlock val={timeLeft.s} label="Giây" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <a
+                            href="#products-section"
+                            className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+                        >
+                            Xem tất cả deal sốc
+                            <ChevronRightIcon className="size-3.5" />
+                        </a>
+                    </div>
+
+                    {/* Flash Sale Deals Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {FLASH_SALE_PRODUCTS.map((item) => {
+                            const progressPercent = Math.round((item.sold / item.totalStock) * 100)
+                            return (
+                                <div
+                                    key={item.id}
+                                    className="group relative flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card p-4 transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-xl hover:shadow-destructive/15 hover:border-destructive/50"
+                                >
+                                    {/* Discount Badge */}
+                                    <div className="absolute top-3 left-3 z-10 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-6deg]">
+                                        -{item.discount}%
+                                    </div>
+
+                                    {/* Emoji & Visual */}
+                                    <div className="relative flex h-36 items-center justify-center rounded-xl bg-muted/40 transition-all duration-500 group-hover:bg-destructive/5 overflow-hidden">
+                                        <span className="text-6xl drop-shadow-sm select-none transition-transform duration-500 ease-out group-hover:scale-115 group-hover:-rotate-3">
+                                            {item.emoji}
                                         </span>
-                                        <span>Đã bán {p.sold.toLocaleString('vi-VN')}</span>
+                                    </div>
+
+                                    {/* Details */}
+                                    <div className="mt-3 flex flex-1 flex-col gap-1.5">
+                                        <span className="text-[10px] font-semibold text-muted-foreground uppercase">
+                                            {item.category}
+                                        </span>
+                                        <p className="line-clamp-2 text-xs font-bold text-foreground leading-snug group-hover:text-destructive transition-colors">
+                                            {item.title}
+                                        </p>
+
+                                        <div className="mt-auto pt-2 space-y-2">
+                                            <div className="flex items-baseline gap-1.5">
+                                                <span className="text-base font-extrabold text-destructive transition-transform duration-300 group-hover:scale-105 origin-left inline-block">
+                                                    ₫{item.price}
+                                                </span>
+                                                <span className="text-[10px] text-muted-foreground line-through">
+                                                    ₫{item.originalPrice}
+                                                </span>
+                                            </div>
+
+                                            {/* Sold Progress Bar */}
+                                            <div className="space-y-1">
+                                                <div className="h-2 w-full overflow-hidden rounded-full bg-destructive/15">
+                                                    <div
+                                                        className="h-full rounded-full bg-gradient-to-r from-amber-500 to-destructive transition-all duration-500 group-hover:brightness-110"
+                                                        style={{ width: `${progressPercent}%` }}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center justify-between text-[10px] text-muted-foreground font-semibold">
+                                                    <span className="text-destructive font-bold">
+                                                        Đã bán {item.sold}
+                                                    </span>
+                                                    <span>Còn {item.totalStock - item.sold}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Seller Footer */}
+                                            <div className="pt-2.5 border-t border-border/60 flex items-center justify-between gap-1.5 text-xs">
+                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                    <div className="flex size-5 shrink-0 items-center justify-center rounded-md bg-destructive/10 text-destructive transition-transform duration-300 group-hover:scale-110 group-hover:bg-destructive group-hover:text-white">
+                                                        <StoreIcon className="size-3" />
+                                                    </div>
+                                                    <span className="truncate text-[11px] font-semibold text-foreground group-hover:text-destructive transition-colors">
+                                                        {item.shop}
+                                                    </span>
+                                                    {item.verified && (
+                                                        <CheckCircle2Icon className="size-3 text-primary shrink-0 transition-transform duration-300 group-hover:scale-125" />
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-3 pt-2 sm:pt-0">
-                                    <div className="text-left sm:text-right">
-                                        <p className="text-lg font-extrabold text-primary">₫{p.price}</p>
-                                        <p className="text-xs text-muted-foreground line-through">₫{p.originalPrice}</p>
+                            )
+                        })}
+                    </div>
+                </section>
+
+                {/* ═══════════════════════════════════════════════════════════════════
+                 * 6. POST FEED SECTION: VIDEO & BÀI VIẾT CỘNG ĐỒNG SÁNG TẠO
+                 * ═══════════════════════════════════════════════════════════════════ */}
+                <section aria-labelledby="posts-heading" className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                        <div className="flex items-center gap-2">
+                            <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <PlayIcon className="size-4 fill-primary" />
+                            </div>
+                            <div>
+                                <h2
+                                    id="posts-heading"
+                                    className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2"
+                                >
+                                    <span>Video & Bài viết cộng đồng</span>
+                                    <IconPath name="gemini-star" className="size-4 text-primary animate-pulse" />
+                                </h2>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => toast.info('Xem thêm video cộng đồng')}
+                            className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+                        >
+                            Xem tất cả
+                            <ChevronRightIcon className="size-3.5" />
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        {COMMUNITY_POSTS.map((post) => (
+                            <article
+                                key={post.id}
+                                className="group flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-primary/40"
+                            >
+                                {/* Video Simulated Thumbnail */}
+                                <div
+                                    className={`relative h-44 w-full bg-gradient-to-br ${post.accent} flex items-center justify-center overflow-hidden border-b border-border/50`}
+                                >
+                                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+                                    <div className="relative flex size-12 items-center justify-center rounded-full bg-primary text-white shadow-lg transition-transform duration-200 group-hover:scale-110">
+                                        <PlayIcon className="size-5 fill-current ml-0.5 text-white" />
                                     </div>
-                                    <Button
-                                        size="sm"
-                                        onClick={() => handleAddToCart(p.name)}
-                                        className="rounded-xl gap-1.5 text-xs font-semibold h-8 text-white"
-                                    >
-                                        <ShoppingCartIcon className="size-3.5 text-white" />
-                                        Thêm vào giỏ
-                                    </Button>
+                                    <span className="absolute bottom-2.5 right-2.5 rounded-md bg-black/70 px-2 py-0.5 font-mono text-[10px] font-bold text-white">
+                                        {post.videoDuration}
+                                    </span>
+                                    <span className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90">
+                                        <EyeIcon className="size-3" />
+                                        {post.views} lượt xem
+                                    </span>
+                                </div>
+
+                                {/* Post Meta */}
+                                <div className="flex flex-1 flex-col p-4 space-y-3">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xs ring-1 ring-primary/30">
+                                            {post.avatar}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-center gap-1">
+                                                <p className="font-bold text-xs text-foreground truncate">
+                                                    {post.creator}
+                                                </p>
+                                                <CheckCircle2Icon className="size-3 text-primary shrink-0" />
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground">{post.role}</p>
+                                        </div>
+                                    </div>
+
+                                    <h3 className="line-clamp-2 text-sm font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
+                                        {post.title}
+                                    </h3>
+                                    <p className="line-clamp-2 text-xs text-muted-foreground leading-relaxed">
+                                        {post.desc}
+                                    </p>
+
+                                    {/* Tagged Product Link */}
+                                    <div className="mt-auto rounded-xl bg-muted/50 p-2.5 border border-border/60 flex items-center gap-2.5 text-xs">
+                                        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                            <ShoppingBagIcon className="size-3.5" />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="truncate font-semibold text-foreground text-[11px]">
+                                                {post.taggedProduct}
+                                            </p>
+                                            <p className="font-extrabold text-primary text-xs">{post.productPrice}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Engagement Counters */}
+                                    <div className="flex items-center justify-between pt-2 border-t border-border/40 text-xs text-muted-foreground">
+                                        <span
+                                            suppressHydrationWarning
+                                            className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
+                                        >
+                                            <ThumbsUpIcon className="size-3.5" />
+                                            {formatNumber(post.likes)}
+                                        </span>
+                                        <span className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer">
+                                            <MessageCircleIcon className="size-3.5" />
+                                            {post.comments}
+                                        </span>
+                                        <span className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer">
+                                            <Share2Icon className="size-3.5" />
+                                            Chia sẻ
+                                        </span>
+                                    </div>
                                 </div>
                             </article>
                         ))}
                     </div>
-                )}
-            </section>
+                </section>
 
-            {/* ═══════════════════════════════════════════════════════════════════
-             * 8. FOOTER PROMO BANNER: TRẢI NGHIỆM APP & ĐĂNG KÝ BÁN HÀNG
-             * ═══════════════════════════════════════════════════════════════════ */}
-            <section
-                aria-label="Khuyến mãi chân trang"
-                className="overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-br from-card via-card to-primary/10 shadow-lg"
-            >
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center p-6 sm:p-10">
-                    <div className="md:col-span-8 space-y-4">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-bold text-white shadow-sm">
-                            <SparklesIcon className="size-3 text-white" />
-                            Độc quyền trên TimmyHub App
-                        </span>
-                        <h2 className="font-heading text-2xl sm:text-4xl font-extrabold tracking-tight text-foreground leading-tight">
-                            Tải App Ngay — Nhận Quà Tặng ₫100.000 Cho Đơn Hàng Đầu Tiên!
-                        </h2>
-                        <p className="text-sm sm:text-base text-muted-foreground max-w-xl leading-relaxed">
-                            Trải nghiệm mua sắm nhanh hơn, săn sale chớp nhoáng, theo dõi trạng thái đơn hàng thời gian
-                            thực và nhận thông báo khuyến mãi cá nhân hoá mỗi ngày.
-                        </p>
-                        <div className="flex flex-wrap items-center gap-3 pt-2">
-                            <Button
-                                size="lg"
-                                className="rounded-xl font-semibold gap-2 shadow-md bg-primary text-white hover:bg-primary/90"
-                                onClick={() => toast.info('Tính năng tải ứng dụng iOS sắp ra mắt!')}
+                {/* ═══════════════════════════════════════════════════════════════════
+                 * 7. PRODUCTS SECTION: GỢI Ý HÔM NAY (TODAY SUGGESTION TABS + GRID)
+                 * ═══════════════════════════════════════════════════════════════════ */}
+                <section id="products-section" aria-labelledby="today-heading" className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-4">
+                        <div className="flex items-center gap-2">
+                            <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <SparklesIcon className="size-4" />
+                            </div>
+                            <h2
+                                id="today-heading"
+                                className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2"
                             >
-                                <AppleIcon className="size-4 text-white" />
-                                App Store
-                            </Button>
-                            <Button
-                                size="lg"
-                                className="rounded-xl font-semibold gap-2 shadow-md bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700"
-                                onClick={() => toast.info('Tính năng tải ứng dụng Android sắp ra mắt!')}
-                            >
-                                <PlayIcon className="size-4 fill-current text-white" />
-                                Google Play
-                            </Button>
-                            <Link href={ROUTE.SELLER_PORTAL}>
+                                <span>Gợi ý hôm nay</span>
+                                <IconPath name="gemini-star" className="size-4 text-primary animate-pulse" />
+                            </h2>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            {/* Tab Pills */}
+                            <div className="flex rounded-xl bg-muted p-1 border border-border/60 text-xs font-semibold">
+                                <button
+                                    onClick={() => setProductTab('all')}
+                                    className={`rounded-lg px-3 py-1.5 transition-colors ${
+                                        productTab === 'all'
+                                            ? 'bg-primary text-white shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                                >
+                                    Tất cả
+                                </button>
+                                <button
+                                    onClick={() => setProductTab('new')}
+                                    className={`rounded-lg px-3 py-1.5 transition-colors ${
+                                        productTab === 'new'
+                                            ? 'bg-primary text-white shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                                >
+                                    Mới nhất
+                                </button>
+                                <button
+                                    onClick={() => setProductTab('best')}
+                                    className={`rounded-lg px-3 py-1.5 transition-colors ${
+                                        productTab === 'best'
+                                            ? 'bg-primary text-white shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                                >
+                                    Bán chạy
+                                </button>
+                            </div>
+
+                            {/* View Mode Toggle */}
+                            <div className="flex rounded-xl border border-border/60 bg-muted/40 p-1">
+                                <button
+                                    onClick={() => setViewMode('grid')}
+                                    aria-label="Xem dạng lưới"
+                                    className={`flex size-7 items-center justify-center rounded-lg transition-colors ${
+                                        viewMode === 'grid'
+                                            ? 'bg-background text-foreground shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                                >
+                                    <LayoutGridIcon className="size-3.5" />
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('list')}
+                                    aria-label="Xem dạng danh sách"
+                                    className={`flex size-7 items-center justify-center rounded-lg transition-colors ${
+                                        viewMode === 'list'
+                                            ? 'bg-background text-foreground shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                                >
+                                    <ListIcon className="size-3.5" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Products Grid or List View */}
+                    {viewMode === 'grid' ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {filteredProducts.map((p) => {
+                                const isLiked = wishlist.has(p.id)
+                                return (
+                                    <Product3DCard
+                                        key={p.id}
+                                        product={p}
+                                        isLiked={isLiked}
+                                        onToggleWishlist={handleToggleWishlist}
+                                    />
+                                )
+                            })}
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {filteredProducts.map((p) => (
+                                <article
+                                    key={p.id}
+                                    className="group flex flex-col sm:flex-row items-center gap-4 rounded-2xl border border-border/70 bg-card p-4 transition-all duration-300 ease-out hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/10 hover:border-primary/50"
+                                >
+                                    <div className="flex size-24 shrink-0 items-center justify-center rounded-xl bg-muted/40 text-4xl select-none transition-all duration-500 ease-out group-hover:scale-115 group-hover:rotate-3 group-hover:bg-primary/5">
+                                        {p.emoji}
+                                    </div>
+                                    <div className="flex-1 min-w-0 space-y-1">
+                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                            <span className="font-semibold">{p.category}</span>
+                                            <span>•</span>
+                                            <span>{p.shop}</span>
+                                            {p.verified && (
+                                                <CheckCircle2Icon className="size-3.5 text-primary transition-transform duration-300 group-hover:scale-110" />
+                                            )}
+                                        </div>
+                                        <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
+                                            {p.name}
+                                        </h3>
+                                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                            <span className="flex items-center gap-1">
+                                                <StarIcon className="size-3.5 fill-amber-400 text-amber-400 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
+                                                <span className="font-bold text-foreground">{p.rating}</span>
+                                                <span>({p.reviews})</span>
+                                            </span>
+                                            <span suppressHydrationWarning>Đã bán {formatNumber(p.sold)}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-3 pt-2 sm:pt-0">
+                                        <div className="text-left sm:text-right">
+                                            <p className="text-lg font-extrabold text-primary transition-transform duration-300 group-hover:scale-105 origin-right">
+                                                ₫{p.price}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground line-through">
+                                                ₫{p.originalPrice}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2 rounded-xl bg-muted/60 px-3 py-1.5 border border-border/60 transition-colors group-hover:border-primary/40">
+                                            <div className="flex size-5 items-center justify-center rounded-md bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
+                                                <StoreIcon className="size-3" />
+                                            </div>
+                                            <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                                                {p.shop}
+                                            </span>
+                                            {p.verified && (
+                                                <CheckCircle2Icon className="size-3.5 text-primary transition-transform duration-300 group-hover:scale-125" />
+                                            )}
+                                        </div>
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
+                    )}
+                </section>
+
+                {/* ═══════════════════════════════════════════════════════════════════
+                 * 8. FOOTER PROMO BANNER: TRẢI NGHIỆM APP & ĐĂNG KÝ BÁN HÀNG
+                 * ═══════════════════════════════════════════════════════════════════ */}
+                <section
+                    aria-label="Khuyến mãi chân trang"
+                    className="overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-br from-card via-card to-primary/10 shadow-lg"
+                >
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center p-6 sm:p-10">
+                        <div className="md:col-span-8 space-y-4">
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-bold text-white shadow-sm">
+                                <SparklesIcon className="size-3 text-white" />
+                                Độc quyền trên TimmyHub App
+                            </span>
+                            <h2 className="font-heading text-2xl sm:text-4xl font-extrabold tracking-tight text-foreground leading-tight">
+                                Tải App Ngay — Nhận Quà Tặng ₫100.000 Cho Đơn Hàng Đầu Tiên!
+                            </h2>
+                            <p className="text-sm sm:text-base text-muted-foreground max-w-xl leading-relaxed">
+                                Trải nghiệm mua sắm nhanh hơn, săn sale chớp nhoáng, theo dõi trạng thái đơn hàng thời
+                                gian thực và nhận thông báo khuyến mãi cá nhân hoá mỗi ngày.
+                            </p>
+                            <div className="flex flex-wrap items-center gap-3 pt-2">
                                 <Button
                                     size="lg"
-                                    className="rounded-xl font-semibold gap-2 bg-primary text-white hover:bg-primary/90 shadow-sm"
+                                    className="rounded-xl font-semibold gap-2 shadow-md bg-primary text-white hover:bg-primary/90"
+                                    onClick={() => toast.info('Tính năng tải ứng dụng iOS sắp ra mắt!')}
                                 >
-                                    <StoreIcon className="size-4 text-white" />
-                                    Đăng ký bán hàng
+                                    <IconPath name="apple" size={16} className="text-white" />
+                                    App Store
                                 </Button>
-                            </Link>
+                                <Button
+                                    size="lg"
+                                    className="rounded-xl font-semibold gap-2 shadow-md bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700"
+                                    onClick={() => toast.info('Tính năng tải ứng dụng Android sắp ra mắt!')}
+                                >
+                                    <PlayIcon className="size-4 fill-current text-white" />
+                                    Google Play
+                                </Button>
+                                <Link href={ROUTE.SELLER_PORTAL}>
+                                    <Button
+                                        size="lg"
+                                        className="rounded-xl font-semibold gap-2 bg-primary text-white hover:bg-primary/90 shadow-sm"
+                                    >
+                                        <StoreIcon className="size-4 text-white" />
+                                        Đăng ký bán hàng
+                                    </Button>
+                                </Link>
+                            </div>
                         </div>
-                    </div>
 
-                    <div className="md:col-span-4 flex justify-center [perspective:800px]">
-                        <div className="w-64 rounded-2xl border border-border/60 bg-card p-5 shadow-2xl text-center space-y-3 transition-transform duration-300 hover:rotate-0 hover:scale-105 [transform:rotateY(-6deg)_rotateX(4deg)] motion-reduce:transform-none select-none">
-                            <div className="size-16 mx-auto rounded-2xl bg-primary flex items-center justify-center text-white font-black text-2xl shadow-md">
-                                T
+                        <div className="md:col-span-4 flex justify-center [perspective:800px]">
+                            <div className="w-64 rounded-2xl border border-border/60 bg-card p-5 shadow-2xl text-center space-y-3 transition-transform duration-300 hover:rotate-0 hover:scale-105 [transform:rotateY(-6deg)_rotateX(4deg)] motion-reduce:transform-none select-none">
+                                <div className="size-16 mx-auto rounded-2xl bg-primary flex items-center justify-center text-white font-black text-2xl shadow-md">
+                                    T
+                                </div>
+                                <h3 className="font-bold text-base text-foreground">TimmyHub Mobile</h3>
+                                <p className="text-xs text-muted-foreground">
+                                    Quét mã QR để tải ngay ứng dụng cho điện thoại của bạn
+                                </p>
+                                <div className="rounded-xl bg-muted p-4 border border-border font-mono text-xs font-bold text-foreground">
+                                    [ QR CODE SCAN ]
+                                </div>
+                                <p className="text-[10px] text-primary font-bold">iOS & Android Hỗ Trợ 100%</p>
                             </div>
-                            <h3 className="font-bold text-base text-foreground">TimmyHub Mobile</h3>
-                            <p className="text-xs text-muted-foreground">
-                                Quét mã QR để tải ngay ứng dụng cho điện thoại của bạn
-                            </p>
-                            <div className="rounded-xl bg-muted p-4 border border-border font-mono text-xs font-bold text-foreground">
-                                [ QR CODE SCAN ]
-                            </div>
-                            <p className="text-[10px] text-primary font-bold">iOS & Android Hỗ Trợ 100%</p>
                         </div>
                     </div>
-                </div>
-            </section>
+                </section>
+            </div>
         </div>
-    )
-}
-
-function AppleIcon(props: React.SVGProps<SVGSVGElement>) {
-    return (
-        <svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" {...props}>
-            <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 1.01-2.87-.96.04-2.07.64-2.72 1.39-.58.65-1.06 1.71-.93 2.74 1.05.08 2.05-.55 2.64-1.26" />
-        </svg>
     )
 }

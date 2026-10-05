@@ -26,6 +26,7 @@ const nextConfig: NextConfig = {
             { protocol: 'https', hostname: '*.supabase.in' },
             { protocol: 'https', hostname: '*.amazonaws.com' },
             { protocol: 'https', hostname: '*.cloudfront.net' },
+            { protocol: 'https', hostname: 'images.unsplash.com' },
         ],
     },
     // Proxy /uploads/* về backend — tránh CORS và cho phép xem ảnh local

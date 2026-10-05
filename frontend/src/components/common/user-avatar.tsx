@@ -20,7 +20,10 @@ export function UserAvatar({ name, imageUrl, size, className, fallbackClassName 
     return (
         <Avatar size={size} className={className}>
             {imageUrl && <AvatarImage src={imageUrl} alt="" />}
-            <AvatarFallback className={cn('bg-primary/10 text-xs font-semibold text-primary', fallbackClassName)}>
+            <AvatarFallback
+                suppressHydrationWarning
+                className={cn('bg-primary/10 text-xs font-semibold text-primary', fallbackClassName)}
+            >
                 {getInitials(name)}
             </AvatarFallback>
         </Avatar>

@@ -22,7 +22,7 @@ import {
 import { DASHBOARD_PERMISSION, QUERY_KEY, ROUTE } from '@/constants'
 import { AccountDialog } from '@/features/account'
 import { getCurrentUserProfileAction } from '@/features/users'
-import { useLogout, usePermissions } from '@/hooks'
+import { useLogout, useMounted, usePermissions } from '@/hooks'
 import { useUserProfileStore } from '@/stores'
 
 import { UserAvatar } from './user-avatar'
@@ -31,6 +31,8 @@ import { UserAvatar } from './user-avatar'
 export function UserMenu() {
     // ===== Hooks =====
     const t = useTranslations('nav')
+    const isMounted = useMounted()
+
     const { data: session } = useSession()
     const { mutate: logout, isPending } = useLogout()
     const profileOverride = useUserProfileStore((state) => state.override)
@@ -50,19 +52,21 @@ export function UserMenu() {
     })
 
     // ===== Derived =====
-    const email = session?.user?.email ?? ''
-    const username =
-        profileOverride?.displayName ||
-        backendProfile?.displayName ||
-        session?.user?.name ||
-        (email ? email.split('@')[0] : '') ||
-        t('account')
-    const avatar =
-        profileOverride?.avatar !== undefined
+    const email = isMounted ? (session?.user?.email ?? '') : ''
+    const username = isMounted
+        ? profileOverride?.displayName ||
+          backendProfile?.displayName ||
+          session?.user?.name ||
+          (email ? email.split('@')[0] : '') ||
+          t('account')
+        : t('account')
+    const avatar = isMounted
+        ? profileOverride?.avatar !== undefined
             ? profileOverride.avatar
             : backendProfile?.avatar !== undefined
               ? backendProfile.avatar
               : session?.user?.image
+        : undefined
 
     // ===== Handlers =====
     const router = useRouter()
