@@ -5,7 +5,7 @@ import { getTranslations } from 'next-intl/server'
 
 import { LocaleSwitcher, NotificationMenu, ThemeMenu, ThemeModeToggle, UserMenu } from '@/components/common'
 import { Button, Skeleton } from '@/components/ui'
-import { DASHBOARD_PERMISSION, ROUTE, SELLER_SHOP_ANY_PERMISSION, SELLER_SHOP_PERMISSION } from '@/constants'
+import { DASHBOARD_PERMISSION, ROUTE, SELLER_SHOP_PERMISSION } from '@/constants'
 import { getMyShopAction } from '@/features/seller'
 import { getActor } from '@/lib/actor-permissions'
 
@@ -17,10 +17,9 @@ export async function HomeHeader() {
     const t = await getTranslations('nav')
     const actor = await getActor()
     const canAccessDashboard = actor?.permissions.has(DASHBOARD_PERMISSION) ?? false
-    const isSellerByPermission =
-        (actor?.permissions.has(SELLER_SHOP_PERMISSION) || actor?.permissions.has(SELLER_SHOP_ANY_PERMISSION)) ?? false
+    const isSellerByPermission = !canAccessDashboard && (actor?.permissions.has(SELLER_SHOP_PERMISSION) ?? false)
     let isSeller = isSellerByPermission
-    if (!isSeller && actor) {
+    if (!isSeller && !canAccessDashboard && actor) {
         const shopRes = await getMyShopAction()
         if (shopRes.ok && Boolean(shopRes.data)) {
             isSeller = true
@@ -33,7 +32,7 @@ export async function HomeHeader() {
         <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 px-4 sm:px-6 backdrop-blur-md">
             <div className="flex items-center gap-4">
                 <Link
-                    href={ROUTE.HOME}
+                    href={canAccessDashboard ? ROUTE.DASHBOARD : ROUTE.HOME}
                     className="flex items-center gap-2.5 font-bold text-base sm:text-lg transition-opacity hover:opacity-90"
                 >
                     <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary font-semibold text-primary-foreground shadow-sm">
@@ -42,12 +41,14 @@ export async function HomeHeader() {
                     <span className="tracking-tight">{t('brand')}</span>
                 </Link>
 
-                <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex gap-1.5 h-8">
-                    <Link href={sellerRoute}>
-                        <StoreIcon className="size-3.5 text-muted-foreground" />
-                        <span>{sellerLabel}</span>
-                    </Link>
-                </Button>
+                {!canAccessDashboard && (
+                    <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex gap-1.5 h-8">
+                        <Link href={sellerRoute}>
+                            <StoreIcon className="size-3.5 text-muted-foreground" />
+                            <span>{sellerLabel}</span>
+                        </Link>
+                    </Button>
+                )}
 
                 {canAccessDashboard && (
                     <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex gap-1.5 h-8">

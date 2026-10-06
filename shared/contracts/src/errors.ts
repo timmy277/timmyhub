@@ -41,6 +41,12 @@ export const API_ERROR_CODES = {
     SELLER_SHOP_NOT_FOUND: { status: 404 },
     SELLER_SHOP_ALREADY_EXISTS: { status: 409 },
     SELLER_SHOP_SUSPENDED: { status: 403 },
+    // domain catalog / product
+    PRODUCT_NOT_FOUND: { status: 404 },
+    PRODUCT_ALREADY_EXISTS: { status: 409 },
+    PRODUCT_NOT_PENDING: { status: 409 },
+    PRODUCT_SUSPENDED: { status: 403 },
+    CATEGORY_NOT_FOUND: { status: 404 },
 } as const
 
 export type ApiErrorCode = keyof typeof API_ERROR_CODES

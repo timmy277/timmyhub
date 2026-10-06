@@ -15,6 +15,15 @@ export const OUTBOX_EVENT = {
     SELLER_SHOP_UPDATED: 'seller.shop.updated',
     SELLER_SHOP_SUSPENDED: 'seller.shop.suspended',
     SELLER_SHOP_RESTORED: 'seller.shop.restored',
+    // domain catalog / product
+    PRODUCT_CREATED: 'catalog.product.created',
+    PRODUCT_SUBMITTED: 'catalog.product.submitted',
+    PRODUCT_APPROVED: 'catalog.product.approved',
+    PRODUCT_REJECTED: 'catalog.product.rejected',
+    PRODUCT_UPDATED: 'catalog.product.updated',
+    PRODUCT_SUSPENDED: 'catalog.product.suspended',
+    PRODUCT_RESTORED: 'catalog.product.restored',
+    PRODUCT_DELETED: 'catalog.product.deleted',
 } as const
 
 export type OutboxEventType = (typeof OUTBOX_EVENT)[keyof typeof OUTBOX_EVENT]
@@ -23,6 +32,7 @@ export type OutboxEventType = (typeof OUTBOX_EVENT)[keyof typeof OUTBOX_EVENT]
 export const OUTBOX_AGGREGATE = {
     IDENTITY: 'identity',
     SELLER: 'seller',
+    CATALOG: 'catalog',
 } as const
 
 export type OutboxAggregateType = (typeof OUTBOX_AGGREGATE)[keyof typeof OUTBOX_AGGREGATE]

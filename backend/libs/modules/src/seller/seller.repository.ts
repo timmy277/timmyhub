@@ -42,6 +42,14 @@ export class SellerRepository {
         })
     }
 
+    async findUserRoles(userId: string): Promise<UserRole[]> {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { roles: true },
+        })
+        return user?.roles ?? []
+    }
+
     async findProfileById(id: string): Promise<SellerProfile | null> {
         return this.prisma.sellerProfile.findUnique({
             where: { id },

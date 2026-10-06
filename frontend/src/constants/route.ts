@@ -11,5 +11,9 @@ export const ROUTE = {
     LOGIN: '/login',
     SELLER_REGISTER: '/seller/register',
     SELLER_PORTAL: '/seller/portal',
+    SELLER_ORDERS: '/seller/orders',
+    SELLER_SETTINGS: '/seller/settings',
     ADMIN_SELLER_APPLICATIONS: '/seller-applications',
+    PRODUCTS: '/products',
+    ADMIN_PRODUCTS: '/products',
 } as const

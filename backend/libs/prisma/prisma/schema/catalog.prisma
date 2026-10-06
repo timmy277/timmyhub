@@ -53,14 +53,22 @@ model Product {
     viewCount   Int             @default(0)
     ratingAvg   Float           @default(0)
     ratingCount Int             @default(0)
-    isFeatured  Boolean         @default(false)
-    reviewNote  String?
-    version     Int             @default(0)
-    createdAt   DateTime        @default(now())
-    updatedAt   DateTime        @updatedAt
-    category    Category        @relation(fields: [categoryId], references: [id])
-    options     ProductOption[]
-    variants    ProductVariant[]
+    isFeatured      Boolean         @default(false)
+    images          String[]        @default([])
+    videos          String[]        @default([])
+    isSuspended     Boolean         @default(false)
+    suspendedReason String?
+    suspendedById   String?
+    suspendedAt     DateTime?
+    reviewNote      String?
+    reviewedById    String?
+    reviewedAt      DateTime?
+    version         Int             @default(0)
+    createdAt       DateTime        @default(now())
+    updatedAt       DateTime        @updatedAt
+    category        Category        @relation(fields: [categoryId], references: [id])
+    options         ProductOption[]
+    variants        ProductVariant[]
 
     @@unique([shopId, slug])
     @@index([categoryId, status])

@@ -23,7 +23,7 @@ import {
     SidebarRail,
     useSidebar,
 } from '@/components/ui'
-import { NAV_GROUPS, ROUTE } from '@/constants'
+import { DASHBOARD_PERMISSION, NAV_GROUPS, ROUTE } from '@/constants'
 import type { NavItem } from '@/types'
 
 function isRouteActive(pathname: string, url: string): boolean {
@@ -71,7 +71,10 @@ export function AppSidebar({ permissions }: AppSidebarProps) {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton asChild size="lg" tooltip={t('brand')}>
-                            <Link href={ROUTE.HOME} onClick={closeMobileSidebar}>
+                            <Link
+                                href={permissions.has(DASHBOARD_PERMISSION) ? ROUTE.DASHBOARD : ROUTE.HOME}
+                                onClick={closeMobileSidebar}
+                            >
                                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary font-semibold text-sidebar-primary-foreground">
                                     T
                                 </div>

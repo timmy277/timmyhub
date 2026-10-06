@@ -19,7 +19,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui'
-import { DASHBOARD_PERMISSION, QUERY_KEY, ROUTE, SELLER_SHOP_ANY_PERMISSION, SELLER_SHOP_PERMISSION } from '@/constants'
+import { DASHBOARD_PERMISSION, QUERY_KEY, ROUTE, SELLER_SHOP_PERMISSION } from '@/constants'
 import { AccountDialog } from '@/features/account'
 import { getCurrentUserProfileAction } from '@/features/users'
 import { useLogout, useMounted, usePermissions } from '@/hooks'
@@ -39,7 +39,7 @@ export function UserMenu() {
 
     const { hasPermission } = usePermissions()
     const canAccessDashboard = hasPermission(DASHBOARD_PERMISSION)
-    const isSeller = hasPermission(SELLER_SHOP_PERMISSION) || hasPermission(SELLER_SHOP_ANY_PERMISSION)
+    const isSeller = !canAccessDashboard && hasPermission(SELLER_SHOP_PERMISSION)
     const sellerRoute = isSeller ? ROUTE.SELLER_PORTAL : ROUTE.SELLER_REGISTER
     const sellerLabel = isSeller ? t('sellerPortal') : t('becomeSeller')
 
@@ -118,12 +118,14 @@ export function UserMenu() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
-                        <DropdownMenuItem asChild>
-                            <Link href={sellerRoute}>
-                                <StoreIcon aria-hidden />
-                                {sellerLabel}
-                            </Link>
-                        </DropdownMenuItem>
+                        {!canAccessDashboard && (
+                            <DropdownMenuItem asChild>
+                                <Link href={sellerRoute}>
+                                    <StoreIcon aria-hidden />
+                                    {sellerLabel}
+                                </Link>
+                            </DropdownMenuItem>
+                        )}
                         {canAccessDashboard && (
                             <DropdownMenuItem asChild>
                                 <Link href={ROUTE.DASHBOARD}>

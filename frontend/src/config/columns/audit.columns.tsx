@@ -76,7 +76,7 @@ function actionLabel(log: AuditLogSummary, t: AuditTranslator): string {
 }
 
 // Tên loại tác nhân (Quản trị viên / Người dùng / Hệ thống) — `actorType` là chuỗi enum tiếng Anh.
-function actorTypeLabel(actorType: string, t: AuditTranslator): string {
+export function actorTypeLabel(actorType: string, t: AuditTranslator): string {
     const key = AUDIT_ACTOR_TYPE_LABEL_KEY[actorType as keyof typeof AUDIT_ACTOR_TYPE_LABEL_KEY]
     return key ? t(key) : actorType
 }
@@ -216,14 +216,7 @@ export function createAuditColumns({ t, canRead, actions }: CreateAuditColumnsOp
                 const log = params.data
                 if (!log) return null
                 if (log.actorName) {
-                    return (
-                        <span className="flex min-w-0 flex-col">
-                            <span className="truncate font-medium">{log.actorName}</span>
-                            <span className="truncate text-xs text-muted-foreground">
-                                {actorTypeLabel(log.actorType, t)}
-                            </span>
-                        </span>
-                    )
+                    return <span className="truncate font-medium">{log.actorName}</span>
                 }
                 // Không có tên: tài khoản đã xoá (còn id) hoặc tác nhân hệ thống — hiện chữ mờ để không ai đọc nhầm
                 // thành một tên thật.

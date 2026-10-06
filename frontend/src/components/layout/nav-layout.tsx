@@ -2,7 +2,12 @@ import type { ReactNode } from 'react'
 import { cookies } from 'next/headers'
 
 import { SidebarInset, SidebarProvider } from '@/components/ui'
-import { SELLER_SHOP_PERMISSION, SIDEBAR_STATE_COOKIE_NAME } from '@/constants'
+import {
+    DASHBOARD_PERMISSION,
+    SELLER_PRODUCT_PERMISSION,
+    SELLER_SHOP_PERMISSION,
+    SIDEBAR_STATE_COOKIE_NAME,
+} from '@/constants'
 import { getMyShopAction } from '@/features/seller'
 import { getActor } from '@/lib/actor-permissions'
 
@@ -27,10 +32,25 @@ export async function NavLayout({ children }: NavLayoutProps) {
     // Lấy tập quyền để lọc nav item — chỉ truyền set (serializable thông qua SSR props client component).
     const actor = await getActor()
     const permissions = new Set(actor?.permissions ?? [])
-    if (!permissions.has(SELLER_SHOP_PERMISSION) && actor) {
-        const shopRes = await getMyShopAction()
-        if (shopRes.ok && Boolean(shopRes.data)) {
-            permissions.add(SELLER_SHOP_PERMISSION)
+
+    // Đối với người bán (không phải Admin), nếu có shop thì cấp đủ quyền thao tác sản phẩm và shop
+    if (actor && !permissions.has(DASHBOARD_PERMISSION)) {
+        let hasShop = permissions.has(SELLER_SHOP_PERMISSION)
+        if (!hasShop) {
+            const shopRes = await getMyShopAction()
+            if (shopRes.ok && Boolean(shopRes.data)) {
+                hasShop = true
+                permissions.add(SELLER_SHOP_PERMISSION)
+            }
+        }
+        if (hasShop) {
+            permissions.add(SELLER_PRODUCT_PERMISSION.LIST)
+            permissions.add(SELLER_PRODUCT_PERMISSION.READ)
+            permissions.add(SELLER_PRODUCT_PERMISSION.CREATE)
+            permissions.add(SELLER_PRODUCT_PERMISSION.UPDATE)
+            permissions.add(SELLER_PRODUCT_PERMISSION.DELETE)
+            permissions.add(SELLER_PRODUCT_PERMISSION.SUSPEND)
+            permissions.add(SELLER_PRODUCT_PERMISSION.RESTORE)
         }
     }
 

@@ -75,3 +75,60 @@ export const SELLER_APPLICATIONS_PERMISSION = 'seller:applications:list' as cons
 // Quyền quản lý shop của người bán — SELLER, BRAND có `seller:shops:update`.
 export const SELLER_SHOP_PERMISSION = 'seller:shops:update' as const satisfies PermissionName
 export const SELLER_SHOP_ANY_PERMISSION = 'seller:shops:update:any' as const satisfies PermissionName
+
+// Quyền quản lý sản phẩm phía Người bán (Seller)
+export const SELLER_PRODUCT_PERMISSION = {
+    LIST: 'catalog:products:read',
+    READ: 'catalog:products:read',
+    CREATE: 'catalog:products:create',
+    UPDATE: 'catalog:products:update',
+    DELETE: 'catalog:products:delete',
+    SUSPEND: 'catalog:products:suspend',
+    RESTORE: 'catalog:products:restore',
+} as const satisfies Record<string, PermissionName>
+
+export type SellerProductPermissionKey = keyof typeof SELLER_PRODUCT_PERMISSION
+export type SellerProductPermissionFlags = Record<SellerProductPermissionKey, boolean>
+
+export function toSellerProductPermissionFlags(permissions: ReadonlySet<string>): SellerProductPermissionFlags {
+    return {
+        LIST: permissions.has(SELLER_PRODUCT_PERMISSION.LIST),
+        READ: permissions.has(SELLER_PRODUCT_PERMISSION.READ),
+        CREATE: permissions.has(SELLER_PRODUCT_PERMISSION.CREATE),
+        UPDATE: permissions.has(SELLER_PRODUCT_PERMISSION.UPDATE),
+        DELETE: permissions.has(SELLER_PRODUCT_PERMISSION.DELETE),
+        SUSPEND: permissions.has(SELLER_PRODUCT_PERMISSION.SUSPEND),
+        RESTORE: permissions.has(SELLER_PRODUCT_PERMISSION.RESTORE),
+    }
+}
+
+// Quyền quản lý sản phẩm phía Quản trị viên (Admin / Moderator)
+export const ADMIN_PRODUCT_PERMISSION = {
+    LIST: 'catalog:products:list:any',
+    READ: 'catalog:products:read:any',
+    APPROVE: 'catalog:products:approve',
+    REJECT: 'catalog:products:reject',
+    UPDATE: 'catalog:products:update:any',
+    DELETE: 'catalog:products:delete:any',
+    SUSPEND: 'catalog:products:suspend:any',
+    RESTORE: 'catalog:products:restore:any',
+} as const satisfies Record<string, PermissionName>
+
+export type AdminProductPermissionKey = keyof typeof ADMIN_PRODUCT_PERMISSION
+export type AdminProductPermissionFlags = Record<AdminProductPermissionKey, boolean>
+
+export function toAdminProductPermissionFlags(permissions: ReadonlySet<string>): AdminProductPermissionFlags {
+    return {
+        LIST: permissions.has(ADMIN_PRODUCT_PERMISSION.LIST),
+        READ: permissions.has(ADMIN_PRODUCT_PERMISSION.READ),
+        APPROVE: permissions.has(ADMIN_PRODUCT_PERMISSION.APPROVE),
+        REJECT: permissions.has(ADMIN_PRODUCT_PERMISSION.REJECT),
+        UPDATE: permissions.has(ADMIN_PRODUCT_PERMISSION.UPDATE),
+        DELETE: permissions.has(ADMIN_PRODUCT_PERMISSION.DELETE),
+        SUSPEND: permissions.has(ADMIN_PRODUCT_PERMISSION.SUSPEND),
+        RESTORE: permissions.has(ADMIN_PRODUCT_PERMISSION.RESTORE),
+    }
+}
+
+export const CATALOG_PRODUCTS_ADMIN_PERMISSION = ADMIN_PRODUCT_PERMISSION.LIST
+export const CATALOG_PRODUCTS_SELLER_PERMISSION = SELLER_PRODUCT_PERMISSION.CREATE

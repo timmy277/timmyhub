@@ -37,4 +37,14 @@ export const QUERY_KEY = {
         APPLICATIONS: ['seller', 'applications'] as const,
         APPLICATION_DETAIL: (id: string) => ['seller', 'applications', id] as const,
     },
+    PRODUCTS: {
+        ALL: ['products'] as const,
+        SELLER_LIST: (filters?: Record<string, unknown>) => ['products', 'seller-list', filters] as const,
+        ADMIN_LIST: (filters?: Record<string, unknown>) => ['products', 'admin-list', filters] as const,
+        DETAIL: (id: string) => ['products', 'detail', id] as const,
+    },
+    CATEGORIES: {
+        ALL: ['categories'] as const,
+        LIST: ['categories', 'list'] as const,
+    },
 } as const

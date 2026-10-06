@@ -93,7 +93,7 @@ jobs:
         run: pnpm --filter @timmyhub/prisma prisma:generate
 
       - name: Run ESLint
-        run: pnpm lint -- --cache-dir=.turbo
+        run: pnpm exec turbo run lint --cache-dir=.turbo
 
   typecheck:
     name: Type Check
@@ -129,7 +129,7 @@ jobs:
         run: pnpm --filter @timmyhub/contracts build
 
       - name: Run Typecheck
-        run: pnpm typecheck -- --cache-dir=.turbo
+        run: pnpm exec turbo run typecheck --cache-dir=.turbo
 
   test:
     name: Unit Tests
@@ -165,7 +165,7 @@ jobs:
         run: pnpm --filter @timmyhub/contracts build && pnpm --filter @timmyhub/common build
 
       - name: Run Unit Tests
-        run: pnpm test -- --cache-dir=.turbo
+        run: pnpm exec turbo run test --cache-dir=.turbo
 
   build:
     name: Build Packages & Apps
@@ -199,4 +199,4 @@ jobs:
         run: pnpm --filter @timmyhub/prisma prisma:generate
 
       - name: Run Build
-        run: pnpm build -- --cache-dir=.turbo
+        run: pnpm exec turbo run build --cache-dir=.turbo

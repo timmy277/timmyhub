@@ -18,7 +18,7 @@ export type BackendFailure = {
 export type BackendResult<T> = { ok: true; data: T } | BackendFailure
 
 type FetchBackendOptions = {
-    token: string
+    token?: string | undefined
     method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
     body?: unknown
     // Tham số truy vấn; giá trị `undefined` bị bỏ qua thay vì gửi chuỗi rỗng.
@@ -27,7 +27,7 @@ type FetchBackendOptions = {
 
 const BACKEND_UNAVAILABLE_CODE = 'BACKEND_UNAVAILABLE' as const
 
-export async function fetchBackend<T>(path: string, options: FetchBackendOptions): Promise<BackendResult<T>> {
+export async function fetchBackend<T>(path: string, options: FetchBackendOptions = {}): Promise<BackendResult<T>> {
     const url = new URL(`${API_BASE_URL}/${path}`)
     for (const [key, value] of Object.entries(options.query ?? {})) {
         if (value !== undefined) url.searchParams.set(key, String(value))
@@ -39,7 +39,7 @@ export async function fetchBackend<T>(path: string, options: FetchBackendOptions
             method: options.method ?? 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${options.token}`,
+                ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
             },
             // Không cache: dữ liệu quản trị phải phản ánh ngay thay đổi vừa ghi, và `revalidatePath` sau mỗi thao tác
             // ghi mới là thứ quyết định khi nào bảng được dựng lại.

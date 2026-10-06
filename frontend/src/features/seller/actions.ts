@@ -94,6 +94,7 @@ export async function updateMyShopAction(
     if (!result.ok) return { ok: false, code: result.code }
 
     revalidatePath(ROUTE.SELLER_PORTAL)
+    revalidatePath(ROUTE.SELLER_SETTINGS)
     return { ok: true, data: result.data }
 }
 

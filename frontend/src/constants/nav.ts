@@ -1,13 +1,24 @@
-import { HistoryIcon, KeyRoundIcon, LayoutGridIcon, ShieldCheckIcon, StoreIcon, UsersIcon } from 'lucide-react'
+import {
+    HistoryIcon,
+    KeyRoundIcon,
+    LayoutGridIcon,
+    PackageIcon,
+    SettingsIcon,
+    ShieldCheckIcon,
+    ShoppingBagIcon,
+    StoreIcon,
+    UsersIcon,
+} from 'lucide-react'
 
 import type { BreadcrumbEntry, NavGroup } from '@/types'
 
 import { AUDIT_PERMISSION } from './audit'
 import {
+    CATALOG_PRODUCTS_ADMIN_PERMISSION,
     DASHBOARD_PERMISSION,
     RBAC_PERMISSION,
     SELLER_APPLICATIONS_PERMISSION,
-    SELLER_SHOP_ANY_PERMISSION,
+    SELLER_PRODUCT_PERMISSION,
     SELLER_SHOP_PERMISSION,
     USER_PERMISSION,
 } from './permission'
@@ -26,6 +37,12 @@ export const NAV_GROUPS: readonly NavGroup[] = [
                 url: ROUTE.DASHBOARD,
                 icon: LayoutGridIcon,
                 requirePermission: DASHBOARD_PERMISSION,
+            },
+            {
+                titleKey: 'products',
+                url: ROUTE.ADMIN_PRODUCTS,
+                icon: PackageIcon,
+                requirePermission: CATALOG_PRODUCTS_ADMIN_PERMISSION,
             },
             {
                 titleKey: 'users',
@@ -63,10 +80,36 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         labelKey: 'sellerSection',
         items: [
             {
-                titleKey: 'sellerPortal',
+                titleKey: 'sellerOverview',
                 url: ROUTE.SELLER_PORTAL,
                 icon: StoreIcon,
-                requirePermission: [SELLER_SHOP_PERMISSION, SELLER_SHOP_ANY_PERMISSION],
+                requirePermission: SELLER_SHOP_PERMISSION,
+                excludePermission: DASHBOARD_PERMISSION,
+            },
+            {
+                titleKey: 'products',
+                url: ROUTE.PRODUCTS,
+                icon: PackageIcon,
+                requirePermission: [
+                    SELLER_PRODUCT_PERMISSION.LIST,
+                    SELLER_PRODUCT_PERMISSION.CREATE,
+                    SELLER_SHOP_PERMISSION,
+                ],
+                excludePermission: DASHBOARD_PERMISSION,
+            },
+            {
+                titleKey: 'sellerOrders',
+                url: ROUTE.SELLER_ORDERS,
+                icon: ShoppingBagIcon,
+                requirePermission: SELLER_SHOP_PERMISSION,
+                excludePermission: DASHBOARD_PERMISSION,
+            },
+            {
+                titleKey: 'sellerSettings',
+                url: ROUTE.SELLER_SETTINGS,
+                icon: SettingsIcon,
+                requirePermission: SELLER_SHOP_PERMISSION,
+                excludePermission: DASHBOARD_PERMISSION,
             },
         ],
     },
@@ -75,36 +118,36 @@ export const NAV_GROUPS: readonly NavGroup[] = [
 // Breadcrumb khai báo sẵn theo pathname. Pathname không có ở đây thì `useBreadcrumbs` tự dựng từ các đoạn URL.
 export const BREADCRUMB_ROUTES: Readonly<Record<string, readonly BreadcrumbEntry[]>> = {
     [ROUTE.HOME]: [{ titleKey: 'home', url: ROUTE.HOME }],
-    [ROUTE.DASHBOARD]: [
-        { titleKey: 'home', url: ROUTE.HOME },
-        { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
-    ],
+    [ROUTE.DASHBOARD]: [{ titleKey: 'dashboard', url: ROUTE.DASHBOARD }],
     [ROUTE.USERS]: [
-        { titleKey: 'home', url: ROUTE.HOME },
+        { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
         { titleKey: 'users', url: ROUTE.USERS },
     ],
     [ROUTE.ROLES]: [
-        { titleKey: 'home', url: ROUTE.HOME },
+        { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
         { titleKey: 'roles', url: ROUTE.ROLES },
     ],
     [ROUTE.PERMISSIONS]: [
-        { titleKey: 'home', url: ROUTE.HOME },
+        { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
         { titleKey: 'permissions', url: ROUTE.PERMISSIONS },
     ],
     [ROUTE.ADMIN_SELLER_APPLICATIONS]: [
-        { titleKey: 'home', url: ROUTE.HOME },
+        { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
         { titleKey: 'sellerApplications', url: ROUTE.ADMIN_SELLER_APPLICATIONS },
     ],
+    [ROUTE.PRODUCTS]: [{ titleKey: 'products', url: ROUTE.PRODUCTS }],
     [ROUTE.AUDIT]: [
-        { titleKey: 'home', url: ROUTE.HOME },
+        { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
         { titleKey: 'audit', url: ROUTE.AUDIT },
     ],
-    [ROUTE.SELLER_PORTAL]: [
-        { titleKey: 'home', url: ROUTE.HOME },
-        { titleKey: 'sellerPortal', url: ROUTE.SELLER_PORTAL },
+    [ROUTE.SELLER_PORTAL]: [{ titleKey: 'sellerOverview', url: ROUTE.SELLER_PORTAL }],
+    [ROUTE.SELLER_ORDERS]: [
+        { titleKey: 'sellerOverview', url: ROUTE.SELLER_PORTAL },
+        { titleKey: 'sellerOrders', url: ROUTE.SELLER_ORDERS },
     ],
-    [ROUTE.SELLER_REGISTER]: [
-        { titleKey: 'home', url: ROUTE.HOME },
-        { titleKey: 'becomeSeller', url: ROUTE.SELLER_REGISTER },
+    [ROUTE.SELLER_SETTINGS]: [
+        { titleKey: 'sellerOverview', url: ROUTE.SELLER_PORTAL },
+        { titleKey: 'sellerSettings', url: ROUTE.SELLER_SETTINGS },
     ],
+    [ROUTE.SELLER_REGISTER]: [{ titleKey: 'becomeSeller', url: ROUTE.SELLER_REGISTER }],
 }

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 
 import { NavLayout } from '@/components/layout'
-import { ROUTE, SELLER_SHOP_ANY_PERMISSION, SELLER_SHOP_PERMISSION } from '@/constants'
+import { DASHBOARD_PERMISSION, ROUTE, SELLER_SHOP_PERMISSION } from '@/constants'
 import { getMyShopAction } from '@/features/seller'
 import { getActor } from '@/lib/actor-permissions'
 
@@ -10,7 +10,7 @@ interface SellerPortalLayoutProps {
     children: ReactNode
 }
 
-// Layout cho Kênh Người Bán (Seller Portal):
+// Layout cho Kênh Người Bán (Tổng quan):
 // Khi đã là người bán, sử dụng NavLayout (có thanh sidebar bên trái để điều hướng).
 export default async function SellerPortalLayout({ children }: SellerPortalLayoutProps) {
     const actor = await getActor()
@@ -18,8 +18,12 @@ export default async function SellerPortalLayout({ children }: SellerPortalLayou
         redirect(ROUTE.LOGIN)
     }
 
-    const isSellerByPermission =
-        actor.permissions.has(SELLER_SHOP_PERMISSION) || actor.permissions.has(SELLER_SHOP_ANY_PERMISSION)
+    // Quản trị viên (Admin) không vào Kênh Người Bán
+    if (actor.permissions.has(DASHBOARD_PERMISSION)) {
+        redirect(ROUTE.DASHBOARD)
+    }
+
+    const isSellerByPermission = actor.permissions.has(SELLER_SHOP_PERMISSION)
     let isSeller = isSellerByPermission
     if (!isSeller) {
         const shopRes = await getMyShopAction()

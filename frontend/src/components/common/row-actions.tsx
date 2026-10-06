@@ -16,6 +16,7 @@ export interface RowAction {
     onClick: () => void
     disabled?: boolean
     destructive?: boolean
+    className?: string
 }
 
 interface RowActionsProps {
@@ -31,28 +32,33 @@ export function RowActions({ actions, className }: RowActionsProps) {
 
     return (
         <div className={cn('flex items-center gap-1', className)}>
-            {actions.map(({ key, label, ariaLabel, icon: Icon, onClick, disabled, destructive }) => (
-                <IconButtonWithTooltip
-                    key={key}
-                    aria-label={ariaLabel}
-                    tooltip={label}
-                    icon={<Icon />}
-                    disabled={disabled}
-                    onClick={onClick}
-                    className={cn(
-                        key === 'edit' &&
-                            'text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300',
-                        key === 'view' &&
-                            'text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300',
-                        key === 'toggle' &&
-                            destructive &&
-                            'text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300',
-                        key !== 'toggle' &&
-                            (key === 'delete' || destructive) &&
-                            'text-destructive hover:text-destructive',
-                    )}
-                />
-            ))}
+            {actions.map(
+                ({ key, label, ariaLabel, icon: Icon, onClick, disabled, destructive, className: actionClassName }) => (
+                    <IconButtonWithTooltip
+                        key={key}
+                        aria-label={ariaLabel}
+                        tooltip={label}
+                        icon={<Icon />}
+                        disabled={disabled}
+                        onClick={onClick}
+                        className={cn(
+                            key === 'approve' &&
+                                'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300',
+                            key === 'edit' &&
+                                'text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300',
+                            key === 'view' &&
+                                'text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300',
+                            key === 'toggle' &&
+                                destructive &&
+                                'text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300',
+                            key !== 'toggle' &&
+                                (key === 'delete' || destructive) &&
+                                'text-destructive hover:text-destructive',
+                            actionClassName,
+                        )}
+                    />
+                ),
+            )}
         </div>
     )
 }

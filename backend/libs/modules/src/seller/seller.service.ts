@@ -10,7 +10,7 @@ import type {
     SellerProfileDetail,
     UpdateSellerProfileInput,
 } from '@timmyhub/contracts'
-import { ApiError, ResourceStatus } from '@timmyhub/contracts'
+import { ApiError, ResourceStatus, UserRole } from '@timmyhub/contracts'
 
 import { REAPPLICATION_COOLDOWN_MS } from './seller.constants'
 import { slugifyShopName, toPublicShopDetail, toSellerApplicationDetail, toSellerProfileDetail } from './seller.mapper'
@@ -89,6 +89,18 @@ export class SellerService {
 
     // REQ-SEL-001..005: Nộp đơn đăng ký bán hàng
     async submitApplication(userId: string, input: CreateSellerApplicationInput): Promise<SellerApplicationDetail> {
+        // 0. Quản trị viên sàn không được phép đăng ký bán hàng
+        const roles = await this.repository.findUserRoles(userId)
+        if (
+            roles.includes(UserRole.ADMIN) ||
+            roles.includes(UserRole.SUPER_ADMIN) ||
+            roles.includes(UserRole.MODERATOR)
+        ) {
+            throw new ApiError('FORBIDDEN', {
+                messageKey: 'seller.adminCannotApply',
+            })
+        }
+
         // 1. Kiểm tra xem user đã có shop đã duyệt chưa (REQ-SEL-003)
         const existingProfile = await this.repository.findProfileByUserId(userId)
         if (existingProfile && existingProfile.status === ResourceStatus.APPROVED) {

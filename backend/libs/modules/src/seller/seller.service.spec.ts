@@ -1,4 +1,4 @@
-import { ResourceStatus } from '@timmyhub/contracts'
+import { ResourceStatus, UserRole } from '@timmyhub/contracts'
 import type { CreateSellerApplicationInput, ReviewSellerApplicationInput } from '@timmyhub/contracts'
 import type { SellerApplication, SellerProfile } from '@timmyhub/prisma'
 
@@ -65,6 +65,7 @@ describe('SellerService', () => {
             findLatestApplicationByUserId: jest.fn(),
             findApplicationsByUserId: jest.fn(),
             findProfileByUserId: jest.fn(),
+            findUserRoles: jest.fn().mockResolvedValue([]),
             findProfileById: jest.fn(),
             findProfileBySlug: jest.fn(),
             findApplicationById: jest.fn(),
@@ -100,6 +101,13 @@ describe('SellerService', () => {
             expect(result.id).toBe('app-1')
             expect(result.status).toBe(ResourceStatus.PENDING)
             expect(repository.createApplication).toHaveBeenCalledWith('user-1', input)
+        })
+
+        it('từ chối nộp đơn khi user có vai trò quản trị viên (ADMIN)', async () => {
+            repository.findUserRoles.mockResolvedValue([UserRole.ADMIN])
+
+            await expect(service.submitApplication('admin-1', input)).rejects.toThrow()
+            expect(repository.createApplication).not.toHaveBeenCalled()
         })
 
         it('từ chối nộp đơn khi user đã có shop APPROVED (REQ-SEL-003)', async () => {

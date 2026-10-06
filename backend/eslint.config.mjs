@@ -26,7 +26,9 @@ export default tseslint.config(
             },
             sourceType: 'commonjs',
             parserOptions: {
-                projectService: true,
+                projectService: {
+                    allowDefaultProject: ['*.config.ts', 'libs/prisma/prisma.config.ts'],
+                },
                 tsconfigRootDir: configDir,
             },
         },
@@ -50,7 +52,7 @@ export default tseslint.config(
     {
         // Chính file eslint.config.mjs (và bản của libs/modules import nó) không thuộc include của tsconfig nào
         // — tắt hẳn rule cần type-check cho các file này thay vì gán project mặc định (dễ ra sai "error typed value").
-        files: ['**/eslint.config.mjs'],
+        files: ['**/eslint.config.mjs', '**/prisma.config.ts'],
         ...tseslint.configs.disableTypeChecked,
     },
 )

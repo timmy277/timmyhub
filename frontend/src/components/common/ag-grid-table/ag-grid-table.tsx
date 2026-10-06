@@ -516,6 +516,7 @@ export function AgGridTable<TData>({
                         quickFilterText={isServerSearch ? undefined : debouncedQuickFilter}
                         pagination={pagination}
                         paginationPageSize={pageSize}
+                        paginationPageSizeSelector={AG_GRID_PAGE_SIZE_OPTIONS as unknown as number[]}
                         // Ẩn panel mặc định, dùng thanh ô số `AgGridPagination` bên dưới.
                         suppressPaginationPanel
                         rowSelection={{ mode: 'multiRow', selectAll: 'filtered' }}
