@@ -70,10 +70,8 @@ function normalizePem(raw: string): string {
     if (value.startsWith('"') && value.endsWith('"')) {
         value = value.slice(1, -1)
     }
-    value = value.replace(/\\n/g, '\n')
-    value = value.replace(/(BEGIN(?: ENCRYPTED)? PRIVATE KEY)/g, '$1\n')
-    value = value.replace(/(BEGIN PUBLIC KEY)/g, '$1\n')
-    value = value.replace(/\n?(END(?: ENCRYPTED)? PRIVATE KEY)/g, '\n$1')
-    value = value.replace(/\n?(END PUBLIC KEY)/g, '\n$1')
-    return value.replace(/\n{2,}/g, '\n').trim()
+    if (!value.includes('\n') && value.includes('\\n')) {
+        value = value.replace(/\\n/g, '\n')
+    }
+    return value
 }

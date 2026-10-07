@@ -1,3 +1,5 @@
+import { generateKeyPairSync } from 'node:crypto'
+
 import type { ConfigService } from '@nestjs/config'
 import type { JwtService } from '@nestjs/jwt'
 
@@ -6,6 +8,11 @@ import { UserRole } from '@timmyhub/contracts'
 import { AuthService } from './auth.service'
 import type { IdentityRepository, RefreshRotationResult } from './identity.repository'
 import { hashRefreshToken } from './utils/index'
+
+// `signAccessToken` dùng `crypto.createPrivateKey` nên mock phải trả PEM hợp lệ (không thể là 'private-key' nữa).
+const TEST_PRIVATE_KEY_PEM = generateKeyPairSync('rsa', { modulusLength: 2048 })
+    .privateKey.export({ type: 'pkcs8', format: 'pem' })
+    .toString()
 
 // `@nestjs/event-emitter@12` và `@nestjs/config@12` đều là package ESM thuần (`"type": "module"`, không có nhánh
 // CJS) nên Jest — vốn nạp module qua `require` — không đọc được. Ứng dụng chạy thật không dính lỗi này (Node 22
@@ -71,7 +78,7 @@ function buildService(
     } as unknown as IdentityRepository
 
     const jwtService = { signAsync: jest.fn().mockResolvedValue('signed-access-token') } as unknown as JwtService
-    const configService = { get: jest.fn().mockReturnValue('private-key') } as unknown as ConfigService
+    const configService = { get: jest.fn().mockReturnValue(TEST_PRIVATE_KEY_PEM) } as unknown as ConfigService
     const eventEmitter = { emit: jest.fn() } as unknown as ConstructorParameters<typeof AuthService>[3]
 
     return {
