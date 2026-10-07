@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { useQuery } from '@tanstack/react-query'
@@ -76,8 +77,14 @@ export function SellerPortalView({ initialShop }: SellerPortalViewProps = {}) {
             <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-r from-card via-card to-primary/10 p-6 sm:p-8 shadow-xl backdrop-blur-xl">
                 {shop.shopBanner && (
                     <div className="absolute inset-0 z-0 opacity-15 overflow-hidden">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={shop.shopBanner} alt="Shop Banner" className="size-full object-cover" />
+                        <Image
+                            src={shop.shopBanner}
+                            alt="Shop Banner"
+                            fill
+                            sizes="100vw"
+                            className="object-cover"
+                            unoptimized
+                        />
                     </div>
                 )}
 
@@ -86,8 +93,14 @@ export function SellerPortalView({ initialShop }: SellerPortalViewProps = {}) {
                         {/* Shop Logo Avatar */}
                         <div className="relative size-16 sm:size-20 rounded-2xl bg-gradient-to-tr from-primary to-primary/70 text-white font-black text-3xl flex items-center justify-center shadow-lg border-2 border-white/20 shrink-0 overflow-hidden">
                             {shop.shopLogo ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={shop.shopLogo} alt={shop.shopName} className="size-full object-cover" />
+                                <Image
+                                    src={shop.shopLogo}
+                                    alt={shop.shopName}
+                                    fill
+                                    sizes="80px"
+                                    className="object-cover"
+                                    unoptimized
+                                />
                             ) : (
                                 shop.shopName.charAt(0).toUpperCase()
                             )}

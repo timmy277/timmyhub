@@ -66,7 +66,7 @@ export function LoginForm() {
     }
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-2" noValidate>
             <FloatInput
                 type="email"
                 label={t('email')}

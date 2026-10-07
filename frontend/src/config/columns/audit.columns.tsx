@@ -12,7 +12,6 @@ import {
     AG_GRID_NO_EXPORT,
     AG_GRID_SORT_KEY,
     AUDIT_ACTION_LABEL_KEY,
-    AUDIT_ACTOR_TYPE_LABEL_KEY,
     AUDIT_ENTITY_LABEL_KEY,
     AUDIT_QUERY_PARAM,
     AUDIT_RESULT_LABEL_KEY,
@@ -73,12 +72,6 @@ function actorLabel(log: AuditLogSummary, t: AuditTranslator): string {
 function actionLabel(log: AuditLogSummary, t: AuditTranslator): string {
     const key = AUDIT_ACTION_LABEL_KEY[log.action as keyof typeof AUDIT_ACTION_LABEL_KEY]
     return key ? t(key) : log.action
-}
-
-// Tên loại tác nhân (Quản trị viên / Người dùng / Hệ thống) — `actorType` là chuỗi enum tiếng Anh.
-export function actorTypeLabel(actorType: string, t: AuditTranslator): string {
-    const key = AUDIT_ACTOR_TYPE_LABEL_KEY[actorType as keyof typeof AUDIT_ACTOR_TYPE_LABEL_KEY]
-    return key ? t(key) : actorType
 }
 
 // Tên loại đối tượng bị tác động (Người dùng / Vai trò hệ thống…).
