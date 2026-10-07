@@ -238,8 +238,9 @@ function normalizePem(raw: string): string {
     if (value.startsWith('"') && value.endsWith('"')) {
         value = value.slice(1, -1)
     }
-    // Nếu PEM bị dính liền (không có newline nào) → chèn newline sau header và trước footer.
-    if (!value.includes('\n') && value.includes('\\n')) {
+    // Nếu PEM có literal `\n` (không phải newline thật) → thay bằng newline thật.
+    // Dotenv trên một số môi trường không tự chuyển escape sequence → để lại `\n` literal.
+    if (value.includes('\\n')) {
         value = value.replace(/\\n/g, '\n')
     }
     return value
