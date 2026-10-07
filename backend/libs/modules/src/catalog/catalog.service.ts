@@ -3,19 +3,24 @@ import { EventEmitter2 } from '@nestjs/event-emitter'
 
 import { ResourceStatus } from '@timmyhub/contracts'
 import type {
+    CategoryItem,
+    CategoryListResult,
+    CategoryQuery,
     CategorySummary,
+    CreateCategoryInput,
     CreateProductInput,
     ProductDetail,
     ProductListResult,
     ProductQuery,
     ReviewProductInput,
     SuspendProductInput,
+    UpdateCategoryInput,
     UpdateProductInput,
 } from '@timmyhub/contracts'
 import { SellerRepository } from '../seller'
 
 import { CATALOG_EVENT } from './catalog.constants'
-import { toCategorySummary, toProductDetail } from './catalog.mapper'
+import { slugifyString, toCategoryItem, toCategorySummary, toProductDetail } from './catalog.mapper'
 import { CatalogRepository } from './catalog.repository'
 import type { PingResponse } from './dto/index'
 
@@ -295,5 +300,117 @@ export class CatalogService {
         }
 
         return { success }
+    }
+
+    // ===== Admin Category Commands & Queries =====
+
+    async listAdminCategories(query: CategoryQuery): Promise<CategoryListResult> {
+        const page = query.page ?? 1
+        const pageSize = query.pageSize ?? 50
+        const [categories, totalItems] = await Promise.all([
+            this.catalogRepository.findAdminCategories(query),
+            this.catalogRepository.countAdminCategories(query),
+        ])
+
+        return {
+            items: categories.map((c) => toCategoryItem(c)),
+            totalItems,
+            page,
+            pageSize,
+            totalPages: Math.ceil(totalItems / pageSize) || 1,
+        }
+    }
+
+    async getAdminCategoryDetail(id: string): Promise<CategoryItem> {
+        const category = await this.catalogRepository.findCategoryById(id)
+        if (!category) {
+            throw new NotFoundException('Không tìm thấy danh mục.')
+        }
+        return toCategoryItem(category)
+    }
+
+    async createCategory(input: CreateCategoryInput, _actorId: string): Promise<CategoryItem> {
+        const slug = input.slug?.trim() || slugifyString(input.name)
+
+        const existingSlug = await this.catalogRepository.findCategoryBySlug(slug)
+        if (existingSlug) {
+            throw new BadRequestException(`Đường dẫn slug "${slug}" đã tồn tại. Vui lòng chọn slug khác.`)
+        }
+
+        if (input.parentId) {
+            const parent = await this.catalogRepository.findCategoryById(input.parentId)
+            if (!parent) {
+                throw new BadRequestException('Danh mục cha không tồn tại.')
+            }
+        }
+
+        const created = await this.catalogRepository.createCategory({
+            name: input.name,
+            slug,
+            parentId: input.parentId ?? null,
+            image: input.image ?? null,
+            description: input.description ?? null,
+            position: input.position ?? 0,
+            isActive: input.isActive ?? true,
+        })
+
+        return toCategoryItem(created)
+    }
+
+    async updateCategory(id: string, input: UpdateCategoryInput, _actorId: string): Promise<CategoryItem> {
+        const existing = await this.catalogRepository.findCategoryById(id)
+        if (!existing) {
+            throw new NotFoundException('Không tìm thấy danh mục để cập nhật.')
+        }
+
+        if (input.parentId !== undefined && input.parentId !== null) {
+            if (input.parentId === id) {
+                throw new BadRequestException('Danh mục không thể làm cha của chính nó.')
+            }
+            const parent = await this.catalogRepository.findCategoryById(input.parentId)
+            if (!parent) {
+                throw new BadRequestException('Danh mục cha không tồn tại.')
+            }
+        }
+
+        const slug = input.slug?.trim()
+        if (slug) {
+            const existingSlug = await this.catalogRepository.findCategoryBySlug(slug)
+            if (existingSlug && existingSlug.id !== id) {
+                throw new BadRequestException(`Đường dẫn slug "${slug}" đã tồn tại. Vui lòng chọn slug khác.`)
+            }
+        }
+
+        const updated = await this.catalogRepository.updateCategory(id, {
+            name: input.name,
+            slug,
+            parentId: input.parentId,
+            image: input.image,
+            description: input.description,
+            position: input.position,
+            isActive: input.isActive,
+        })
+
+        return toCategoryItem(updated)
+    }
+
+    async deleteCategory(id: string, _actorId: string): Promise<{ success: boolean }> {
+        const existing = await this.catalogRepository.findCategoryById(id)
+        if (!existing) {
+            throw new NotFoundException('Không tìm thấy danh mục để xoá.')
+        }
+
+        if (existing.children && existing.children.length > 0) {
+            throw new BadRequestException('Không thể xoá danh mục vì vẫn còn chứa danh mục con.')
+        }
+
+        if (existing._count?.products && existing._count.products > 0) {
+            throw new BadRequestException(
+                `Không thể xoá danh mục vì đang có ${existing._count.products} sản phẩm liên kết.`,
+            )
+        }
+
+        await this.catalogRepository.deleteCategory(id)
+        return { success: true }
     }
 }

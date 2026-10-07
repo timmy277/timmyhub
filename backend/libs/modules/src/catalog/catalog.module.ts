@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common'
 import { SellerModule } from '@timmyhub/modules/seller'
 import { PrismaModule } from '@timmyhub/prisma'
 
+import { AdminCategoryController } from './admin-category.controller'
 import { AdminProductController } from './admin-product.controller'
 import { CatalogController } from './catalog.controller'
 import { CatalogRepository } from './catalog.repository'
@@ -18,6 +19,7 @@ import { SellerProductController } from './seller-product.controller'
         CategoriesController,
         SellerProductController,
         AdminProductController,
+        AdminCategoryController,
     ],
     providers: [CatalogService, CatalogRepository, CatalogEventsListener],
     exports: [CatalogService, CatalogRepository],

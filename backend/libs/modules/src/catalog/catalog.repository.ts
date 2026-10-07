@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 
 import { OUTBOX_AGGREGATE, OUTBOX_EVENT, ProductStatus } from '@timmyhub/contracts'
 import type {
+    CategoryQuery,
     CreateProductInput,
     ProductListResult,
     ProductQuery,
@@ -12,14 +13,14 @@ import { Prisma, PrismaService } from '@timmyhub/prisma'
 import type { Category } from '@timmyhub/prisma'
 
 import { slugifyString, toProductSummary } from './catalog.mapper'
-import type { ProductWithRelations } from './catalog.mapper'
+import type { CategoryWithRelations, ProductWithRelations } from './catalog.mapper'
 
 @Injectable()
 export class CatalogRepository {
     // ===== Dependencies =====
     constructor(private readonly prisma: PrismaService) {}
 
-    // ===== Category Queries =====
+    // ===== Category Queries & Mutations =====
 
     async findCategories(): Promise<Category[]> {
         return this.prisma.category.findMany({
@@ -34,10 +35,148 @@ export class CatalogRepository {
         })
     }
 
-    async findCategoryById(id: string): Promise<Category | null> {
+    async findAdminCategories(query: CategoryQuery): Promise<CategoryWithRelations[]> {
+        const { page = 1, pageSize = 50, q, parentId, isActive } = query
+        const where: Prisma.CategoryWhereInput = {}
+
+        if (q) {
+            where.OR = [{ name: { contains: q, mode: 'insensitive' } }, { slug: { contains: q, mode: 'insensitive' } }]
+        }
+
+        if (parentId !== undefined) {
+            if (parentId === 'root' || parentId === null || parentId === '') {
+                where.parentId = null
+            } else if (parentId !== 'all') {
+                where.parentId = parentId
+            }
+        }
+
+        if (isActive !== undefined) {
+            where.isActive = isActive
+        }
+
+        return this.prisma.category.findMany({
+            where,
+            skip: (page - 1) * pageSize,
+            take: pageSize,
+            orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
+            include: {
+                parent: true,
+                _count: {
+                    select: { products: true, children: true },
+                },
+            },
+        })
+    }
+
+    async countAdminCategories(query: CategoryQuery): Promise<number> {
+        const { q, parentId, isActive } = query
+        const where: Prisma.CategoryWhereInput = {}
+
+        if (q) {
+            where.OR = [{ name: { contains: q, mode: 'insensitive' } }, { slug: { contains: q, mode: 'insensitive' } }]
+        }
+
+        if (parentId !== undefined) {
+            if (parentId === 'root' || parentId === null || parentId === '') {
+                where.parentId = null
+            } else if (parentId !== 'all') {
+                where.parentId = parentId
+            }
+        }
+
+        if (isActive !== undefined) {
+            where.isActive = isActive
+        }
+
+        return this.prisma.category.count({ where })
+    }
+
+    async findCategoryById(id: string): Promise<CategoryWithRelations | null> {
         return this.prisma.category.findUnique({
             where: { id },
+            include: {
+                parent: true,
+                children: {
+                    orderBy: { position: 'asc' },
+                    include: {
+                        _count: { select: { products: true, children: true } },
+                    },
+                },
+                _count: {
+                    select: { products: true, children: true },
+                },
+            },
         })
+    }
+
+    async findCategoryBySlug(slug: string): Promise<Category | null> {
+        return this.prisma.category.findUnique({
+            where: { slug },
+        })
+    }
+
+    async createCategory(data: {
+        name: string
+        slug: string
+        parentId?: string | null | undefined
+        image?: string | null | undefined
+        description?: string | null | undefined
+        position?: number | undefined
+        isActive?: boolean | undefined
+    }): Promise<CategoryWithRelations> {
+        return this.prisma.category.create({
+            data: {
+                name: data.name,
+                slug: data.slug,
+                parentId: data.parentId || null,
+                image: data.image || null,
+                description: data.description || null,
+                position: data.position ?? 0,
+                isActive: data.isActive ?? true,
+            },
+            include: {
+                parent: true,
+                _count: { select: { products: true, children: true } },
+            },
+        })
+    }
+
+    async updateCategory(
+        id: string,
+        data: {
+            name?: string | undefined
+            slug?: string | undefined
+            parentId?: string | null | undefined
+            image?: string | null | undefined
+            description?: string | null | undefined
+            position?: number | undefined
+            isActive?: boolean | undefined
+        },
+    ): Promise<CategoryWithRelations> {
+        return this.prisma.category.update({
+            where: { id },
+            data: {
+                ...(data.name !== undefined ? { name: data.name } : {}),
+                ...(data.slug !== undefined ? { slug: data.slug } : {}),
+                ...(data.parentId !== undefined ? { parentId: data.parentId || null } : {}),
+                ...(data.image !== undefined ? { image: data.image || null } : {}),
+                ...(data.description !== undefined ? { description: data.description || null } : {}),
+                ...(data.position !== undefined ? { position: data.position } : {}),
+                ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
+            },
+            include: {
+                parent: true,
+                _count: { select: { products: true, children: true } },
+            },
+        })
+    }
+
+    async deleteCategory(id: string): Promise<boolean> {
+        await this.prisma.category.delete({
+            where: { id },
+        })
+        return true
     }
 
     // ===== Product Queries =====

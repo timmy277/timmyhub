@@ -38,6 +38,10 @@ export default tseslint.config(
             '@typescript-eslint/no-explicit-any': 'error',
             '@typescript-eslint/no-floating-promises': 'error',
             '@typescript-eslint/consistent-type-imports': 'error',
+            '@typescript-eslint/no-unused-vars': [
+                'error',
+                { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+            ],
             'no-console': 'error',
             'prettier/prettier': ['error', { endOfLine: 'auto' }],
         },

@@ -1,4 +1,5 @@
 import type {
+    CategoryItem,
     CategorySummary,
     ProductDetail,
     ProductOptionDetail,
@@ -24,6 +25,17 @@ export type ProductWithRelations = Product & {
     _count?: { variants?: number } | undefined
 }
 
+export type CategoryWithRelations = Category & {
+    parent?: Category | null | undefined
+    children?: Category[] | undefined
+    _count?:
+        | {
+              products?: number | undefined
+              children?: number | undefined
+          }
+        | undefined
+}
+
 export function slugifyString(name: string): string {
     return name
         .toLowerCase()
@@ -44,6 +56,31 @@ export function toCategorySummary(category: Category & { children?: Category[] }
         parentId: category.parentId,
         image: category.image,
         children: category.children ? category.children.map((child) => toCategorySummary(child)) : undefined,
+    }
+}
+
+export function toCategoryItem(
+    category: Category & {
+        parent?: Category | null | undefined
+        children?: Category[] | undefined
+        _count?: { products?: number | undefined; children?: number | undefined } | undefined
+    },
+): CategoryItem {
+    return {
+        id: category.id,
+        name: category.name,
+        slug: category.slug,
+        parentId: category.parentId,
+        parentName: category.parent?.name ?? null,
+        image: category.image,
+        description: category.description,
+        position: category.position,
+        isActive: category.isActive,
+        productCount: category._count?.products ?? 0,
+        childrenCount: category._count?.children ?? (category.children ? category.children.length : 0),
+        createdAt: category.createdAt.toISOString(),
+        updatedAt: category.updatedAt.toISOString(),
+        children: category.children ? category.children.map((child) => toCategoryItem(child)) : undefined,
     }
 }
 
