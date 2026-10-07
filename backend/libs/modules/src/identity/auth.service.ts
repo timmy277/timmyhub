@@ -223,7 +223,7 @@ export class AuthService {
             { sub: userId, email, roles },
             {
                 algorithm: ACCESS_TOKEN_ALGORITHM,
-                privateKey,
+                privateKey: privateKey as unknown as string,
                 expiresIn: ACCESS_TOKEN_TTL,
             },
         )

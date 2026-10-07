@@ -47,7 +47,7 @@ export class JwtAuthGuard implements CanActivate {
             const publicKey = createPublicKey(normalizePem(rawPublicKey))
             const payload = await this.jwtService.verifyAsync<AccessTokenPayload>(token, {
                 algorithms: [ACCESS_TOKEN_VERIFY_ALGORITHM],
-                publicKey,
+                publicKey: publicKey as unknown as string,
             })
             request.user = { id: payload.sub, email: payload.email, roles: payload.roles }
             return true
