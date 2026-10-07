@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import { FileTextIcon, PackageIcon, PlusIcon, XIcon } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
@@ -26,7 +27,6 @@ import { getOpenProductTabsSnapshot, subscribeToOpenProductTabs, writeOpenProduc
 interface ProductTabsProps {
     active: ProductTabState
     userId: string
-    canCreate?: boolean
     activeLabel?: string
 }
 
@@ -57,7 +57,8 @@ function sameProductTabs(left: readonly ProductTabItem[], right: readonly Produc
     )
 }
 
-export function ProductTabs({ active, userId, canCreate = false, activeLabel }: ProductTabsProps) {
+export function ProductTabs({ active, userId, activeLabel }: ProductTabsProps) {
+    const t = useTranslations('products')
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -86,10 +87,13 @@ export function ProductTabs({ active, userId, canCreate = false, activeLabel }: 
         try {
             stored = parseProductTabKeys(JSON.parse(getOpenProductTabsSnapshot(userId)))
         } catch {
-            // bỏ qua nếu hỏng
+            // ignore
         }
         const activeItem = parseProductTabItem(activeKey)
-        const itemWithLabel = activeItem ? { ...activeItem, label: activeLabel ?? activeItem.label } : null
+        const itemWithLabel =
+            activeItem && activeItem.tab === PRODUCT_TAB.DETAIL
+                ? { ...activeItem, label: activeLabel ?? activeItem.label }
+                : activeItem
         const withActive = itemWithLabel ? addProductTab(stored, itemWithLabel) : stored
 
         if (!sameProductTabs(stored, withActive)) {
@@ -112,30 +116,35 @@ export function ProductTabs({ active, userId, canCreate = false, activeLabel }: 
         router.push(buildProductTabCloseHref(pathname, searchParams, item, open))
     }
 
-    const items = useMemo<ProductTabStripItem[]>(() => {
-        const listItems: ProductTabStripItem[] = [
-            {
-                value: PRODUCT_TAB.LIST,
-                label: 'Danh sách',
-                icon: <PackageIcon className="size-4 shrink-0" aria-hidden="true" />,
-                target: { tab: PRODUCT_TAB.LIST },
-                item: null,
-            },
-        ]
+    const visibleOpen = useMemo(
+        () => (active.tab === PRODUCT_TAB.LIST ? open : addProductTab(open, active)),
+        [active, open],
+    )
 
-        if (canCreate) {
-            listItems.push({
-                value: PRODUCT_TAB.CREATE,
-                label: 'Tạo sản phẩm',
-                icon: <PlusIcon className="size-4 shrink-0" aria-hidden="true" />,
-                target: { tab: PRODUCT_TAB.CREATE },
-                item: null,
-            })
+    const items = useMemo<ProductTabStripItem[]>(() => {
+        const listTab: ProductTabStripItem = {
+            value: PRODUCT_TAB.LIST,
+            label: t('tabList'),
+            icon: <PackageIcon className="size-4 shrink-0" aria-hidden="true" />,
+            target: { tab: PRODUCT_TAB.LIST },
+            item: null,
         }
 
-        const openItems: ProductTabStripItem[] = open.map((tabItem) => {
+        const openItems: ProductTabStripItem[] = visibleOpen.map((tabItem) => {
+            if (tabItem.tab === PRODUCT_TAB.CREATE) {
+                return {
+                    value: PRODUCT_TAB.CREATE,
+                    label: t('tabCreate'),
+                    icon: <PlusIcon className="size-4 shrink-0" aria-hidden="true" />,
+                    target: tabItem,
+                    item: tabItem,
+                }
+            }
+
             const shortId = tabItem.id.slice(0, PRODUCT_TAB_ID_LABEL_LENGTH)
-            const displayLabel = tabItem.label ? `Chi tiết: ${tabItem.label}` : `Chi tiết: ${shortId}`
+            const displayLabel = tabItem.label
+                ? t('tabDetailWithId', { id: tabItem.label })
+                : t('tabDetailWithId', { id: shortId })
 
             return {
                 value: productTabKey(tabItem),
@@ -146,12 +155,12 @@ export function ProductTabs({ active, userId, canCreate = false, activeLabel }: 
             }
         })
 
-        return [...listItems, ...openItems]
-    }, [canCreate, open])
+        return [listTab, ...openItems]
+    }, [t, visibleOpen])
 
     return (
         <Tabs value={activeKey} className="overflow-x-auto">
-            <TabsList variant="line" className={TABS_LIST_CLASS}>
+            <TabsList variant="line" className={TABS_LIST_CLASS} aria-label={t('openTabsRegion')}>
                 {items.map((tab) => {
                     const isActive = activeKey === tab.value
                     const href = buildProductTabsHref(pathname, searchParams, tab.target)
@@ -170,7 +179,7 @@ export function ProductTabs({ active, userId, canCreate = false, activeLabel }: 
                                     <span
                                         role="button"
                                         tabIndex={0}
-                                        aria-label={`Đóng tab ${tab.label}`}
+                                        aria-label={t('closeTab', { label: tab.label })}
                                         className="-me-1 ms-0.5 flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
                                         onClick={(e) => handleCloseTab(e, tab.item!)}
                                         onKeyDown={(e) => {

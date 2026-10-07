@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import Image from 'next/image'
 import {
     AlertCircle,
     Ban,
@@ -14,6 +15,7 @@ import {
     Video,
     XCircle,
 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 
 import type { ProductDetail } from '@timmyhub/contracts'
@@ -38,6 +40,7 @@ function formatVnd(val: number | null | undefined): string {
 }
 
 export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: ProductDetailPanelProps) {
+    const t = useTranslations('products')
     const [product, setProduct] = useState<ProductDetail | null>(initialDetail ?? null)
     const [loading, setLoading] = useState(!initialDetail)
     const [selectedImage, setSelectedImage] = useState<string | null>(null)
@@ -56,7 +59,7 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                     setProduct(res.data)
                     if (res.data.images?.[0]) setSelectedImage(res.data.images[0])
                 } else {
-                    toast.error('Không tìm thấy thông tin sản phẩm.')
+                    toast.error(t('notFoundTitle'))
                 }
                 setLoading(false)
             }
@@ -65,13 +68,13 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
         return () => {
             mounted = false
         }
-    }, [id])
+    }, [id, t])
 
     if (loading) {
         return (
             <div className="py-20 text-center space-y-3">
                 <div className="size-10 mx-auto rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                <p className="text-xs text-muted-foreground">Đang tải thông tin sản phẩm…</p>
+                <p className="text-xs text-muted-foreground">{t('loadingDetail')}</p>
             </div>
         )
     }
@@ -80,10 +83,8 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
         return (
             <div className="py-16 text-center space-y-3 bg-card/40 rounded-2xl border border-dashed border-border">
                 <Package className="size-10 mx-auto text-muted-foreground" />
-                <p className="text-sm font-semibold text-foreground">Không tìm thấy thông tin sản phẩm</p>
-                <p className="text-xs text-muted-foreground">
-                    Sản phẩm này có thể đã bị gỡ bỏ hoặc bạn không có quyền xem.
-                </p>
+                <p className="text-sm font-semibold text-foreground">{t('notFoundTitle')}</p>
+                <p className="text-xs text-muted-foreground">{t('notFoundDesc')}</p>
             </div>
         )
     }
@@ -101,17 +102,17 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                         <h2 className="text-xl sm:text-2xl font-black text-foreground truncate">{product.name}</h2>
 
                         {product.isSuspended ? (
-                            <StatusBadge label="Tạm ngưng bán" tone={StatusTone.NEUTRAL} />
+                            <StatusBadge label={t('status.SUSPENDED')} tone={StatusTone.NEUTRAL} />
                         ) : (
                             <StatusBadge
                                 label={
                                     product.status === ProductStatus.APPROVED
-                                        ? 'Đang bán'
+                                        ? t('status.APPROVED')
                                         : product.status === ProductStatus.PENDING
-                                          ? 'Chờ duyệt'
+                                          ? t('status.PENDING')
                                           : product.status === ProductStatus.REJECTED
-                                            ? 'Bị từ chối'
-                                            : 'Bản nháp'
+                                            ? t('status.REJECTED')
+                                            : t('status.DRAFT')
                                 }
                                 tone={
                                     product.status === ProductStatus.APPROVED
@@ -128,7 +129,7 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                         {product.isFeatured && (
                             <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px] gap-1">
                                 <Sparkles className="size-2.5" />
-                                Nổi bật
+                                {t('featured')}
                             </Badge>
                         )}
                     </div>
@@ -138,7 +139,7 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                         <span>&bull;</span>
                         <span className="flex items-center gap-1">
                             <Tag className="size-3 text-primary" />
-                            {product.categoryName || 'Chưa phân loại'}
+                            {product.categoryName || t('uncategorized')}
                         </span>
                         {product.shopName && (
                             <>
@@ -162,7 +163,7 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                                 onClick={() => setReviewMode('APPROVE')}
                             >
                                 <CheckCircle2 className="size-3.5" />
-                                <span>Phê duyệt</span>
+                                <span>{t('actions.approve')}</span>
                             </Button>
                             <Button
                                 size="sm"
@@ -171,7 +172,7 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                                 onClick={() => setReviewMode('REJECT')}
                             >
                                 <XCircle className="size-3.5" />
-                                <span>Từ chối</span>
+                                <span>{t('actions.reject')}</span>
                             </Button>
                         </>
                     )}
@@ -184,7 +185,7 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                             onClick={() => setSuspendOpen(true)}
                         >
                             <Ban className="size-3.5" />
-                            <span>Tạm ngưng</span>
+                            <span>{t('actions.suspend')}</span>
                         </Button>
                     )}
                 </div>
@@ -195,9 +196,11 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                 <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/10 text-xs space-y-1">
                     <p className="font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
                         <AlertCircle className="size-4" />
-                        <span>Sản phẩm đang bị tạm ngưng kinh doanh</span>
+                        <span>{t('suspendedAlertTitle')}</span>
                     </p>
-                    <p className="text-muted-foreground pl-5.5">Lý do: {product.suspendedReason}</p>
+                    <p className="text-muted-foreground pl-5.5">
+                        {t('suspendedAlertReason', { reason: product.suspendedReason })}
+                    </p>
                 </div>
             )}
 
@@ -205,9 +208,11 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                 <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/10 text-xs space-y-1">
                     <p className="font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
                         <AlertCircle className="size-4" />
-                        <span>Sản phẩm bị từ chối phê duyệt</span>
+                        <span>{t('rejectedAlertTitle')}</span>
                     </p>
-                    <p className="text-muted-foreground pl-5.5">Phản hồi của kiểm duyệt viên: {product.reviewNote}</p>
+                    <p className="text-muted-foreground pl-5.5">
+                        {t('rejectedAlertFeedback', { note: product.reviewNote })}
+                    </p>
                 </div>
             )}
 
@@ -220,8 +225,14 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                     <Card className="border border-border/80 bg-card overflow-hidden rounded-2xl">
                         <div className="aspect-square bg-muted/40 relative flex items-center justify-center overflow-hidden">
                             {currentImage ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={currentImage} alt={product.name} className="size-full object-contain p-2" />
+                                <Image
+                                    src={currentImage}
+                                    alt={product.name}
+                                    fill
+                                    sizes="(max-width: 1024px) 100vw, 40vw"
+                                    className="object-contain p-2"
+                                    unoptimized
+                                />
                             ) : (
                                 <Package className="size-16 text-muted-foreground" />
                             )}
@@ -235,14 +246,20 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                                         key={idx}
                                         type="button"
                                         onClick={() => setSelectedImage(img)}
-                                        className={`size-14 rounded-lg border-2 overflow-hidden shrink-0 transition-all ${
+                                        className={`relative size-14 rounded-lg border-2 overflow-hidden shrink-0 transition-all ${
                                             currentImage === img
                                                 ? 'border-primary shadow-sm'
                                                 : 'border-transparent opacity-60 hover:opacity-100'
                                         }`}
                                     >
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src={img} alt="" className="size-full object-cover" />
+                                        <Image
+                                            src={img}
+                                            alt=""
+                                            fill
+                                            sizes="56px"
+                                            className="object-cover"
+                                            unoptimized
+                                        />
                                     </button>
                                 ))}
                             </div>
@@ -254,7 +271,7 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                         <div className="p-3.5 rounded-xl border border-primary/20 bg-primary/5 space-y-2 text-xs">
                             <p className="font-bold text-foreground flex items-center gap-1.5">
                                 <Video className="size-4 text-primary" />
-                                <span>Video giới thiệu sản phẩm ({product.videos.length})</span>
+                                <span>{t('videosTitle', { count: product.videos.length })}</span>
                             </p>
                             <div className="space-y-1.5">
                                 {product.videos.map((vid, idx) => (
@@ -275,7 +292,7 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                     {/* KPI Cards */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div className="p-3.5 rounded-xl border border-border/80 bg-card">
-                            <span className="text-[11px] text-muted-foreground block">Khoảng giá</span>
+                            <span className="text-[11px] text-muted-foreground block">{t('priceRangeCard')}</span>
                             <span className="text-base font-extrabold text-primary font-mono block mt-1">
                                 {product.minPrice !== null &&
                                 product.maxPrice !== null &&
@@ -286,21 +303,21 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                         </div>
 
                         <div className="p-3.5 rounded-xl border border-border/80 bg-card">
-                            <span className="text-[11px] text-muted-foreground block">Tổng tồn kho</span>
+                            <span className="text-[11px] text-muted-foreground block">{t('totalStockCard')}</span>
                             <span className="text-base font-extrabold text-foreground block mt-1">
                                 {product.totalStock}
                             </span>
                         </div>
 
                         <div className="p-3.5 rounded-xl border border-border/80 bg-card">
-                            <span className="text-[11px] text-muted-foreground block">Đã bán</span>
+                            <span className="text-[11px] text-muted-foreground block">{t('soldCountCard')}</span>
                             <span className="text-base font-extrabold text-foreground block mt-1">
                                 {product.soldCount}
                             </span>
                         </div>
 
                         <div className="p-3.5 rounded-xl border border-border/80 bg-card">
-                            <span className="text-[11px] text-muted-foreground block">Đánh giá</span>
+                            <span className="text-[11px] text-muted-foreground block">{t('ratingCard')}</span>
                             <span className="text-base font-extrabold text-amber-500 block mt-1 flex items-center gap-1">
                                 <Star className="size-4 fill-current" />
                                 <span>{product.ratingAvg > 0 ? product.ratingAvg.toFixed(1) : '5.0'}</span>
@@ -311,10 +328,10 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                     {/* Description */}
                     <Card className="border border-border/80 bg-card rounded-2xl overflow-hidden">
                         <CardHeader className="p-4 border-b border-border/60">
-                            <CardTitle className="text-sm font-bold">Mô tả sản phẩm</CardTitle>
+                            <CardTitle className="text-sm font-bold">{t('descriptionTitle')}</CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
-                            {product.description || 'Chưa có thông tin mô tả chi tiết.'}
+                            {product.description || t('noDescription')}
                         </CardContent>
                     </Card>
 
@@ -324,18 +341,18 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                             <CardHeader className="p-4 border-b border-border/60 flex flex-row items-center justify-between">
                                 <CardTitle className="text-sm font-bold flex items-center gap-2">
                                     <Layers className="size-4 text-primary" />
-                                    <span>Danh sách biến thể phân loại ({product.variants.length})</span>
+                                    <span>{t('variantsTitle', { count: product.variants.length })}</span>
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="p-0 overflow-x-auto">
                                 <table className="w-full text-xs text-left">
                                     <thead className="bg-muted/40 border-b border-border/60 text-muted-foreground uppercase text-[10px]">
                                         <tr>
-                                            <th className="px-4 py-2.5">Mã SKU</th>
-                                            <th className="px-4 py-2.5">Phân loại</th>
-                                            <th className="px-4 py-2.5 text-right">Giá bán</th>
-                                            <th className="px-4 py-2.5 text-right">Tồn kho</th>
-                                            <th className="px-4 py-2.5 text-center">Mặc định</th>
+                                            <th className="px-4 py-2.5">{t('skuCol')}</th>
+                                            <th className="px-4 py-2.5">{t('variantCol')}</th>
+                                            <th className="px-4 py-2.5 text-right">{t('priceCol')}</th>
+                                            <th className="px-4 py-2.5 text-right">{t('stockCol')}</th>
+                                            <th className="px-4 py-2.5 text-center">{t('defaultCol')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/50">
@@ -345,7 +362,7 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                                                     {v.sku || '—'}
                                                 </td>
                                                 <td className="px-4 py-2.5 text-muted-foreground">
-                                                    {v.optionKey || 'Mặc định'}
+                                                    {v.optionKey || t('defaultBadge')}
                                                 </td>
                                                 <td className="px-4 py-2.5 text-right font-bold font-mono text-foreground">
                                                     {formatVnd(v.price)}
@@ -354,7 +371,7 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                                                 <td className="px-4 py-2.5 text-center">
                                                     {v.isDefault ? (
                                                         <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20">
-                                                            Mặc định
+                                                            {t('defaultBadge')}
                                                         </Badge>
                                                     ) : (
                                                         '—'

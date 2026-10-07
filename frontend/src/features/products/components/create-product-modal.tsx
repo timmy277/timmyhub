@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
+import Image from 'next/image'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { CheckCheck, Film, Loader2, Package, Plus, RefreshCw, Trash2, UploadCloud, X, Zap } from 'lucide-react'
@@ -87,13 +88,6 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
         },
         enabled: open || inline,
     })
-
-    // Auto set default category when loaded
-    useEffect(() => {
-        if (!form.getValues('categoryId') && categories.length > 0 && categories[0]?.id) {
-            form.setValue('categoryId', categories[0].id)
-        }
-    }, [categories, form])
 
     // Media (Images & Videos)
     const [images, setImages] = useState<string[]>([])
@@ -524,15 +518,30 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                             control={form.control}
                             name="categoryId"
                             render={({ field }) => (
-                                <Select value={field.value || categories[0]?.id || ''} onValueChange={field.onChange}>
+                                <Select value={field.value || ''} onValueChange={field.onChange}>
                                     <SelectTrigger className="text-xs rounded-xl">
                                         <SelectValue placeholder={t('categorySelect')} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {categories.map((c) => (
-                                            <SelectItem key={c.id} value={c.id}>
-                                                {c.name}
-                                            </SelectItem>
+                                            <React.Fragment key={c.id}>
+                                                <SelectItem
+                                                    key={c.id}
+                                                    value={c.id}
+                                                    className="font-semibold text-foreground"
+                                                >
+                                                    {c.name}
+                                                </SelectItem>
+                                                {c.children?.map((child) => (
+                                                    <SelectItem
+                                                        key={child.id}
+                                                        value={child.id}
+                                                        className="pl-6 text-muted-foreground text-xs"
+                                                    >
+                                                        └ {child.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </React.Fragment>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -692,8 +701,14 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                                     key={idx}
                                     className="relative group rounded-xl overflow-hidden border border-border/80 bg-muted/30 aspect-square"
                                 >
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={img} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+                                    <Image
+                                        src={img}
+                                        alt={`Preview ${idx + 1}`}
+                                        fill
+                                        sizes="(max-width: 640px) 33vw, 20vw"
+                                        className="object-cover"
+                                        unoptimized
+                                    />
                                     {idx === 0 && (
                                         <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-primary text-white text-[10px] font-bold shadow-sm">
                                             Ảnh bìa
@@ -1096,28 +1111,13 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
     if (inline) {
         return (
             <div className="space-y-6 max-w-4xl mx-auto py-2">
-                <div className="flex items-center justify-between pb-4 border-b border-border/60">
-                    <div className="flex items-center gap-2.5 text-primary">
-                        <div className="size-9 rounded-xl bg-primary/10 flex items-center justify-center">
-                            <Package className="size-5" />
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-bold text-foreground">{t('createTitle')}</h3>
-                            <p className="text-xs text-muted-foreground">{t('createDesc')}</p>
-                        </div>
+                <div className="flex items-center gap-2.5 text-primary pb-4 border-b border-border/60">
+                    <div className="size-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <Package className="size-5" />
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="rounded-xl text-xs"
-                            onClick={() => onOpenChange(false)}
-                            disabled={submitting}
-                        >
-                            {t('cancel')}
-                        </Button>
-                        {actionsBlock}
+                    <div>
+                        <h3 className="text-xl font-bold text-foreground">{t('createTitle')}</h3>
+                        <p className="text-xs text-muted-foreground">{t('createDesc')}</p>
                     </div>
                 </div>
 

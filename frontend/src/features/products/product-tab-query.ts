@@ -3,32 +3,34 @@ import { PRODUCT_QUERY_PARAM, PRODUCT_TAB, PRODUCT_TAB_ID_SEPARATOR } from '@/co
 type SearchParams = Record<string, string | string[] | undefined>
 export type ProductTabSearchParams = SearchParams | URLSearchParams
 
-export type ProductTabItem = {
-    tab: typeof PRODUCT_TAB.DETAIL
-    id: string
-    label?: string
-}
+export type ProductTabItem =
+    | { tab: typeof PRODUCT_TAB.CREATE }
+    | {
+          tab: typeof PRODUCT_TAB.DETAIL
+          id: string
+          label?: string
+      }
 
-export type ProductTabState = { tab: typeof PRODUCT_TAB.LIST } | { tab: typeof PRODUCT_TAB.CREATE } | ProductTabItem
+export type ProductTabState = { tab: typeof PRODUCT_TAB.LIST } | ProductTabItem
 
 export interface ProductTabsState {
     active: ProductTabState
 }
 
 const LIST_STATE: ProductTabState = { tab: PRODUCT_TAB.LIST }
-const CREATE_STATE: ProductTabState = { tab: PRODUCT_TAB.CREATE }
 
 export function productTabKey(item: ProductTabItem): string {
+    if (item.tab === PRODUCT_TAB.CREATE) return PRODUCT_TAB.CREATE
     return `${item.tab}${PRODUCT_TAB_ID_SEPARATOR}${item.id}`
 }
 
 export function activeProductTabKey(active: ProductTabState): string {
     if (active.tab === PRODUCT_TAB.LIST) return PRODUCT_TAB.LIST
-    if (active.tab === PRODUCT_TAB.CREATE) return PRODUCT_TAB.CREATE
     return productTabKey(active)
 }
 
 export function parseProductTabItem(raw: string): ProductTabItem | null {
+    if (raw === PRODUCT_TAB.CREATE) return { tab: PRODUCT_TAB.CREATE }
     const separatorAt = raw.indexOf(PRODUCT_TAB_ID_SEPARATOR)
     const name = separatorAt === -1 ? raw : raw.slice(0, separatorAt)
     const id = separatorAt === -1 ? '' : raw.slice(separatorAt + 1)
@@ -75,7 +77,6 @@ function readParam(params: ProductTabSearchParams, key: string): string | undefi
 export function parseProductTabs(params: ProductTabSearchParams): ProductTabsState {
     const raw = readParam(params, PRODUCT_QUERY_PARAM.TABS)
     if (!raw) return { active: LIST_STATE }
-    if (raw === PRODUCT_TAB.CREATE) return { active: CREATE_STATE }
     const parsed = parseProductTabItem(raw)
     return { active: parsed ?? LIST_STATE }
 }
@@ -85,8 +86,6 @@ export function buildProductTabsHref(pathname: string, searchParams: URLSearchPa
 
     if (active.tab === PRODUCT_TAB.LIST) {
         params.delete(PRODUCT_QUERY_PARAM.TABS)
-    } else if (active.tab === PRODUCT_TAB.CREATE) {
-        params.set(PRODUCT_QUERY_PARAM.TABS, PRODUCT_TAB.CREATE)
     } else {
         params.set(PRODUCT_QUERY_PARAM.TABS, productTabKey(active))
     }
@@ -107,10 +106,7 @@ export function buildProductTabCloseHref(
     open: readonly ProductTabItem[],
 ): string {
     const { active } = parseProductTabs(searchParams)
-    const isActive =
-        active.tab !== PRODUCT_TAB.LIST &&
-        active.tab !== PRODUCT_TAB.CREATE &&
-        productTabKey(active) === productTabKey(item)
+    const isActive = active.tab !== PRODUCT_TAB.LIST && productTabKey(active) === productTabKey(item)
 
     return buildProductTabsHref(pathname, searchParams, isActive ? previousProductTabAfterClose(open, item) : active)
 }

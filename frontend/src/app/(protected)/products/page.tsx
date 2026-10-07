@@ -1,9 +1,13 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 
 import { parseProductTabs, ProductManagementPage } from '@/features/products'
 
-export const metadata: Metadata = {
-    title: 'Quản lý sản phẩm · TimmyHub',
+export async function generateMetadata(): Promise<Metadata> {
+    const t = await getTranslations('products')
+    return {
+        title: `${t('title')} · TimmyHub`,
+    }
 }
 
 interface ProductsPageProps {

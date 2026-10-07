@@ -1,3 +1,5 @@
+import Image from 'next/image'
+import type { useTranslations } from 'next-intl'
 import type { ColDef, ICellRendererParams } from 'ag-grid-community'
 import {
     BanIcon,
@@ -18,6 +20,8 @@ import { Badge, RowActions, StatusBadge, type RowAction } from '@/components'
 import { AG_GRID_NO_EXPORT, StatusTone } from '@/constants'
 import { rowActionsColumnWidth } from '@/utils'
 
+export type ProductsTranslator = ReturnType<typeof useTranslations<'products'>>
+
 export interface ProductColumnActions {
     onDetail: (product: ProductSummary) => void
     onEdit?: (product: ProductSummary) => void
@@ -29,6 +33,7 @@ export interface ProductColumnActions {
 }
 
 interface CreateProductColumnsOptions {
+    t: ProductsTranslator
     actions: ProductColumnActions
     isAdmin?: boolean
     canCreateOrUpdate?: boolean
@@ -39,7 +44,10 @@ function formatVnd(amount: number | null | undefined): string {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
 }
 
+// Cột bảng sản phẩm — cùng khuôn `createAuditColumns`/`createUserColumns`: hàm thuần, không hook, trang gọi trong
+// `useMemo` với translator đã có (luật #22). Cột ảnh đứng riêng (width 80px) giống cột ảnh danh mục.
 export function createProductColumns({
+    t,
     actions,
     isAdmin = false,
     canCreateOrUpdate = false,
@@ -48,8 +56,8 @@ export function createProductColumns({
         const rowActions: RowAction[] = [
             {
                 key: 'view',
-                label: 'Xem chi tiết',
-                ariaLabel: `Xem chi tiết ${product.name}`,
+                label: t('actions.viewDetail'),
+                ariaLabel: t('viewAria', { name: product.name }),
                 icon: EyeIcon,
                 onClick: () => actions.onDetail(product),
             },
@@ -58,28 +66,28 @@ export function createProductColumns({
         if (canCreateOrUpdate && actions.onEdit) {
             rowActions.push({
                 key: 'edit',
-                label: 'Chỉnh sửa',
-                ariaLabel: `Chỉnh sửa ${product.name}`,
+                label: t('actions.edit'),
+                ariaLabel: t('editAria', { name: product.name }),
                 icon: PencilIcon,
                 onClick: () => actions.onEdit?.(product),
             })
         }
 
-        // Admin actions
+        // Hành động của quản trị viên
         if (isAdmin) {
             if (product.status === ProductStatus.PENDING && actions.onApprove && actions.onReject) {
                 rowActions.push(
                     {
                         key: 'approve',
-                        label: 'Duyệt sản phẩm',
-                        ariaLabel: `Duyệt sản phẩm ${product.name}`,
+                        label: t('actions.approve'),
+                        ariaLabel: t('approveAria', { name: product.name }),
                         icon: CheckCircle2Icon,
                         onClick: () => actions.onApprove?.(product),
                     },
                     {
                         key: 'reject',
-                        label: 'Từ chối duyệt',
-                        ariaLabel: `Từ chối duyệt ${product.name}`,
+                        label: t('actions.reject'),
+                        ariaLabel: t('rejectAria', { name: product.name }),
                         icon: XCircleIcon,
                         destructive: true,
                         onClick: () => actions.onReject?.(product),
@@ -88,13 +96,13 @@ export function createProductColumns({
             }
         }
 
-        // Suspend / Restore
+        // Ngưng bán / Khôi phục
         if (product.isSuspended) {
             if (actions.onRestore) {
                 rowActions.push({
                     key: 'restore',
-                    label: 'Khôi phục kinh doanh',
-                    ariaLabel: `Khôi phục ${product.name}`,
+                    label: t('actions.restore'),
+                    ariaLabel: t('restoreAria', { name: product.name }),
                     icon: RotateCcwIcon,
                     onClick: () => actions.onRestore?.(product),
                 })
@@ -102,20 +110,20 @@ export function createProductColumns({
         } else if (product.status === ProductStatus.APPROVED && actions.onSuspend) {
             rowActions.push({
                 key: 'suspend',
-                label: 'Tạm ngưng bán',
-                ariaLabel: `Tạm ngưng ${product.name}`,
+                label: t('actions.suspend'),
+                ariaLabel: t('suspendAria', { name: product.name }),
                 icon: BanIcon,
                 destructive: true,
                 onClick: () => actions.onSuspend?.(product),
             })
         }
 
-        // Delete
+        // Xoá
         if (actions.onDelete) {
             rowActions.push({
                 key: 'delete',
-                label: 'Xoá sản phẩm',
-                ariaLabel: `Xoá ${product.name}`,
+                label: t('actions.delete'),
+                ariaLabel: t('deleteAria', { name: product.name }),
                 icon: Trash2Icon,
                 destructive: true,
                 onClick: () => actions.onDelete?.(product),
@@ -127,23 +135,30 @@ export function createProductColumns({
 
     const columns: ColDef<ProductSummary>[] = [
         {
-            headerName: 'Hình ảnh',
+            headerName: t('columns.image'),
             colId: 'image',
             width: 80,
             minWidth: 80,
             maxWidth: 80,
             sortable: false,
             filter: false,
+            context: AG_GRID_NO_EXPORT,
             cellRenderer: (params: ICellRendererParams<ProductSummary>) => {
                 if (!params.data) return null
                 const thumb = params.data.images?.[0]
 
                 return (
                     <div className="flex items-center justify-center size-full py-1">
-                        <div className="size-10 rounded-lg bg-muted border border-border/70 overflow-hidden shrink-0 flex items-center justify-center shadow-2xs">
+                        <div className="relative size-10 rounded-lg bg-muted border border-border/70 overflow-hidden shrink-0 flex items-center justify-center shadow-2xs">
                             {thumb ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={thumb} alt={params.data.name} className="size-full object-cover" />
+                                <Image
+                                    src={thumb}
+                                    alt={params.data.name}
+                                    fill
+                                    sizes="40px"
+                                    className="object-cover"
+                                    unoptimized
+                                />
                             ) : (
                                 <PackageIcon className="size-5 text-muted-foreground" />
                             )}
@@ -153,7 +168,7 @@ export function createProductColumns({
             },
         },
         {
-            headerName: 'Tên sản phẩm',
+            headerName: t('columns.name'),
             field: 'name',
             flex: 1.8,
             minWidth: 200,
@@ -176,7 +191,7 @@ export function createProductColumns({
             },
         },
         {
-            headerName: 'Mã Slug',
+            headerName: t('columns.slug'),
             field: 'slug',
             flex: 1.2,
             minWidth: 140,
@@ -192,7 +207,7 @@ export function createProductColumns({
             },
         },
         {
-            headerName: 'Biến thể',
+            headerName: t('columns.variantCount'),
             colId: 'variantCount',
             flex: 0.9,
             minWidth: 110,
@@ -207,10 +222,10 @@ export function createProductColumns({
                                 variant="secondary"
                                 className="text-[11px] font-semibold rounded-md px-2 py-0.5 bg-primary/10 text-primary border border-primary/20"
                             >
-                                {count} phân loại
+                                {t('variantCount', { count })}
                             </Badge>
                         ) : (
-                            <span className="text-xs text-muted-foreground">1 phiên bản</span>
+                            <span className="text-xs text-muted-foreground">{t('singleVersion')}</span>
                         )}
                     </div>
                 )
@@ -218,16 +233,16 @@ export function createProductColumns({
         },
     ]
 
-    // Nếu là Admin thì hiện cột Gian hàng
+    // Nếu là quản trị viên thì hiện cột Gian hàng
     if (isAdmin) {
         columns.push({
-            headerName: 'Gian hàng',
+            headerName: t('columns.shop'),
             field: 'shopName',
             flex: 1.1,
             minWidth: 160,
             cellRenderer: (params: ICellRendererParams<ProductSummary>) => {
                 if (!params.data) return null
-                const name = params.data.shopName || 'Gian hàng'
+                const name = params.data.shopName || t('shopFallback')
                 return (
                     <div className="flex items-center gap-1.5 text-xs text-foreground font-medium">
                         <StoreIcon className="size-3.5 text-primary shrink-0" />
@@ -240,18 +255,18 @@ export function createProductColumns({
 
     columns.push(
         {
-            headerName: 'Ngành hàng',
+            headerName: t('columns.category'),
             field: 'categoryName',
             flex: 1.1,
             minWidth: 140,
             cellRenderer: (params: ICellRendererParams<ProductSummary>) => {
                 return (
-                    <span className="text-xs text-muted-foreground truncate">{params.value || 'Chưa phân loại'}</span>
+                    <span className="text-xs text-muted-foreground truncate">{params.value || t('uncategorized')}</span>
                 )
             },
         },
         {
-            headerName: 'Khoảng giá',
+            headerName: t('columns.price'),
             colId: 'price',
             flex: 1.2,
             minWidth: 150,
@@ -270,7 +285,7 @@ export function createProductColumns({
             },
         },
         {
-            headerName: 'Tồn kho',
+            headerName: t('columns.stock'),
             field: 'totalStock',
             flex: 0.8,
             minWidth: 90,
@@ -286,7 +301,7 @@ export function createProductColumns({
             },
         },
         {
-            headerName: 'Đã bán',
+            headerName: t('columns.sold'),
             field: 'soldCount',
             flex: 0.8,
             minWidth: 80,
@@ -295,7 +310,7 @@ export function createProductColumns({
             },
         },
         {
-            headerName: 'Trạng thái',
+            headerName: t('columns.status'),
             field: 'status',
             flex: 1,
             minWidth: 120,
@@ -304,25 +319,25 @@ export function createProductColumns({
                 const prod = params.data
 
                 if (prod.isSuspended) {
-                    return <StatusBadge label="Tạm ngưng" tone={StatusTone.NEUTRAL} />
+                    return <StatusBadge label={t('status.SUSPENDED')} tone={StatusTone.NEUTRAL} />
                 }
 
                 switch (prod.status) {
                     case ProductStatus.APPROVED:
-                        return <StatusBadge label="Đang bán" tone={StatusTone.SUCCESS} />
+                        return <StatusBadge label={t('status.APPROVED')} tone={StatusTone.SUCCESS} />
                     case ProductStatus.PENDING:
-                        return <StatusBadge label="Chờ duyệt" tone={StatusTone.NEUTRAL} />
+                        return <StatusBadge label={t('status.PENDING')} tone={StatusTone.NEUTRAL} />
                     case ProductStatus.REJECTED:
-                        return <StatusBadge label="Bị từ chối" tone={StatusTone.DANGER} />
+                        return <StatusBadge label={t('status.REJECTED')} tone={StatusTone.DANGER} />
                     case ProductStatus.DRAFT:
-                        return <StatusBadge label="Bản nháp" tone={StatusTone.NEUTRAL} />
+                        return <StatusBadge label={t('status.DRAFT')} tone={StatusTone.NEUTRAL} />
                     default:
                         return <StatusBadge label={prod.status} tone={StatusTone.NEUTRAL} />
                 }
             },
         },
         {
-            headerName: 'Ngày tạo',
+            headerName: t('columns.createdAt'),
             field: 'createdAt',
             flex: 1,
             minWidth: 130,
@@ -333,7 +348,7 @@ export function createProductColumns({
             },
         },
         {
-            headerName: 'Thao tác',
+            headerName: t('columns.actions'),
             colId: 'actions',
             pinned: 'right',
             width: rowActionsColumnWidth(3),

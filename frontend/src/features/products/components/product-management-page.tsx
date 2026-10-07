@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { getTranslations } from 'next-intl/server'
 
 import { EmptyState, ErrorState, PageContainer } from '@/components'
 import { ADMIN_PRODUCT_PERMISSION, PRODUCT_TAB, SELLER_PRODUCT_PERMISSION, SELLER_SHOP_PERMISSION } from '@/constants'
@@ -17,13 +18,14 @@ interface ProductManagementPageProps {
 }
 
 export async function ProductManagementPage({ tabs }: ProductManagementPageProps) {
+    const t = await getTranslations('products')
     const { active } = tabs
 
     const actor = await getActor()
     if (!actor) {
         return (
             <PageContainer>
-                <ErrorState description="Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại." />
+                <ErrorState description={t('sessionExpired')} />
             </PageContainer>
         )
     }
@@ -31,7 +33,7 @@ export async function ProductManagementPage({ tabs }: ProductManagementPageProps
     if (actor.permissionsUnavailable) {
         return (
             <PageContainer>
-                <ErrorState description="Không thể tải danh sách quyền từ máy chủ. Vui lòng thử lại sau." />
+                <ErrorState description={t('permissionsLoadFailed')} />
             </PageContainer>
         )
     }
@@ -52,10 +54,7 @@ export async function ProductManagementPage({ tabs }: ProductManagementPageProps
     if (!isAdmin && !isSeller) {
         return (
             <PageContainer>
-                <EmptyState
-                    title="Không có quyền truy cập"
-                    description="Bạn không có quyền quản lý sản phẩm. Vui lòng liên hệ quản trị viên hoặc đăng ký mở gian hàng."
-                />
+                <EmptyState title={t('noAccessTitle')} description={t('noAccessDesc')} />
             </PageContainer>
         )
     }
@@ -67,10 +66,7 @@ export async function ProductManagementPage({ tabs }: ProductManagementPageProps
         panel = isSeller ? (
             <ProductCreatePanel />
         ) : (
-            <EmptyState
-                title="Không có quyền tạo sản phẩm"
-                description="Chỉ người bán có gian hàng hoạt động mới có thể tạo sản phẩm mới."
-            />
+            <EmptyState title={t('noPermissionTitle')} description={t('noPermissionDesc')} />
         )
     } else if (active.tab === PRODUCT_TAB.DETAIL) {
         const detailRes = await getProductDetailAction(active.id)
@@ -78,7 +74,9 @@ export async function ProductManagementPage({ tabs }: ProductManagementPageProps
         activeLabel = productDetail?.name
         panel = <ProductDetailPanel id={active.id} isAdmin={isAdmin} initialDetail={productDetail} />
     } else {
-        const result = isAdmin ? await listAdminProductsAction() : await getMyProductsAction()
+        const result = isAdmin
+            ? await listAdminProductsAction({ pageSize: 100 })
+            : await getMyProductsAction({ pageSize: 100 })
 
         panel = (
             <ProductTable
@@ -86,7 +84,7 @@ export async function ProductManagementPage({ tabs }: ProductManagementPageProps
                 totalItems={result.ok ? result.data.totalItems : 0}
                 isAdmin={isAdmin}
                 canCreate={isSeller}
-                error={result.ok ? undefined : result.message || 'Không thể tải danh sách sản phẩm.'}
+                error={result.ok ? undefined : result.message || t('loadFailed')}
             />
         )
     }
@@ -94,7 +92,7 @@ export async function ProductManagementPage({ tabs }: ProductManagementPageProps
     return (
         <PageContainer>
             <section className="rounded-xl border bg-card p-4 text-card-foreground shadow-sm">
-                <ProductTabs active={active} userId={actor.userId} canCreate={isSeller} activeLabel={activeLabel} />
+                <ProductTabs active={active} userId={actor.userId} activeLabel={activeLabel} />
                 <div className="mt-4">{panel}</div>
             </section>
         </PageContainer>

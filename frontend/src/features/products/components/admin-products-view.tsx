@@ -260,7 +260,7 @@ export function AdminProductsView({ permissions }: AdminProductsViewProps = {}) 
                                     <tr>
                                         <th className="px-6 py-3.5">Sản phẩm</th>
                                         <th className="px-6 py-3.5">Gian hàng</th>
-                                        <th className="px-6 py-3.5">Ngành hàng</th>
+                                        <th className="px-6 py-3.5">Danh mục</th>
                                         <th className="px-6 py-3.5">Khoảng giá</th>
                                         <th className="px-6 py-3.5">Tồn kho</th>
                                         <th className="px-6 py-3.5">Đã bán</th>
@@ -496,7 +496,7 @@ export function AdminProductsView({ permissions }: AdminProductsViewProps = {}) 
                                 <div className="space-y-1">
                                     <p className="font-bold text-foreground text-sm">{detailTarget.name}</p>
                                     <p className="text-muted-foreground">
-                                        Ngành hàng: {detailTarget.categoryName || '--'}
+                                        Danh mục: {detailTarget.categoryName || '--'}
                                     </p>
                                     <p className="text-primary font-bold">Giá: {formatVnd(detailTarget.minPrice)}</p>
                                     <p className="text-muted-foreground">Tồn kho: {detailTarget.totalStock} sản phẩm</p>
