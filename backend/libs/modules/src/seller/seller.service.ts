@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+import { randomUUID } from 'crypto'
 
 import type {
     CreateSellerApplicationInput,
@@ -176,8 +177,8 @@ export class SellerService {
         let shopSlug = slugifyShopName(app.shopName)
         const existingWithSlug = await this.repository.findProfileBySlug(shopSlug)
         if (existingWithSlug) {
-            // Thêm hậu tố ngẫu nhiên nếu trùng
-            shopSlug = `${shopSlug}-${Math.random().toString(36).substring(2, 6)}`
+            // Luật #4: hậu tố ngẫu nhiên dùng crypto.randomUUID thay Math.random để tránh tranh chấp
+            shopSlug = `${shopSlug}-${randomUUID().slice(0, 8)}`
         }
 
         const result = await this.repository.approveApplication({

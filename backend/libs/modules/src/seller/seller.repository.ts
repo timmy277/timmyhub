@@ -211,27 +211,9 @@ export class SellerRepository {
                 data: { sellerProfileId: profile.id },
             })
 
-            // Gán role SELLER cho user nếu chưa có
-            const user = await tx.user.findUniqueOrThrow({
-                where: { id: application.userId },
-            })
-            if (!user.roles.includes(UserRole.SELLER)) {
-                await tx.user.update({
-                    where: { id: user.id },
-                    data: {
-                        roles: [...user.roles, UserRole.SELLER],
-                    },
-                })
-            }
-
-            const sellerRole = await tx.systemRole.findUnique({ where: { name: UserRole.SELLER } })
-            if (sellerRole) {
-                await tx.userSystemRole.upsert({
-                    where: { userId_roleId: { userId: user.id, roleId: sellerRole.id } },
-                    update: {},
-                    create: { userId: user.id, roleId: sellerRole.id },
-                })
-            }
+            // Luật #2: Service chỉ đụng database của chính nó — KHÔNG cross-write user.roles/userSystemRole.
+            // Role SELLER được gán bởi identity consumer khi nghe event SELLER_APPLICATION_APPROVED.
+            // Payload kèm userId để consumer biết cần gán role cho ai.
 
             // Ghi OutboxEvent cho seller.application.approved
             await tx.outboxEvent.create({
@@ -244,6 +226,8 @@ export class SellerRepository {
                         sellerProfileId: profile.id,
                         userId: application.userId,
                         shopSlug: profile.shopSlug,
+                        // Consumer (identity) đọc field này để gán role SELLER
+                        assignRole: UserRole.SELLER,
                     },
                 },
             })

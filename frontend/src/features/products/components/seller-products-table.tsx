@@ -102,9 +102,9 @@ export function SellerProductsTable({ permissions }: SellerProductsTableProps = 
         }
     }
 
-    const formatVnd = (num: number | null) => {
+    const formatVnd = (num: string | number | null) => {
         if (num === null || num === undefined) return '--'
-        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num)
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(num))
     }
 
     const renderStatusBadge = (p: ProductSummary) => {

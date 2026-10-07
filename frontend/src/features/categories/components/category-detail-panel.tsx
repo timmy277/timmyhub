@@ -30,6 +30,7 @@ export function CategoryDetailPanel({ id, initialCategory, availableParents }: C
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [pendingDelete, setPendingDelete] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
+    const tCommon = useTranslations('common')
 
     if (!initialCategory) {
         return <div className="py-12 text-center text-muted-foreground text-xs">{t('noPermissionDesc')}</div>
@@ -43,10 +44,10 @@ export function CategoryDetailPanel({ id, initialCategory, availableParents }: C
                 toast.success(t('messages.updateSuccess'))
                 router.refresh()
             } else {
-                toast.error(res.message || 'Error')
+                toast.error(res.message || tCommon('errorGeneric'))
             }
         } catch {
-            toast.error('Error')
+            toast.error(tCommon('errorGeneric'))
         } finally {
             setIsSubmitting(false)
         }
@@ -62,10 +63,10 @@ export function CategoryDetailPanel({ id, initialCategory, availableParents }: C
                 router.push(href)
                 router.refresh()
             } else {
-                toast.error(res.message || 'Error')
+                toast.error(res.message || tCommon('errorGeneric'))
             }
         } catch {
-            toast.error('Error')
+            toast.error(tCommon('errorGeneric'))
         } finally {
             setIsDeleting(false)
             setPendingDelete(false)

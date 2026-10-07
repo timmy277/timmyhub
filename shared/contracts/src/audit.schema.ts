@@ -65,6 +65,7 @@ export type AuditLogSummary = {
 }
 
 // Chi tiết — thêm `before`/`after` (diff) và `errorMessage`/`actorIp`/`userAgent` cho xem rõ.
+// `before`/`after` là JSON tùy biến — dùng `z.unknown()` vì Prisma Json type có shape riêng (JSONType).
 export type AuditLogDetail = AuditLogSummary & {
     actorIp: string | null
     userAgent: string | null

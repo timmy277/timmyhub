@@ -17,6 +17,7 @@ import {
     MediaAsset,
     MediaFilterDto,
     MediaListResponse,
+    type MediaOwnerType,
     PresignedUrlResponse,
 } from '@timmyhub/contracts'
 
@@ -44,7 +45,7 @@ export class MediaService {
     async uploadFiles(
         files: UploadFileInput[],
         actorId: string,
-        ownerType: string = MEDIA_OWNER_TYPE.GENERAL,
+        ownerType: MediaOwnerType = MEDIA_OWNER_TYPE.GENERAL,
         ownerId?: string,
     ): Promise<MediaAsset[]> {
         if (!files || files.length === 0) {

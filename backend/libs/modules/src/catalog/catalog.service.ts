@@ -1,7 +1,7 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { EventEmitter2 } from '@nestjs/event-emitter'
 
-import { ResourceStatus } from '@timmyhub/contracts'
+import { ApiError, apiMessageKey, ResourceStatus } from '@timmyhub/contracts'
 import type {
     CategoryItem,
     CategoryListResult,
@@ -34,6 +34,8 @@ export class CatalogService {
     ) {}
 
     // ===== Infrastructure =====
+    // NOTE: `ping` phát sự kiện nội bộ qua EventEmitter2 — đây là sự kiện demo/không mang nghiệp vụ,
+    // không cần qua transactional outbox. Event nghiệp vụ (PRODUCT_CREATED, v.v.) luôn qua outbox.
     ping(): PingResponse {
         this.eventEmitter.emit(CATALOG_EVENT.PRODUCT_PINGED)
         return { module: 'catalog', status: 'ok' }
@@ -46,9 +48,8 @@ export class CatalogService {
     // ===== Public Queries =====
 
     async getCategories(): Promise<CategorySummary[]> {
-        const categories = await this.catalogRepository.findCategories()
-        // Chỉ lấy các danh mục gốc (parentId === null) với children lồng bên trong
-        const rootCategories = categories.filter((c) => !c.parentId)
+        // Luật #7: lọc phạm vi TRONG câu truy vấn, không .filter() sau khi lấy
+        const rootCategories = await this.catalogRepository.findRootCategories()
         return rootCategories.map((c) => toCategorySummary(c))
     }
 
@@ -59,7 +60,7 @@ export class CatalogService {
     async getPublicProductDetail(idOrSlug: string): Promise<ProductDetail> {
         const product = await this.catalogRepository.findPublicProductByIdOrSlug(idOrSlug)
         if (!product) {
-            throw new NotFoundException('Không tìm thấy sản phẩm hoặc sản phẩm chưa khả dụng.')
+            throw new ApiError('NOT_FOUND', { messageKey: apiMessageKey('catalog.productNotFound') })
         }
         return toProductDetail(product)
     }
@@ -69,16 +70,16 @@ export class CatalogService {
     async createProduct(userId: string, input: CreateProductInput): Promise<ProductDetail> {
         const sellerProfile = await this.sellerRepository.findProfileByUserId(userId)
         if (!sellerProfile || sellerProfile.status !== ResourceStatus.APPROVED) {
-            throw new ForbiddenException('Bạn chưa có cửa hàng đã được duyệt để đăng sản phẩm.')
+            throw new ApiError('FORBIDDEN', { messageKey: apiMessageKey('catalog.shopNotApproved') })
         }
 
         if (sellerProfile.isSuspended) {
-            throw new ForbiddenException('Cửa hàng của bạn hiện đang bị tạm ngưng hoạt động.')
+            throw new ApiError('FORBIDDEN', { messageKey: apiMessageKey('catalog.shopSuspended') })
         }
 
         const category = await this.catalogRepository.findCategoryById(input.categoryId)
         if (!category) {
-            throw new NotFoundException('Danh mục sản phẩm không tồn tại.')
+            throw new ApiError('NOT_FOUND', { messageKey: apiMessageKey('catalog.categoryNotFound') })
         }
 
         const product = await this.catalogRepository.createProduct({
@@ -102,12 +103,13 @@ export class CatalogService {
     async getMyProductDetail(userId: string, productId: string): Promise<ProductDetail> {
         const sellerProfile = await this.sellerRepository.findProfileByUserId(userId)
         if (!sellerProfile) {
-            throw new ForbiddenException('Bạn chưa đăng ký cửa hàng người bán.')
+            throw new ApiError('FORBIDDEN', { messageKey: apiMessageKey('catalog.sellerProfileRequired') })
         }
 
         const product = await this.catalogRepository.findProductById(productId)
         if (!product || product.shopId !== sellerProfile.id) {
-            throw new NotFoundException('Không tìm thấy sản phẩm.')
+            // Luật #8: tài nguyên ngoài phạm vi trả 404, không 403
+            throw new ApiError('NOT_FOUND', { messageKey: apiMessageKey('catalog.productNotFound') })
         }
 
         return toProductDetail(product)
@@ -116,12 +118,12 @@ export class CatalogService {
     async sellerSuspendProduct(userId: string, productId: string, input: SuspendProductInput): Promise<ProductDetail> {
         const sellerProfile = await this.sellerRepository.findProfileByUserId(userId)
         if (!sellerProfile) {
-            throw new ForbiddenException('Bạn không có quyền thao tác trên sản phẩm này.')
+            throw new ApiError('FORBIDDEN', { messageKey: apiMessageKey('catalog.noPermissionProduct') })
         }
 
         const existing = await this.catalogRepository.findProductById(productId)
         if (!existing || existing.shopId !== sellerProfile.id) {
-            throw new NotFoundException('Không tìm thấy sản phẩm.')
+            throw new ApiError('NOT_FOUND', { messageKey: apiMessageKey('catalog.productNotFound') })
         }
 
         const updated = await this.catalogRepository.suspendProduct({
@@ -131,7 +133,7 @@ export class CatalogService {
         })
 
         if (!updated) {
-            throw new BadRequestException('Không thể tạm ngưng sản phẩm này.')
+            throw new ApiError('BAD_REQUEST', { messageKey: apiMessageKey('catalog.cannotSuspend') })
         }
 
         return toProductDetail(updated)
@@ -140,12 +142,12 @@ export class CatalogService {
     async sellerRestoreProduct(userId: string, productId: string): Promise<ProductDetail> {
         const sellerProfile = await this.sellerRepository.findProfileByUserId(userId)
         if (!sellerProfile) {
-            throw new ForbiddenException('Bạn không có quyền thao tác trên sản phẩm này.')
+            throw new ApiError('FORBIDDEN', { messageKey: apiMessageKey('catalog.noPermissionProduct') })
         }
 
         const existing = await this.catalogRepository.findProductById(productId)
         if (!existing || existing.shopId !== sellerProfile.id) {
-            throw new NotFoundException('Không tìm thấy sản phẩm.')
+            throw new ApiError('NOT_FOUND', { messageKey: apiMessageKey('catalog.productNotFound') })
         }
 
         const updated = await this.catalogRepository.restoreProduct({
@@ -154,7 +156,7 @@ export class CatalogService {
         })
 
         if (!updated) {
-            throw new BadRequestException('Không thể khôi phục sản phẩm này.')
+            throw new ApiError('BAD_REQUEST', { messageKey: apiMessageKey('catalog.cannotRestore') })
         }
 
         return toProductDetail(updated)
@@ -163,12 +165,12 @@ export class CatalogService {
     async sellerDeleteProduct(userId: string, productId: string): Promise<{ success: boolean }> {
         const sellerProfile = await this.sellerRepository.findProfileByUserId(userId)
         if (!sellerProfile) {
-            throw new ForbiddenException('Bạn không có quyền thao tác trên sản phẩm này.')
+            throw new ApiError('FORBIDDEN', { messageKey: apiMessageKey('catalog.noPermissionProduct') })
         }
 
         const existing = await this.catalogRepository.findProductById(productId)
         if (!existing || existing.shopId !== sellerProfile.id) {
-            throw new NotFoundException('Không tìm thấy sản phẩm.')
+            throw new ApiError('NOT_FOUND', { messageKey: apiMessageKey('catalog.productNotFound') })
         }
 
         const success = await this.catalogRepository.deleteProduct({
@@ -188,7 +190,7 @@ export class CatalogService {
     async getAdminProductDetail(productId: string): Promise<ProductDetail> {
         const product = await this.catalogRepository.findProductById(productId)
         if (!product) {
-            throw new NotFoundException('Không tìm thấy sản phẩm.')
+            throw new ApiError('NOT_FOUND', { messageKey: apiMessageKey('catalog.productNotFound') })
         }
         return toProductDetail(product)
     }
@@ -202,7 +204,7 @@ export class CatalogService {
         })
 
         if (!updated) {
-            throw new BadRequestException('Sản phẩm không ở trạng thái chờ duyệt hoặc đã được xử lý bởi admin khác.')
+            throw new ApiError('BAD_REQUEST', { messageKey: apiMessageKey('catalog.productNotPending') })
         }
 
         return toProductDetail(updated)
@@ -216,7 +218,7 @@ export class CatalogService {
         })
 
         if (!updated) {
-            throw new NotFoundException('Không tìm thấy sản phẩm để tạm ngưng.')
+            throw new ApiError('NOT_FOUND', { messageKey: apiMessageKey('catalog.productNotFoundSuspend') })
         }
 
         return toProductDetail(updated)
@@ -229,7 +231,7 @@ export class CatalogService {
         })
 
         if (!updated) {
-            throw new NotFoundException('Không tìm thấy sản phẩm để khôi phục.')
+            throw new ApiError('NOT_FOUND', { messageKey: apiMessageKey('catalog.productNotFoundRestore') })
         }
 
         return toProductDetail(updated)
@@ -238,18 +240,18 @@ export class CatalogService {
     async sellerUpdateProduct(userId: string, productId: string, input: UpdateProductInput): Promise<ProductDetail> {
         const sellerProfile = await this.sellerRepository.findProfileByUserId(userId)
         if (!sellerProfile) {
-            throw new ForbiddenException('Bạn không có quyền thao tác trên sản phẩm này.')
+            throw new ApiError('FORBIDDEN', { messageKey: apiMessageKey('catalog.noPermissionProduct') })
         }
 
         const existing = await this.catalogRepository.findProductById(productId)
         if (!existing || existing.shopId !== sellerProfile.id) {
-            throw new NotFoundException('Không tìm thấy sản phẩm.')
+            throw new ApiError('NOT_FOUND', { messageKey: apiMessageKey('catalog.productNotFound') })
         }
 
         if (input.categoryId) {
             const category = await this.catalogRepository.findCategoryById(input.categoryId)
             if (!category) {
-                throw new BadRequestException('Danh mục ngành hàng không tồn tại.')
+                throw new ApiError('BAD_REQUEST', { messageKey: apiMessageKey('catalog.categoryNotFound') })
             }
         }
 
@@ -261,7 +263,7 @@ export class CatalogService {
         })
 
         if (!updated) {
-            throw new BadRequestException('Không thể cập nhật sản phẩm.')
+            throw new ApiError('BAD_REQUEST', { messageKey: apiMessageKey('catalog.cannotUpdate') })
         }
 
         return toProductDetail(updated)
@@ -271,7 +273,7 @@ export class CatalogService {
         if (input.categoryId) {
             const category = await this.catalogRepository.findCategoryById(input.categoryId)
             if (!category) {
-                throw new BadRequestException('Danh mục ngành hàng không tồn tại.')
+                throw new ApiError('BAD_REQUEST', { messageKey: apiMessageKey('catalog.categoryNotFound') })
             }
         }
 
@@ -283,7 +285,7 @@ export class CatalogService {
         })
 
         if (!updated) {
-            throw new NotFoundException('Không tìm thấy sản phẩm.')
+            throw new ApiError('NOT_FOUND', { messageKey: apiMessageKey('catalog.productNotFound') })
         }
 
         return toProductDetail(updated)
@@ -296,7 +298,7 @@ export class CatalogService {
         })
 
         if (!success) {
-            throw new NotFoundException('Không tìm thấy sản phẩm để xoá.')
+            throw new ApiError('NOT_FOUND', { messageKey: apiMessageKey('catalog.productNotFoundDelete') })
         }
 
         return { success }
@@ -324,7 +326,7 @@ export class CatalogService {
     async getAdminCategoryDetail(id: string): Promise<CategoryItem> {
         const category = await this.catalogRepository.findCategoryById(id)
         if (!category) {
-            throw new NotFoundException('Không tìm thấy danh mục.')
+            throw new ApiError('NOT_FOUND', { messageKey: apiMessageKey('catalog.categoryNotFound') })
         }
         return toCategoryItem(category)
     }
@@ -334,13 +336,16 @@ export class CatalogService {
 
         const existingSlug = await this.catalogRepository.findCategoryBySlug(slug)
         if (existingSlug) {
-            throw new BadRequestException(`Đường dẫn slug "${slug}" đã tồn tại. Vui lòng chọn slug khác.`)
+            throw new ApiError('BAD_REQUEST', {
+                messageKey: apiMessageKey('catalog.slugExists'),
+                messageParams: { slug },
+            })
         }
 
         if (input.parentId) {
             const parent = await this.catalogRepository.findCategoryById(input.parentId)
             if (!parent) {
-                throw new BadRequestException('Danh mục cha không tồn tại.')
+                throw new ApiError('BAD_REQUEST', { messageKey: apiMessageKey('catalog.parentCategoryNotFound') })
             }
         }
 
@@ -360,16 +365,16 @@ export class CatalogService {
     async updateCategory(id: string, input: UpdateCategoryInput, _actorId: string): Promise<CategoryItem> {
         const existing = await this.catalogRepository.findCategoryById(id)
         if (!existing) {
-            throw new NotFoundException('Không tìm thấy danh mục để cập nhật.')
+            throw new ApiError('NOT_FOUND', { messageKey: apiMessageKey('catalog.categoryNotFoundUpdate') })
         }
 
         if (input.parentId !== undefined && input.parentId !== null) {
             if (input.parentId === id) {
-                throw new BadRequestException('Danh mục không thể làm cha của chính nó.')
+                throw new ApiError('BAD_REQUEST', { messageKey: apiMessageKey('catalog.categoryCannotBeOwnParent') })
             }
             const parent = await this.catalogRepository.findCategoryById(input.parentId)
             if (!parent) {
-                throw new BadRequestException('Danh mục cha không tồn tại.')
+                throw new ApiError('BAD_REQUEST', { messageKey: apiMessageKey('catalog.parentCategoryNotFound') })
             }
         }
 
@@ -377,7 +382,10 @@ export class CatalogService {
         if (slug) {
             const existingSlug = await this.catalogRepository.findCategoryBySlug(slug)
             if (existingSlug && existingSlug.id !== id) {
-                throw new BadRequestException(`Đường dẫn slug "${slug}" đã tồn tại. Vui lòng chọn slug khác.`)
+                throw new ApiError('BAD_REQUEST', {
+                    messageKey: apiMessageKey('catalog.slugExists'),
+                    messageParams: { slug },
+                })
             }
         }
 
@@ -397,17 +405,18 @@ export class CatalogService {
     async deleteCategory(id: string, _actorId: string): Promise<{ success: boolean }> {
         const existing = await this.catalogRepository.findCategoryById(id)
         if (!existing) {
-            throw new NotFoundException('Không tìm thấy danh mục để xoá.')
+            throw new ApiError('NOT_FOUND', { messageKey: apiMessageKey('catalog.categoryNotFoundDelete') })
         }
 
         if (existing.children && existing.children.length > 0) {
-            throw new BadRequestException('Không thể xoá danh mục vì vẫn còn chứa danh mục con.')
+            throw new ApiError('BAD_REQUEST', { messageKey: apiMessageKey('catalog.categoryHasChildren') })
         }
 
         if (existing._count?.products && existing._count.products > 0) {
-            throw new BadRequestException(
-                `Không thể xoá danh mục vì đang có ${existing._count.products} sản phẩm liên kết.`,
-            )
+            throw new ApiError('BAD_REQUEST', {
+                messageKey: apiMessageKey('catalog.categoryHasProducts'),
+                messageParams: { count: String(existing._count.products) },
+            })
         }
 
         await this.catalogRepository.deleteCategory(id)

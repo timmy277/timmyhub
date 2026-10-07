@@ -56,6 +56,7 @@ export function SellerRegistrationForm({
     isAlreadySeller = false,
 }: SellerRegistrationFormProps) {
     const t = useTranslations('seller.register')
+    const tCommon = useTranslations('common')
     const router = useRouter()
     const queryClient = useQueryClient()
     const [selectedDocPreset, setSelectedDocPreset] = useState<'cccd' | 'gpkd' | 'custom'>('cccd')
@@ -85,11 +86,11 @@ export function SellerRegistrationForm({
                 void queryClient.invalidateQueries({ queryKey: QUERY_KEY.SELLER.APPLICATIONS })
                 form.reset()
             } else {
-                toast.error(res.message || 'Không thể gửi đơn đăng ký. Vui lòng kiểm tra lại thông tin.')
+                toast.error(res.message || t('submitFailed'))
             }
         },
         onError: () => {
-            toast.error('Đã xảy ra lỗi khi gửi đơn đăng ký. Vui lòng thử lại sau.')
+            toast.error(tCommon('errorGeneric'))
         },
     })
 

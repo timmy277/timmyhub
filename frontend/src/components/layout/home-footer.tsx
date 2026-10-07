@@ -14,9 +14,11 @@ import {
     TruckIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 
 import { IconPath } from '@/components/icons'
-import { Badge, Button, Input } from '@/components/ui'
+import { Badge, FloatInput } from '@/components'
+import { Button } from '@/components/ui'
 import { QUERY_KEY, ROUTE, SELLER_SHOP_ANY_PERMISSION, SELLER_SHOP_PERMISSION } from '@/constants'
 import { getMyShopAction } from '@/features/seller'
 import { usePermissions } from '@/hooks'
@@ -58,6 +60,7 @@ const FOOTER_LINKS = {
 
 export function HomeFooter() {
     const [email, setEmail] = useState('')
+    const t = useTranslations('home.footer')
     const { hasPermission } = usePermissions()
     const isSellerByPermission = hasPermission(SELLER_SHOP_PERMISSION) || hasPermission(SELLER_SHOP_ANY_PERMISSION)
     const { data: myShop } = useQuery({
@@ -76,11 +79,11 @@ export function HomeFooter() {
     const handleSubscribe = (e: React.FormEvent) => {
         e.preventDefault()
         if (!email.trim() || !email.includes('@')) {
-            toast.error('Vui lòng nhập địa chỉ email hợp lệ')
+            toast.error(t('newsletterInvalid'))
             return
         }
-        toast.success('Đăng ký nhận bản tin thành công!', {
-            description: 'TimmyHub sẽ gửi các mã giảm giá độc quyền đến hộp thư của bạn.',
+        toast.success(t('newsletterSuccess'), {
+            description: t('newsletterSuccessDesc'),
         })
         setEmail('')
     }
@@ -141,11 +144,12 @@ export function HomeFooter() {
                                 <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2">
                                     <div className="relative flex-1">
                                         <MailIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                                        <Input
+                                        <FloatInput
                                             type="email"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            placeholder="Nhập email của bạn..."
+                                            label={t('newsletterLabel')}
+                                            placeholder={t('newsletterPlaceholder')}
                                             className="h-11 pl-10 rounded-xl bg-background/80 border-border/80 focus-visible:ring-primary"
                                         />
                                     </div>

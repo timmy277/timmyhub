@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { REVIEW_ACTION } from './product.schema'
+
 // ===== Enums =====
 export const ResourceStatus = {
     PENDING: 'PENDING',
@@ -10,21 +12,30 @@ export const ResourceStatus = {
 
 export type ResourceStatusType = (typeof ResourceStatus)[keyof typeof ResourceStatus]
 
-export const ResourceStatusSchema = z.enum(['PENDING', 'APPROVED', 'REJECTED', 'DELETED'])
+export const ResourceStatusSchema = z.enum(ResourceStatus)
+
+// Tập con trạng thái dùng cho query danh sách đơn (không bao gồm DELETED)
+export const SELLER_APPLICATION_QUERY_STATUS = {
+    PENDING: 'PENDING',
+    APPROVED: 'APPROVED',
+    REJECTED: 'REJECTED',
+} as const
+
+export const SellerApplicationQueryStatusSchema = z.enum(SELLER_APPLICATION_QUERY_STATUS)
 
 // ===== Schemas =====
 
 // FEAT-SEL-001: Nộp đơn đăng ký bán hàng
 export const CreateSellerApplicationSchema = z.object({
-    shopName: z.string().min(3, 'Tên shop phải có ít nhất 3 ký tự').max(50, 'Tên shop không được quá 50 ký tự').trim(),
-    shopDescription: z.string().max(500, 'Mô tả không được quá 500 ký tự').trim().optional(),
-    idDocumentUrl: z.string().url('Đường dẫn ảnh giấy tờ không hợp lệ'),
+    shopName: z.string().min(3, 'validation.shopNameMin').max(50, 'validation.shopNameMax').trim(),
+    shopDescription: z.string().max(500, 'validation.shopDescriptionMax').trim().optional(),
+    idDocumentUrl: z.string().url('validation.idDocumentUrlInvalid'),
     taxCode: z
         .string()
-        .regex(/^([0-9]{10}|[0-9]{13})$/, 'Mã số thuế phải gồm 10 hoặc 13 chữ số')
+        .regex(/^([0-9]{10}|[0-9]{13})$/, 'validation.taxCodeInvalid')
         .optional()
         .or(z.literal('')),
-    warehouseAddressLine: z.string().max(255, 'Địa chỉ kho không quá 255 ký tự').trim().optional(),
+    warehouseAddressLine: z.string().max(255, 'validation.warehouseAddressMax').trim().optional(),
     provinceCode: z.string().max(20).optional(),
     districtCode: z.string().max(20).optional(),
     wardCode: z.string().max(20).optional(),
@@ -34,8 +45,8 @@ export type CreateSellerApplicationInput = z.infer<typeof CreateSellerApplicatio
 
 // FEAT-SEL-002: Admin duyệt / từ chối đơn đăng ký
 export const ReviewSellerApplicationSchema = z.object({
-    status: z.enum(['APPROVED', 'REJECTED']),
-    reviewNote: z.string().max(500, 'Ghi chú không quá 500 ký tự').trim().optional(),
+    status: z.enum(REVIEW_ACTION),
+    reviewNote: z.string().max(500, 'validation.reviewNoteMax').trim().optional(),
 })
 
 export type ReviewSellerApplicationInput = z.infer<typeof ReviewSellerApplicationSchema>
@@ -44,7 +55,7 @@ export type ReviewSellerApplicationInput = z.infer<typeof ReviewSellerApplicatio
 export const SellerApplicationQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(20),
-    status: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional(),
+    status: SellerApplicationQueryStatusSchema.optional(),
     q: z.string().trim().optional(),
 })
 
@@ -52,11 +63,11 @@ export type SellerApplicationQuery = z.infer<typeof SellerApplicationQuerySchema
 
 // FEAT-SEL-003: Cập nhật thông tin hồ sơ shop
 export const UpdateSellerProfileSchema = z.object({
-    shopName: z.string().min(3).max(50).trim().optional(),
-    description: z.string().max(1000).trim().optional(),
-    shopLogo: z.string().url().optional().or(z.literal('')),
-    shopBanner: z.string().url().optional().or(z.literal('')),
-    warehouseAddressLine: z.string().max(255).trim().optional(),
+    shopName: z.string().min(3, 'validation.shopNameMin').max(50, 'validation.shopNameMax').trim().optional(),
+    description: z.string().max(1000, 'validation.shopDescriptionLongMax').trim().optional(),
+    shopLogo: z.string().url('validation.imageUrlInvalid').optional().or(z.literal('')),
+    shopBanner: z.string().url('validation.imageUrlInvalid').optional().or(z.literal('')),
+    warehouseAddressLine: z.string().max(255, 'validation.warehouseAddressMax').trim().optional(),
     provinceCode: z.string().max(20).optional(),
     districtCode: z.string().max(20).optional(),
     wardCode: z.string().max(20).optional(),
@@ -68,7 +79,7 @@ export type UpdateSellerProfileInput = z.infer<typeof UpdateSellerProfileSchema>
 
 // FEAT-SEL-007: Tạm ngưng shop vi phạm
 export const SuspendShopSchema = z.object({
-    reason: z.string().min(5, 'Lý do tạm ngưng phải từ 5 ký tự').max(500, 'Lý do không quá 500 ký tự').trim(),
+    reason: z.string().min(5, 'validation.suspendShopReasonMin').max(500, 'validation.suspendReasonMax').trim(),
 })
 
 export type SuspendShopInput = z.infer<typeof SuspendShopSchema>

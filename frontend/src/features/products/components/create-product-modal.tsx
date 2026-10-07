@@ -2,11 +2,11 @@
 
 import React, { useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
-import { Controller, useForm } from 'react-hook-form'
+import { Controller, useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { CheckCheck, Film, Loader2, Package, Plus, RefreshCw, Trash2, UploadCloud, X, Zap } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 import { useUploadMedia } from '@/hooks'
@@ -27,6 +27,8 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
+    FloatInput,
+    FloatTextarea,
     Input,
     Select,
     SelectContent,
@@ -34,7 +36,6 @@ import {
     SelectTrigger,
     SelectValue,
     Switch,
-    Textarea,
 } from '@/components'
 import { QUERY_KEY } from '@/constants'
 
@@ -54,8 +55,8 @@ type OptionGroupState = {
 }
 
 type VariantOverride = {
-    price?: number
-    compareAtPrice?: number | null
+    price?: string
+    compareAtPrice?: string | null
     stock?: number
     sku?: string
 }
@@ -66,7 +67,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
 
     // React Hook Form with Zod Schema validation
     const form = useForm<CreateProductInput>({
-        resolver: zodResolver(CreateProductInputSchema) as never,
+        resolver: zodResolver(CreateProductInputSchema) as unknown as Resolver<CreateProductInput>,
         defaultValues: {
             name: '',
             categoryId: '',
@@ -94,16 +95,16 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
     const [videos, setVideos] = useState<string[]>([])
     const [mediaUrlInput, setMediaUrlInput] = useState('')
     const [mediaTypeInput, setMediaTypeInput] = useState<'auto' | 'image' | 'video'>('auto')
-    const [isUploadingMedia, setIsUploadingMedia] = useState(false)
     const [isDragOver, setIsDragOver] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const uploadMediaMutation = useUploadMedia()
+    const isUploadingMedia = uploadMediaMutation.isPending
 
     // Variants Mode
     const [hasVariants, setHasVariants] = useState(false)
 
     // Single Variant Fields
-    const [singlePrice, setSinglePrice] = useState<number>(100000)
+    const [singlePrice, setSinglePrice] = useState<string>('100000')
     const [singleComparePrice, setSingleComparePrice] = useState<string>('')
     const [singleStock, setSingleStock] = useState<number>(50)
     const [singleWeight, setSingleWeight] = useState<number>(200)
@@ -123,7 +124,11 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
     const [batchStock, setBatchStock] = useState<string>('')
     const [batchSkuPrefix, setBatchSkuPrefix] = useState<string>('')
 
-    const [submitting, setSubmitting] = useState(false)
+    // ===== Mutation =====
+    const createProductMutation = useMutation({
+        mutationFn: async (values: CreateProductInput) => createProductAction(values),
+    })
+    const submitting = createProductMutation.isPending
 
     // Derived variants matrix via useMemo
     const variantsMatrix = useMemo(() => {
@@ -188,7 +193,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
             setImages((prev) => {
                 const available = 10 - prev.length
                 if (available <= 0) {
-                    toast.error('Đã đạt tối đa 10 hình ảnh.')
+                    toast.error(t('maxImages'))
                     return prev
                 }
                 const toAdd = newImages.slice(0, available)
@@ -201,7 +206,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
             setVideos((prev) => {
                 const available = 3 - prev.length
                 if (available <= 0) {
-                    toast.error('Đã đạt tối đa 3 video.')
+                    toast.error(t('maxVideos'))
                     return prev
                 }
                 const toAdd = newVideos.slice(0, available)
@@ -210,13 +215,12 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
             })
         }
 
-        toast.success(`Đã thêm ${addedImagesCount} ảnh và ${addedVideosCount} video.`)
+        toast.success(t('addedMedia', { imageCount: addedImagesCount, videoCount: addedVideosCount }))
     }
 
     const handleUploadFiles = async (files: File[]) => {
         if (files.length === 0) return
 
-        setIsUploadingMedia(true)
         try {
             const assets = await uploadMediaMutation.mutateAsync({
                 files,
@@ -224,10 +228,8 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
             })
             processUploadedAssets(assets)
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : 'Tải lên thất bại'
+            const message = err instanceof Error ? err.message : tMsg('uploadFailed')
             toast.error(message)
-        } finally {
-            setIsUploadingMedia(false)
         }
     }
 
@@ -249,26 +251,26 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
 
         if (isVideo) {
             if (videos.includes(url)) {
-                toast.error('Video này đã có trong danh sách.')
+                toast.error(t('duplicateVideo'))
                 return
             }
             if (videos.length >= 3) {
-                toast.error('Tối đa 3 video cho mỗi sản phẩm.')
+                toast.error(t('maxVideoLimit'))
                 return
             }
             setVideos([...videos, url])
-            toast.success('Đã thêm 1 video')
+            toast.success(t('addedVideo'))
         } else {
             if (images.includes(url)) {
-                toast.error('Ảnh này đã có trong danh sách.')
+                toast.error(t('duplicateImage'))
                 return
             }
             if (images.length >= 10) {
-                toast.error('Tối đa 10 hình ảnh cho mỗi sản phẩm.')
+                toast.error(t('maxImageLimit'))
                 return
             }
             setImages([...images, url])
-            toast.success('Đã thêm 1 ảnh')
+            toast.success(t('addedImage'))
         }
         setMediaUrlInput('')
     }
@@ -288,7 +290,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
         const val = grp.currentValueInput.trim()
         if (!val) return
         if (grp.values.includes(val)) {
-            toast.error('Giá trị này đã tồn tại trong nhóm phân loại.')
+            toast.error(t('duplicateOptionValue'))
             return
         }
         const updated = [...optionGroups]
@@ -313,12 +315,12 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
 
     const handleAddOptionGroup = () => {
         if (optionGroups.length >= 3) {
-            toast.error('Tối đa 3 nhóm phân loại (ví dụ: Màu sắc, Size, Chất liệu).')
+            toast.error(t('maxOptionGroups'))
             return
         }
         setOptionGroups([
             ...optionGroups,
-            { name: `Phân loại ${optionGroups.length + 1}`, values: [], currentValueInput: '' },
+            { name: t('optionGroupDefault', { index: optionGroups.length + 1 }), values: [], currentValueInput: '' },
         ])
     }
 
@@ -327,12 +329,12 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
     }
 
     const handleBatchApply = () => {
-        const p = batchPrice ? Number(batchPrice) : undefined
-        const cp = batchComparePrice ? Number(batchComparePrice) : batchComparePrice === '' ? undefined : null
+        const p = batchPrice || undefined
+        const cp = batchComparePrice || undefined
         const s = batchStock ? Number(batchStock) : undefined
 
         if (p === undefined && cp === undefined && s === undefined && !batchSkuPrefix.trim()) {
-            toast.warning('Vui lòng nhập ít nhất Giá bán, Giá gốc, Tồn kho hoặc Tiền tố SKU để áp dụng.')
+            toast.warning(t('batchEnterPrompt'))
             return
         }
 
@@ -359,7 +361,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                 next[vm.key] = {
                     ...current,
                     ...(p !== undefined ? { price: p } : {}),
-                    ...(batchComparePrice !== '' ? { compareAtPrice: cp } : {}),
+                    ...(cp !== undefined ? { compareAtPrice: cp } : {}),
                     ...(s !== undefined ? { stock: s } : {}),
                     ...(skuVal !== undefined ? { sku: skuVal } : {}),
                 }
@@ -367,14 +369,13 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
             return next
         })
 
-        toast.success(`Đã áp dụng thông tin hàng loạt cho ${variantsMatrix.length} biến thể!`)
+        toast.success(t('batchApplied', { count: variantsMatrix.length }))
     }
 
     // React Hook Form submission handler
     const onSubmit = async (values: CreateProductInput) => {
-        setSubmitting(true)
         try {
-            const res = await createProductAction(values)
+            const res = await createProductMutation.mutateAsync(values)
             if (res.ok) {
                 toast.success(values.isDraft ? tMsg('createDraftSuccess') : tMsg('createSuccess'))
                 form.reset()
@@ -392,8 +393,6 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
             }
         } catch {
             toast.error(tMsg('createFailed', { error: '' }))
-        } finally {
-            setSubmitting(false)
         }
     }
 
@@ -402,14 +401,14 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
         let variants: CreateProductVariantInput[] = []
 
         if (!hasVariants) {
-            if (singlePrice <= 0) {
-                toast.error('Giá bán phải lớn hơn 0.')
+            if (Number(singlePrice) <= 0) {
+                toast.error(t('priceMustBePositive'))
                 return
             }
             variants = [
                 {
                     price: singlePrice,
-                    compareAtPrice: singleComparePrice ? Number(singleComparePrice) : null,
+                    compareAtPrice: singleComparePrice ? singleComparePrice : null,
                     stock: singleStock,
                     weightGram: singleWeight,
                     sku: singleSku || undefined,
@@ -419,7 +418,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
         } else {
             const validGroups = optionGroups.filter((g) => g.name.trim() && g.values.length > 0)
             if (validGroups.length === 0 || variantsMatrix.length === 0) {
-                toast.error('Vui lòng nhập đầy đủ nhóm phân loại và giá trị biến thể.')
+                toast.error(t('missingVariants'))
                 return
             }
 
@@ -452,7 +451,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                 if (firstError?.message) {
                     toast.error(String(firstError.message))
                 } else {
-                    toast.error('Vui lòng kiểm tra lại thông tin sản phẩm đã nhập.')
+                    toast.error(t('validationError'))
                 }
             },
         )()
@@ -494,23 +493,19 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
             {/* 1. Basic Info Section */}
             <div className="space-y-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    1. Thông tin cơ bản
+                    1. {t('basicInfo')}
                 </h4>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-foreground">{t('nameLabel')}</label>
-                        <Input
-                            {...form.register('name')}
-                            placeholder={t('namePlaceholder')}
-                            className="text-xs rounded-xl"
-                        />
-                        {form.formState.errors.name && (
-                            <p className="text-[11px] text-destructive font-medium mt-1">
-                                {form.formState.errors.name.message}
-                            </p>
-                        )}
-                    </div>
+                    <FloatInput
+                        {...form.register('name')}
+                        label={t('nameLabel')}
+                        placeholder={t('namePlaceholder')}
+                        variant="outlined"
+                        size="sm"
+                        className="text-xs"
+                        error={form.formState.errors.name?.message}
+                    />
 
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold text-foreground">{t('categoryLabel')}</label>
@@ -555,19 +550,15 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                     </div>
                 </div>
 
-                <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-foreground">{t('descLabel')}</label>
-                    <Textarea
-                        {...form.register('description')}
-                        placeholder={t('descPlaceholder')}
-                        className="text-xs rounded-xl min-h-[90px] resize-none"
-                    />
-                    {form.formState.errors.description && (
-                        <p className="text-[11px] text-destructive font-medium mt-1">
-                            {form.formState.errors.description.message}
-                        </p>
-                    )}
-                </div>
+                <FloatTextarea
+                    {...form.register('description')}
+                    label={t('descLabel')}
+                    placeholder={t('descPlaceholder')}
+                    variant="outlined"
+                    size="sm"
+                    className="text-xs min-h-[90px] resize-none"
+                    error={form.formState.errors.description?.message}
+                />
             </div>
 
             {/* 2. Media Upload & Gallery Section (Images & Videos) */}
@@ -576,11 +567,9 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                     <div>
                         <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                             <Film className="size-3.5 text-primary" />
-                            <span>Hình ảnh & Video sản phẩm</span>
+                            <span>{t('mediaTitle')}</span>
                         </label>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                            Tải ảnh và video chung để khách hàng có trải nghiệm mua sắm sống động nhất.
-                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{t('mediaDesc')}</p>
                     </div>
                     <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="text-[11px] font-medium">
@@ -630,8 +619,8 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                     {isUploadingMedia ? (
                         <div className="flex flex-col items-center gap-2 py-2">
                             <Loader2 className="size-8 text-primary animate-spin" />
-                            <p className="text-xs font-semibold text-foreground">Đang tải tệp tin lên máy chủ...</p>
-                            <p className="text-[11px] text-muted-foreground">Vui lòng chờ trong giây lát</p>
+                            <p className="text-xs font-semibold text-foreground">{t('uploadingTitle')}</p>
+                            <p className="text-[11px] text-muted-foreground">{t('uploadingDesc')}</p>
                         </div>
                     ) : (
                         <>
@@ -639,12 +628,8 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                                 <UploadCloud className="size-5" />
                             </div>
                             <div className="space-y-0.5">
-                                <p className="text-xs font-semibold text-foreground">
-                                    Nhấp để chọn tệp hoặc kéo thả ảnh & video vào đây
-                                </p>
-                                <p className="text-[11px] text-muted-foreground">
-                                    Hỗ trợ JPG, PNG, WEBP (tối đa 10 ảnh) & MP4, WEBM, MOV (tối đa 3 video)
-                                </p>
+                                <p className="text-xs font-semibold text-foreground">{t('clickToUpload')}</p>
+                                <p className="text-[11px] text-muted-foreground">{t('uploadFormats')}</p>
                             </div>
                         </>
                     )}
@@ -660,9 +645,9 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                             <SelectValue placeholder="Loại" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="auto">Tự nhận diện</SelectItem>
-                            <SelectItem value="image">Ảnh</SelectItem>
-                            <SelectItem value="video">Video</SelectItem>
+                            <SelectItem value="auto">{t('autoDetect')}</SelectItem>
+                            <SelectItem value="image">{t('imageType')}</SelectItem>
+                            <SelectItem value="video">{t('videoType')}</SelectItem>
                         </SelectContent>
                     </Select>
                     <Input
@@ -674,7 +659,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                                 handleAddMediaUrl()
                             }
                         }}
-                        placeholder="Hoặc dán liên kết URL ảnh / video trực tiếp..."
+                        placeholder={t('urlPlaceholder')}
                         className="text-xs rounded-xl flex-1 h-9"
                     />
                     <Button
@@ -685,7 +670,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                         className="rounded-xl text-xs gap-1.5 shrink-0 h-9"
                     >
                         <Plus className="size-3.5" />
-                        <span>Thêm URL</span>
+                        <span>{t('addUrl')}</span>
                     </Button>
                 </div>
 
@@ -693,7 +678,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                 {images.length > 0 && (
                     <div className="space-y-1.5 pt-1">
                         <span className="text-[11px] font-semibold text-muted-foreground">
-                            Danh sách ảnh ({images.length}/10):
+                            {t('imageListLabel', { count: images.length })}
                         </span>
                         <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
                             {images.map((img, idx) => (
@@ -711,7 +696,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                                     />
                                     {idx === 0 && (
                                         <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-primary text-white text-[10px] font-bold shadow-sm">
-                                            Ảnh bìa
+                                            {t('coverBadge')}
                                         </span>
                                     )}
                                     <button
@@ -731,7 +716,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                 {videos.length > 0 && (
                     <div className="space-y-1.5 pt-1">
                         <span className="text-[11px] font-semibold text-muted-foreground">
-                            Danh sách video ({videos.length}/3):
+                            {t('videoListLabel', { count: videos.length })}
                         </span>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {videos.map((vid, idx) => (
@@ -746,7 +731,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                                         className="w-full h-full object-contain"
                                     />
                                     <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-emerald-600 text-white text-[10px] font-bold shadow-sm pointer-events-none">
-                                        Video #{idx + 1}
+                                        {t('videoBadge', { index: idx + 1 })}
                                     </span>
                                     <button
                                         type="button"
@@ -773,7 +758,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                 <div className="flex items-center justify-between">
                     <div>
                         <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                            2. Phân loại hàng & Giá bán
+                            {t('variantSectionTitle')}
                         </h4>
                         <p className="text-xs text-muted-foreground mt-0.5">{t('hasVariants')}</p>
                     </div>
@@ -783,63 +768,55 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                 {!hasVariants ? (
                     /* Single Variant Form */
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 p-4 rounded-2xl border border-border/60 bg-muted/20">
-                        <div className="space-y-1">
-                            <label className="text-[11px] font-semibold text-foreground">
-                                {t('singleVariantPrice')}
-                            </label>
-                            <Input
-                                type="number"
-                                min={1000}
-                                value={singlePrice}
-                                onChange={(e) => setSinglePrice(Number(e.target.value))}
-                                className="text-xs rounded-xl"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[11px] font-semibold text-foreground">
-                                {t('singleVariantCompare')}
-                            </label>
-                            <Input
-                                type="number"
-                                value={singleComparePrice}
-                                onChange={(e) => setSingleComparePrice(e.target.value)}
-                                placeholder="Để trống"
-                                className="text-xs rounded-xl"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[11px] font-semibold text-foreground">
-                                {t('singleVariantStock')}
-                            </label>
-                            <Input
-                                type="number"
-                                min={0}
-                                value={singleStock}
-                                onChange={(e) => setSingleStock(Number(e.target.value))}
-                                className="text-xs rounded-xl"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[11px] font-semibold text-foreground">
-                                {t('singleVariantWeight')}
-                            </label>
-                            <Input
-                                type="number"
-                                min={1}
-                                value={singleWeight}
-                                onChange={(e) => setSingleWeight(Number(e.target.value))}
-                                className="text-xs rounded-xl"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[11px] font-semibold text-foreground">Mã SKU</label>
-                            <Input
-                                value={singleSku}
-                                onChange={(e) => setSingleSku(e.target.value)}
-                                placeholder="Tự động"
-                                className="text-xs rounded-xl"
-                            />
-                        </div>
+                        <FloatInput
+                            type="number"
+                            min={1000}
+                            label={t('singleVariantPrice')}
+                            value={singlePrice}
+                            onChange={(e) => setSinglePrice(e.target.value)}
+                            variant="outlined"
+                            size="sm"
+                            className="text-xs"
+                        />
+                        <FloatInput
+                            type="number"
+                            label={t('singleVariantCompare')}
+                            value={singleComparePrice}
+                            onChange={(e) => setSingleComparePrice(e.target.value)}
+                            placeholder={t('emptyComparePlaceholder')}
+                            variant="outlined"
+                            size="sm"
+                            className="text-xs"
+                        />
+                        <FloatInput
+                            type="number"
+                            min={0}
+                            label={t('singleVariantStock')}
+                            value={singleStock}
+                            onChange={(e) => setSingleStock(Number(e.target.value))}
+                            variant="outlined"
+                            size="sm"
+                            className="text-xs"
+                        />
+                        <FloatInput
+                            type="number"
+                            min={1}
+                            label={t('singleVariantWeight')}
+                            value={singleWeight}
+                            onChange={(e) => setSingleWeight(Number(e.target.value))}
+                            variant="outlined"
+                            size="sm"
+                            className="text-xs"
+                        />
+                        <FloatInput
+                            label={t('skuLabel')}
+                            value={singleSku}
+                            onChange={(e) => setSingleSku(e.target.value)}
+                            placeholder={t('autoSku')}
+                            variant="outlined"
+                            size="sm"
+                            className="text-xs"
+                        />
                     </div>
                 ) : (
                     /* Multi-Option Configuration */
@@ -902,7 +879,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                                                     handleAddOptionValue(gIdx)
                                                 }
                                             }}
-                                            placeholder="Thêm giá trị (nhấn Enter)"
+                                            placeholder={t('addValuePlaceholder')}
                                             className="text-xs h-8 w-44 rounded-lg"
                                         />
                                         <Button
@@ -939,60 +916,58 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                                         <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
                                             <Zap className="size-3.5 text-primary" />
-                                            Áp dụng hàng loạt cho tất cả {variantsMatrix.length} biến thể
+                                            {t('batchTitle', { count: variantsMatrix.length })}
                                         </span>
-                                        <span className="text-[11px] text-muted-foreground">
-                                            Điền nhanh giá, tồn kho & SKU cho mọi biến thể chỉ với 1 click
-                                        </span>
+                                        <span className="text-[11px] text-muted-foreground">{t('batchDesc')}</span>
                                     </div>
 
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                                         <div className="space-y-1">
                                             <label className="text-[11px] font-semibold text-muted-foreground">
-                                                Giá bán chung (đ)
+                                                {t('batchPriceLabel')}
                                             </label>
                                             <Input
                                                 type="number"
                                                 min={1000}
                                                 value={batchPrice}
                                                 onChange={(e) => setBatchPrice(e.target.value)}
-                                                placeholder="VD: 150000"
+                                                placeholder={t('batchPricePlaceholder')}
                                                 className="h-8 text-xs rounded-lg bg-card"
                                             />
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-[11px] font-semibold text-muted-foreground">
-                                                Giá gốc so sánh (đ)
+                                                {t('batchCompareLabel')}
                                             </label>
                                             <Input
                                                 type="number"
                                                 value={batchComparePrice}
                                                 onChange={(e) => setBatchComparePrice(e.target.value)}
-                                                placeholder="VD: 200000"
+                                                placeholder={t('batchComparePricePlaceholder')}
                                                 className="h-8 text-xs rounded-lg bg-card"
                                             />
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-[11px] font-semibold text-muted-foreground">
-                                                Tồn kho chung
+                                                {t('batchStockLabel')}
                                             </label>
                                             <Input
                                                 type="number"
                                                 min={0}
                                                 value={batchStock}
                                                 onChange={(e) => setBatchStock(e.target.value)}
-                                                placeholder="VD: 50"
+                                                placeholder={t('batchStockPlaceholder')}
                                                 className="h-8 text-xs rounded-lg bg-card"
                                             />
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-[11px] font-semibold text-muted-foreground">
-                                                Tiền tố SKU
+                                                {t('batchSkuLabel')}
                                             </label>
                                             <Input
                                                 value={batchSkuPrefix}
                                                 onChange={(e) => setBatchSkuPrefix(e.target.value)}
-                                                placeholder="VD: POLO"
+                                                placeholder={t('batchSkuPrefixPlaceholder')}
                                                 className="h-8 text-xs rounded-lg bg-card"
                                             />
                                         </div>
@@ -1006,24 +981,24 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                                             className="h-8 text-xs rounded-xl font-bold gap-1.5 bg-primary text-white hover:bg-primary/90"
                                         >
                                             <CheckCheck className="size-3.5" />
-                                            <span>Áp dụng cho tất cả biến thể</span>
+                                            <span>{t('batchApplyAllBtn')}</span>
                                         </Button>
                                     </div>
                                 </div>
 
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-semibold text-foreground">
-                                        {t('variantsTable')} ({variantsMatrix.length} biến thể)
+                                        {t('variantsTableLabel', { count: variantsMatrix.length })}
                                     </label>
                                     <div className="border border-border/70 rounded-xl overflow-hidden overflow-x-auto">
                                         <table className="w-full text-xs">
                                             <thead className="bg-muted/50 border-b border-border text-muted-foreground uppercase font-semibold">
                                                 <tr>
-                                                    <th className="px-3 py-2 text-left">Phiên bản</th>
-                                                    <th className="px-3 py-2 text-left">Giá bán *</th>
-                                                    <th className="px-3 py-2 text-left">Giá gốc</th>
-                                                    <th className="px-3 py-2 text-left">Tồn kho *</th>
-                                                    <th className="px-3 py-2 text-left">Mã SKU</th>
+                                                    <th className="px-3 py-2 text-left">{t('colVariant')}</th>
+                                                    <th className="px-3 py-2 text-left">{t('colPriceRequired')}</th>
+                                                    <th className="px-3 py-2 text-left">{t('colComparePrice')}</th>
+                                                    <th className="px-3 py-2 text-left">{t('colStockRequired')}</th>
+                                                    <th className="px-3 py-2 text-left">{t('colSku')}</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-border/60">
@@ -1037,7 +1012,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                                                                 type="number"
                                                                 value={vm.price}
                                                                 onChange={(e) => {
-                                                                    const val = Number(e.target.value)
+                                                                    const val = e.target.value
                                                                     setVariantOverrides((prev) => ({
                                                                         ...prev,
                                                                         [vm.key]: { ...prev[vm.key], price: val },
@@ -1051,9 +1026,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                                                                 type="number"
                                                                 value={vm.compareAtPrice ?? ''}
                                                                 onChange={(e) => {
-                                                                    const val = e.target.value
-                                                                        ? Number(e.target.value)
-                                                                        : null
+                                                                    const val = e.target.value ? e.target.value : null
                                                                     setVariantOverrides((prev) => ({
                                                                         ...prev,
                                                                         [vm.key]: {
@@ -1090,7 +1063,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                                                                         [vm.key]: { ...prev[vm.key], sku: val },
                                                                     }))
                                                                 }}
-                                                                placeholder="Tự động"
+                                                                placeholder={t('autoSkuPlaceholder')}
                                                                 className="h-8 text-xs w-28 rounded-lg"
                                                             />
                                                         </td>

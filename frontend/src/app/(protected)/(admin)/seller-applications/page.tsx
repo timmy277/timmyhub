@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 
 import type { SellerApplicationDetail, SellerApplicationQuery } from '@timmyhub/contracts'
 import { ResourceStatus } from '@timmyhub/contracts'
@@ -13,8 +14,9 @@ import {
 } from '@/features/seller'
 import { getActor } from '@/lib/actor-permissions'
 
-export const metadata: Metadata = {
-    title: 'Duyệt đơn đăng ký bán hàng · TimmyHub',
+export async function generateMetadata(): Promise<Metadata> {
+    const t = await getTranslations('seller')
+    return { title: t('applicationsMetaTitle') }
 }
 
 interface SellerApplicationsPageProps {

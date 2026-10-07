@@ -1,12 +1,14 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 
 import { DASHBOARD_PERMISSION, ROUTE, SELLER_SHOP_PERMISSION } from '@/constants'
 import { getMyApplicationsAction, getMyShopAction, SellerRegistrationForm } from '@/features/seller'
 import { getActor } from '@/lib/actor-permissions'
 
-export const metadata: Metadata = {
-    title: 'Đăng ký bán hàng · TimmyHub',
+export async function generateMetadata(): Promise<Metadata> {
+    const t = await getTranslations('seller')
+    return { title: t('registerMetaTitle') }
 }
 
 export default async function SellerRegisterPage() {

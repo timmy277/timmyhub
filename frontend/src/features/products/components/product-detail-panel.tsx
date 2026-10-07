@@ -34,9 +34,9 @@ interface ProductDetailPanelProps {
     initialDetail?: ProductDetail | null
 }
 
-function formatVnd(val: number | null | undefined): string {
+function formatVnd(val: string | number | null | undefined): string {
     if (val === null || val === undefined) return '0 ₫'
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val)
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(val))
 }
 
 export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: ProductDetailPanelProps) {

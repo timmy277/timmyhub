@@ -17,6 +17,7 @@ import {
     XCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 
 import {
     Badge,
@@ -229,6 +230,7 @@ const STATUS_CONFIG: Record<
 }
 
 export function SellerOrdersView() {
+    const t = useTranslations('seller.orders')
     const [orders, setOrders] = useState<OrderRecord[]>(INITIAL_ORDERS)
     const [searchQuery, setSearchQuery] = useState('')
     const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -266,18 +268,18 @@ export function SellerOrdersView() {
         setOrders((prev) =>
             prev.map((ord) => (ord.id === orderId ? { ...ord, status: 'pending_pickup' as OrderStatus } : ord)),
         )
-        toast.success('Đã xác nhận đơn hàng thành công! Vui lòng đóng gói và bàn giao.')
+        toast.success(t('orderConfirmed'))
     }
 
     const handleHandoverShipping = (orderId: string) => {
         setOrders((prev) =>
             prev.map((ord) => (ord.id === orderId ? { ...ord, status: 'shipping' as OrderStatus } : ord)),
         )
-        toast.success('Đã chuyển đơn hàng sang trạng thái Đang giao hàng.')
+        toast.success(t('orderHandedOver'))
     }
 
     const handlePrintInvoice = (orderCode: string) => {
-        toast.info(`Đang tạo phiếu gửi hàng cho đơn ${orderCode}…`)
+        toast.info(t('printingInvoice', { code: orderCode }))
     }
 
     const formatCurrency = (val: number) => {

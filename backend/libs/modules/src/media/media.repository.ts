@@ -1,13 +1,21 @@
 import { Injectable } from '@nestjs/common'
-import { PrismaService } from '@timmyhub/prisma'
-import { MediaAsset, MediaFilterDto, MEDIA_STATUS } from '@timmyhub/contracts'
+
+import {
+    MEDIA_STATUS,
+    type MediaAsset,
+    type MediaFilterDto,
+    type MediaOwnerType,
+    type MediaStatus as MediaStatusType,
+    type MediaType,
+} from '@timmyhub/contracts'
+import { Prisma, PrismaService } from '@timmyhub/prisma'
 
 export interface CreateMediaAssetInput {
     id?: string
     ownerId: string
-    ownerType: string
-    type: 'IMAGE' | 'VIDEO'
-    status?: 'UPLOADING' | 'PROCESSING' | 'READY' | 'FAILED'
+    ownerType: MediaOwnerType
+    type: MediaType
+    status?: MediaStatusType
     originalUrl?: string | null
     thumbnailUrl?: string | null
     sizeBytes?: number | null
@@ -17,7 +25,7 @@ export interface CreateMediaAssetInput {
 }
 
 export interface UpdateMediaAssetInput {
-    status?: 'UPLOADING' | 'PROCESSING' | 'READY' | 'FAILED'
+    status?: MediaStatusType
     originalUrl?: string | null
     thumbnailUrl?: string | null
     hlsMasterUrl?: string | null
@@ -26,6 +34,30 @@ export interface UpdateMediaAssetInput {
     height?: number | null
     durationMs?: number | null
     failReason?: string | null
+}
+
+// Helper: map Prisma MediaAsset (có Date fields) sang MediaAsset contract (có ISO string fields)
+// Prisma schema dùng String cho ownerType/type/status; contracts dùng union type — cast an toàn vì
+// dữ liệu luôn đi qua Zod validation khi tạo.
+function toMediaAsset(asset: Prisma.MediaAssetGetPayload<{ include: { variants: true } }>): MediaAsset {
+    return {
+        id: asset.id,
+        ownerId: asset.ownerId,
+        ownerType: asset.ownerType as MediaOwnerType,
+        type: asset.type,
+        status: asset.status,
+        originalUrl: asset.originalUrl,
+        hlsMasterUrl: asset.hlsMasterUrl ?? null,
+        thumbnailUrl: asset.thumbnailUrl ?? null,
+        durationMs: asset.durationMs ?? null,
+        sizeBytes: asset.sizeBytes ?? null,
+        width: asset.width ?? null,
+        height: asset.height ?? null,
+        failReason: asset.failReason ?? null,
+        createdAt: asset.createdAt.toISOString(),
+        updatedAt: asset.updatedAt.toISOString(),
+        variants: asset.variants,
+    }
 }
 
 @Injectable()
@@ -40,16 +72,15 @@ export class MediaRepository {
             where: { id },
             include: { variants: true },
         })
-        // Prisma bao gồm `variants` dạng mảng quan hệ; MediaAsset trong contracts
-        // khai báo kiểu tổng quát hơn — cast an toàn vì include đúng với shape.
-        return (asset as unknown as MediaAsset) ?? null
+        return asset ? toMediaAsset(asset) : null
     }
 
     async listAssets(filters: MediaFilterDto): Promise<{ items: MediaAsset[]; total: number }> {
         const { page = 1, limit = 20, type, status, ownerType, ownerId, search } = filters
         const skip = (page - 1) * limit
 
-        const where: Record<string, unknown> = {}
+        // Luật #14: dùng Prisma.MediaAssetWhereInput thay Record<string, unknown>
+        const where: Prisma.MediaAssetWhereInput = {}
         if (type) where.type = type
         // Mặc định chỉ hiển thị các asset đã sẵn sàng (READY) — không trả về asset đang tải (UPLOADING) hoặc hỏng
         where.status = status || MEDIA_STATUS.READY
@@ -73,17 +104,18 @@ export class MediaRepository {
             this.prisma.mediaAsset.count({ where }),
         ])
 
-        return { items: items as unknown as MediaAsset[], total }
+        return { items: items.map(toMediaAsset), total }
     }
 
     // ===== Commands =====
 
     async createAsset(data: CreateMediaAssetInput): Promise<MediaAsset> {
-        const createData: Record<string, unknown> = {
+        // Luật #14: dùng Prisma.MediaAssetCreateInput thay Record<string, unknown> + as never
+        const createData: Prisma.MediaAssetCreateInput = {
             ownerId: data.ownerId,
             ownerType: data.ownerType,
             type: data.type,
-            status: data.status ?? 'READY',
+            status: data.status ?? MEDIA_STATUS.READY,
             originalUrl: data.originalUrl ?? null,
             thumbnailUrl: data.thumbnailUrl ?? null,
             sizeBytes: data.sizeBytes ?? null,
@@ -97,11 +129,11 @@ export class MediaRepository {
         }
 
         const created = await this.prisma.mediaAsset.create({
-            data: createData as never,
+            data: createData,
             include: { variants: true },
         })
 
-        return created as unknown as MediaAsset
+        return toMediaAsset(created)
     }
 
     async updateAsset(id: string, data: UpdateMediaAssetInput): Promise<MediaAsset> {
@@ -111,7 +143,7 @@ export class MediaRepository {
             include: { variants: true },
         })
 
-        return updated as unknown as MediaAsset
+        return toMediaAsset(updated)
     }
 
     async deleteAsset(id: string): Promise<MediaAsset> {
@@ -120,6 +152,6 @@ export class MediaRepository {
             include: { variants: true },
         })
 
-        return deleted as unknown as MediaAsset
+        return toMediaAsset(deleted)
     }
 }

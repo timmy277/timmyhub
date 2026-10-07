@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useRef, useState } from 'react'
+import React, { useRef } from 'react'
+import type { Resolver } from 'react-hook-form'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { FolderTreeIcon, ImageIcon, Loader2Icon, SparklesIcon, UploadCloudIcon, XIcon } from 'lucide-react'
@@ -18,14 +19,14 @@ import {
     CardDescription,
     CardHeader,
     CardTitle,
-    Input,
+    FloatInput,
+    FloatTextarea,
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
     Switch,
-    Textarea,
 } from '@/components'
 import { useUploadMedia } from '@/hooks'
 
@@ -58,11 +59,11 @@ export function CategoryForm({
 }: CategoryFormProps) {
     const t = useTranslations('categories')
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const [isUploading, setIsUploading] = useState(false)
     const uploadMutation = useUploadMedia()
+    const isUploading = uploadMutation.isPending
 
     const form = useForm<CreateCategoryInput>({
-        resolver: zodResolver(CreateCategoryInputSchema) as never,
+        resolver: zodResolver(CreateCategoryInputSchema) as unknown as Resolver<CreateCategoryInput>,
         defaultValues: {
             name: initialData?.name ?? '',
             slug: initialData?.slug ?? '',
@@ -91,7 +92,6 @@ export function CategoryForm({
         const file = e.target.files?.[0]
         if (!file) return
 
-        setIsUploading(true)
         try {
             const uploaded = await uploadMutation.mutateAsync({
                 files: [file],
@@ -105,7 +105,6 @@ export function CategoryForm({
         } catch {
             toast.error(t('messages.uploadFailed'))
         } finally {
-            setIsUploading(false)
             if (fileInputRef.current) fileInputRef.current.value = ''
         }
     }
@@ -116,7 +115,7 @@ export function CategoryForm({
     )
 
     return (
-        <form onSubmit={form.handleSubmit(onSubmit as never)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <Card className="border-border/60 shadow-sm">
                 <CardHeader>
                     <CardTitle className="text-base font-bold flex items-center gap-2">
@@ -134,8 +133,9 @@ export function CategoryForm({
                             <span>{t('form.name')}</span>
                             <span className="text-destructive">*</span>
                         </label>
-                        <Input
+                        <FloatInput
                             {...form.register('name')}
+                            label={t('form.name')}
                             placeholder={t('form.namePlaceholder')}
                             className="text-xs rounded-lg"
                         />
@@ -164,8 +164,9 @@ export function CategoryForm({
                                 <span>{t('form.generateSlug')}</span>
                             </Button>
                         </div>
-                        <Input
+                        <FloatInput
                             {...form.register('slug')}
+                            label={t('form.slug')}
                             placeholder="dien-thoai-thiet-bi-di-dong"
                             className="text-xs rounded-lg font-mono"
                         />
@@ -238,8 +239,9 @@ export function CategoryForm({
 
                             <div className="flex-1 space-y-1.5 w-full">
                                 <div className="flex items-center gap-2">
-                                    <Input
+                                    <FloatInput
                                         {...form.register('image')}
+                                        label={t('form.image')}
                                         placeholder="https://example.com/category-icon.png"
                                         className="text-xs rounded-lg flex-1"
                                     />
@@ -278,8 +280,9 @@ export function CategoryForm({
                     {/* Mô tả */}
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold text-foreground">{t('form.description')}</label>
-                        <Textarea
+                        <FloatTextarea
                             {...form.register('description')}
+                            label={t('form.description')}
                             placeholder={t('form.descPlaceholder')}
                             className="text-xs rounded-lg min-h-[80px]"
                             maxLength={500}
@@ -295,10 +298,11 @@ export function CategoryForm({
                         {/* Vị trí hiển thị */}
                         <div className="space-y-1.5">
                             <label className="text-xs font-semibold text-foreground">{t('form.position')}</label>
-                            <Input
+                            <FloatInput
                                 type="number"
                                 min={0}
                                 {...form.register('position', { valueAsNumber: true })}
+                                label={t('form.position')}
                                 className="text-xs rounded-lg"
                             />
                             <p className="text-[10px] text-muted-foreground">{t('form.positionHelp')}</p>

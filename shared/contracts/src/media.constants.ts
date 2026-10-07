@@ -3,6 +3,8 @@
  * Central source of truth for file types, extensions, size limits, and presets.
  */
 
+// ===== Media Types =====
+
 export const MEDIA_TYPE = {
     IMAGE: 'IMAGE',
     VIDEO: 'VIDEO',
@@ -32,12 +34,14 @@ export const MEDIA_OWNER_TYPE = {
 
 export type MediaOwnerType = (typeof MEDIA_OWNER_TYPE)[keyof typeof MEDIA_OWNER_TYPE]
 
-/** Allowed File Extensions */
+// ===== Allowed Extensions =====
+
 export const ALLOWED_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'] as const
 export const ALLOWED_VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov', 'mkv', 'avi'] as const
 export const ALLOWED_ALL_EXTENSIONS = [...ALLOWED_IMAGE_EXTENSIONS, ...ALLOWED_VIDEO_EXTENSIONS] as const
 
-/** Allowed MIME Types */
+// ===== Allowed MIME Types =====
+
 export const ALLOWED_IMAGE_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/svg+xml'] as const
 
 export const ALLOWED_VIDEO_MIME_TYPES = [
@@ -50,11 +54,14 @@ export const ALLOWED_VIDEO_MIME_TYPES = [
 
 export const ALLOWED_ALL_MIME_TYPES = [...ALLOWED_IMAGE_MIME_TYPES, ...ALLOWED_VIDEO_MIME_TYPES] as const
 
-/** File Size Limits */
+// ===== File Size Limits =====
+
 export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024 // 10 MB
 export const MAX_VIDEO_SIZE_BYTES = 200 * 1024 * 1024 // 200 MB
 export const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
 export const DEFAULT_MAX_FILES = 10
+
+// ===== Upload Presets =====
 
 /** Chunk size for resumable multipart/S3/Supabase tus uploads (6 MB strict) */
 export const S3_UPLOAD_CHUNK_SIZE_BYTES = 6 * 1024 * 1024 // 6 MB

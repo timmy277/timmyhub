@@ -26,7 +26,8 @@
     "errorDigest": "This content could not be loaded. Error code: {digest}",
     "notFoundTitle": "Page not found",
     "notFoundDescription": "The page you are looking for does not exist or has been moved.",
-    "backHome": "Back to home"
+    "backHome": "Back to home",
+    "errorGeneric": "An error occurred. Please try again."
   },
   "role": {
     "superAdmin": "Super admin",
@@ -225,7 +226,14 @@
     "securityCardTitle": "Account Security",
     "securityCardDescription": "Protect your account with strong authentication and security settings.",
     "notificationsCardTitle": "System Notifications",
-    "notificationsCardDescription": "Track account updates and key announcements from the platform."
+    "notificationsCardDescription": "Track account updates and key announcements from the platform.",
+    "footer": {
+      "newsletterInvalid": "Please enter a valid email address",
+      "newsletterSuccess": "Newsletter subscription successful!",
+      "newsletterSuccessDesc": "TimmyHub will send exclusive discount codes to your inbox.",
+      "newsletterPlaceholder": "Enter your email...",
+      "newsletterLabel": "Email"
+    }
   },
   "login": {
     "metaTitle": "Log in",
@@ -424,6 +432,8 @@
     "actorTypeSystem": "System"
   },
   "account": {
+    "metaTitle": "Account Settings · TimmyHub",
+    "metaDescription": "Manage your personal information, security password, address book, and notifications",
     "dialogTitle": "Account Settings",
     "dialogDescription": "Manage your personal information, security password, address book, and notifications.",
     "tabs": {
@@ -637,6 +647,12 @@
     "rejectReasonRequired": "Please enter or select a rejection reason"
   },
   "seller": {
+    "metaTitle": "Seller · TimmyHub",
+    "registerMetaTitle": "Register to Sell · TimmyHub",
+    "portalMetaTitle": "Seller Portal Overview · TimmyHub",
+    "settingsMetaTitle": "Shop Settings · Seller Portal · TimmyHub",
+    "ordersMetaTitle": "Order Management · Seller Portal · TimmyHub",
+    "applicationsMetaTitle": "Seller Application Review · TimmyHub",
     "register": {
       "badge": "Seller Partner Program 2026",
       "heroTitle": "Start Your Online Store with TimmyHub",
@@ -687,7 +703,8 @@
       "statusPending": "Pending Review",
       "statusApproved": "Approved",
       "statusRejected": "Rejected",
-      "noteLabel": "Admin Feedback:"
+      "noteLabel": "Admin Feedback:",
+      "submitFailed": "Could not submit application. Please check your information."
     },
     "portal": {
       "badge": "Seller Administration Channel",
@@ -724,12 +741,18 @@
       "savingBtn": "Saving…",
       "settingsSuccess": "Store profile updated successfully!",
       "settingsFailed": "Failed to update profile: {error}",
+      "settingsError": "An error occurred while saving. Please try again.",
       "sampleProductName": "Sample Demo Product",
       "price": "Price",
       "stock": "Stock",
       "sales": "Sold",
       "status": "Status",
       "statusActive": "Active"
+    },
+    "orders": {
+      "orderConfirmed": "Order confirmed successfully! Please pack and hand over.",
+      "orderHandedOver": "Order status updated to Shipping.",
+      "printingInvoice": "Generating shipping label for order {code}…"
     }
   },
   "products": {
@@ -875,7 +898,72 @@
       "submitReview": "Submit for Review",
       "saveDraft": "Save as Draft",
       "cancel": "Cancel",
-      "submitting": "Processing…"
+      "submitting": "Processing…",
+      "basicInfo": "Basic Information",
+      "mediaTitle": "Product Images & Videos",
+      "mediaDesc": "Upload images and videos to give customers the most vivid shopping experience.",
+      "maxImages": "Maximum of 10 images reached.",
+      "maxVideos": "Maximum of 3 videos reached.",
+      "addedMedia": "Added {imageCount} images and {videoCount} videos.",
+      "uploadFailed": "Upload failed",
+      "uploadingTitle": "Uploading files to server...",
+      "uploadingDesc": "Please wait a moment",
+      "clickToUpload": "Click to select files or drag & drop images & videos here",
+      "uploadFormats": "Supports JPG, PNG, WEBP (max 10 images) & MP4, WEBM, MOV (max 3 videos)",
+      "autoDetect": "Auto detect",
+      "imageType": "Image",
+      "videoType": "Video",
+      "urlPlaceholder": "Or paste an image / video URL directly...",
+      "addUrl": "Add URL",
+      "imageListLabel": "Image list ({count}/10):",
+      "videoListLabel": "Video list ({count}/3):",
+      "coverBadge": "Cover",
+      "videoBadge": "Video #{index}",
+      "duplicateVideo": "This video is already in the list.",
+      "maxVideoLimit": "Maximum 3 videos per product.",
+      "addedVideo": "Added 1 video",
+      "duplicateImage": "This image is already in the list.",
+      "maxImageLimit": "Maximum 10 images per product.",
+      "addedImage": "Added 1 image",
+      "duplicateOptionValue": "This value already exists in the option group.",
+      "maxOptionGroups": "Maximum 3 option groups (e.g.: Color, Size, Material).",
+      "optionGroupDefault": "Option {index}",
+      "batchEnterPrompt": "Please enter at least Price, Compare Price, Stock or SKU prefix to apply.",
+      "batchApplied": "Applied batch info to {count} variants!",
+      "batchTitle": "Apply to all {count} variants",
+      "batchDesc": "Quickly fill price, stock & SKU for all variants in 1 click",
+      "batchPriceLabel": "Common price (₫)",
+      "batchCompareLabel": "Compare-at price (₫)",
+      "batchStockLabel": "Common stock",
+      "batchSkuLabel": "SKU prefix",
+      "batchApplyBtn": "Apply to all variants",
+      "variantsCount": "{count} variants",
+      "variantColHeader": "Variant",
+      "priceColHeader": "Price *",
+      "compareColHeader": "Compare",
+      "stockColHeader": "Stock *",
+      "skuColHeader": "SKU",
+      "priceMustBePositive": "Price must be greater than 0.",
+      "missingVariants": "Please fill in all option groups and variant values.",
+      "validationError": "Please check the product information you entered.",
+      "skuLabel": "SKU",
+      "addValuePlaceholder": "Add value (press Enter)",
+      "autoSku": "Auto",
+      "emptyComparePlaceholder": "Leave empty",
+      "variantSectionTitle": "2. Variants & Pricing",
+      "batchPricePlaceholder": "e.g. 150000",
+      "batchComparePricePlaceholder": "e.g. 200000",
+      "batchStockPlaceholder": "e.g. 50",
+      "batchSkuPrefixPlaceholder": "e.g. POLO",
+      "batchSkuPrefixLabel": "SKU Prefix",
+      "autoSkuPlaceholder": "Auto",
+      "variantsTableLabel": "{count} variants",
+      "colVariant": "Variant",
+      "colPriceRequired": "Price *",
+      "colComparePrice": "Compare Price",
+      "colStockRequired": "Stock *",
+      "colSku": "SKU",
+      "batchApplyAllBtn": "Apply to all variants"
     },
     "messages": {
       "createSuccess": "Product created and submitted for review successfully!",
@@ -918,7 +1006,46 @@
     "approveSuccess": "Product approved successfully!",
     "rejectSuccess": "Product rejected successfully!",
     "suspendSuccess": "Product suspended across platform!",
-    "restoreSuccess": "Product restored successfully!"
+    "restoreSuccess": "Product restored successfully!",
+    "suspendedReasonLabel": "Suspension reason:",
+    "noSuspendedReason": "No specific reason provided",
+    "loadingProducts": "Loading marketplace products…",
+    "emptyTitle": "No products found",
+    "emptyDesc": "No products match the current filter.",
+    "searchPlaceholder": "Search product name, slug, shop...",
+    "colProduct": "Product",
+    "colShop": "Shop",
+    "colCategory": "Category",
+    "colPrice": "Price range",
+    "colStock": "Stock",
+    "colSold": "Sold",
+    "colStatus": "Status",
+    "colActions": "Moderation / Actions",
+    "defaultCategory": "Default",
+    "productUnit": "products",
+    "viewDetail": "View details",
+    "detailTitle": "Product detail #{id}",
+    "detailShop": "Shop: {shop}",
+    "detailCategory": "Category: {category}",
+    "detailPrice": "Price: {price}",
+    "detailStock": "Stock: {count} products",
+    "suspendedLabel": "Currently suspended",
+    "detailImages": "Image gallery ({count} images):",
+    "detailVideos": "Product videos ({count} videos):"
+  },
+  "media": {
+    "library": {
+      "deleteSuccess": "Media file deleted successfully!",
+      "deleteFailed": "Failed to delete media file",
+      "copySuccess": "URL copied!",
+      "copyFailed": "Failed to copy",
+      "loading": "Loading media library...",
+      "loadErrorDesc": "Could not load media list. Please try again."
+    },
+    "lightbox": {
+      "copySuccess": "Media link copied!",
+      "copyFailed": "Failed to copy link"
+    }
   },
   "categories": {
     "pageTitle": "Product Categories · TimmyHub",

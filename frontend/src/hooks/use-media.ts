@@ -1,3 +1,5 @@
+'use client'
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import type {
@@ -105,7 +107,7 @@ export function usePresignedUpload() {
             // Step 1: Request presigned URL from Backend
             const presignedPayload: CreatePresignedUrlDto = {
                 filename: file.name,
-                mimeType: file.type,
+                mimeType: file.type as CreatePresignedUrlDto['mimeType'],
                 sizeBytes: file.size,
                 ownerType: ownerType || 'GENERAL',
                 ownerId,

@@ -1,9 +1,14 @@
 import { z } from 'zod'
 
 import { apiMessageKey } from './i18n/translate'
+import { PERMISSION_NAMES, type PermissionName } from './permissions.catalog'
 
 // Zod DTO cho REST API của domain rbac — docs/03-specs/rbac-permission/design.md §3.
 // Đây là nguồn validation duy nhất (CLAUDE.md luật #15), dùng chung FE/BE. Message là khoá thông điệp (auth.schema.ts).
+
+// Schema cho permission name — nguồn sự thật là PERMISSION_NAMES trong permissions.catalog.ts (luật #23).
+export const PermissionNameSchema = z.enum(PERMISSION_NAMES)
+export type { PermissionName }
 
 const DisplayNameSchema = z.string().min(1, apiMessageKey('validation.displayNameRequired'))
 
@@ -24,7 +29,7 @@ export const UpdateRoleSchema = z.object({
 export type UpdateRoleInput = z.infer<typeof UpdateRoleSchema>
 
 export const AssignRolePermissionsSchema = z.object({
-    permissionNames: z.array(z.string().min(1)).min(0),
+    permissionNames: z.array(PermissionNameSchema).min(0),
 })
 export type AssignRolePermissionsInput = z.infer<typeof AssignRolePermissionsSchema>
 
@@ -45,7 +50,7 @@ export const AssignUserRoleSchema = z.object({
 export type AssignUserRoleInput = z.infer<typeof AssignUserRoleSchema>
 
 export const GrantUserPermissionSchema = z.object({
-    permissionName: z.string().min(1, apiMessageKey('validation.permissionNameRequired')),
+    permissionName: PermissionNameSchema,
     isGranted: z.boolean(),
 })
 export type GrantUserPermissionInput = z.infer<typeof GrantUserPermissionSchema>
@@ -69,10 +74,10 @@ export type PermissionSummary = {
 }
 
 export type RoleDetail = RoleSummary & {
-    permissionNames: string[]
+    permissionNames: PermissionName[]
 }
 
 export type EffectivePermissions = {
     userId: string
-    permissions: string[]
+    permissions: PermissionName[]
 }

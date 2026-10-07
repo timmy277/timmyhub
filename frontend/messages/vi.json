@@ -26,7 +26,8 @@
     "errorDigest": "Không tải được nội dung này. Mã lỗi: {digest}",
     "notFoundTitle": "Không tìm thấy trang",
     "notFoundDescription": "Trang bạn tìm không tồn tại hoặc đã bị chuyển đi.",
-    "backHome": "Về trang chủ"
+    "backHome": "Về trang chủ",
+    "errorGeneric": "Đã có lỗi xảy ra. Vui lòng thử lại."
   },
   "role": {
     "superAdmin": "Quản trị cấp cao",
@@ -225,7 +226,14 @@
     "securityCardTitle": "Bảo mật tài khoản",
     "securityCardDescription": "Bảo vệ tài khoản với mật khẩu mạnh và cài đặt bảo mật cá nhân.",
     "notificationsCardTitle": "Thông báo hệ thống",
-    "notificationsCardDescription": "Theo dõi các cập nhật tài khoản và thông tin quan trọng từ hệ thống."
+    "notificationsCardDescription": "Theo dõi các cập nhật tài khoản và thông tin quan trọng từ hệ thống.",
+    "footer": {
+      "newsletterInvalid": "Vui lòng nhập địa chỉ email hợp lệ",
+      "newsletterSuccess": "Đăng ký nhận bản tin thành công!",
+      "newsletterSuccessDesc": "TimmyHub sẽ gửi các mã giảm giá độc quyền đến hộp thư của bạn.",
+      "newsletterPlaceholder": "Nhập email của bạn...",
+      "newsletterLabel": "Email"
+    }
   },
   "login": {
     "metaTitle": "Đăng nhập",
@@ -424,6 +432,8 @@
     "actorTypeSystem": "Hệ thống"
   },
   "account": {
+    "metaTitle": "Cài đặt tài khoản · TimmyHub",
+    "metaDescription": "Quản lý thông tin cá nhân, bảo mật mật khẩu, sổ địa chỉ và cài đặt thông báo",
     "dialogTitle": "Cài đặt tài khoản",
     "dialogDescription": "Quản lý thông tin cá nhân, bảo mật mật khẩu, sổ địa chỉ và cài đặt thông báo.",
     "tabs": {
@@ -637,6 +647,12 @@
     "rejectReasonRequired": "Vui lòng nhập hoặc chọn lý do từ chối"
   },
   "seller": {
+    "metaTitle": "Người bán · TimmyHub",
+    "registerMetaTitle": "Đăng ký bán hàng · TimmyHub",
+    "portalMetaTitle": "Tổng quan Kênh Người Bán · TimmyHub",
+    "settingsMetaTitle": "Cài đặt gian hàng · Kênh Người Bán · TimmyHub",
+    "ordersMetaTitle": "Quản lý đơn hàng · Kênh Người Bán · TimmyHub",
+    "applicationsMetaTitle": "Duyệt đơn đăng ký bán hàng · TimmyHub",
     "register": {
       "badge": "Chương trình Đối tác Người bán 2026",
       "heroTitle": "Khởi đầu Gian hàng Trực tuyến của bạn",
@@ -687,7 +703,8 @@
       "statusPending": "Đang chờ duyệt",
       "statusApproved": "Đã phê duyệt",
       "statusRejected": "Bị từ chối",
-      "noteLabel": "Phản hồi từ Admin:"
+      "noteLabel": "Phản hồi từ Admin:",
+      "submitFailed": "Không thể gửi đơn đăng ký. Vui lòng kiểm tra lại thông tin."
     },
     "portal": {
       "badge": "Kênh Quản Trị Người Bán",
@@ -724,12 +741,18 @@
       "savingBtn": "Đang lưu…",
       "settingsSuccess": "Đã cập nhật thông tin gian hàng thành công!",
       "settingsFailed": "Không thể cập nhật thông tin: {error}",
+      "settingsError": "Đã xảy ra lỗi khi lưu thông tin. Vui lòng thử lại.",
       "sampleProductName": "Sản phẩm mẫu demo",
       "price": "Giá bán",
       "stock": "Tồn kho",
       "sales": "Đã bán",
       "status": "Trạng thái",
       "statusActive": "Đang bán"
+    },
+    "orders": {
+      "orderConfirmed": "Đã xác nhận đơn hàng thành công! Vui lòng đóng gói và bàn giao.",
+      "orderHandedOver": "Đã chuyển đơn hàng sang trạng thái Đang giao hàng.",
+      "printingInvoice": "Đang tạo phiếu gửi hàng cho đơn {code}…"
     }
   },
   "products": {
@@ -875,7 +898,72 @@
       "submitReview": "Gửi xét duyệt",
       "saveDraft": "Lưu bản nháp",
       "cancel": "Huỷ",
-      "submitting": "Đang xử lý…"
+      "submitting": "Đang xử lý…",
+      "basicInfo": "Thông tin cơ bản",
+      "mediaTitle": "Hình ảnh & Video sản phẩm",
+      "mediaDesc": "Tải ảnh và video chung để khách hàng có trải nghiệm mua sắm sống động nhất.",
+      "maxImages": "Đã đạt tối đa 10 hình ảnh.",
+      "maxVideos": "Đã đạt tối đa 3 video.",
+      "addedMedia": "Đã thêm {imageCount} ảnh và {videoCount} video.",
+      "uploadFailed": "Tải lên thất bại",
+      "uploadingTitle": "Đang tải tệp tin lên máy chủ...",
+      "uploadingDesc": "Vui lòng chờ trong giây lát",
+      "clickToUpload": "Nhấp để chọn tệp hoặc kéo thả ảnh & video vào đây",
+      "uploadFormats": "Hỗ trợ JPG, PNG, WEBP (tối đa 10 ảnh) & MP4, WEBM, MOV (tối đa 3 video)",
+      "autoDetect": "Tự nhận diện",
+      "imageType": "Ảnh",
+      "videoType": "Video",
+      "urlPlaceholder": "Hoặc dán liên kết URL ảnh / video trực tiếp...",
+      "addUrl": "Thêm URL",
+      "imageListLabel": "Danh sách ảnh ({count}/10):",
+      "videoListLabel": "Danh sách video ({count}/3):",
+      "coverBadge": "Ảnh bìa",
+      "videoBadge": "Video #{index}",
+      "duplicateVideo": "Video này đã có trong danh sách.",
+      "maxVideoLimit": "Tối đa 3 video cho mỗi sản phẩm.",
+      "addedVideo": "Đã thêm 1 video",
+      "duplicateImage": "Ảnh này đã có trong danh sách.",
+      "maxImageLimit": "Tối đa 10 hình ảnh cho mỗi sản phẩm.",
+      "addedImage": "Đã thêm 1 ảnh",
+      "duplicateOptionValue": "Giá trị này đã tồn tại trong nhóm phân loại.",
+      "maxOptionGroups": "Tối đa 3 nhóm phân loại (ví dụ: Màu sắc, Size, Chất liệu).",
+      "optionGroupDefault": "Phân loại {index}",
+      "batchEnterPrompt": "Vui lòng nhập ít nhất Giá bán, Giá gốc, Tồn kho hoặc Tiền tố SKU để áp dụng.",
+      "batchApplied": "Đã áp dụng thông tin hàng loạt cho {count} biến thể!",
+      "batchTitle": "Áp dụng hàng loạt cho tất cả {count} biến thể",
+      "batchDesc": "Điền nhanh giá, tồn kho & SKU cho mọi biến thể chỉ với 1 click",
+      "batchPriceLabel": "Giá bán chung (đ)",
+      "batchCompareLabel": "Giá gốc so sánh (đ)",
+      "batchStockLabel": "Tồn kho chung",
+      "batchSkuLabel": "Tiền tố SKU",
+      "batchApplyBtn": "Áp dụng cho tất cả biến thể",
+      "variantsCount": "{count} biến thể",
+      "variantColHeader": "Phiên bản",
+      "priceColHeader": "Giá bán *",
+      "compareColHeader": "Giá gốc",
+      "stockColHeader": "Tồn kho *",
+      "skuColHeader": "Mã SKU",
+      "priceMustBePositive": "Giá bán phải lớn hơn 0.",
+      "missingVariants": "Vui lòng nhập đầy đủ nhóm phân loại và giá trị biến thể.",
+      "validationError": "Vui lòng kiểm tra lại thông tin sản phẩm đã nhập.",
+      "skuLabel": "Mã SKU",
+      "addValuePlaceholder": "Thêm giá trị (nhấn Enter)",
+      "autoSku": "Tự động",
+      "emptyComparePlaceholder": "Để trống",
+      "variantSectionTitle": "2. Phân loại hàng & Giá bán",
+      "batchPricePlaceholder": "VD: 150000",
+      "batchComparePricePlaceholder": "VD: 200000",
+      "batchStockPlaceholder": "VD: 50",
+      "batchSkuPrefixPlaceholder": "VD: POLO",
+      "batchSkuPrefixLabel": "Tiền tố SKU",
+      "autoSkuPlaceholder": "Tự động",
+      "variantsTableLabel": "{count} biến thể",
+      "colVariant": "Phiên bản",
+      "colPriceRequired": "Giá bán *",
+      "colComparePrice": "Giá gốc",
+      "colStockRequired": "Tồn kho *",
+      "colSku": "Mã SKU",
+      "batchApplyAllBtn": "Áp dụng cho tất cả biến thể"
     },
     "messages": {
       "createSuccess": "Đã tạo sản phẩm thành công và gửi xét duyệt!",
@@ -918,7 +1006,46 @@
     "approveSuccess": "Đã phê duyệt sản phẩm thành công!",
     "rejectSuccess": "Đã từ chối sản phẩm thành công!",
     "suspendSuccess": "Đã tạm ngưng sản phẩm trên toàn sàn!",
-    "restoreSuccess": "Đã khôi phục sản phẩm hoạt động trở lại!"
+    "restoreSuccess": "Đã khôi phục sản phẩm hoạt động trở lại!",
+    "suspendedReasonLabel": "Lý do tạm ngưng:",
+    "noSuspendedReason": "Không có lý do cụ thể",
+    "loadingProducts": "Đang tải danh sách sản phẩm sàn…",
+    "emptyTitle": "Không có sản phẩm nào",
+    "emptyDesc": "Không tìm thấy sản phẩm nào khớp với bộ lọc hiện tại.",
+    "searchPlaceholder": "Tìm tên sản phẩm, slug, shop...",
+    "colProduct": "Sản phẩm",
+    "colShop": "Gian hàng",
+    "colCategory": "Danh mục",
+    "colPrice": "Khoảng giá",
+    "colStock": "Tồn kho",
+    "colSold": "Đã bán",
+    "colStatus": "Trạng thái",
+    "colActions": "Kiểm duyệt / Thao tác",
+    "defaultCategory": "Mặc định",
+    "productUnit": "sản phẩm",
+    "viewDetail": "Xem chi tiết",
+    "detailTitle": "Chi tiết sản phẩm #{id}",
+    "detailShop": "Gian hàng: {shop}",
+    "detailCategory": "Danh mục: {category}",
+    "detailPrice": "Giá: {price}",
+    "detailStock": "Tồn kho: {count} sản phẩm",
+    "suspendedLabel": "Đang bị tạm ngưng",
+    "detailImages": "Thư viện ảnh ({count} ảnh):",
+    "detailVideos": "Video sản phẩm ({count} video):"
+  },
+  "media": {
+    "library": {
+      "deleteSuccess": "Đã xoá tập tin media thành công!",
+      "deleteFailed": "Không thể xoá tập tin media",
+      "copySuccess": "Đã sao chép đường dẫn!",
+      "copyFailed": "Không thể sao chép",
+      "loading": "Đang tải thư viện media...",
+      "loadErrorDesc": "Không thể tải danh sách media. Vui lòng thử lại."
+    },
+    "lightbox": {
+      "copySuccess": "Đã sao chép liên kết media!",
+      "copyFailed": "Không thể sao chép liên kết"
+    }
   },
   "categories": {
     "pageTitle": "Quản lý danh mục sản phẩm · TimmyHub",

@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 
 import { getMyShopAction, SellerSettingsView } from '@/features/seller'
 
-export const metadata: Metadata = {
-    title: 'Cài đặt gian hàng · Kênh Người Bán · TimmyHub',
+export async function generateMetadata(): Promise<Metadata> {
+    const t = await getTranslations('seller')
+    return { title: t('settingsMetaTitle') }
 }
 
 export default async function SellerSettingsPage() {

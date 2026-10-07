@@ -51,11 +51,11 @@ export function SellerSettingsView({ initialShop }: SellerSettingsViewProps = {}
                 toast.success(t('settingsSuccess'))
                 void queryClient.invalidateQueries({ queryKey: QUERY_KEY.SELLER.MY_SHOP })
             } else {
-                toast.error(t('settingsFailed', { error: res.message || 'Lỗi cập nhật' }))
+                toast.error(t('settingsFailed', { error: res.message || t('updateError') }))
             }
         },
         onError: () => {
-            toast.error('Đã xảy ra lỗi khi lưu thông tin. Vui lòng thử lại.')
+            toast.error(t('settingsError'))
         },
     })
 

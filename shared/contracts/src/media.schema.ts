@@ -8,6 +8,8 @@ import {
     MAX_VIDEO_SIZE_BYTES,
 } from './media.constants'
 
+// ===== Enums =====
+
 export const MediaTypeEnum = z.enum([MEDIA_TYPE.IMAGE, MEDIA_TYPE.VIDEO])
 export const MediaStatusEnum = z.enum([
     MEDIA_STATUS.UPLOADING,
@@ -25,6 +27,8 @@ export const MediaOwnerTypeEnum = z.enum([
     MEDIA_OWNER_TYPE.SELLER_VERIFICATION,
     MEDIA_OWNER_TYPE.GENERAL,
 ])
+
+// ===== Schemas =====
 
 export const MediaVariantSchema = z.object({
     id: z.string(),
@@ -50,21 +54,19 @@ export const MediaAssetSchema = z.object({
     width: z.number().nullable().optional(),
     height: z.number().nullable().optional(),
     failReason: z.string().nullable().optional(),
-    createdAt: z.union([z.string(), z.date()]),
-    updatedAt: z.union([z.string(), z.date()]),
+    createdAt: z.iso.datetime(),
+    updatedAt: z.iso.datetime(),
     variants: z.array(MediaVariantSchema).optional(),
 })
 
 export type MediaAsset = z.infer<typeof MediaAssetSchema>
 
+export const AllowedMimeTypeSchema = z.enum(ALLOWED_ALL_MIME_TYPES)
+
 export const CreatePresignedUrlSchema = z.object({
-    filename: z.string().min(1).max(255),
-    mimeType: z.string().refine((val) => (ALLOWED_ALL_MIME_TYPES as readonly string[]).includes(val), {
-        message: 'Unsupported MIME type',
-    }),
-    sizeBytes: z.number().positive().max(MAX_VIDEO_SIZE_BYTES, {
-        message: 'File size exceeds maximum allowed limit',
-    }),
+    filename: z.string().min(1, 'validation.filenameRequired').max(255, 'validation.filenameMax'),
+    mimeType: AllowedMimeTypeSchema,
+    sizeBytes: z.number().positive().max(MAX_VIDEO_SIZE_BYTES, 'validation.fileSizeExceeded'),
     ownerType: MediaOwnerTypeEnum.default(MEDIA_OWNER_TYPE.GENERAL),
     ownerId: z.string().optional(),
 })
@@ -84,7 +86,7 @@ export type PresignedUrlResponse = z.infer<typeof PresignedUrlResponseSchema>
 
 export const ConfirmMediaUploadSchema = z.object({
     assetId: z.string(),
-    publicUrl: z.string().url(),
+    publicUrl: z.string().url('validation.imageUrlInvalid'),
     sizeBytes: z.number().optional(),
     width: z.number().optional(),
     height: z.number().optional(),

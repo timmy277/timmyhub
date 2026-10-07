@@ -116,7 +116,7 @@ export function RejectDialog({ app, open, onOpenChange, onSucceeded }: RejectDia
         setSubmitting(true)
         try {
             const res = await rejectSellerApplicationAction(app.id, {
-                status: 'REJECTED',
+                status: 'REJECT',
                 reviewNote: reason.trim(),
             })
             if (res.ok) {

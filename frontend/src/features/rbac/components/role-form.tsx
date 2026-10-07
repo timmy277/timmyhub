@@ -7,7 +7,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { ChevronDownIcon, Layers3Icon } from 'lucide-react'
 
-import type { PermissionSummary, RoleDetail } from '@timmyhub/contracts'
+import type { PermissionName, PermissionSummary, RoleDetail } from '@timmyhub/contracts'
 import { CreateRoleSchema, UpdateRoleSchema } from '@timmyhub/contracts'
 
 import {
@@ -58,7 +58,7 @@ interface RoleFormValues {
     name: string
     displayName: string
     description: string
-    selectedPermissions: string[]
+    selectedPermissions: PermissionName[]
 }
 
 // Form tạo/sửa vai trò, dùng chung cho tab "Tạo" và tab "Cập nhật" (giống `UserForm`). Validate bằng chính schema của
@@ -137,7 +137,7 @@ export function RoleForm({ role, permissionCatalog, canAssignPermissions, flags,
         return [...groups.entries()]
     }, [permissionCatalog])
 
-    const selectedSet = useMemo(() => new Set(selectedPermissions), [selectedPermissions])
+    const selectedSet = useMemo(() => new Set<string>(selectedPermissions), [selectedPermissions])
     const permissionsChanged = useMemo(() => {
         if (!role) return selectedPermissions.length > 0
         const original = new Set(role.permissionNames)
@@ -145,13 +145,15 @@ export function RoleForm({ role, permissionCatalog, canAssignPermissions, flags,
     }, [role, selectedPermissions])
 
     // ===== Handlers =====
-    const togglePermission = (name: string, checked: boolean) => {
-        const next = checked ? [...selectedPermissions, name] : selectedPermissions.filter((item) => item !== name)
+    const togglePermission = (name: PermissionName | string, checked: boolean) => {
+        const next = checked
+            ? [...selectedPermissions, name as PermissionName]
+            : selectedPermissions.filter((item) => item !== name)
         setValue('selectedPermissions', next, { shouldDirty: true, shouldValidate: true })
     }
 
     const toggleModule = (permissions: PermissionSummary[], checked: boolean) => {
-        const names = permissions.map((permission) => permission.name)
+        const names = permissions.map((permission) => permission.name as PermissionName)
         const next = checked
             ? [...selectedPermissions, ...names.filter((name) => !selectedPermissions.includes(name))]
             : selectedPermissions.filter((name) => !names.includes(name))
@@ -318,7 +320,7 @@ function PermissionGroup({
     permissions: PermissionSummary[]
     selected: ReadonlySet<string>
     disabled: boolean
-    onToggle: (name: string, checked: boolean) => void
+    onToggle: (name: PermissionName | string, checked: boolean) => void
     onToggleModule: (permissions: PermissionSummary[], checked: boolean) => void
     countLabel: string
     selectAllLabel: string

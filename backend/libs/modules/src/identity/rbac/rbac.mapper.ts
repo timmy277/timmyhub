@@ -1,4 +1,4 @@
-import type { PermissionSummary, RoleDetail, RoleSummary } from '@timmyhub/contracts'
+import type { PermissionName, PermissionSummary, RoleDetail, RoleSummary } from '@timmyhub/contracts'
 import type { Permission, SystemRole } from '@timmyhub/prisma'
 
 // Bản ghi Prisma → DTO trả về API (rbac.schema.ts ở contracts). Chỉ lấy đúng field công khai, Date → ISO string.
@@ -21,7 +21,8 @@ export function toRoleDetail(
     role: Pick<SystemRole, 'id' | 'name' | 'displayName' | 'description' | 'isSystem' | 'createdAt'>,
     permissionNames: string[],
 ): RoleDetail {
-    return { ...toRoleSummary(role), permissionNames }
+    // Ép kiểu an toàn — permissionNames từ DB đã được validate qua PermissionNameSchema khi seed
+    return { ...toRoleSummary(role), permissionNames: permissionNames as PermissionName[] }
 }
 
 export function toPermissionSummary(

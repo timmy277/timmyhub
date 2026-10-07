@@ -7,7 +7,14 @@ import type {
     RoleDetail,
     RoleSummary,
 } from '@timmyhub/contracts'
-import { ApiError, apiMessageKey, isSuperAdmin, PERMISSION_NAMES, UserRole } from '@timmyhub/contracts'
+import {
+    ApiError,
+    apiMessageKey,
+    isSuperAdmin,
+    PERMISSION_NAMES,
+    type PermissionName,
+    UserRole,
+} from '@timmyhub/contracts'
 import type { PermissionResolver } from '@timmyhub/modules/platform/auth'
 import type { SystemRole } from '@timmyhub/prisma'
 
@@ -89,7 +96,7 @@ export class RbacService implements PermissionResolver {
         }
 
         const permissions = await this.getEffectivePermissions(targetUserId)
-        return { userId: targetUserId, permissions: [...permissions] }
+        return { userId: targetUserId, permissions: [...permissions] as PermissionName[] }
     }
 
     async checkPermission(userId: string, permission: string): Promise<boolean> {

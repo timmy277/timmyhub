@@ -16,6 +16,7 @@ import {
     HardDrive,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 import type { MediaOwnerType, MediaType } from '@timmyhub/contracts'
 
 import { useDeleteMedia, useMediaList, useDebouncedValue } from '@/hooks'
@@ -30,12 +31,17 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
+    ErrorState,
 } from '@/components'
 
 import { MediaLightbox, type MediaLightboxItem } from './media-lightbox'
 import { MediaUploader } from './media-uploader'
 
 export function MediaLibrary() {
+    // ===== i18n =====
+    const t = useTranslations('media.library')
+    const tCommon = useTranslations('common')
+
     // ===== State =====
     const [search, setSearch] = useState('')
     const [selectedType, setSelectedType] = useState<MediaType | ''>('')
@@ -50,7 +56,7 @@ export function MediaLibrary() {
 
     // ===== Hooks =====
     const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS)
-    const { data, isLoading, refetch, isFetching } = useMediaList({
+    const { data, isLoading, isError, refetch, isFetching } = useMediaList({
         page: 1,
         limit: 50,
         type: selectedType ? selectedType : undefined,
@@ -71,9 +77,9 @@ export function MediaLibrary() {
         if (!pendingDeleteId) return
         try {
             await deleteMediaMutation.mutateAsync(pendingDeleteId)
-            toast.success('Đã xoá tập tin media thành công!')
+            toast.success(t('deleteSuccess'))
         } catch {
-            toast.error('Không thể xoá tập tin media')
+            toast.error(t('deleteFailed'))
         } finally {
             setPendingDeleteId(null)
         }
@@ -85,10 +91,10 @@ export function MediaLibrary() {
         try {
             await navigator.clipboard.writeText(url)
             setCopiedId(id)
-            toast.success('Đã sao chép đường dẫn!')
+            toast.success(t('copySuccess'))
             setTimeout(() => setCopiedId(null), 2000)
         } catch {
-            toast.error('Không thể sao chép')
+            toast.error(t('copyFailed'))
         }
     }
 
@@ -249,8 +255,14 @@ export function MediaLibrary() {
             {isLoading ? (
                 <div className="w-full py-20 flex flex-col items-center justify-center gap-3 text-neutral-400">
                     <RefreshCw className="w-8 h-8 animate-spin text-sky-500" />
-                    <p className="text-xs">Đang tải thư viện media...</p>
+                    <p className="text-xs">{t('loading')}</p>
                 </div>
+            ) : isError ? (
+                <ErrorState
+                    title={tCommon('errorGeneric')}
+                    description={t('loadErrorDesc')}
+                    onRetry={() => void refetch()}
+                />
             ) : assets.length === 0 ? (
                 <div className="w-full py-16 flex flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-800 text-center p-6">
                     <div className="p-4 rounded-2xl bg-neutral-100 dark:bg-neutral-800 text-neutral-400 mb-3">

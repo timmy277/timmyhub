@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { X, Download, Copy, Check, Film, Image as ImageIcon, ExternalLink } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 
 export interface MediaLightboxItem {
@@ -18,6 +19,7 @@ interface MediaLightboxProps {
 
 export function MediaLightbox({ item, onClose }: MediaLightboxProps) {
     const [copied, setCopied] = useState(false)
+    const t = useTranslations('media.lightbox')
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -33,10 +35,10 @@ export function MediaLightbox({ item, onClose }: MediaLightboxProps) {
         try {
             await navigator.clipboard.writeText(item.url)
             setCopied(true)
-            toast.success('Đã sao chép liên kết media!')
+            toast.success(t('copySuccess'))
             setTimeout(() => setCopied(false), 2000)
         } catch {
-            toast.error('Không thể sao chép liên kết')
+            toast.error(t('copyFailed'))
         }
     }
 

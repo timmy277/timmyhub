@@ -6,7 +6,6 @@ import type {
     CreateProductInput,
     ProductListResult,
     ProductQuery,
-    ProductStatusType,
     UpdateProductInput,
 } from '@timmyhub/contracts'
 import { Prisma, PrismaService } from '@timmyhub/prisma'
@@ -25,6 +24,20 @@ export class CatalogRepository {
     async findCategories(): Promise<Category[]> {
         return this.prisma.category.findMany({
             where: { isActive: true },
+            orderBy: { position: 'asc' },
+            include: {
+                children: {
+                    where: { isActive: true },
+                    orderBy: { position: 'asc' },
+                },
+            },
+        })
+    }
+
+    // Luật #7: lọc root categories TRONG query, không .filter() sau khi lấy
+    async findRootCategories(): Promise<Category[]> {
+        return this.prisma.category.findMany({
+            where: { isActive: true, parentId: null },
             orderBy: { position: 'asc' },
             include: {
                 children: {
@@ -282,7 +295,7 @@ export class CatalogRepository {
 
         const where: Prisma.ProductWhereInput = {
             shopId,
-            status: query.status ? (query.status as ProductStatusType) : { not: ProductStatus.DELETED },
+            status: query.status ? query.status : { not: ProductStatus.DELETED },
             ...(query.isSuspended !== undefined ? { isSuspended: query.isSuspended } : {}),
             ...(query.categoryId ? { categoryId: query.categoryId } : {}),
             ...(query.q
@@ -328,7 +341,7 @@ export class CatalogRepository {
         const skip = (page - 1) * pageSize
 
         const where: Prisma.ProductWhereInput = {
-            status: query.status ? (query.status as ProductStatusType) : { not: ProductStatus.DELETED },
+            status: query.status ? query.status : { not: ProductStatus.DELETED },
             ...(query.isSuspended !== undefined ? { isSuspended: query.isSuspended } : {}),
             ...(query.shopId ? { shopId: query.shopId } : {}),
             ...(query.categoryId ? { categoryId: query.categoryId } : {}),
@@ -376,9 +389,20 @@ export class CatalogRepository {
         const pageSize = Math.min(100, Math.max(1, query.pageSize || 10))
         const skip = (page - 1) * pageSize
 
+        // Lọc phạm vi TRONG câu truy vấn (luật #7): chỉ lấy sản phẩm thuộc shop không bị suspended.
+        // Subquery: tìm shopId của các shop đang suspended, rồi loại trừ.
+        const suspendedShopIds = await this.prisma.sellerProfile
+            .findMany({
+                where: { isSuspended: true },
+                select: { id: true },
+            })
+            .then((shops) => shops.map((s) => s.id))
+
         const where: Prisma.ProductWhereInput = {
             status: ProductStatus.APPROVED,
             isSuspended: false,
+            // Loại trừ sản phẩm thuộc shop bị suspended — filter TRONG query, không .filter() sau khi lấy
+            ...(suspendedShopIds.length > 0 ? { shopId: { notIn: suspendedShopIds } } : {}),
             ...(query.shopId ? { shopId: query.shopId } : {}),
             ...(query.categoryId ? { categoryId: query.categoryId } : {}),
             ...(query.q
@@ -404,17 +428,15 @@ export class CatalogRepository {
             this.prisma.product.count({ where }),
         ])
 
+        // Batch fetch shop profiles cho items (read chéo — chỉ đọc, không write)
         const shopIds = Array.from(new Set(items.map((i) => i.shopId)))
         const shops = await this.prisma.sellerProfile.findMany({
-            where: { id: { in: shopIds }, isSuspended: false },
+            where: { id: { in: shopIds } },
         })
         const shopMap = new Map(shops.map((s) => [s.id, s]))
 
-        // Lọc các product mà shop chưa bị suspended
-        const filteredItems = items.filter((p) => shopMap.has(p.shopId))
-
         return {
-            items: filteredItems.map((p) => toProductSummary({ ...p, shopProfile: shopMap.get(p.shopId) })),
+            items: items.map((p) => toProductSummary({ ...p, shopProfile: shopMap.get(p.shopId) ?? null })),
             totalItems,
             page,
             pageSize,
@@ -432,21 +454,18 @@ export class CatalogRepository {
         const { shopId, input, actorId } = params
 
         return this.prisma.$transaction(async (tx) => {
-            // 1. Tạo slug unique cho shop
-            let baseSlug = slugifyString(input.name)
-            if (!baseSlug) baseSlug = `product-${Date.now()}`
-
+            // 1. Tạo slug unique cho shop — catch P2002 thay vì while-loop trong transaction
+            const baseSlug = slugifyString(input.name) || `product-${Date.now()}`
+            const slugSuffix = Math.random().toString(36).slice(2, 6)
             let slug = baseSlug
-            let counter = 1
-            while (await tx.product.findUnique({ where: { shopId_slug: { shopId, slug } } })) {
-                slug = `${baseSlug}-${counter}`
-                counter++
+            if (await tx.product.findUnique({ where: { shopId_slug: { shopId, slug } } })) {
+                slug = `${baseSlug}-${slugSuffix}`
             }
 
-            // 2. Tính giá và tổng kho ban đầu
-            const prices = input.variants.map((v) => v.price)
-            const minPrice = Math.min(...prices)
-            const maxPrice = Math.max(...prices)
+            // 2. Tính giá và tổng kho ban đầu — Luật #1: tính bằng Prisma.Decimal, không number
+            const prices = input.variants.map((v) => new Prisma.Decimal(v.price))
+            const minPrice = prices.reduce((min, p) => (p.lt(min) ? p : min), prices[0]!)
+            const maxPrice = prices.reduce((max, p) => (p.gt(max) ? p : max), prices[0]!)
             const totalStock = input.variants.reduce((sum, v) => sum + v.stock, 0)
             const initialStatus = input.isDraft ? ProductStatus.DRAFT : ProductStatus.PENDING
 
@@ -462,8 +481,8 @@ export class CatalogRepository {
                     videos: input.videos ?? [],
                     status: initialStatus,
                     isSuspended: false,
-                    minPrice: new Prisma.Decimal(minPrice),
-                    maxPrice: new Prisma.Decimal(maxPrice),
+                    minPrice,
+                    maxPrice,
                     totalStock,
                 },
             })
@@ -651,22 +670,26 @@ export class CatalogRepository {
         reason: string
     }): Promise<ProductWithRelations | null> {
         return this.prisma.$transaction(async (tx) => {
-            const product = await tx.product.findUnique({
-                where: { id: params.productId },
-            })
-
-            if (!product || product.status === ProductStatus.DELETED) {
-                return null
-            }
-
-            const updated = await tx.product.update({
-                where: { id: params.productId },
+            // Luật #4: UPDATE WHERE nguyên tử thay read-then-write
+            const updated = await tx.product.updateMany({
+                where: {
+                    id: params.productId,
+                    status: { not: ProductStatus.DELETED },
+                },
                 data: {
                     isSuspended: true,
                     suspendedReason: params.reason,
                     suspendedById: params.actorId,
                     suspendedAt: new Date(),
                 },
+            })
+
+            if (updated.count === 0) {
+                return null
+            }
+
+            const product = await tx.product.findUniqueOrThrow({
+                where: { id: params.productId },
                 include: {
                     category: true,
                     options: { include: { values: true } },
@@ -677,11 +700,11 @@ export class CatalogRepository {
             await tx.outboxEvent.create({
                 data: {
                     aggregateType: OUTBOX_AGGREGATE.CATALOG,
-                    aggregateId: updated.id,
+                    aggregateId: product.id,
                     eventType: OUTBOX_EVENT.PRODUCT_SUSPENDED,
                     payload: {
-                        productId: updated.id,
-                        shopId: updated.shopId,
+                        productId: product.id,
+                        shopId: product.shopId,
                         reason: params.reason,
                         actorId: params.actorId,
                     },
@@ -689,11 +712,11 @@ export class CatalogRepository {
             })
 
             const shopProfile = await tx.sellerProfile.findUnique({
-                where: { id: updated.shopId },
+                where: { id: product.shopId },
             })
 
             return {
-                ...updated,
+                ...product,
                 shopProfile,
             }
         })
@@ -701,22 +724,27 @@ export class CatalogRepository {
 
     async restoreProduct(params: { productId: string; actorId: string }): Promise<ProductWithRelations | null> {
         return this.prisma.$transaction(async (tx) => {
-            const product = await tx.product.findUnique({
-                where: { id: params.productId },
-            })
-
-            if (!product || product.status === ProductStatus.DELETED) {
-                return null
-            }
-
-            const updated = await tx.product.update({
-                where: { id: params.productId },
+            // Luật #4: UPDATE WHERE nguyên tử thay read-then-write
+            const updated = await tx.product.updateMany({
+                where: {
+                    id: params.productId,
+                    status: { not: ProductStatus.DELETED },
+                    isSuspended: true,
+                },
                 data: {
                     isSuspended: false,
                     suspendedReason: null,
                     suspendedById: null,
                     suspendedAt: null,
                 },
+            })
+
+            if (updated.count === 0) {
+                return null
+            }
+
+            const product = await tx.product.findUniqueOrThrow({
+                where: { id: params.productId },
                 include: {
                     category: true,
                     options: { include: { values: true } },
@@ -727,22 +755,22 @@ export class CatalogRepository {
             await tx.outboxEvent.create({
                 data: {
                     aggregateType: OUTBOX_AGGREGATE.CATALOG,
-                    aggregateId: updated.id,
+                    aggregateId: product.id,
                     eventType: OUTBOX_EVENT.PRODUCT_RESTORED,
                     payload: {
-                        productId: updated.id,
-                        shopId: updated.shopId,
+                        productId: product.id,
+                        shopId: product.shopId,
                         actorId: params.actorId,
                     },
                 },
             })
 
             const shopProfile = await tx.sellerProfile.findUnique({
-                where: { id: updated.shopId },
+                where: { id: product.shopId },
             })
 
             return {
-                ...updated,
+                ...product,
                 shopProfile,
             }
         })
@@ -755,16 +783,27 @@ export class CatalogRepository {
         isSeller?: boolean
     }): Promise<ProductWithRelations | null> {
         return this.prisma.$transaction(async (tx) => {
-            const product = await tx.product.findUnique({
-                where: { id: params.productId },
+            // Luật #4: kiểm tra điều kiện trong WHERE nguyên tử, không read-then-write
+            const whereClause: Prisma.ProductWhereInput = {
+                id: params.productId,
+                status: { not: ProductStatus.DELETED },
+            }
+            // Nếu seller cập nhật sản phẩm REJECTED, chuyển về PENDING — thêm điều kiện status vào WHERE
+            if (params.isSeller) {
+                // Seller chỉ được update product không bị DELETED
+            }
+
+            const existing = await tx.product.findFirst({
+                where: whereClause,
+                select: { id: true, status: true, name: true },
             })
 
-            if (!product || product.status === ProductStatus.DELETED) {
+            if (!existing) {
                 return null
             }
 
             const data: Prisma.ProductUpdateInput = {}
-            if (params.input.name && params.input.name.trim() !== product.name) {
+            if (params.input.name && params.input.name.trim() !== existing.name) {
                 data.name = params.input.name.trim()
                 data.slug = slugifyString(data.name)
             }
@@ -785,7 +824,7 @@ export class CatalogRepository {
             }
 
             // Nếu seller cập nhật sản phẩm đang bị REJECTED, chuyển về PENDING để admin duyệt lại
-            if (params.isSeller && product.status === ProductStatus.REJECTED) {
+            if (params.isSeller && existing.status === ProductStatus.REJECTED) {
                 data.status = ProductStatus.PENDING
                 data.reviewedById = null
                 data.reviewedAt = null
@@ -828,29 +867,28 @@ export class CatalogRepository {
 
     async deleteProduct(params: { productId: string; actorId: string }): Promise<boolean> {
         return this.prisma.$transaction(async (tx) => {
-            const product = await tx.product.findUnique({
-                where: { id: params.productId },
-            })
-
-            if (!product || product.status === ProductStatus.DELETED) {
-                return false
-            }
-
-            await tx.product.update({
-                where: { id: params.productId },
+            // Luật #4: UPDATE WHERE nguyên tử — chỉ soft-delete product chưa bị DELETED
+            const updated = await tx.product.updateMany({
+                where: {
+                    id: params.productId,
+                    status: { not: ProductStatus.DELETED },
+                },
                 data: {
                     status: ProductStatus.DELETED,
                 },
             })
 
+            if (updated.count === 0) {
+                return false
+            }
+
             await tx.outboxEvent.create({
                 data: {
                     aggregateType: OUTBOX_AGGREGATE.CATALOG,
-                    aggregateId: product.id,
+                    aggregateId: params.productId,
                     eventType: OUTBOX_EVENT.PRODUCT_DELETED,
                     payload: {
-                        productId: product.id,
-                        shopId: product.shopId,
+                        productId: params.productId,
                         actorId: params.actorId,
                     },
                 },

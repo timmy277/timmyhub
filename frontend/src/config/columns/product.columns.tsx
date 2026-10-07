@@ -39,9 +39,9 @@ interface CreateProductColumnsOptions {
     canCreateOrUpdate?: boolean
 }
 
-function formatVnd(amount: number | null | undefined): string {
+function formatVnd(amount: string | number | null | undefined): string {
     if (amount === null || amount === undefined) return '0 ₫'
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(amount))
 }
 
 // Cột bảng sản phẩm — cùng khuôn `createAuditColumns`/`createUserColumns`: hàm thuần, không hook, trang gọi trong
