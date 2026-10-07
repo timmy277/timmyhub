@@ -198,7 +198,7 @@ describe('SellerService', () => {
 
     describe('rejectApplication (REQ-SEL-007, REQ-SEL-008)', () => {
         const rejectInput: ReviewSellerApplicationInput = {
-            status: 'REJECTED',
+            status: 'REJECT',
             reviewNote: 'Ảnh căn cước công dân bị mờ',
         }
 
@@ -225,7 +225,7 @@ describe('SellerService', () => {
 
             await expect(
                 service.rejectApplication('app-1', 'admin-1', {
-                    status: 'REJECTED',
+                    status: 'REJECT',
                     reviewNote: '   ',
                 }),
             ).rejects.toThrow()
