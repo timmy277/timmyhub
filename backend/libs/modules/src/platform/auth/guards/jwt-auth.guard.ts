@@ -1,5 +1,6 @@
 import type { CanActivate, ExecutionContext } from '@nestjs/common'
 import { Injectable } from '@nestjs/common'
+import { createPublicKey } from 'node:crypto'
 import { ConfigService } from '@nestjs/config'
 import { Reflector } from '@nestjs/core'
 import { JwtService } from '@nestjs/jwt'
@@ -37,12 +38,13 @@ export class JwtAuthGuard implements CanActivate {
             throw new ApiError('UNAUTHORIZED', { messageKey: apiMessageKey('auth.missingAccessToken') })
         }
 
-        const publicKey = this.configService.get<string>('JWT_ACCESS_PUBLIC_KEY')
-        if (!publicKey) {
+        const rawPublicKey = this.configService.get<string>('JWT_ACCESS_PUBLIC_KEY')
+        if (!rawPublicKey) {
             throw new Error(AUTH_CONFIG_ERROR.MISSING_ACCESS_PUBLIC_KEY)
         }
 
         try {
+            const publicKey = createPublicKey(normalizePem(rawPublicKey))
             const payload = await this.jwtService.verifyAsync<AccessTokenPayload>(token, {
                 algorithms: [ACCESS_TOKEN_VERIFY_ALGORITHM],
                 publicKey,
@@ -60,4 +62,18 @@ export class JwtAuthGuard implements CanActivate {
         if (!header?.startsWith(BEARER_PREFIX)) return null
         return header.slice(BEARER_PREFIX.length).trim() || null
     }
+}
+
+// Tương tự auth.service.ts — Render/Vercel có thể nuốt newline trong PEM, khiến verify RS256 fail.
+function normalizePem(raw: string): string {
+    let value = raw.trim()
+    if (value.startsWith('"') && value.endsWith('"')) {
+        value = value.slice(1, -1)
+    }
+    value = value.replace(/\\n/g, '\n')
+    value = value.replace(/(BEGIN(?: ENCRYPTED)? PRIVATE KEY)/g, '$1\n')
+    value = value.replace(/(BEGIN PUBLIC KEY)/g, '$1\n')
+    value = value.replace(/\n?(END(?: ENCRYPTED)? PRIVATE KEY)/g, '\n$1')
+    value = value.replace(/\n?(END PUBLIC KEY)/g, '\n$1')
+    return value.replace(/\n{2,}/g, '\n').trim()
 }

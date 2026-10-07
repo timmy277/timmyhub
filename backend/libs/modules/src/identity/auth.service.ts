@@ -1,3 +1,4 @@
+import { createPrivateKey } from 'node:crypto'
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { EventEmitter2 } from '@nestjs/event-emitter'
@@ -210,10 +211,14 @@ export class AuthService {
     }
 
     private async signAccessToken(userId: string, email: string, roles: readonly UserRole[]): Promise<string> {
-        const privateKey = this.configService.get<string>('JWT_ACCESS_PRIVATE_KEY')
-        if (!privateKey) {
+        const rawKey = this.configService.get<string>('JWT_ACCESS_PRIVATE_KEY')
+        if (!rawKey) {
             throw new Error(IDENTITY_CONFIG_ERROR.MISSING_ACCESS_PRIVATE_KEY)
         }
+        // Hosting platform (Render, Vercel…) thường lưu biến môi trường dưới dạng chuỗi một dòng,
+        // khiến ký tự xuống dòng trong PEM bị thành literal `\n` hoặc mất hoàn toàn.
+        // `crypto.createPrivateKey` chấp nhận PEM string và trả về KeyObject đúng định dạng cho RS256.
+        const privateKey = createPrivateKey(normalizePem(rawKey))
         return this.jwtService.signAsync(
             { sub: userId, email, roles },
             {
@@ -223,4 +228,23 @@ export class AuthService {
             },
         )
     }
+}
+
+// Biến môi trường trên hosting (Render, Vercel…) thường escape sai ký tự xuống dòng trong PEM.
+// Hàm này khôi phục newline thật và bỏ bọc ngoặc kép thừa để `crypto.createPrivateKey` đọc được.
+function normalizePem(raw: string): string {
+    let value = raw.trim()
+    // Bỏ bọc ngoặc kép mà .env local dùng (Render không cần, nhưng để phòng).
+    if (value.startsWith('"') && value.endsWith('"')) {
+        value = value.slice(1, -1)
+    }
+    // Chuyển escape sequence `\n` thành xuống dòng thật nếu bị bẻo thành literal.
+    value = value.replace(/\\n/g, '\n')
+    // Bổ sung newline trước các marker PEM nếu bị dính liền (Render đôi khi nuốt newline).
+    value = value.replace(/(BEGIN(?: ENCRYPTED)? PRIVATE KEY)/g, '$1\n')
+    value = value.replace(/(BEGIN PUBLIC KEY)/g, '$1\n')
+    value = value.replace(/\n?(END(?: ENCRYPTED)? PRIVATE KEY)/g, '\n$1')
+    value = value.replace(/\n?(END PUBLIC KEY)/g, '\n$1')
+    // Gom nhiều dòng trống thành một.
+    return value.replace(/\n{2,}/g, '\n').trim()
 }
