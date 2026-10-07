@@ -1,5 +1,5 @@
 /**
- * Chạy sau `prisma generate` (đã sinh qua script `prepare` bên dưới nếu cần).
+ * Chạy sau `pnpm install`. Sinh Prisma Client (generate) — không cần DATABASE_URL.
  * Chỉ áp migration khi có DATABASE_URL (đọc từ backend/apps/api/.env) — CI/máy chưa cấu hình DB thì bỏ qua,
  * không làm fail `pnpm install`. Dùng `prisma migrate deploy` (không phải `db push`), đúng quy ước
  * data-architecture.md §5: chỉ áp migration đã có sẵn trong thư mục migrations/, không tạo/đổi schema ngầm.
@@ -15,6 +15,16 @@ if (existsSync(apiEnvPath)) {
     require('dotenv').config({ path: apiEnvPath })
 }
 
+// 1. Luôn generate — prisma generate không cần DATABASE_URL (chỉ đọc schema.prisma).
+try {
+    console.log('📦 Prisma generate...')
+    execSync('pnpm exec prisma generate --schema=./prisma/schema', { cwd: root, stdio: 'inherit' })
+} catch {
+    console.warn('⚠️  Postinstall: prisma generate thất bại. Chạy tay: pnpm --filter @timmyhub/prisma prisma:generate')
+    process.exit(0) // không làm fail install — generate sẽ chạy lại trong CI step hoặc build
+}
+
+// 2. Migrate deploy — chỉ khi có DATABASE_URL.
 const hasDb = Boolean(process.env.DATABASE_URL && process.env.DATABASE_URL.trim() !== '')
 
 if (!hasDb) {
@@ -23,12 +33,8 @@ if (!hasDb) {
 }
 
 try {
-    console.log('📦 Prisma generate...')
-    execSync('pnpm exec prisma generate --schema=./prisma/schema', { cwd: root, stdio: 'inherit' })
-
     console.log('🚀 Prisma migrate deploy...')
     execSync('pnpm exec prisma migrate deploy --schema=./prisma/schema', { cwd: root, stdio: 'inherit' })
-
     console.log('✅ Postinstall (db) done.')
 } catch {
     console.warn('⚠️  Postinstall migrate deploy thất bại (kiểm tra DATABASE_URL). Chạy tay: pnpm run db:setup')

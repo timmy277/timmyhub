@@ -10,7 +10,7 @@
     "db:setup": "prisma migrate deploy --schema=./prisma/schema",
     "db:seed": "tsx prisma/seed.ts",
     "postinstall": "node scripts/postinstall.js",
-    "build": "pnpm run prisma:generate && tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/copy-generated.js",
     "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc -p tsconfig.json --noEmit"
