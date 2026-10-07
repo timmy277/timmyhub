@@ -728,7 +728,6 @@ export function HomePage() {
                                             priority={index === 0}
                                             sizes="(max-width: 1280px) 100vw, 1280px"
                                             className="object-cover scale-105 transition-transform duration-1000 ease-out"
-                                            unoptimized
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/75 to-black/45" />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/35" />

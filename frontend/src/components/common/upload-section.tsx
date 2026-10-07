@@ -749,7 +749,7 @@ export function UploadSection<TValue = string | string[] | MediaAsset | MediaAss
                                             src={url}
                                             alt=""
                                             fill
-                                            unoptimized
+                                            sizes="120px"
                                             className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
                                         />
                                     )}
@@ -804,6 +804,7 @@ export function UploadSection<TValue = string | string[] | MediaAsset | MediaAss
                                         alt=""
                                         fill
                                         unoptimized
+                                        sizes="120px"
                                         className="size-full object-cover opacity-60"
                                     />
                                 )}

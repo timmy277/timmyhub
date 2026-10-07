@@ -67,9 +67,10 @@ const { BACKGROUND_STARS, MICRO_STARS } = (() => {
         },
     ]
 
-    // 56 Gemini 4-point star icons spread along side margins and ambient spaces
+    // 28 Gemini 4-point star icons spread along side margins and ambient spaces
+    // (giảm từ 56 → 28 để giảm số lượng DOM + công việc paint trên main thread)
     const geminiList: BackgroundStar[] = []
-    const totalGemini = 56
+    const totalGemini = 28
     for (let i = 0; i < totalGemini; i++) {
         const pal = colorPalettes[Math.floor(rand() * colorPalettes.length)]
         const size = sizes[Math.floor(rand() * sizes.length)]
@@ -101,9 +102,9 @@ const { BACKGROUND_STARS, MICRO_STARS } = (() => {
         })
     }
 
-    // 140 tiny stardust dots
+    // 60 tiny stardust dots (giảm từ 140 → 60 để giảm DOM nodes)
     const microList: MicroStar[] = []
-    const totalMicro = 140
+    const totalMicro = 60
     for (let i = 0; i < totalMicro; i++) {
         const top = `${(rand() * 99).toFixed(1)}%`
         const left = `${(rand() * 98 + 1).toFixed(1)}%`
@@ -126,11 +127,14 @@ export const StarryBackground = memo(function StarryBackground() {
     const [hoveredStarId, setHoveredStarId] = useState<number | null>(null)
 
     useEffect(() => {
-        const handlePointerMove = (e: PointerEvent) => {
+        let mouseX = 0
+        let mouseY = 0
+        let rafId: number | null = null
+
+        const checkHover = () => {
+            rafId = null
             const vw = window.innerWidth
             const vh = window.innerHeight
-            const mouseX = e.clientX
-            const mouseY = e.clientY
 
             let foundId: number | null = null
             for (const star of BACKGROUND_STARS) {
@@ -145,11 +149,21 @@ export const StarryBackground = memo(function StarryBackground() {
             setHoveredStarId(foundId)
         }
 
+        const handlePointerMove = (e: PointerEvent) => {
+            mouseX = e.clientX
+            mouseY = e.clientY
+            // Chạy hit-test tối đa 1 lần mỗi frame — tránh 56 vòng lặp Math.hypot mỗi pixel di chuột.
+            if (rafId === null) {
+                rafId = requestAnimationFrame(checkHover)
+            }
+        }
+
         const handlePointerLeave = () => setHoveredStarId(null)
 
         window.addEventListener('pointermove', handlePointerMove, { passive: true })
         window.addEventListener('pointerleave', handlePointerLeave)
         return () => {
+            if (rafId !== null) cancelAnimationFrame(rafId)
             window.removeEventListener('pointermove', handlePointerMove)
             window.removeEventListener('pointerleave', handlePointerLeave)
         }
@@ -160,20 +174,20 @@ export const StarryBackground = memo(function StarryBackground() {
             {/* Dot texture */}
             <div className="absolute inset-0 bg-[radial-gradient(var(--color-primary)_1px,transparent_1px)] [background-size:24px_24px] opacity-10" />
 
-            {/* Top radiant bloom */}
-            <div className="absolute -top-32 left-1/2 -translate-x-1/2 h-[650px] w-full max-w-7xl rounded-full bg-gradient-to-b from-primary/30 via-primary/15 to-transparent blur-[120px]" />
+            {/* Top radiant bloom — blur 80px (giảm từ 120px để giảm GPU paint cost) */}
+            <div className="absolute -top-32 left-1/2 -translate-x-1/2 h-[650px] w-full max-w-7xl rounded-full bg-gradient-to-b from-primary/30 via-primary/15 to-transparent blur-[80px]" />
 
             {/* Left orb */}
-            <div className="absolute top-[20%] -left-32 size-[500px] rounded-full bg-primary/20 blur-[140px]" />
+            <div className="absolute top-[20%] -left-32 size-[500px] rounded-full bg-primary/20 blur-[80px]" />
 
             {/* Right orb */}
-            <div className="absolute top-[50%] -right-32 size-[550px] rounded-full bg-primary/20 blur-[150px]" />
+            <div className="absolute top-[50%] -right-32 size-[550px] rounded-full bg-primary/20 blur-[80px]" />
 
             {/* Lower aura */}
-            <div className="absolute top-[75%] left-1/4 size-[600px] rounded-full bg-primary/15 blur-[160px]" />
+            <div className="absolute top-[75%] left-1/4 size-[600px] rounded-full bg-primary/15 blur-[80px]" />
 
             {/* Bottom aura */}
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[450px] w-full max-w-6xl rounded-full bg-gradient-to-t from-primary/25 to-transparent blur-[130px]" />
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[450px] w-full max-w-6xl rounded-full bg-gradient-to-t from-primary/25 to-transparent blur-[80px]" />
 
             {/* Dark mode nebula */}
             <div className="absolute inset-0 bg-transparent dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.22),transparent)]" />

@@ -692,7 +692,6 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                                         fill
                                         sizes="(max-width: 640px) 33vw, 20vw"
                                         className="object-cover"
-                                        unoptimized
                                     />
                                     {idx === 0 && (
                                         <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-primary text-white text-[10px] font-bold shadow-sm">

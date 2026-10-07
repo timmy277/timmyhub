@@ -12,6 +12,10 @@ const nextConfig: NextConfig = {
         optimizePackageImports: ['lucide-react', 'date-fns', '@ag-grid-community/locale', 'radix-ui'],
     },
     images: {
+        // Tối ưu ảnh: phục vụ AVIF (nén tốt hơn WebP) rồi mới đến WebP, giảm dung lượng tải xuống đáng kể.
+        formats: ['image/avif', 'image/webp'],
+        // TTL cache ảnh tối ưu — tăng hit ratio cho các lượt tải lại (giảm "Use cache efficiently").
+        minimumCacheTTL: 60 * 60 * 24,
         // Cho phép next/image tối ưu ảnh từ các nguồn lưu trữ media:
         // - localhost: backend dev server — Next.js optimizer follow rewrite /uploads/* → localhost:3001
         //   dangerouslyAllowLocalIP bật để optimizer vượt SSRF protection trong dev (an toàn vì chỉ chạy local)

@@ -220,8 +220,8 @@ export function CategoryForm({
                                             src={watchImage}
                                             alt="Category preview"
                                             fill
+                                            sizes="64px"
                                             className="object-cover"
-                                            unoptimized
                                         />
                                         <button
                                             type="button"

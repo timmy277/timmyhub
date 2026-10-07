@@ -119,7 +119,6 @@ export function SuspendProductDialog({
                                         fill
                                         sizes="44px"
                                         className="object-cover"
-                                        unoptimized
                                     />
                                 </div>
                             ) : (

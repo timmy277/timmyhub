@@ -139,7 +139,6 @@ export function ReviewProductDialog({ product, mode, open, onOpenChange, onSucce
                                         fill
                                         sizes="44px"
                                         className="object-cover"
-                                        unoptimized
                                     />
                                 </div>
                             ) : (

@@ -86,14 +86,7 @@ export function createCategoryColumns({
                     <div className="flex items-center justify-center size-full py-1">
                         <div className="relative size-10 rounded-lg bg-muted border border-border/70 overflow-hidden shrink-0 flex items-center justify-center shadow-2xs">
                             {cat.image ? (
-                                <Image
-                                    src={cat.image}
-                                    alt={cat.name}
-                                    fill
-                                    sizes="40px"
-                                    className="object-cover"
-                                    unoptimized
-                                />
+                                <Image src={cat.image} alt={cat.name} fill sizes="40px" className="object-cover" />
                             ) : (
                                 <FolderTreeIcon className="size-5 text-muted-foreground" />
                             )}

@@ -231,7 +231,6 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                                     fill
                                     sizes="(max-width: 1024px) 100vw, 40vw"
                                     className="object-contain p-2"
-                                    unoptimized
                                 />
                             ) : (
                                 <Package className="size-16 text-muted-foreground" />
@@ -252,14 +251,7 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                                                 : 'border-transparent opacity-60 hover:opacity-100'
                                         }`}
                                     >
-                                        <Image
-                                            src={img}
-                                            alt=""
-                                            fill
-                                            sizes="56px"
-                                            className="object-cover"
-                                            unoptimized
-                                        />
+                                        <Image src={img} alt="" fill sizes="56px" className="object-cover" />
                                     </button>
                                 ))}
                             </div>

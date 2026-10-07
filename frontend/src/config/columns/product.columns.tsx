@@ -151,14 +151,7 @@ export function createProductColumns({
                     <div className="flex items-center justify-center size-full py-1">
                         <div className="relative size-10 rounded-lg bg-muted border border-border/70 overflow-hidden shrink-0 flex items-center justify-center shadow-2xs">
                             {thumb ? (
-                                <Image
-                                    src={thumb}
-                                    alt={params.data.name}
-                                    fill
-                                    sizes="40px"
-                                    className="object-cover"
-                                    unoptimized
-                                />
+                                <Image src={thumb} alt={params.data.name} fill sizes="40px" className="object-cover" />
                             ) : (
                                 <PackageIcon className="size-5 text-muted-foreground" />
                             )}

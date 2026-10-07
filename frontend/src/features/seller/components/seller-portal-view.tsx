@@ -77,14 +77,7 @@ export function SellerPortalView({ initialShop }: SellerPortalViewProps = {}) {
             <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-r from-card via-card to-primary/10 p-6 sm:p-8 shadow-xl backdrop-blur-xl">
                 {shop.shopBanner && (
                     <div className="absolute inset-0 z-0 opacity-15 overflow-hidden">
-                        <Image
-                            src={shop.shopBanner}
-                            alt="Shop Banner"
-                            fill
-                            sizes="100vw"
-                            className="object-cover"
-                            unoptimized
-                        />
+                        <Image src={shop.shopBanner} alt="Shop Banner" fill sizes="100vw" className="object-cover" />
                     </div>
                 )}
 
@@ -99,7 +92,6 @@ export function SellerPortalView({ initialShop }: SellerPortalViewProps = {}) {
                                     fill
                                     sizes="80px"
                                     className="object-cover"
-                                    unoptimized
                                 />
                             ) : (
                                 shop.shopName.charAt(0).toUpperCase()
