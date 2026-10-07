@@ -1,4 +1,5 @@
 import {
+    FolderTreeIcon,
     HistoryIcon,
     KeyRoundIcon,
     LayoutGridIcon,
@@ -14,6 +15,7 @@ import type { BreadcrumbEntry, NavGroup } from '@/types'
 
 import { AUDIT_PERMISSION } from './audit'
 import {
+    ADMIN_CATEGORY_PERMISSION,
     CATALOG_PRODUCTS_ADMIN_PERMISSION,
     DASHBOARD_PERMISSION,
     RBAC_PERMISSION,
@@ -43,6 +45,12 @@ export const NAV_GROUPS: readonly NavGroup[] = [
                 url: ROUTE.ADMIN_PRODUCTS,
                 icon: PackageIcon,
                 requirePermission: CATALOG_PRODUCTS_ADMIN_PERMISSION,
+            },
+            {
+                titleKey: 'categories',
+                url: ROUTE.ADMIN_CATEGORIES,
+                icon: FolderTreeIcon,
+                requirePermission: ADMIN_CATEGORY_PERMISSION.CREATE,
             },
             {
                 titleKey: 'users',
@@ -134,6 +142,10 @@ export const BREADCRUMB_ROUTES: Readonly<Record<string, readonly BreadcrumbEntry
     [ROUTE.ADMIN_SELLER_APPLICATIONS]: [
         { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
         { titleKey: 'sellerApplications', url: ROUTE.ADMIN_SELLER_APPLICATIONS },
+    ],
+    [ROUTE.ADMIN_CATEGORIES]: [
+        { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
+        { titleKey: 'categories', url: ROUTE.ADMIN_CATEGORIES },
     ],
     [ROUTE.PRODUCTS]: [{ titleKey: 'products', url: ROUTE.PRODUCTS }],
     [ROUTE.AUDIT]: [

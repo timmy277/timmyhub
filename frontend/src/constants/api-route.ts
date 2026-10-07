@@ -82,5 +82,7 @@ export const API_ROUTE = {
         ADMIN_PRODUCT_REJECT: (id: string) => `v1/admin/products/${encodeURIComponent(id)}/reject`,
         ADMIN_PRODUCT_SUSPEND: (id: string) => `v1/admin/products/${encodeURIComponent(id)}/suspend`,
         ADMIN_PRODUCT_RESTORE: (id: string) => `v1/admin/products/${encodeURIComponent(id)}/restore`,
+        ADMIN_CATEGORIES: 'v1/admin/categories',
+        ADMIN_CATEGORY_DETAIL: (id: string) => `v1/admin/categories/${encodeURIComponent(id)}`,
     },
 } as const

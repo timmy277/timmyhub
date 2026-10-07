@@ -16,4 +16,5 @@ export const ROUTE = {
     ADMIN_SELLER_APPLICATIONS: '/seller-applications',
     PRODUCTS: '/products',
     ADMIN_PRODUCTS: '/products',
+    ADMIN_CATEGORIES: '/categories',
 } as const

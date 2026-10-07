@@ -1,5 +1,7 @@
 export * from './audit.columns'
+export * from './category.columns'
 export * from './default-col-def'
 export * from './permissions.columns'
+export * from './product.columns'
 export * from './roles.columns'
 export * from './users.columns'

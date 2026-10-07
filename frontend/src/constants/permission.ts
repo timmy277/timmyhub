@@ -132,3 +132,21 @@ export function toAdminProductPermissionFlags(permissions: ReadonlySet<string>):
 
 export const CATALOG_PRODUCTS_ADMIN_PERMISSION = ADMIN_PRODUCT_PERMISSION.LIST
 export const CATALOG_PRODUCTS_SELLER_PERMISSION = SELLER_PRODUCT_PERMISSION.CREATE
+
+// Quyền quản lý danh mục phía Quản trị viên
+export const ADMIN_CATEGORY_PERMISSION = {
+    CREATE: 'catalog:categories:create',
+    UPDATE: 'catalog:categories:update',
+    DELETE: 'catalog:categories:delete',
+} as const satisfies Record<string, PermissionName>
+
+export type AdminCategoryPermissionKey = keyof typeof ADMIN_CATEGORY_PERMISSION
+export type AdminCategoryPermissionFlags = Record<AdminCategoryPermissionKey, boolean>
+
+export function toAdminCategoryPermissionFlags(permissions: ReadonlySet<string>): AdminCategoryPermissionFlags {
+    return {
+        CREATE: permissions.has(ADMIN_CATEGORY_PERMISSION.CREATE),
+        UPDATE: permissions.has(ADMIN_CATEGORY_PERMISSION.UPDATE),
+        DELETE: permissions.has(ADMIN_CATEGORY_PERMISSION.DELETE),
+    }
+}
