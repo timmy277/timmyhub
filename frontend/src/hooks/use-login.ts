@@ -5,9 +5,7 @@ import { signIn } from 'next-auth/react'
 
 import type { LoginInput } from '@timmyhub/contracts'
 
-import { ROUTE } from '@/constants'
 import { LoginError } from '@/features/login'
-import { resolveSafeCallbackUrl } from '@/utils'
 
 // Đăng nhập qua NextAuth credentials — token do NextAuth ghi vào cookie HttpOnly, client không đụng tới.
 // Dùng useMutation chỉ để UI đọc trạng thái isPending; điều hướng tự làm ở onSuccess.
@@ -24,10 +22,20 @@ export function useLogin() {
             return result
         },
         onSuccess: () => {
-            // `callbackUrl` đã được lọc open-redirect ở `resolveSafeCallbackUrl` (REQ-IDN-033); giá trị
-            // không hợp lệ hoặc không có thì về trang chủ. Locale đi theo cookie, không mang trên URL.
+            // Route handler `/api/auth/redirect` đọc roles từ JWT cookie và `redirect()` thẳng đến
+            // dashboard (nếu là admin) hoặc trang chủ — browser nhận HTTP 307, không bao giờ render
+            // trang home trung gian (BUG cũ: luôn assign('/') rồi home page mới redirect tiếp).
+            // `callbackUrl` vẫn qua route handler để server lọc open-redirect (REQ-IDN-033).
+            //
+            // Cố ý dùng `window.location.assign` thay vì `useRouter().push`: cần full-page navigation
+            // để route handler server-side chạy (nó đọc JWT cookie, không thể chạy ở client). Router
+            // client-side sẽ render trang nội bộ thay vì gọi route handler GET.
             const callbackUrl = new URLSearchParams(window.location.search).get('callbackUrl')
-            window.location.assign(resolveSafeCallbackUrl(callbackUrl, ROUTE.HOME))
+            const params = new URLSearchParams()
+            if (callbackUrl && callbackUrl !== '/') params.set('callbackUrl', callbackUrl)
+            const query = params.toString()
+            const target = query ? `/api/auth/redirect?${query}` : '/api/auth/redirect'
+            window.location.assign(target)
         },
     })
 }

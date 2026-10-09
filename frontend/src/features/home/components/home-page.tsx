@@ -37,15 +37,13 @@ import {
     WatchIcon,
     ZapIcon,
 } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 
 import { IconPath } from '@/components/icons'
 import { Badge, Button } from '@/components/ui'
-import { QUERY_KEY, ROUTE, SELLER_SHOP_ANY_PERMISSION, SELLER_SHOP_PERMISSION } from '@/constants'
-import { getMyShopAction } from '@/features/seller'
-import { usePermissions } from '@/hooks'
+import { ROUTE, SELLER_SHOP_ANY_PERMISSION, SELLER_SHOP_PERMISSION } from '@/constants'
+import { useMyShop, usePermissions } from '@/hooks'
 
 function formatNumber(num: number): string {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
@@ -598,15 +596,7 @@ export function HomePage() {
     const tNav = useTranslations('nav')
     const { hasPermission } = usePermissions()
     const isSellerByPermission = hasPermission(SELLER_SHOP_PERMISSION) || hasPermission(SELLER_SHOP_ANY_PERMISSION)
-    const { data: myShop } = useQuery({
-        queryKey: QUERY_KEY.SELLER.MY_SHOP,
-        queryFn: async () => {
-            const res = await getMyShopAction()
-            return res.ok && res.data ? res.data : null
-        },
-        enabled: !isSellerByPermission,
-        staleTime: 60_000,
-    })
+    const { data: myShop } = useMyShop({ enabled: !isSellerByPermission })
     const isSeller = isSellerByPermission || Boolean(myShop)
     const sellerRoute = isSeller ? ROUTE.SELLER_PORTAL : ROUTE.SELLER_REGISTER
     const sellerLabel = isSeller ? tNav('sellerPortal') : tNav('becomeSeller')

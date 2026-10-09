@@ -3,9 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-import { ROUTE } from '@/constants'
 import { getSession } from '@/lib/auth-session'
-import { resolveSafeCallbackUrl } from '@/utils'
 
 // Đã đăng nhập mà vẫn vào /login (gõ tay, bookmark, back sau logout…) → chuyển ngay về đích cũ.
 // Dùng getSession() (fetch mới /api/auth/session mỗi lần) thay vì useSession() (đọc cache của
@@ -23,9 +21,13 @@ export function RedirectIfAuthenticated() {
             const session = await getSession()
             if (cancelled || !session?.user?.id) return
 
-            // `callbackUrl` đã được lọc open-redirect ở `resolveSafeCallbackUrl` (REQ-IDN-033).
+            // Route handler `/api/auth/redirect` đọc roles từ JWT và redirect thẳng — không double-hop
+            // qua home page nữa. `callbackUrl` vẫn qua server để lọc open-redirect (REQ-IDN-033).
             const callbackUrl = new URLSearchParams(window.location.search).get('callbackUrl')
-            router.replace(resolveSafeCallbackUrl(callbackUrl, ROUTE.HOME))
+            const params = new URLSearchParams()
+            if (callbackUrl && callbackUrl !== '/') params.set('callbackUrl', callbackUrl)
+            const query = params.toString()
+            router.replace(query ? `/api/auth/redirect?${query}` : '/api/auth/redirect')
         })()
 
         return () => {

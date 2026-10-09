@@ -24,15 +24,25 @@ export const proxy = auth((request) => {
     const isAuthenticated = Boolean(request.auth?.user?.id)
 
     // Chưa có phiên hợp lệ mà vào trang protected → về login kèm callbackUrl (REQ-IDN-032). Đích gốc lấy từ
-    // chính request, không tin tham số do client truyền lên.
+    // chính request, không tin tham số do client truyền lên. Chỉ gán callbackUrl nếu khác trang chủ ROUTE.HOME.
     if (!isPublic && !isAuthenticated) {
         const loginUrl = new URL(ROUTE.LOGIN, request.url)
-        loginUrl.searchParams.set('callbackUrl', pathname)
+        if (pathname !== ROUTE.HOME) {
+            loginUrl.searchParams.set('callbackUrl', pathname)
+        }
         return NextResponse.redirect(loginUrl)
     }
 
-    // Có phiên hợp lệ mà vào /login → render bình thường, để trang login tự chuyển hướng
-    // (RedirectIfAuthenticated dùng getSession() nên chỉ tin phiên đã xác minh phía server).
+    // Đã có phiên hợp lệ mà vào trang công khai (/login) → proxy chuyển hướng ngay qua /api/auth/redirect
+    // để đến thẳng đích theo role (dashboard cho admin, home cho user), không cần render trang login.
+    if (isPublic && isAuthenticated) {
+        const rawCallback = request.nextUrl.searchParams.get('callbackUrl')
+        const redirectUrl = new URL('/api/auth/redirect', request.url)
+        if (rawCallback && rawCallback !== ROUTE.HOME) {
+            redirectUrl.searchParams.set('callbackUrl', rawCallback)
+        }
+        return NextResponse.redirect(redirectUrl)
+    }
 
     // Gắn đích gốc vào header — (protected)/layout dùng làm callbackUrl khi phiên hết hạn thật.
     const requestHeaders = new Headers(request.headers)

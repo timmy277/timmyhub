@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import { AuthLayout } from '@/components/layout'
 
 export const metadata: Metadata = {
-    robots: { index: false, follow: false },
+    robots: { index: true, follow: true },
 }
 
 export default function AuthRouteLayout({ children }: LayoutProps<'/'>) {

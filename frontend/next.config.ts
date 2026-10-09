@@ -9,7 +9,18 @@ const nextConfig: NextConfig = {
     // để HMR nhận thay đổi của package này giống code trong frontend/ (vẫn cần `pnpm -C shared/contracts run dev` chạy song song).
     transpilePackages: ['@timmyhub/contracts'],
     experimental: {
-        optimizePackageImports: ['lucide-react', 'date-fns', '@ag-grid-community/locale', 'radix-ui'],
+        optimizePackageImports: [
+            'lucide-react',
+            'date-fns',
+            '@ag-grid-community/locale',
+            'radix-ui',
+            'react-day-picker',
+            'react-hook-form',
+            '@hookform/resolvers',
+            'zod',
+            'sonner',
+            'next-intl',
+        ],
     },
     images: {
         // Tối ưu ảnh: phục vụ AVIF (nén tốt hơn WebP) rồi mới đến WebP, giảm dung lượng tải xuống đáng kể.
