@@ -2,7 +2,16 @@
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { BellIcon, CalendarIcon, CheckCircle2Icon, LockIcon, MapPinIcon, ShieldCheckIcon, UserIcon } from 'lucide-react'
+import {
+    BellIcon,
+    CalendarIcon,
+    CheckCircle2Icon,
+    LockIcon,
+    MapPinIcon,
+    PackageIcon,
+    ShieldCheckIcon,
+    UserIcon,
+} from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useSession } from 'next-auth/react'
 
@@ -16,17 +25,19 @@ import { useUserProfileStore } from '@/stores'
 
 import { AddressesTab } from './addresses-tab'
 import { NotificationsTab } from './notifications-tab'
+import { OrdersTab } from './orders-tab'
 import { ProfileTab } from './profile-tab'
 import { SecurityTab } from './security-tab'
 
-type TabKey = 'profile' | 'security' | 'addresses' | 'notifications'
+type TabKey = 'profile' | 'orders' | 'security' | 'addresses' | 'notifications'
 
 const NAV_ITEMS: {
     key: TabKey
-    labelKey: 'tabs.profile' | 'tabs.security' | 'tabs.addresses' | 'tabs.notifications'
+    labelKey: 'tabs.profile' | 'tabs.orders' | 'tabs.security' | 'tabs.addresses' | 'tabs.notifications'
     icon: React.ComponentType<{ className?: string }>
 }[] = [
     { key: 'profile', labelKey: 'tabs.profile', icon: UserIcon },
+    { key: 'orders', labelKey: 'tabs.orders', icon: PackageIcon },
     { key: 'security', labelKey: 'tabs.security', icon: ShieldCheckIcon },
     { key: 'addresses', labelKey: 'tabs.addresses', icon: MapPinIcon },
     { key: 'notifications', labelKey: 'tabs.notifications', icon: BellIcon },
@@ -209,6 +220,7 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
                 {/* Content Area */}
                 <div className="lg:col-span-3">
                     {activeTab === 'profile' && <ProfileTab user={user} onProfileUpdated={() => refetch()} />}
+                    {activeTab === 'orders' && <OrdersTab />}
                     {activeTab === 'security' && <SecurityTab user={user} />}
                     {activeTab === 'addresses' && <AddressesTab />}
                     {activeTab === 'notifications' && <NotificationsTab />}

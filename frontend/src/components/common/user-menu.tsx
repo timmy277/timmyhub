@@ -3,7 +3,7 @@
 import { useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
-import { BadgeCheckIcon, LayoutGridIcon, LogOutIcon, StoreIcon } from 'lucide-react'
+import { BadgeCheckIcon, LayoutGridIcon, LogOutIcon, PackageIcon, StoreIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -20,7 +20,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui'
 import { DASHBOARD_PERMISSION, QUERY_KEY, ROUTE, SELLER_SHOP_PERMISSION } from '@/constants'
-import { AccountDialog } from '@/features/account'
+import { AccountDialog, type AccountTabKey } from '@/features/account'
 import { getCurrentUserProfileAction } from '@/features/users'
 import { useLogout, useMounted, usePermissions } from '@/hooks'
 import { useUserProfileStore } from '@/stores'
@@ -73,12 +73,17 @@ export function UserMenu() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const isAccountOpen = searchParams.get('modal') === 'account'
+    const accountTab = (searchParams.get('tab') as AccountTabKey) || 'profile'
 
-    const handleAccount = useCallback(() => {
-        const params = new URLSearchParams(searchParams.toString())
-        params.set('modal', 'account')
-        router.push(`?${params.toString()}`, { scroll: false })
-    }, [router, searchParams])
+    const handleOpenAccount = useCallback(
+        (tab: AccountTabKey = 'profile') => {
+            const params = new URLSearchParams(searchParams.toString())
+            params.set('modal', 'account')
+            params.set('tab', tab)
+            router.push(`?${params.toString()}`, { scroll: false })
+        },
+        [router, searchParams],
+    )
 
     const handleAccountOpenChange = useCallback(
         (open: boolean) => {
@@ -87,6 +92,7 @@ export function UserMenu() {
                 params.set('modal', 'account')
             } else {
                 params.delete('modal')
+                params.delete('tab')
             }
             router.push(`?${params.toString()}`, { scroll: false })
         },
@@ -138,7 +144,11 @@ export function UserMenu() {
                                 </Link>
                             </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem onSelect={handleAccount}>
+                        <DropdownMenuItem onSelect={() => handleOpenAccount('orders')}>
+                            <PackageIcon aria-hidden />
+                            {t('myOrders')}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleOpenAccount('profile')}>
                             <BadgeCheckIcon aria-hidden />
                             {t('account')}
                         </DropdownMenuItem>
@@ -151,7 +161,7 @@ export function UserMenu() {
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            <AccountDialog open={isAccountOpen} onOpenChange={handleAccountOpenChange} />
+            <AccountDialog open={isAccountOpen} onOpenChange={handleAccountOpenChange} defaultTab={accountTab} />
         </>
     )
 }

@@ -178,6 +178,7 @@
     "themeMode": "Chuyển chế độ sáng/tối",
     "account": "Tài khoản",
     "accountComingSoon": "Trang tài khoản đang được xây dựng.",
+    "myOrders": "Đơn hàng của tôi",
     "notifications": "Thông báo",
     "noNotifications": "Chưa có thông báo nào",
     "logOut": "Đăng xuất",
@@ -438,6 +439,7 @@
     "dialogDescription": "Quản lý thông tin cá nhân, bảo mật mật khẩu, sổ địa chỉ và cài đặt thông báo.",
     "tabs": {
       "profile": "Hồ sơ cá nhân",
+      "orders": "Đơn hàng của tôi",
       "security": "Bảo mật & Mật khẩu",
       "addresses": "Sổ địa chỉ",
       "notifications": "Cài đặt thông báo"
@@ -529,6 +531,30 @@
       "email": "Email",
       "save": "Lưu cài đặt",
       "saveSuccess": "Đã lưu tuỳ chọn thông báo thành công!"
+    },
+    "orders": {
+      "title": "Đơn hàng của tôi",
+      "description": "Theo dõi tiến độ đơn hàng, trạng thái thanh toán và lịch sử mua sắm của bạn.",
+      "emptyTitle": "Chưa có đơn hàng nào",
+      "emptyDescription": "Bạn chưa có đơn hàng nào ở trạng thái này. Hãy khám phá và mua sắm ngay!",
+      "shopNow": "Khám phá sản phẩm",
+      "viewAllOrders": "Xem trang đơn hàng đầy đủ",
+      "searchPlaceholder": "Tìm theo mã đơn, tên sản phẩm hoặc tên Shop...",
+      "tabAll": "Tất cả",
+      "tabPending": "Chờ xác nhận",
+      "tabConfirmed": "Đã xác nhận",
+      "tabShipping": "Đang giao hàng",
+      "tabDelivered": "Hoàn thành",
+      "tabCancelled": "Đã huỷ",
+      "cancelDialogTitle": "Xác nhận huỷ đơn hàng",
+      "cancelDialogDescription": "Vui lòng chọn lý do huỷ đơn hàng. Thao tác này không thể hoàn tác.",
+      "cancelReasonLabel": "Lý do huỷ:",
+      "customReasonPlaceholder": "Nhập chi tiết lý do huỷ đơn...",
+      "confirmCancel": "Xác nhận huỷ",
+      "keepOrder": "Giữ đơn hàng",
+      "cancelling": "Đang xử lý huỷ...",
+      "cancelSuccess": "Đã huỷ đơn hàng thành công",
+      "cancelFailed": "Huỷ đơn hàng thất bại: {error}"
     }
   },
   "validation": {

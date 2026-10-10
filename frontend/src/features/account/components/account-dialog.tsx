@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { BellIcon, CalendarIcon, LockIcon, MapPinIcon, ShieldCheckIcon, UserIcon } from 'lucide-react'
+import { BellIcon, CalendarIcon, LockIcon, MapPinIcon, PackageIcon, ShieldCheckIcon, UserIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useSession } from 'next-auth/react'
 
@@ -23,17 +23,19 @@ import { useUserProfileStore } from '@/stores'
 
 import { AddressesTab } from './addresses-tab'
 import { NotificationsTab } from './notifications-tab'
+import { OrdersTab } from './orders-tab'
 import { ProfileTab } from './profile-tab'
 import { SecurityTab } from './security-tab'
 
-export type AccountTabKey = 'profile' | 'security' | 'addresses' | 'notifications'
+export type AccountTabKey = 'profile' | 'orders' | 'security' | 'addresses' | 'notifications'
 
 const NAV_ITEMS: {
     key: AccountTabKey
-    labelKey: 'tabs.profile' | 'tabs.security' | 'tabs.addresses' | 'tabs.notifications'
+    labelKey: 'tabs.profile' | 'tabs.orders' | 'tabs.security' | 'tabs.addresses' | 'tabs.notifications'
     icon: React.ComponentType<{ className?: string }>
 }[] = [
     { key: 'profile', labelKey: 'tabs.profile', icon: UserIcon },
+    { key: 'orders', labelKey: 'tabs.orders', icon: PackageIcon },
     { key: 'security', labelKey: 'tabs.security', icon: ShieldCheckIcon },
     { key: 'addresses', labelKey: 'tabs.addresses', icon: MapPinIcon },
     { key: 'notifications', labelKey: 'tabs.notifications', icon: BellIcon },
@@ -49,8 +51,16 @@ export function AccountDialog({ open, onOpenChange, defaultTab = 'profile' }: Ac
     const t = useTranslations('account')
     const tCommon = useTranslations('common')
     const { data: session } = useSession()
-    const [activeTab, setActiveTab] = useState<AccountTabKey>(defaultTab)
+    const [selectedTab, setSelectedTab] = useState<AccountTabKey | null>(null)
+    const [prevOpen, setPrevOpen] = useState(open)
     const profileOverride = useUserProfileStore((state) => state.override)
+
+    if (open !== prevOpen) {
+        setPrevOpen(open)
+        setSelectedTab(null)
+    }
+
+    const activeTab = selectedTab ?? defaultTab
 
     const {
         data: user,
@@ -137,7 +147,7 @@ export function AccountDialog({ open, onOpenChange, defaultTab = 'profile' }: Ac
                                         <button
                                             key={item.key}
                                             type="button"
-                                            onClick={() => setActiveTab(item.key)}
+                                            onClick={() => setSelectedTab(item.key)}
                                             className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition-all text-left whitespace-nowrap ${
                                                 isActive
                                                     ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
@@ -176,6 +186,7 @@ export function AccountDialog({ open, onOpenChange, defaultTab = 'profile' }: Ac
                         {/* Content Right */}
                         <div className="flex-1 overflow-y-auto p-6">
                             {activeTab === 'profile' && <ProfileTab user={user} onProfileUpdated={() => refetch()} />}
+                            {activeTab === 'orders' && <OrdersTab onCloseDialog={() => onOpenChange(false)} />}
                             {activeTab === 'security' && <SecurityTab user={user} />}
                             {activeTab === 'addresses' && <AddressesTab />}
                             {activeTab === 'notifications' && <NotificationsTab />}

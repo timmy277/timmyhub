@@ -178,6 +178,7 @@
     "themeMode": "Toggle light/dark mode",
     "account": "Account",
     "accountComingSoon": "The account page is under construction.",
+    "myOrders": "My Orders",
     "notifications": "Notifications",
     "noNotifications": "No notifications yet",
     "logOut": "Log out",
@@ -438,6 +439,7 @@
     "dialogDescription": "Manage your personal information, security password, address book, and notifications.",
     "tabs": {
       "profile": "Profile",
+      "orders": "My Orders",
       "security": "Security & Password",
       "addresses": "Address Book",
       "notifications": "Notification Settings"
@@ -529,6 +531,30 @@
       "email": "Email",
       "save": "Save Preferences",
       "saveSuccess": "Notification preferences saved successfully!"
+    },
+    "orders": {
+      "title": "My Orders",
+      "description": "Track your order progress, payment status, and shopping history.",
+      "emptyTitle": "No orders yet",
+      "emptyDescription": "You don't have any orders in this category. Start shopping now!",
+      "shopNow": "Explore Products",
+      "viewAllOrders": "View Full Orders Page",
+      "searchPlaceholder": "Search by order ID, product name, or shop...",
+      "tabAll": "All",
+      "tabPending": "Pending",
+      "tabConfirmed": "Confirmed",
+      "tabShipping": "Shipping",
+      "tabDelivered": "Delivered",
+      "tabCancelled": "Cancelled",
+      "cancelDialogTitle": "Confirm Order Cancellation",
+      "cancelDialogDescription": "Please select a reason for cancelling this order. This action cannot be undone.",
+      "cancelReasonLabel": "Cancellation Reason:",
+      "customReasonPlaceholder": "Enter detailed reason for cancellation...",
+      "confirmCancel": "Confirm Cancel",
+      "keepOrder": "Keep Order",
+      "cancelling": "Processing cancellation...",
+      "cancelSuccess": "Order cancelled successfully",
+      "cancelFailed": "Failed to cancel order: {error}"
     }
   },
   "validation": {
