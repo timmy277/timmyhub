@@ -95,6 +95,8 @@ export const API_ROUTE = {
         CHECKOUT: 'v1/orders/checkout',
         DETAIL: (id: string) => `v1/orders/${encodeURIComponent(id)}`,
         CANCEL: (id: string) => `v1/orders/${encodeURIComponent(id)}/cancel`,
+        SELLER_ORDERS: 'v1/orders/seller/all',
+        SELLER_UPDATE_STATUS: (id: string) => `v1/orders/seller/${encodeURIComponent(id)}/status`,
     },
     ADDRESS: {
         ROOT: 'v1/addresses',

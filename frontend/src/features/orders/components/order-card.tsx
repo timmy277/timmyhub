@@ -1,10 +1,24 @@
-import React from 'react'
+'use client'
+
+import React, { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { CalendarIcon, ChevronRightIcon, StoreIcon, XCircleIcon, EyeIcon } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
+import {
+    CalendarIcon,
+    ChevronRightIcon,
+    StoreIcon,
+    XCircleIcon,
+    EyeIcon,
+    RotateCcwIcon,
+    Loader2Icon,
+} from 'lucide-react'
+import { toast } from 'sonner'
 import type { OrderDetail } from '@timmyhub/contracts'
 import { Button, Card, CardContent, CardFooter, CardHeader } from '@/components'
-import { ROUTE } from '@/constants'
+import { QUERY_KEY, ROUTE } from '@/constants'
+import { addToCartAction } from '@/features/cart'
 import { formatCurrencyVND } from '@/utils'
 import { OrderStatusBadge, PaymentStatusBadge } from './order-status-badge'
 
@@ -15,7 +29,39 @@ interface OrderCardProps {
 }
 
 export function OrderCard({ order, onCancelClick, onViewDetail }: OrderCardProps) {
+    const router = useRouter()
+    const queryClient = useQueryClient()
+    const [isReordering, setIsReordering] = useState(false)
     const canCancel = order.status === 'PENDING' || order.status === 'CONFIRMED'
+
+    const handleReorder = async () => {
+        if (!order.items || order.items.length === 0) return
+        setIsReordering(true)
+        try {
+            let successCount = 0
+            for (const item of order.items) {
+                if (item.variantId) {
+                    const res = await addToCartAction({
+                        variantId: item.variantId,
+                        quantity: item.quantity || 1,
+                    })
+                    if (res.ok) successCount++
+                }
+            }
+
+            if (successCount > 0) {
+                await queryClient.invalidateQueries({ queryKey: QUERY_KEY.CART.ALL })
+                toast.success(`Đã thêm ${successCount} sản phẩm vào giỏ hàng`)
+                router.push(ROUTE.CART)
+            } else {
+                toast.error('Không thể thêm sản phẩm vào giỏ (sản phẩm có thể đã hết hàng hoặc bị ẩn)')
+            }
+        } catch {
+            toast.error('Có lỗi xảy ra khi mua lại đơn hàng')
+        } finally {
+            setIsReordering(false)
+        }
+    }
 
     return (
         <Card className="overflow-hidden border border-border/70 shadow-sm transition-all duration-200 hover:shadow-md dark:border-border/60">
@@ -123,6 +169,21 @@ export function OrderCard({ order, onCancelClick, onViewDetail }: OrderCardProps
                             Huỷ đơn
                         </Button>
                     )}
+
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleReorder}
+                        disabled={isReordering}
+                        className="text-xs sm:text-sm border-primary/30 text-primary hover:bg-primary/10 hover:text-primary transition-colors"
+                    >
+                        {isReordering ? (
+                            <Loader2Icon className="h-3.5 w-3.5 mr-1 animate-spin" />
+                        ) : (
+                            <RotateCcwIcon className="h-3.5 w-3.5 mr-1" />
+                        )}
+                        Mua lại
+                    </Button>
 
                     {onViewDetail ? (
                         <Button

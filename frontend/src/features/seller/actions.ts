@@ -5,17 +5,20 @@ import { revalidatePath } from 'next/cache'
 import type {
     ApiErrorCode,
     CreateSellerApplicationInput,
+    OrderDetail,
     ReviewSellerApplicationInput,
     SellerApplicationDetail,
     SellerApplicationListResult,
     SellerApplicationQuery,
     SellerProfileDetail,
+    UpdateOrderStatusInput,
     UpdateSellerProfileInput,
 } from '@timmyhub/contracts'
 import {
     CreateSellerApplicationSchema,
     ReviewSellerApplicationSchema,
     SellerApplicationQuerySchema,
+    UpdateOrderStatusInputSchema,
     UpdateSellerProfileSchema,
 } from '@timmyhub/contracts'
 
@@ -188,5 +191,42 @@ export async function rejectSellerApplicationAction(
     if (!result.ok) return { ok: false, code: result.code }
 
     revalidatePath(ROUTE.ADMIN_SELLER_APPLICATIONS)
+    return { ok: true, data: result.data }
+}
+
+// Lấy danh sách đơn hàng của Shop người bán
+export async function getSellerOrdersAction(status?: string): Promise<SellerActionResult<OrderDetail[]>> {
+    const actor = await getActor()
+    if (!actor) return { ok: false, code: 'UNAUTHORIZED' }
+
+    const result = await fetchBackend<OrderDetail[]>(API_ROUTE.ORDER.SELLER_ORDERS, {
+        query: status && status !== 'ALL' ? { status } : undefined,
+        token: actor.accessToken,
+    })
+
+    if (!result.ok) return { ok: false, code: result.code }
+    return { ok: true, data: result.data }
+}
+
+// Người bán cập nhật trạng thái đơn hàng
+export async function updateSellerOrderStatusAction(
+    orderId: string,
+    input: UpdateOrderStatusInput,
+): Promise<SellerActionResult<OrderDetail>> {
+    const parsed = UpdateOrderStatusInputSchema.safeParse(input)
+    if (!parsed.success) return { ok: false, code: 'VALIDATION_FAILED' }
+
+    const actor = await getActor()
+    if (!actor) return { ok: false, code: 'UNAUTHORIZED' }
+
+    const result = await fetchBackend<OrderDetail>(API_ROUTE.ORDER.SELLER_UPDATE_STATUS(orderId), {
+        token: actor.accessToken,
+        method: 'PATCH',
+        body: parsed.data,
+    })
+
+    if (!result.ok) return { ok: false, code: result.code }
+
+    revalidatePath(ROUTE.SELLER_ORDERS)
     return { ok: true, data: result.data }
 }

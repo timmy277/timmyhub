@@ -21,6 +21,7 @@ import {
     AlertTriangleIcon,
     HistoryIcon,
     ShoppingBagIcon,
+    RotateCcwIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { OrderDetail } from '@timmyhub/contracts'
@@ -39,6 +40,7 @@ import {
     Textarea,
 } from '@/components'
 import { QUERY_KEY, ROUTE } from '@/constants'
+import { addToCartAction } from '@/features/cart'
 import { cancelOrderAction } from '@/features/checkout'
 import { formatCurrencyVND } from '@/utils'
 import { OrderStatusBadge, PaymentStatusBadge } from './order-status-badge'
@@ -112,6 +114,36 @@ export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false }: 
         }
     }
 
+    const [isReordering, setIsReordering] = useState(false)
+    const handleReorder = async () => {
+        if (!order.items || order.items.length === 0) return
+        setIsReordering(true)
+        try {
+            let successCount = 0
+            for (const item of order.items) {
+                if (item.variantId) {
+                    const res = await addToCartAction({
+                        variantId: item.variantId,
+                        quantity: item.quantity || 1,
+                    })
+                    if (res.ok) successCount++
+                }
+            }
+
+            if (successCount > 0) {
+                await queryClient.invalidateQueries({ queryKey: QUERY_KEY.CART.ALL })
+                toast.success(`Đã thêm ${successCount} sản phẩm vào giỏ hàng`)
+                router.push(ROUTE.CART)
+            } else {
+                toast.error('Không thể thêm sản phẩm vào giỏ (sản phẩm có thể đã hết hàng hoặc bị ẩn)')
+            }
+        } catch {
+            toast.error('Có lỗi xảy ra khi mua lại đơn hàng')
+        } finally {
+            setIsReordering(false)
+        }
+    }
+
     // Tính tổng tiền hàng
     const subtotal = order.items.reduce((sum, it) => sum + Number(it.lineTotal), 0)
 
@@ -177,6 +209,20 @@ export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false }: 
                                 Huỷ đơn hàng
                             </Button>
                         )}
+                        <Button
+                            variant="default"
+                            size="sm"
+                            onClick={handleReorder}
+                            disabled={isReordering}
+                            className="text-xs sm:text-sm shadow-xs"
+                        >
+                            {isReordering ? (
+                                <Loader2Icon className="h-4 w-4 mr-1.5 animate-spin" />
+                            ) : (
+                                <RotateCcwIcon className="h-4 w-4 mr-1.5" />
+                            )}
+                            Mua lại
+                        </Button>
                         {!isModalOrTab && (
                             <Link href="/">
                                 <Button variant="outline" size="sm" className="text-xs sm:text-sm">
