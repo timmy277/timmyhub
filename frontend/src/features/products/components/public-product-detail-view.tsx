@@ -257,7 +257,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                 <span>{t('allPhotos', { count: allImages.length })}</span>
                                 <span className="text-[11px] font-normal">{t('clickToView')}</span>
                             </p>
-                            <div className="flex items-center gap-3 overflow-x-auto pb-2 pt-1 scrollbar-thin">
+                            <div className="-mx-2 flex items-center gap-3 overflow-x-auto px-2 py-2.5 scrollbar-thin">
                                 {allImages.map((imgUrl, idx) => {
                                     const isSelected = idx === selectedImageIndex
                                     return (

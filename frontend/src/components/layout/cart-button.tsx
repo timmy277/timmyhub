@@ -108,12 +108,12 @@ export function CartButton() {
                                                     {variantText}
                                                 </p>
                                             )}
-                                            <div className="flex items-center justify-between text-xs">
+                                            <div className="flex items-center gap-1.5 text-xs">
                                                 <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">
                                                     ₫{formatPriceVND(item.price)}
                                                 </span>
-                                                <span className="text-[11px] text-muted-foreground">
-                                                    {t('dropdown.qty', { count: item.quantity })}
+                                                <span className="font-mono text-[11px] text-muted-foreground">
+                                                    × {item.quantity}
                                                 </span>
                                             </div>
                                         </div>

@@ -476,8 +476,12 @@ export function CartView({ initialData }: CartViewProps) {
                                                                 >
                                                                     <MinusIcon className="size-3" />
                                                                 </button>
-                                                                <span className="w-9 text-center font-mono text-xs font-bold text-foreground">
-                                                                    {isUpdating ? '...' : item.quantity}
+                                                                <span
+                                                                    className={`w-9 text-center font-mono text-xs font-bold text-foreground transition-opacity ${
+                                                                        isUpdating ? 'opacity-50' : ''
+                                                                    }`}
+                                                                >
+                                                                    {item.quantity}
                                                                 </span>
                                                                 <button
                                                                     type="button"
