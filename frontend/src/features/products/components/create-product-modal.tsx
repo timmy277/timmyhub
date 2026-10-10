@@ -39,6 +39,7 @@ import {
     Switch,
 } from '@/components'
 import { QUERY_KEY } from '@/constants'
+import { toFieldErrorMessage } from '@/utils'
 
 import { createProductAction, listCategoriesAction } from '../actions'
 
@@ -65,6 +66,11 @@ type VariantOverride = {
 export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = false }: CreateProductModalProps) {
     const t = useTranslations('products.dialog')
     const tMsg = useTranslations('products.messages')
+    const tVal = useTranslations('validation')
+
+    const getErrorMessage = (errorMsg: string | undefined): string | undefined => {
+        return toFieldErrorMessage(errorMsg, tVal)
+    }
 
     // React Hook Form with Zod Schema validation
     const form = useForm<CreateProductInput>({
@@ -449,8 +455,9 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
             (data) => onSubmit(data as CreateProductInput),
             (errors) => {
                 const firstError = Object.values(errors)[0]
-                if (firstError?.message) {
-                    toast.error(String(firstError.message))
+                const formatted = getErrorMessage(firstError?.message)
+                if (formatted) {
+                    toast.error(formatted)
                 } else {
                     toast.error(t('validationError'))
                 }
@@ -505,7 +512,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                         variant="outlined"
                         size="sm"
                         className="text-xs"
-                        error={form.formState.errors.name?.message}
+                        error={getErrorMessage(form.formState.errors.name?.message)}
                     />
 
                     <Controller
@@ -518,7 +525,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                                 onValueChange={field.onChange}
                                 size="sm"
                                 placeholder={t('categorySelect')}
-                                error={form.formState.errors.categoryId?.message}
+                                error={getErrorMessage(form.formState.errors.categoryId?.message)}
                             >
                                 {categories.map((c) => (
                                     <React.Fragment key={c.id}>
@@ -549,10 +556,11 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                     {...form.register('description')}
                     label={t('descLabel')}
                     placeholder={t('descPlaceholder')}
+                    helperText={t('descHelper')}
                     variant="outlined"
                     size="sm"
                     className="text-xs min-h-[90px] resize-none"
-                    error={form.formState.errors.description?.message}
+                    error={getErrorMessage(form.formState.errors.description?.message)}
                 />
             </div>
 
@@ -742,7 +750,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
 
                 {form.formState.errors.images && (
                     <p className="text-[11px] text-destructive font-medium mt-1">
-                        {form.formState.errors.images.message}
+                        {getErrorMessage(form.formState.errors.images.message)}
                     </p>
                 )}
             </div>

@@ -22,6 +22,8 @@ import {
     Textarea,
 } from '@/components'
 
+import { toFieldErrorMessage } from '@/utils'
+
 import { adminSuspendProductAction, sellerSuspendProductAction } from '../actions'
 
 const SUSPEND_REASON_PRESETS = [
@@ -49,6 +51,7 @@ export function SuspendProductDialog({
 }: SuspendProductDialogProps) {
     const t = useTranslations('products.dialog')
     const tMsg = useTranslations('products.messages')
+    const tVal = useTranslations('validation')
 
     const {
         register,
@@ -144,7 +147,9 @@ export function SuspendProductDialog({
                                 maxLength={500}
                             />
                             {errors.reason && (
-                                <p className="text-[11px] text-destructive font-medium mt-1">{errors.reason.message}</p>
+                                <p className="text-[11px] text-destructive font-medium mt-1">
+                                    {toFieldErrorMessage(errors.reason.message, tVal)}
+                                </p>
                             )}
 
                             {/* Preset quick picks */}

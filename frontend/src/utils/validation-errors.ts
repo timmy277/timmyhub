@@ -23,7 +23,14 @@ export function toFieldErrors(issues: readonly ValidationIssue[], t: MessageLook
         const params =
             typeof minimum === 'number' || typeof minimum === 'bigint' ? { minimum: Number(minimum) } : undefined
 
-        fieldErrors[field] = t.has(issue.message) ? t(issue.message, params) : issue.message
+        const leafKey = issue.message.startsWith('validation.')
+            ? issue.message.slice('validation.'.length)
+            : issue.message
+        fieldErrors[field] = t.has(leafKey)
+            ? t(leafKey, params)
+            : t.has(issue.message)
+              ? t(issue.message, params)
+              : issue.message
     }
 
     return fieldErrors
@@ -31,5 +38,9 @@ export function toFieldErrors(issues: readonly ValidationIssue[], t: MessageLook
 
 export function toFieldErrorMessage(message: string | undefined, t: MessageLookup): string | undefined {
     if (!message) return undefined
+    if (message.startsWith('validation.')) {
+        const leafKey = message.slice('validation.'.length)
+        if (t.has(leafKey)) return t(leafKey)
+    }
     return t.has(message) ? t(message) : message
 }

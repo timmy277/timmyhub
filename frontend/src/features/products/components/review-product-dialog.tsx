@@ -22,6 +22,8 @@ import {
     Textarea,
 } from '@/components'
 
+import { toFieldErrorMessage } from '@/utils'
+
 import { adminApproveProductAction, adminRejectProductAction } from '../actions'
 
 const REJECT_REASONS = [
@@ -42,6 +44,7 @@ interface ReviewProductDialogProps {
 
 export function ReviewProductDialog({ product, mode, open, onOpenChange, onSucceeded }: ReviewProductDialogProps) {
     const t = useTranslations('adminProducts')
+    const tVal = useTranslations('validation')
 
     const isApprove = mode === 'APPROVE'
 
@@ -170,7 +173,7 @@ export function ReviewProductDialog({ product, mode, open, onOpenChange, onSucce
                                 />
                                 {errors.reviewNote && (
                                     <p className="text-[11px] text-destructive font-medium mt-1">
-                                        {errors.reviewNote.message}
+                                        {toFieldErrorMessage(errors.reviewNote.message, tVal)}
                                     </p>
                                 )}
 
