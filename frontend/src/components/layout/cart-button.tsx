@@ -9,13 +9,7 @@ import { useTranslations } from 'next-intl'
 import { Badge, Button, Popover, PopoverContent, PopoverTrigger, ScrollArea } from '@/components/ui'
 import { ROUTE } from '@/constants'
 import { useCart } from '@/hooks'
-
-function formatPriceVND(price: string | number | null | undefined): string {
-    if (price === null || price === undefined || price === '') return '0'
-    const num = typeof price === 'string' ? Number(price) : price
-    if (Number.isNaN(num)) return '0'
-    return new Intl.NumberFormat('vi-VN').format(num)
-}
+import { formatCurrencyVND } from '@/utils'
 
 export function CartButton() {
     const t = useTranslations('cart')
@@ -110,7 +104,7 @@ export function CartButton() {
                                             )}
                                             <div className="flex items-center gap-1.5 text-xs">
                                                 <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">
-                                                    ₫{formatPriceVND(item.price)}
+                                                    {formatCurrencyVND(item.price)}
                                                 </span>
                                                 <span className="font-mono text-[11px] text-muted-foreground">
                                                     × {item.quantity}
@@ -130,7 +124,7 @@ export function CartButton() {
                         <div className="flex items-center justify-between px-1 text-xs">
                             <span className="text-muted-foreground">{t('dropdown.subtotal')}</span>
                             <span className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">
-                                ₫{formatPriceVND(cart?.totalAmount ?? 0)}
+                                {formatCurrencyVND(cart?.totalAmount ?? 0)}
                             </span>
                         </div>
                     )}

@@ -37,16 +37,10 @@ import {
 } from '@/components/ui'
 import { ROUTE } from '@/constants'
 import { useCart, useClearCart, useRemoveCartItem, useUpdateCartItem } from '@/hooks'
+import { formatCurrencyVND } from '@/utils'
 
 interface CartViewProps {
     initialData: CartDetail | null
-}
-
-function formatPriceVND(price: string | number | null | undefined): string {
-    if (price === null || price === undefined || price === '') return '0'
-    const num = typeof price === 'string' ? Number(price) : price
-    if (Number.isNaN(num)) return '0'
-    return new Intl.NumberFormat('vi-VN').format(num)
 }
 
 export function CartView({ initialData }: CartViewProps) {
@@ -192,7 +186,7 @@ export function CartView({ initialData }: CartViewProps) {
             return
         }
         toast.info('Chuyển sang bước thanh toán đơn hàng...', {
-            description: `Đã chọn ${selectedCount} sản phẩm với tổng tiền ₫${formatPriceVND(selectedSubtotal)}`,
+            description: `Đã chọn ${selectedCount} sản phẩm với tổng tiền ${formatCurrencyVND(selectedSubtotal)}`,
         })
     }
 
@@ -458,7 +452,7 @@ export function CartView({ initialData }: CartViewProps) {
                                                                 Đơn giá:
                                                             </span>
                                                             <span className="font-mono text-xs sm:text-sm font-bold text-foreground">
-                                                                ₫{formatPriceVND(item.price)}
+                                                                {formatCurrencyVND(item.price)}
                                                             </span>
                                                         </div>
 
@@ -504,7 +498,7 @@ export function CartView({ initialData }: CartViewProps) {
                                                             </span>
                                                             <div className="text-right">
                                                                 <span className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">
-                                                                    ₫{formatPriceVND(lineTotal)}
+                                                                    {formatCurrencyVND(lineTotal)}
                                                                 </span>
                                                             </div>
                                                             <button
@@ -544,7 +538,7 @@ export function CartView({ initialData }: CartViewProps) {
                                 <div className="flex items-center justify-between text-muted-foreground">
                                     <span>{t('page.subtotal')}</span>
                                     <span className="font-mono font-bold text-foreground">
-                                        ₫{formatPriceVND(selectedSubtotal)}
+                                        {formatCurrencyVND(selectedSubtotal)}
                                     </span>
                                 </div>
 
@@ -562,7 +556,7 @@ export function CartView({ initialData }: CartViewProps) {
                                     </div>
                                     <div className="text-right">
                                         <p className="text-xl sm:text-2xl font-extrabold font-mono text-emerald-700 dark:text-emerald-400">
-                                            ₫{formatPriceVND(selectedSubtotal)}
+                                            {formatCurrencyVND(selectedSubtotal)}
                                         </p>
                                     </div>
                                 </div>

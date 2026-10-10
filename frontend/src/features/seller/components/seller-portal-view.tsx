@@ -236,7 +236,7 @@ export function SellerPortalView({ initialShop }: SellerPortalViewProps = {}) {
                                 <TrendingUp className="size-4" />
                             </div>
                         </div>
-                        <p className="text-2xl font-black text-foreground">₫12.850.000</p>
+                        <p className="text-2xl font-black text-foreground">12.850.000 ₫</p>
                         <p className="text-xs text-emerald-500 font-semibold flex items-center gap-1">
                             <ArrowUpRight className="size-3.5" />
                             <span>+14.2% so với hôm qua</span>

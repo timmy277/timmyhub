@@ -23,6 +23,7 @@ import { ProductStatus } from '@timmyhub/contracts'
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, StatusBadge } from '@/components'
 import { StatusTone } from '@/constants'
+import { formatCurrencyVND } from '@/utils'
 
 import { getProductDetailAction } from '../actions'
 import { ReviewProductDialog } from './review-product-dialog'
@@ -34,10 +35,7 @@ interface ProductDetailPanelProps {
     initialDetail?: ProductDetail | null
 }
 
-function formatVnd(val: string | number | null | undefined): string {
-    if (val === null || val === undefined) return '0 ₫'
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(val))
-}
+const formatVnd = formatCurrencyVND
 
 export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: ProductDetailPanelProps) {
     const t = useTranslations('products')

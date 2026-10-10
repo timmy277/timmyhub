@@ -26,17 +26,11 @@ import type { ProductDetail, ProductSummary } from '@timmyhub/contracts'
 import { Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
 import { ROUTE } from '@/constants'
 import { useAddToCart } from '@/hooks'
+import { formatCurrencyVND } from '@/utils'
 
 interface PublicProductDetailViewProps {
     product: ProductDetail
     relatedProducts?: ProductSummary[]
-}
-
-function formatPriceVND(price: string | number | null | undefined): string {
-    if (price === null || price === undefined || price === '') return '0'
-    const num = typeof price === 'string' ? Number(price) : price
-    if (Number.isNaN(num)) return '0'
-    return new Intl.NumberFormat('vi-VN').format(num)
 }
 
 export function PublicProductDetailView({ product, relatedProducts = [] }: PublicProductDetailViewProps) {
@@ -338,11 +332,11 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                         <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-5 sm:p-6 shadow-sm space-y-2">
                             <div className="flex flex-wrap items-baseline gap-3">
                                 <span className="text-3xl sm:text-4xl font-extrabold text-emerald-700 dark:text-emerald-400 tracking-tight">
-                                    ₫{formatPriceVND(currentPrice)}
+                                    {formatCurrencyVND(currentPrice)}
                                 </span>
                                 {comparePrice && (
                                     <span className="text-base text-muted-foreground line-through">
-                                        ₫{formatPriceVND(comparePrice)}
+                                        {formatCurrencyVND(comparePrice)}
                                     </span>
                                 )}
                                 {discountPercent > 0 && (
@@ -604,7 +598,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                     </h3>
                                     <div className="mt-auto pt-2 flex items-baseline justify-between">
                                         <span className="text-sm font-extrabold text-emerald-700 dark:text-emerald-400">
-                                            ₫{formatPriceVND(rp.minPrice)}
+                                            {formatCurrencyVND(rp.minPrice)}
                                         </span>
                                         <span className="text-[10px] text-muted-foreground">
                                             Đã bán {rp.soldCount || 100}

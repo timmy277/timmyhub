@@ -44,6 +44,7 @@ import { IconPath } from '@/components/icons'
 import { Badge, Button } from '@/components/ui'
 import { ROUTE, SELLER_SHOP_ANY_PERMISSION, SELLER_SHOP_PERMISSION } from '@/constants'
 import { useMyShop, usePermissions, usePublicProducts } from '@/hooks'
+import { formatCurrencyVND } from '@/utils'
 
 function formatNumber(num: number): string {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
@@ -135,8 +136,8 @@ const INITIAL_VOUCHERS = [
         title: 'Giảm 15% Đơn Đầu',
         type: 'PERCENT',
         value: '15%',
-        minSpend: '₫200.000',
-        maxDiscount: '₫50.000',
+        minSpend: '200.000 ₫',
+        maxDiscount: '50.000 ₫',
         expiry: 'Còn 3 ngày',
         code: 'TIMMYNEW15',
         badge: 'Người dùng mới',
@@ -146,19 +147,19 @@ const INITIAL_VOUCHERS = [
         title: 'Miễn Phí Vận Chuyển',
         type: 'SHIPPING',
         value: 'FREE',
-        minSpend: '₫150.000',
-        maxDiscount: '₫35.000',
+        minSpend: '150.000 ₫',
+        maxDiscount: '35.000 ₫',
         expiry: 'Hết hạn hôm nay',
         code: 'FREESHIPMAX',
         badge: 'Toàn sàn',
     },
     {
         id: 'v-03',
-        title: 'Giảm ₫100.000 Công Nghệ',
+        title: 'Giảm 100.000 ₫ Công Nghệ',
         type: 'FIXED',
-        value: '₫100K',
-        minSpend: '₫1.500.000',
-        maxDiscount: '₫100.000',
+        value: '100K ₫',
+        minSpend: '1.500.000 ₫',
+        maxDiscount: '100.000 ₫',
         expiry: 'Còn 5 ngày',
         code: 'TECHMEGA100',
         badge: 'Thiết bị số',
@@ -168,8 +169,8 @@ const INITIAL_VOUCHERS = [
         title: 'Giảm 20% Thời Trang',
         type: 'PERCENT',
         value: '20%',
-        minSpend: '₫400.000',
-        maxDiscount: '₫80.000',
+        minSpend: '400.000 ₫',
+        maxDiscount: '80.000 ₫',
         expiry: 'Còn 2 ngày',
         code: 'FASHION20',
         badge: 'Thời trang hè',
@@ -179,19 +180,19 @@ const INITIAL_VOUCHERS = [
         title: 'Hoàn Xu 10% Tối Đa 50K',
         type: 'CASHBACK',
         value: '10%',
-        minSpend: '₫300.000',
-        maxDiscount: '₫50.000',
+        minSpend: '300.000 ₫',
+        maxDiscount: '50.000 ₫',
         expiry: 'Còn 7 ngày',
         code: 'TIMMYCOIN10',
         badge: 'Hoàn xu',
     },
     {
         id: 'v-06',
-        title: 'Giảm ₫50.000 Gia Dụng',
+        title: 'Giảm 50.000 ₫ Gia Dụng',
         type: 'FIXED',
-        value: '₫50K',
-        minSpend: '₫500.000',
-        maxDiscount: '₫50.000',
+        value: '50K ₫',
+        minSpend: '500.000 ₫',
+        maxDiscount: '50.000 ₫',
         expiry: 'Còn 4 ngày',
         code: 'HOMESTYLE50',
         badge: 'Nhà cửa',
@@ -276,7 +277,7 @@ const COMMUNITY_POSTS = [
         likes: 3820,
         comments: 428,
         taggedProduct: 'iPhone 15 Pro Max 256GB',
-        productPrice: '₫28.990.000',
+        productPrice: '28.990.000 ₫',
         accent: 'from-emerald-500/20 to-teal-500/10',
     },
     {
@@ -291,7 +292,7 @@ const COMMUNITY_POSTS = [
         likes: 2410,
         comments: 186,
         taggedProduct: 'Bàn nâng hạ thông minh TimmyDesk',
-        productPrice: '₫4.250.000',
+        productPrice: '4.250.000 ₫',
         accent: 'from-purple-500/20 to-pink-500/10',
     },
     {
@@ -306,7 +307,7 @@ const COMMUNITY_POSTS = [
         likes: 5120,
         comments: 630,
         taggedProduct: 'Tai nghe Sony WH-1000XM5',
-        productPrice: '₫6.490.000',
+        productPrice: '6.490.000 ₫',
         accent: 'from-blue-500/20 to-indigo-500/10',
     },
 ]
@@ -591,11 +592,11 @@ const Product3DCard = memo(function Product3DCard({ product: p, isLiked, onToggl
                         <div className="mt-auto pt-2 space-y-2">
                             <div className="flex items-baseline gap-1.5">
                                 <span className="text-sm sm:text-base font-extrabold text-emerald-700 dark:text-emerald-400 transition-transform duration-300 group-hover:scale-105 origin-left inline-block">
-                                    ₫{p.price}
+                                    {formatCurrencyVND(p.price)}
                                 </span>
                                 {p.originalPrice && (
                                     <span className="text-[10px] text-muted-foreground line-through">
-                                        ₫{p.originalPrice}
+                                        {formatCurrencyVND(p.originalPrice)}
                                     </span>
                                 )}
                             </div>
@@ -1202,10 +1203,10 @@ export function HomePage() {
                                         <div className="mt-auto pt-2 space-y-2">
                                             <div className="flex items-baseline gap-1.5">
                                                 <span className="text-base font-extrabold text-destructive transition-transform duration-300 group-hover:scale-105 origin-left inline-block">
-                                                    ₫{item.price}
+                                                    {formatCurrencyVND(item.price)}
                                                 </span>
                                                 <span className="text-[10px] text-muted-foreground line-through">
-                                                    ₫{item.originalPrice}
+                                                    {formatCurrencyVND(item.originalPrice)}
                                                 </span>
                                             </div>
 
@@ -1499,10 +1500,10 @@ export function HomePage() {
                                         <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-3 pt-2 sm:pt-0">
                                             <div className="text-left sm:text-right">
                                                 <p className="text-lg font-extrabold text-primary transition-transform duration-300 group-hover:scale-105 origin-right">
-                                                    ₫{p.price}
+                                                    {formatCurrencyVND(p.price)}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground line-through">
-                                                    ₫{p.originalPrice}
+                                                    {formatCurrencyVND(p.originalPrice)}
                                                 </p>
                                             </div>
                                             <div className="flex items-center gap-2 rounded-xl bg-muted/60 px-3 py-1.5 border border-border/60 transition-colors group-hover:border-primary/40">
@@ -1538,7 +1539,7 @@ export function HomePage() {
                                 Độc quyền trên TimmyHub App
                             </span>
                             <h2 className="font-heading text-2xl sm:text-4xl font-extrabold tracking-tight text-foreground leading-tight">
-                                Tải App Ngay — Nhận Quà Tặng ₫100.000 Cho Đơn Hàng Đầu Tiên!
+                                Tải App Ngay — Nhận Quà Tặng 100.000 ₫ Cho Đơn Hàng Đầu Tiên!
                             </h2>
                             <p className="text-sm sm:text-base text-muted-foreground max-w-xl leading-relaxed">
                                 Trải nghiệm mua sắm nhanh hơn, săn sale chớp nhoáng, theo dõi trạng thái đơn hàng thời

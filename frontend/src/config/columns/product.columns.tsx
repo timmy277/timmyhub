@@ -18,7 +18,7 @@ import { ProductStatus } from '@timmyhub/contracts'
 
 import { Badge, RowActions, StatusBadge, type RowAction } from '@/components'
 import { AG_GRID_NO_EXPORT, StatusTone } from '@/constants'
-import { rowActionsColumnWidth } from '@/utils'
+import { formatCurrencyVND, rowActionsColumnWidth } from '@/utils'
 
 export type ProductsTranslator = ReturnType<typeof useTranslations<'products'>>
 
@@ -39,10 +39,7 @@ interface CreateProductColumnsOptions {
     canCreateOrUpdate?: boolean
 }
 
-function formatVnd(amount: string | number | null | undefined): string {
-    if (amount === null || amount === undefined) return '0 ₫'
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(amount))
-}
+const formatVnd = formatCurrencyVND
 
 // Cột bảng sản phẩm — cùng khuôn `createAuditColumns`/`createUserColumns`: hàm thuần, không hook, trang gọi trong
 // `useMemo` với translator đã có (luật #22). Cột ảnh đứng riêng (width 80px) giống cột ảnh danh mục.
