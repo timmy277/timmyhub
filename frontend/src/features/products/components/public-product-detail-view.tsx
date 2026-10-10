@@ -210,6 +210,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                     alt={product.name}
                                     fill
                                     priority
+                                    loading="eager"
                                     sizes="(max-width: 1024px) 100vw, 50vw"
                                     className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                                 />
@@ -279,6 +280,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                                     src={imgUrl}
                                                     alt={`${product.name} - ảnh ${idx + 1}`}
                                                     fill
+                                                    loading={idx === 0 ? 'eager' : 'lazy'}
                                                     sizes="96px"
                                                     className="object-cover"
                                                 />

@@ -818,6 +818,7 @@ export function HomePage() {
                                             alt={slide.title.replace('\n', ' ')}
                                             fill
                                             priority={index === 0}
+                                            loading={index === 0 ? 'eager' : 'lazy'}
                                             sizes="(max-width: 1280px) 100vw, 1280px"
                                             className="object-cover scale-105 transition-transform duration-1000 ease-out"
                                         />
