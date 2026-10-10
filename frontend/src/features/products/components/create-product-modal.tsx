@@ -208,9 +208,6 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
             }
         }
 
-        let addedImagesCount = 0
-        let addedVideosCount = 0
-
         if (newImages.length > 0) {
             setImages((prev) => {
                 const available = 10 - prev.length
@@ -219,7 +216,6 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                     return prev
                 }
                 const toAdd = newImages.slice(0, available)
-                addedImagesCount = toAdd.length
                 return [...prev, ...toAdd]
             })
         }
@@ -232,12 +228,9 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                     return prev
                 }
                 const toAdd = newVideos.slice(0, available)
-                addedVideosCount = toAdd.length
                 return [...prev, ...toAdd]
             })
         }
-
-        toast.success(t('addedMedia', { imageCount: addedImagesCount, videoCount: addedVideosCount }))
     }
 
     const handleUploadFiles = async (files: File[]) => {
@@ -281,7 +274,6 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                 return
             }
             setVideos([...videos, url])
-            toast.success(t('addedVideo'))
         } else {
             if (images.includes(url)) {
                 toast.error(t('duplicateImage'))
@@ -292,7 +284,6 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                 return
             }
             setImages([...images, url])
-            toast.success(t('addedImage'))
         }
         setMediaUrlInput('')
     }
