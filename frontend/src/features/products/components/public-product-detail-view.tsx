@@ -20,6 +20,7 @@ import {
     ZapIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 import type { ProductDetail, ProductSummary } from '@timmyhub/contracts'
 
 import { Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
@@ -39,6 +40,7 @@ function formatPriceVND(price: string | number | null | undefined): string {
 }
 
 export function PublicProductDetailView({ product, relatedProducts = [] }: PublicProductDetailViewProps) {
+    const t = useTranslations('productDetail')
     // ===== Gallery State =====
     const allImages = useMemo(() => {
         if (product.images && product.images.length > 0) {
@@ -112,7 +114,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
     const handleShare = () => {
         if (typeof window !== 'undefined') {
             navigator.clipboard.writeText(window.location.href)
-            toast.success('Đã sao chép liên kết sản phẩm vào khay nhớ tạm!')
+            toast.success(t('shareSuccess'))
         }
     }
 
@@ -120,9 +122,9 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
         setIsWishlist((prev) => {
             const next = !prev
             if (next) {
-                toast.success(`Đã thêm "${product.name}" vào danh sách yêu thích!`)
+                toast.success(t('wishlistAdd', { name: product.name }))
             } else {
-                toast.info(`Đã bỏ "${product.name}" khỏi danh sách yêu thích`)
+                toast.info(t('wishlistRemove', { name: product.name }))
             }
             return next
         })
@@ -130,12 +132,12 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
 
     const handleAddToCart = async () => {
         if (!activeVariant) {
-            toast.error('Vui lòng chọn phân loại sản phẩm!')
+            toast.error(t('selectVariant'))
             return
         }
 
         if (stockAvailable <= 0) {
-            toast.error('Sản phẩm hiện đang tạm hết hàng!')
+            toast.error(t('outOfStock'))
             return
         }
 
@@ -144,19 +146,19 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                 variantId: activeVariant.id,
                 quantity,
             })
-            toast.success(`Đã thêm ${quantity} sản phẩm vào giỏ hàng!`, {
+            toast.success(t('addCartSuccess', { quantity }), {
                 description: `${product.name} (SL: ${quantity})`,
                 icon: <ShoppingCartIcon className="size-4 text-primary" />,
             })
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Không thể thêm sản phẩm vào giỏ hàng'
+            const message = error instanceof Error ? error.message : t('addCartError')
             toast.error(message)
         }
     }
 
     const handleBuyNow = () => {
-        toast.info('Tính năng mua ngay đang được tích hợp cổng thanh toán!', {
-            description: 'Vui lòng kiểm tra lại đơn hàng trong phiên bản cập nhật tiếp theo.',
+        toast.info(t('buyNowNotice'), {
+            description: t('buyNowNoticeDesc'),
         })
     }
 
@@ -171,7 +173,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                             className="hover:text-foreground transition-colors flex items-center gap-1.5"
                         >
                             <HomeIcon className="size-3.5 text-primary" />
-                            <span>Trang chủ</span>
+                            <span>{t('home')}</span>
                         </Link>
                         <ChevronRightIcon className="size-3 text-muted-foreground/60" />
                         {product.categoryName && (
@@ -213,11 +215,11 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                             <div className="absolute top-5 left-5 flex flex-col gap-2 z-10">
                                 {discountPercent > 0 && (
                                     <Badge className="bg-destructive text-white font-extrabold text-xs px-2.5 py-1 shadow-md">
-                                        GIẢM {discountPercent}%
+                                        {t('discount', { percent: discountPercent })}
                                     </Badge>
                                 )}
                                 <Badge className="bg-primary/95 text-primary-foreground font-bold text-[11px] px-2.5 py-1 shadow-md backdrop-blur-sm">
-                                    Chính Hãng 100%
+                                    {t('authentic')}
                                 </Badge>
                             </div>
 
@@ -245,15 +247,15 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
 
                             {/* Current Image Indicator */}
                             <div className="absolute bottom-5 right-5 rounded-full bg-black/60 px-3 py-1 font-mono text-xs font-semibold text-white backdrop-blur-md z-10">
-                                {selectedImageIndex + 1} / {allImages.length} ảnh
+                                {t('photosCount', { current: selectedImageIndex + 1, total: allImages.length })}
                             </div>
                         </div>
 
                         {/* Thumbnail Selector Strip (Shows ALL Photos) */}
                         <div className="space-y-2">
                             <p className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
-                                <span>Tất cả hình ảnh thực tế ({allImages.length}):</span>
-                                <span className="text-[11px] font-normal">Nhấp để xem chi tiết</span>
+                                <span>{t('allPhotos', { count: allImages.length })}</span>
+                                <span className="text-[11px] font-normal">{t('clickToView')}</span>
                             </p>
                             <div className="flex items-center gap-3 overflow-x-auto pb-2 pt-1 scrollbar-thin">
                                 {allImages.map((imgUrl, idx) => {
@@ -345,18 +347,18 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                 )}
                                 {discountPercent > 0 && (
                                     <span className="rounded-lg bg-destructive/15 px-2 py-0.5 text-xs font-bold text-destructive">
-                                        Tiết kiệm {discountPercent}%
+                                        {t('save', { percent: discountPercent })}
                                     </span>
                                 )}
                             </div>
                             <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
                                 <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-2 py-0.5 font-semibold">
                                     <TruckIcon className="size-3" />
-                                    Freeship 0Đ Toàn Quốc
+                                    {t('freeship')}
                                 </span>
                                 <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 px-2 py-0.5 font-semibold">
                                     <ZapIcon className="size-3" />
-                                    Giao nhanh trong 2H
+                                    {t('fastDelivery')}
                                 </span>
                             </div>
                         </div>
@@ -401,7 +403,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
 
                         {/* Quantity & Stock Selector */}
                         <div className="flex flex-wrap items-center gap-4 pt-1">
-                            <span className="text-xs font-bold text-foreground">Số lượng:</span>
+                            <span className="text-xs font-bold text-foreground">{t('quantity')}</span>
                             <div className="flex items-center rounded-xl border border-border/80 bg-card p-1">
                                 <button
                                     type="button"
@@ -426,7 +428,8 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                 </button>
                             </div>
                             <span className="text-xs text-muted-foreground">
-                                Kho còn: <strong className="text-foreground">{stockAvailable}</strong> sản phẩm
+                                {t('stockLeft')} <strong className="text-foreground">{stockAvailable}</strong>{' '}
+                                {t('unit')}
                             </span>
                         </div>
 
@@ -444,7 +447,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                 ) : (
                                     <ShoppingCartIcon className="size-4" />
                                 )}
-                                {addToCartMutation.isPending ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
+                                {addToCartMutation.isPending ? t('addingToCart') : t('addToCart')}
                             </Button>
                             <Button
                                 size="lg"
@@ -452,7 +455,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                 className="h-12 rounded-2xl font-bold gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-md transition-transform active:scale-95"
                             >
                                 <ZapIcon className="size-4 fill-current" />
-                                Mua ngay
+                                {t('buyNow')}
                             </Button>
                         </div>
 
@@ -461,15 +464,15 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                             <div className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card p-3">
                                 <ShieldCheckIcon className="size-5 text-emerald-700 dark:text-emerald-400 shrink-0" />
                                 <div className="text-left leading-tight">
-                                    <p className="text-xs font-bold text-foreground">100% Chính Hãng</p>
-                                    <p className="text-[10px] text-muted-foreground">Bồi thường 200% nếu giả</p>
+                                    <p className="text-xs font-bold text-foreground">{t('commitmentAuthentic')}</p>
+                                    <p className="text-[10px] text-muted-foreground">{t('commitmentAuthenticSub')}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card p-3">
                                 <RotateCcwIcon className="size-5 text-emerald-700 dark:text-emerald-400 shrink-0" />
                                 <div className="text-left leading-tight">
-                                    <p className="text-xs font-bold text-foreground">Đổi Trả 7 Ngày</p>
-                                    <p className="text-[10px] text-muted-foreground">Miễn phí nếu lỗi sản phẩm</p>
+                                    <p className="text-xs font-bold text-foreground">{t('commitmentReturn')}</p>
+                                    <p className="text-[10px] text-muted-foreground">{t('commitmentReturnSub')}</p>
                                 </div>
                             </div>
                         </div>
@@ -483,10 +486,10 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                     <Tabs defaultValue="description" className="space-y-6">
                         <TabsList className="rounded-xl bg-muted/60 p-1 border border-border/60">
                             <TabsTrigger value="description" className="rounded-lg text-xs font-bold px-4">
-                                Mô tả chi tiết
+                                {t('tabOverview')}
                             </TabsTrigger>
                             <TabsTrigger value="specs" className="rounded-lg text-xs font-bold px-4">
-                                Thông số kỹ thuật
+                                {t('tabSpecs')}
                             </TabsTrigger>
                             <TabsTrigger value="shipping" className="rounded-lg text-xs font-bold px-4">
                                 Chính sách bảo hành
@@ -565,7 +568,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                 {relatedProducts.length > 0 && (
                     <div className="mt-12 space-y-4">
                         <div className="flex items-center justify-between">
-                            <h2 className="font-heading text-xl font-bold text-foreground">Có thể bạn cũng thích</h2>
+                            <h2 className="font-heading text-xl font-bold text-foreground">{t('relatedProducts')}</h2>
                             <Link
                                 href={ROUTE.HOME}
                                 className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1"

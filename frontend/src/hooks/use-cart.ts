@@ -13,7 +13,7 @@ import {
     updateCartItemAction,
 } from '@/features/cart'
 
-export function useCart(options?: { enabled?: boolean }) {
+export function useCart(options?: { enabled?: boolean; initialData?: CartDetail | null }) {
     return useQuery<CartDetail | null>({
         queryKey: QUERY_KEY.CART.DETAIL,
         queryFn: async () => {
@@ -25,6 +25,7 @@ export function useCart(options?: { enabled?: boolean }) {
             return res.data
         },
         enabled: options?.enabled ?? true,
+        initialData: options?.initialData,
         staleTime: 30_000,
     })
 }
