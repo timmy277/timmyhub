@@ -35,3 +35,23 @@ export const SELLER_APPLICATION_STATUS_TONE: Record<string, StatusTone> = {
     [ResourceStatus.APPROVED]: StatusTone.SUCCESS,
     [ResourceStatus.REJECTED]: StatusTone.DANGER,
 }
+
+// Tham số URL của danh sách đơn hàng người bán
+export const SELLER_ORDER_QUERY_PARAM = {
+    PAGE: 'page',
+    PAGE_SIZE: 'pageSize',
+    STATUS: 'status',
+    Q: 'q',
+    TABS: 'tabs',
+} as const
+
+// Tab của màn quản lý đơn hàng người bán
+export const SELLER_ORDER_TAB = {
+    LIST: 'list',
+    DETAIL: 'detail',
+} as const
+export type SellerOrderTab = (typeof SELLER_ORDER_TAB)[keyof typeof SELLER_ORDER_TAB]
+
+export const SELLER_ORDER_TAB_ID_SEPARATOR = ':'
+export const SELLER_ORDER_TAB_ID_LABEL_LENGTH = 8
+export const SELLER_ORDER_STATUS_ALL = 'ALL'
