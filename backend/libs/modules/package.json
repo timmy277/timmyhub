@@ -37,6 +37,10 @@
     "./cart": {
       "types": "./dist/cart/index.d.ts",
       "default": "./dist/cart/index.js"
+    },
+    "./order": {
+      "types": "./dist/order/index.d.ts",
+      "default": "./dist/order/index.js"
     }
   },
   "scripts": {
