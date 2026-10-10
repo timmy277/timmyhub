@@ -109,7 +109,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
                 titleKey: 'sellerOrders',
                 url: ROUTE.SELLER_ORDERS,
                 icon: ShoppingBagIcon,
-                requirePermission: SELLER_SHOP_PERMISSION,
+                requirePermission: [SELLER_SHOP_PERMISSION, 'orders:orders:list:shop'],
                 excludePermission: DASHBOARD_PERMISSION,
             },
             {

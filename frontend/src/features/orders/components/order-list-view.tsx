@@ -11,6 +11,7 @@ import {
     PackageIcon,
     SearchIcon,
     ShoppingBagIcon,
+    StoreIcon,
     XCircleIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -26,8 +27,9 @@ import {
     Input,
     Textarea,
 } from '@/components'
-import { ROUTE } from '@/constants'
+import { ROUTE, SELLER_SHOP_PERMISSION } from '@/constants'
 import { cancelOrderAction } from '@/features/checkout'
+import { usePermissions } from '@/hooks'
 import { OrderCard } from './order-card'
 
 interface OrderListViewProps {
@@ -54,6 +56,8 @@ const CANCEL_REASONS = [
 
 export function OrderListView({ initialOrders }: OrderListViewProps) {
     const router = useRouter()
+    const { hasPermission } = usePermissions()
+    const isSeller = hasPermission(SELLER_SHOP_PERMISSION) || hasPermission('orders:orders:list:shop')
     const [orders, setOrders] = useState<OrderDetail[]>(initialOrders)
     const [activeTab, setActiveTab] = useState<OrderStatusType | 'ALL'>('ALL')
     const [searchQuery, setSearchQuery] = useState('')
@@ -163,16 +167,22 @@ export function OrderListView({ initialOrders }: OrderListViewProps) {
                         </p>
                     </div>
 
-                    <Link href="/">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-2 self-start sm:self-auto text-xs sm:text-sm"
-                        >
-                            <ShoppingBagIcon className="h-4 w-4" />
-                            Tiếp tục mua sắm
-                        </Button>
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                        {isSeller && (
+                            <Link href={ROUTE.SELLER_ORDERS}>
+                                <Button variant="default" size="sm" className="gap-2 text-xs sm:text-sm">
+                                    <StoreIcon className="h-4 w-4" />
+                                    Vào Quản lý đơn bán hàng
+                                </Button>
+                            </Link>
+                        )}
+                        <Link href="/">
+                            <Button variant="outline" size="sm" className="gap-2 text-xs sm:text-sm">
+                                <ShoppingBagIcon className="h-4 w-4" />
+                                Tiếp tục mua sắm
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
 
                 {/* Filter Tabs & Search Bar */}
@@ -259,14 +269,24 @@ export function OrderListView({ initialOrders }: OrderListViewProps) {
                                   ? 'Bạn chưa có đơn hàng nào trong trạng thái này.'
                                   : 'Bạn chưa đặt đơn hàng nào trên TimmyHub. Hãy khám phá và mua sắm ngay!'}
                         </p>
-                        <div className="mt-6 flex justify-center gap-3">
+                        <div className="mt-6 flex flex-wrap justify-center gap-3">
                             {searchQuery && (
                                 <Button variant="outline" size="sm" onClick={() => setSearchQuery('')}>
                                     Xoá tìm kiếm
                                 </Button>
                             )}
+                            {isSeller && (
+                                <Link href={ROUTE.SELLER_ORDERS}>
+                                    <Button size="sm" className="gap-2">
+                                        <StoreIcon className="h-4 w-4" />
+                                        Vào Quản lý đơn bán hàng
+                                    </Button>
+                                </Link>
+                            )}
                             <Link href="/">
-                                <Button size="sm">Khám phá sản phẩm</Button>
+                                <Button variant={isSeller ? 'outline' : 'default'} size="sm">
+                                    Khám phá sản phẩm
+                                </Button>
                             </Link>
                         </div>
                     </div>

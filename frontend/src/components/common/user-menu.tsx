@@ -3,7 +3,7 @@
 import { useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
-import { BadgeCheckIcon, LayoutGridIcon, LogOutIcon, PackageIcon, StoreIcon } from 'lucide-react'
+import { BadgeCheckIcon, LayoutGridIcon, LogOutIcon, PackageIcon, ShoppingBagIcon, StoreIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -40,7 +40,8 @@ export function UserMenu() {
 
     const { hasPermission } = usePermissions()
     const canAccessDashboard = hasPermission(DASHBOARD_PERMISSION)
-    const isSeller = !canAccessDashboard && hasPermission(SELLER_SHOP_PERMISSION)
+    const isSeller =
+        !canAccessDashboard && (hasPermission(SELLER_SHOP_PERMISSION) || hasPermission('orders:orders:list:shop'))
     const sellerRoute = isSeller ? ROUTE.SELLER_PORTAL : ROUTE.SELLER_REGISTER
     const sellerLabel = isSeller ? t('sellerPortal') : t('becomeSeller')
 
@@ -150,6 +151,14 @@ export function UserMenu() {
                                 </Link>
                             </DropdownMenuItem>
                         )}
+                        {!canAccessDashboard && isSeller && (
+                            <DropdownMenuItem asChild>
+                                <Link href={ROUTE.SELLER_ORDERS}>
+                                    <ShoppingBagIcon aria-hidden />
+                                    {t('sellerOrders')}
+                                </Link>
+                            </DropdownMenuItem>
+                        )}
                         {canAccessDashboard && (
                             <DropdownMenuItem asChild>
                                 <Link href={ROUTE.DASHBOARD}>
@@ -160,7 +169,7 @@ export function UserMenu() {
                         )}
                         <DropdownMenuItem onSelect={() => handleOpenAccount('orders')}>
                             <PackageIcon aria-hidden />
-                            {t('myOrders')}
+                            {isSeller ? t('buyerOrders') : t('myOrders')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => handleOpenAccount('profile')}>
                             <BadgeCheckIcon aria-hidden />

@@ -244,7 +244,7 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
                         <CardDescription className="text-xs">{t('description')}</CardDescription>
                     </div>
 
-                    <Link href={ROUTE.ORDERS} onClick={onCloseDialog} className="shrink-0">
+                    <Link href={`${ROUTE.ORDERS}?view=buyer`} onClick={onCloseDialog} className="shrink-0">
                         <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8">
                             <span>{t('viewAllOrders')}</span>
                             <ExternalLinkIcon className="h-3 w-3" />

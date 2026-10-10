@@ -35,13 +35,15 @@ export async function NavLayout({ children }: NavLayoutProps) {
 
     // Đối với người bán (không phải Admin), nếu có shop thì cấp đủ quyền thao tác sản phẩm và shop
     if (actor && !permissions.has(DASHBOARD_PERMISSION)) {
-        let hasShop = permissions.has(SELLER_SHOP_PERMISSION)
+        let hasShop = permissions.has(SELLER_SHOP_PERMISSION) || permissions.has('orders:orders:list:shop')
         if (!hasShop) {
             const shopRes = await getMyShopAction()
             if (shopRes.ok && Boolean(shopRes.data)) {
                 hasShop = true
                 permissions.add(SELLER_SHOP_PERMISSION)
             }
+        } else {
+            permissions.add(SELLER_SHOP_PERMISSION)
         }
         if (hasShop) {
             permissions.add(SELLER_PRODUCT_PERMISSION.LIST)

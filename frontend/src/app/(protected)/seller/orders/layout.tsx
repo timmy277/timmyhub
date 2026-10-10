@@ -23,7 +23,8 @@ export default async function SellerOrdersLayout({ children }: SellerOrdersLayou
         redirect(ROUTE.DASHBOARD)
     }
 
-    const isSellerByPermission = actor.permissions.has(SELLER_SHOP_PERMISSION)
+    const isSellerByPermission =
+        actor.permissions.has(SELLER_SHOP_PERMISSION) || actor.permissions.has('orders:orders:list:shop')
     let isSeller = isSellerByPermission
     if (!isSeller) {
         const shopRes = await getMyShopAction()

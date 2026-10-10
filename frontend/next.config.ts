@@ -61,6 +61,20 @@ const nextConfig: NextConfig = {
             },
         ]
     },
+    async redirects() {
+        return [
+            {
+                source: '/order',
+                destination: '/orders',
+                permanent: false,
+            },
+            {
+                source: '/seller/order',
+                destination: '/seller/orders',
+                permanent: false,
+            },
+        ]
+    },
 }
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts')
