@@ -8,7 +8,7 @@ import { cn } from '@/utils'
 import { LABEL_CUTOUT_CLASS } from './float-input'
 
 export const floatTextareaVariants = cva(
-    'peer block w-full resize-y text-foreground outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+    'peer block w-full resize-y text-foreground outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50 placeholder:text-transparent focus:placeholder:text-muted-foreground',
     {
         variants: {
             variant: {
@@ -91,9 +91,9 @@ export function FloatTextarea({
                     aria-invalid={Boolean(error)}
                     aria-describedby={description ? descriptionId : undefined}
                     disabled={disabled}
-                    placeholder=" "
                     className={cn(floatTextareaVariants({ variant, size }), className)}
                     {...props}
+                    placeholder={props.placeholder || ' '}
                 />
                 <label
                     htmlFor={textareaId}

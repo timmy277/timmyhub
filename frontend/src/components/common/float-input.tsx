@@ -9,7 +9,7 @@ import { Button } from '@/components/ui'
 import { cn } from '@/utils'
 
 export const floatInputVariants = cva(
-    'peer block w-full appearance-none text-foreground outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+    'peer block w-full appearance-none text-foreground outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50 placeholder:text-transparent focus:placeholder:text-muted-foreground',
     {
         variants: {
             variant: {
@@ -110,7 +110,6 @@ export function FloatInput({
                     aria-invalid={Boolean(error)}
                     aria-describedby={description ? descriptionId : undefined}
                     disabled={disabled}
-                    placeholder=" "
                     className={cn(
                         floatInputVariants({ variant, size }),
                         'autofill:[-webkit-text-fill-color:var(--foreground)] autofill:[box-shadow:0_0_0_1000px_var(--background)_inset]',
@@ -118,6 +117,7 @@ export function FloatInput({
                         className,
                     )}
                     {...props}
+                    placeholder={props.placeholder || ' '}
                 />
                 <label
                     htmlFor={inputId}

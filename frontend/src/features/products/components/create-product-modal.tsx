@@ -28,6 +28,7 @@ import {
     DialogHeader,
     DialogTitle,
     FloatInput,
+    FloatSelect,
     FloatTextarea,
     Input,
     Select,
@@ -507,47 +508,41 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                         error={form.formState.errors.name?.message}
                     />
 
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-foreground">{t('categoryLabel')}</label>
-                        <Controller
-                            control={form.control}
-                            name="categoryId"
-                            render={({ field }) => (
-                                <Select value={field.value || ''} onValueChange={field.onChange}>
-                                    <SelectTrigger className="text-xs rounded-xl">
-                                        <SelectValue placeholder={t('categorySelect')} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {categories.map((c) => (
-                                            <React.Fragment key={c.id}>
-                                                <SelectItem
-                                                    key={c.id}
-                                                    value={c.id}
-                                                    className="font-semibold text-foreground"
-                                                >
-                                                    {c.name}
-                                                </SelectItem>
-                                                {c.children?.map((child) => (
-                                                    <SelectItem
-                                                        key={child.id}
-                                                        value={child.id}
-                                                        className="pl-6 text-muted-foreground text-xs"
-                                                    >
-                                                        └ {child.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </React.Fragment>
+                    <Controller
+                        control={form.control}
+                        name="categoryId"
+                        render={({ field }) => (
+                            <FloatSelect
+                                label={t('categoryLabel')}
+                                value={field.value || ''}
+                                onValueChange={field.onChange}
+                                size="sm"
+                                placeholder={t('categorySelect')}
+                                error={form.formState.errors.categoryId?.message}
+                            >
+                                {categories.map((c) => (
+                                    <React.Fragment key={c.id}>
+                                        <SelectItem
+                                            key={c.id}
+                                            value={c.id}
+                                            className="font-semibold text-foreground text-xs"
+                                        >
+                                            {c.name}
+                                        </SelectItem>
+                                        {c.children?.map((child) => (
+                                            <SelectItem
+                                                key={child.id}
+                                                value={child.id}
+                                                className="pl-6 text-muted-foreground text-xs"
+                                            >
+                                                {child.name}
+                                            </SelectItem>
                                         ))}
-                                    </SelectContent>
-                                </Select>
-                            )}
-                        />
-                        {form.formState.errors.categoryId && (
-                            <p className="text-[11px] text-destructive font-medium mt-1">
-                                {form.formState.errors.categoryId.message}
-                            </p>
+                                    </React.Fragment>
+                                ))}
+                            </FloatSelect>
                         )}
-                    </div>
+                    />
                 </div>
 
                 <FloatTextarea
