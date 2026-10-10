@@ -263,7 +263,7 @@ export function createProductColumns({
             cellRenderer: (params: ICellRendererParams<ProductSummary>) => {
                 if (!params.data) return null
                 const { minPrice, maxPrice } = params.data
-                let display = '0 ₫'
+                let display = '0₫'
                 if (minPrice !== null && minPrice !== undefined) {
                     if (maxPrice !== null && maxPrice !== undefined && maxPrice !== minPrice) {
                         display = `${formatVnd(minPrice)} - ${formatVnd(maxPrice)}`
