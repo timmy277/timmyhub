@@ -477,7 +477,15 @@ export class OrderService {
     async getMyOrders(userId: string, status?: string): Promise<OrderDetail[]> {
         const orderStatus = status && status in ORDER_STATUS ? (status as OrderStatus) : undefined
         const orders = await this.orderRepo.findOrdersByBuyerId(userId, orderStatus)
-        return orders.map((o) => this.formatOrder(o))
+        const sellerIds = Array.from(new Set(orders.map((o) => o.sellerId)))
+        const sellers =
+            sellerIds.length > 0
+                ? await this.prisma.sellerProfile.findMany({
+                      where: { id: { in: sellerIds } },
+                  })
+                : []
+        const shopMap = new Map(sellers.map((s) => [s.id, s.shopName]))
+        return orders.map((o) => this.formatOrder({ ...o, shopName: shopMap.get(o.sellerId) }))
     }
 
     async getOrderById(userId: string, orderId: string): Promise<OrderDetail> {
@@ -485,7 +493,84 @@ export class OrderService {
         if (!order) {
             throw new NotFoundException('Không tìm thấy đơn hàng')
         }
-        return this.formatOrder(order)
+        const seller = await this.prisma.sellerProfile.findUnique({
+            where: { id: order.sellerId },
+        })
+        return this.formatOrder({ ...order, shopName: seller?.shopName })
+    }
+
+    async cancelOrder(userId: string, orderId: string, reason?: string): Promise<OrderDetail> {
+        const order = await this.orderRepo.findOrderById(orderId, userId)
+        if (!order) {
+            throw new NotFoundException('Không tìm thấy đơn hàng')
+        }
+
+        if (order.status !== 'PENDING' && order.status !== 'CONFIRMED') {
+            throw new BadRequestException('Chỉ có thể huỷ đơn hàng khi đang ở trạng thái Chờ xử lý hoặc Đã xác nhận')
+        }
+
+        const cancelReason = reason?.trim() || 'Người mua huỷ đơn hàng'
+
+        const updatedOrder = await this.prisma.$transaction(
+            async (tx) => {
+                // Hoàn lại tồn kho đã giữ (reserved)
+                for (const item of order.orderItems) {
+                    const variant = await tx.productVariant.findUnique({
+                        where: { id: item.variantId },
+                        include: { inventory: true },
+                    })
+
+                    if (variant?.inventory) {
+                        await tx.inventoryItem.update({
+                            where: { id: variant.inventory.id },
+                            data: {
+                                reserved: { decrement: Math.min(variant.inventory.reserved, item.quantity) },
+                            },
+                        })
+                    }
+
+                    await tx.product.update({
+                        where: { id: item.productId },
+                        data: {
+                            totalStock: { increment: item.quantity },
+                            soldCount: { decrement: item.quantity },
+                        },
+                    })
+                }
+
+                // Cập nhật trạng thái đơn
+                const cancelled = await tx.order.update({
+                    where: { id: orderId },
+                    data: {
+                        status: 'CANCELLED',
+                        cancelReason,
+                        statusHistory: {
+                            create: {
+                                fromStatus: order.status,
+                                toStatus: 'CANCELLED',
+                                reason: cancelReason,
+                                actorId: userId,
+                                actorRole: 'BUYER',
+                            },
+                        },
+                    },
+                    include: {
+                        orderItems: true,
+                        address: true,
+                        statusHistory: { orderBy: { createdAt: 'desc' } },
+                    },
+                })
+
+                return cancelled
+            },
+            { maxWait: 10000, timeout: 20000 },
+        )
+
+        const seller = await this.prisma.sellerProfile.findUnique({
+            where: { id: updatedOrder.sellerId },
+        })
+
+        return this.formatOrder({ ...updatedOrder, shopName: seller?.shopName })
     }
 
     // ===== Helpers =====
@@ -511,7 +596,7 @@ export class OrderService {
         }
     }
 
-    private formatOrder(o: OrderWithRelations & { shopName?: string }): OrderDetail {
+    private formatOrder(o: OrderWithRelations & { shopName?: string | undefined }): OrderDetail {
         return {
             id: o.id,
             buyerId: o.buyerId,
@@ -546,6 +631,16 @@ export class OrderService {
                 lineTotal: it.lineTotal.toString(),
                 isReviewed: it.isReviewed,
             })),
+            statusHistory: o.statusHistory
+                ? o.statusHistory.map((sh) => ({
+                      id: sh.id,
+                      fromStatus: sh.fromStatus,
+                      toStatus: sh.toStatus,
+                      reason: sh.reason,
+                      actorRole: sh.actorRole,
+                      createdAt: sh.createdAt.toISOString(),
+                  }))
+                : undefined,
         }
     }
 }

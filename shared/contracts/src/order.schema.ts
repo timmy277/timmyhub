@@ -97,11 +97,25 @@ export interface OrderItemDetail {
     isReviewed: boolean
 }
 
+export const CancelOrderInputSchema = z.object({
+    reason: z.string().trim().max(300).optional(),
+})
+export type CancelOrderInput = z.infer<typeof CancelOrderInputSchema>
+
+export interface OrderStatusHistoryDetail {
+    id: string
+    fromStatus?: string | null
+    toStatus: string
+    reason?: string | null
+    actorRole?: string | null
+    createdAt: string
+}
+
 export interface OrderDetail {
     id: string
     buyerId: string
     sellerId: string
-    shopName?: string
+    shopName?: string | undefined
     status: OrderStatusType
     totalAmount: string
     currency: string
@@ -119,6 +133,7 @@ export interface OrderDetail {
     createdAt: string
     updatedAt: string
     items: OrderItemDetail[]
+    statusHistory?: OrderStatusHistoryDetail[] | undefined
 }
 
 export interface CheckoutResult {

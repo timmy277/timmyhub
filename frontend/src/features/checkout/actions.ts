@@ -180,3 +180,20 @@ export async function getMyOrdersAction(status?: string): Promise<CheckoutAction
     }
     return { ok: true, data: result.data }
 }
+
+// 9. Huỷ đơn hàng
+export async function cancelOrderAction(orderId: string, reason?: string): Promise<CheckoutActionResult<OrderDetail>> {
+    const actor = await getActor()
+    if (!actor) return { ok: false, code: 'UNAUTHORIZED', message: 'Vui lòng đăng nhập' }
+
+    const result = await fetchBackend<OrderDetail>(API_ROUTE.ORDER.CANCEL(orderId), {
+        method: 'PATCH',
+        body: { reason },
+        token: actor.accessToken,
+    })
+
+    if (!result.ok) {
+        return { ok: false, code: result.code, message: formatCheckoutError(result.code, result.status) }
+    }
+    return { ok: true, data: result.data }
+}

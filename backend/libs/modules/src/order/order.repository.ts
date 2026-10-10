@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common'
 import { Prisma, PrismaService } from '@timmyhub/prisma'
-import type { Address, Order, OrderItem, OrderStatus } from '@timmyhub/prisma'
+import type { Address, Order, OrderItem, OrderStatus, OrderStatusHistory } from '@timmyhub/prisma'
 
 export type OrderWithRelations = Order & {
     orderItems: OrderItem[]
     address: Address
+    statusHistory?: OrderStatusHistory[]
 }
 
 @Injectable()
@@ -100,6 +101,7 @@ export class OrderRepository {
             include: {
                 orderItems: true,
                 address: true,
+                statusHistory: { orderBy: { createdAt: 'desc' } },
             },
             orderBy: { createdAt: 'desc' },
         })
@@ -119,6 +121,7 @@ export class OrderRepository {
             include: {
                 orderItems: true,
                 address: true,
+                statusHistory: { orderBy: { createdAt: 'desc' } },
             },
         })
     }

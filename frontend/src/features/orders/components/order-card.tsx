@@ -1,0 +1,125 @@
+import React from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { CalendarIcon, ChevronRightIcon, StoreIcon, XCircleIcon, EyeIcon } from 'lucide-react'
+import type { OrderDetail } from '@timmyhub/contracts'
+import { Button, Card, CardContent, CardFooter, CardHeader } from '@/components'
+import { ROUTE } from '@/constants'
+import { formatCurrencyVND } from '@/utils'
+import { OrderStatusBadge, PaymentStatusBadge } from './order-status-badge'
+
+interface OrderCardProps {
+    order: OrderDetail
+    onCancelClick?: (order: OrderDetail) => void
+}
+
+export function OrderCard({ order, onCancelClick }: OrderCardProps) {
+    const canCancel = order.status === 'PENDING' || order.status === 'CONFIRMED'
+
+    return (
+        <Card className="overflow-hidden border border-border/70 shadow-sm transition-all duration-200 hover:shadow-md dark:border-border/60">
+            {/* Card Header: Shop & Status */}
+            <CardHeader className="bg-muted/30 border-b border-border/50 px-4 py-3 sm:px-6">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <StoreIcon className="h-4 w-4" />
+                        </div>
+                        <span className="font-semibold text-sm sm:text-base text-foreground">
+                            {order.shopName || 'TimmyHub Mall'}
+                        </span>
+                        <span className="text-xs text-muted-foreground hidden sm:inline">&bull;</span>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground hidden sm:flex">
+                            <CalendarIcon className="h-3 w-3" />
+                            <span>{new Date(order.createdAt).toLocaleDateString('vi-VN')}</span>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        <PaymentStatusBadge status={order.paymentStatus} method={order.paymentMethod} />
+                        <OrderStatusBadge status={order.status} />
+                    </div>
+                </div>
+            </CardHeader>
+
+            {/* Card Content: Item List */}
+            <CardContent className="p-4 sm:p-6 divide-y divide-border/40">
+                {order.items.map((item) => (
+                    <div key={item.id} className="py-3 first:pt-0 last:pb-0 flex items-center gap-3 sm:gap-4">
+                        <div className="relative h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-lg border border-border/60 bg-muted/20">
+                            <Image
+                                src={
+                                    item.imageUrl ||
+                                    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80'
+                                }
+                                alt={item.productName}
+                                fill
+                                className="object-cover"
+                            />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-sm sm:text-base text-foreground line-clamp-2">
+                                {item.productName}
+                            </h4>
+                            {item.variantLabel && item.variantLabel !== 'Mặc định' && (
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                    Phân loại:{' '}
+                                    <span className="font-medium text-foreground/80">{item.variantLabel}</span>
+                                </p>
+                            )}
+                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                <span>x{item.quantity}</span>
+                                <span>&bull;</span>
+                                <span>{formatCurrencyVND(item.unitPrice)}</span>
+                            </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                            <span className="font-semibold text-sm sm:text-base text-foreground">
+                                {formatCurrencyVND(item.lineTotal)}
+                            </span>
+                        </div>
+                    </div>
+                ))}
+            </CardContent>
+
+            {/* Card Footer: Summary & Actions */}
+            <CardFooter className="bg-muted/10 border-t border-border/50 p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
+                    <span>Mã đơn:</span>
+                    <span className="font-mono font-medium text-foreground">{order.id}</span>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-end gap-3 w-full sm:w-auto">
+                    <div className="flex items-baseline gap-1.5 mr-1">
+                        <span className="text-xs text-muted-foreground">Thành tiền:</span>
+                        <span className="text-base sm:text-lg font-bold text-primary">
+                            {formatCurrencyVND(order.totalAmount)}
+                        </span>
+                    </div>
+
+                    {canCancel && onCancelClick && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onCancelClick(order)}
+                            className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-xs sm:text-sm"
+                        >
+                            <XCircleIcon className="h-3.5 w-3.5 mr-1 text-rose-500" />
+                            Huỷ đơn
+                        </Button>
+                    )}
+
+                    <Link href={ROUTE.ORDER_DETAIL(order.id)}>
+                        <Button variant="default" size="sm" className="text-xs sm:text-sm shadow-sm">
+                            <EyeIcon className="h-3.5 w-3.5 mr-1" />
+                            Chi tiết
+                            <ChevronRightIcon className="h-3.5 w-3.5 ml-0.5" />
+                        </Button>
+                    </Link>
+                </div>
+            </CardFooter>
+        </Card>
+    )
+}

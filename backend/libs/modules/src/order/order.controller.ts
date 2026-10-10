@@ -1,9 +1,9 @@
-import { Body, Controller, Get, Headers, Param, Post, Query, Req, Res } from '@nestjs/common'
+import { Body, Controller, Get, Headers, Param, Patch, Post, Query, Req, Res } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import type { Request, Response } from 'express'
 import { ZodValidationPipe } from '@timmyhub/common'
-import type { CheckoutInput, CheckoutResult, OrderDetail } from '@timmyhub/contracts'
-import { CheckoutInputSchema } from '@timmyhub/contracts'
+import type { CancelOrderInput, CheckoutInput, CheckoutResult, OrderDetail } from '@timmyhub/contracts'
+import { CancelOrderInputSchema, CheckoutInputSchema } from '@timmyhub/contracts'
 import type { AuthUser } from '@timmyhub/modules/platform/auth'
 import { AuthenticatedOnly, CurrentUser, Public } from '@timmyhub/modules/platform/auth'
 
@@ -87,5 +87,16 @@ export class OrderController {
     @Get(':id')
     getOrderById(@Param('id') id: string, @CurrentUser() actor: AuthUser): Promise<OrderDetail> {
         return this.orderService.getOrderById(actor.id, id)
+    }
+
+    // Huỷ đơn hàng của người mua
+    @AuthenticatedOnly()
+    @Patch(':id/cancel')
+    cancelOrder(
+        @Param('id') id: string,
+        @Body(new ZodValidationPipe(CancelOrderInputSchema)) body: CancelOrderInput,
+        @CurrentUser() actor: AuthUser,
+    ): Promise<OrderDetail> {
+        return this.orderService.cancelOrder(actor.id, id, body.reason)
     }
 }
