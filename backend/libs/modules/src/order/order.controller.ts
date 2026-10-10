@@ -2,8 +2,14 @@ import { Body, Controller, Get, Headers, Param, Patch, Post, Query, Req, Res } f
 import { ConfigService } from '@nestjs/config'
 import type { Request, Response } from 'express'
 import { ZodValidationPipe } from '@timmyhub/common'
-import type { CancelOrderInput, CheckoutInput, CheckoutResult, OrderDetail } from '@timmyhub/contracts'
-import { CancelOrderInputSchema, CheckoutInputSchema } from '@timmyhub/contracts'
+import type {
+    CancelOrderInput,
+    CheckoutInput,
+    CheckoutResult,
+    OrderDetail,
+    UpdateOrderStatusInput,
+} from '@timmyhub/contracts'
+import { CancelOrderInputSchema, CheckoutInputSchema, UpdateOrderStatusInputSchema } from '@timmyhub/contracts'
 import type { AuthUser } from '@timmyhub/modules/platform/auth'
 import { AuthenticatedOnly, CurrentUser, Public } from '@timmyhub/modules/platform/auth'
 
@@ -80,6 +86,27 @@ export class OrderController {
         const payload = (body && Object.keys(body).length > 0 ? body : req.query) as Record<string, string>
         const result = await this.vnpayService.processIpn(payload)
         res.status(200).json(result)
+    }
+
+    // Danh sách đơn hàng thuộc về shop của người bán
+    @AuthenticatedOnly()
+    @Get('seller/all')
+    getSellerOrders(
+        @Query('status') status: string | undefined,
+        @CurrentUser() actor: AuthUser,
+    ): Promise<OrderDetail[]> {
+        return this.orderService.getSellerOrders(actor.id, status)
+    }
+
+    // Người bán cập nhật trạng thái đơn hàng (Xác nhận, Đang xử lý, Giao hàng, Hoàn thành, Huỷ)
+    @AuthenticatedOnly()
+    @Patch('seller/:id/status')
+    updateSellerOrderStatus(
+        @Param('id') id: string,
+        @Body(new ZodValidationPipe(UpdateOrderStatusInputSchema)) body: UpdateOrderStatusInput,
+        @CurrentUser() actor: AuthUser,
+    ): Promise<OrderDetail> {
+        return this.orderService.updateSellerOrderStatus(actor.id, id, body.status, body.note)
     }
 
     // Chi tiết 1 đơn hàng

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import type { Address, OrderItem, OrderStatus } from '@timmyhub/prisma'
 import { Prisma, PrismaService } from '@timmyhub/prisma'
 import type {
@@ -571,6 +571,96 @@ export class OrderService {
         })
 
         return this.formatOrder({ ...updatedOrder, shopName: seller?.shopName })
+    }
+
+    async getSellerOrders(userId: string, status?: string): Promise<OrderDetail[]> {
+        const seller = await this.prisma.sellerProfile.findUnique({
+            where: { userId },
+        })
+        if (!seller) {
+            throw new ForbiddenException('Bạn chưa có hồ sơ người bán hoặc chưa được phê duyệt')
+        }
+
+        const orderStatus = status && status in ORDER_STATUS ? (status as OrderStatus) : undefined
+        const orders = await this.orderRepo.findOrdersBySellerId(seller.id, orderStatus)
+        return orders.map((o) => this.formatOrder({ ...o, shopName: seller.shopName }))
+    }
+
+    async updateSellerOrderStatus(
+        userId: string,
+        orderId: string,
+        toStatus: OrderStatus,
+        note?: string,
+    ): Promise<OrderDetail> {
+        const seller = await this.prisma.sellerProfile.findUnique({
+            where: { userId },
+        })
+        if (!seller) {
+            throw new ForbiddenException('Bạn chưa có hồ sơ người bán')
+        }
+
+        const order = await this.orderRepo.findOrderByIdForSeller(orderId, seller.id)
+        if (!order) {
+            throw new NotFoundException('Không tìm thấy đơn hàng của gian hàng bạn')
+        }
+
+        const updatedOrder = await this.prisma.$transaction(
+            async (tx) => {
+                // Nếu huỷ đơn hàng, hoàn lại tồn kho
+                if (toStatus === 'CANCELLED' && order.status !== 'CANCELLED') {
+                    for (const item of order.orderItems) {
+                        const variant = await tx.productVariant.findUnique({
+                            where: { id: item.variantId },
+                            include: { inventory: true },
+                        })
+                        if (variant?.inventory) {
+                            await tx.inventoryItem.update({
+                                where: { id: variant.inventory.id },
+                                data: {
+                                    reserved: { decrement: Math.min(variant.inventory.reserved, item.quantity) },
+                                },
+                            })
+                        }
+                        await tx.product.update({
+                            where: { id: item.productId },
+                            data: {
+                                totalStock: { increment: item.quantity },
+                                soldCount: { decrement: item.quantity },
+                            },
+                        })
+                    }
+                }
+
+                // Nếu đơn chuyển sang COMPLETED hoặc DELIVERED và đã thanh toán COD
+                const isPaid = order.paymentStatus === 'PAID' || toStatus === 'DELIVERED' || toStatus === 'COMPLETED'
+
+                return tx.order.update({
+                    where: { id: orderId },
+                    data: {
+                        status: toStatus,
+                        ...(isPaid && order.paymentStatus !== 'PAID' ? { paymentStatus: 'PAID' } : {}),
+                        cancelReason: toStatus === 'CANCELLED' ? (note ?? 'Người bán huỷ đơn') : order.cancelReason,
+                        statusHistory: {
+                            create: {
+                                fromStatus: order.status,
+                                toStatus,
+                                reason: note ?? `Người bán chuyển trạng thái sang ${toStatus}`,
+                                actorId: userId,
+                                actorRole: 'SELLER',
+                            },
+                        },
+                    },
+                    include: {
+                        orderItems: true,
+                        address: true,
+                        statusHistory: { orderBy: { createdAt: 'desc' } },
+                    },
+                })
+            },
+            { maxWait: 10000, timeout: 20000 },
+        )
+
+        return this.formatOrder({ ...updatedOrder, shopName: seller.shopName })
     }
 
     // ===== Helpers =====

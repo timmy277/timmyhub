@@ -125,4 +125,43 @@ export class OrderRepository {
             },
         })
     }
+
+    async findOrdersBySellerId(
+        sellerId: string,
+        status?: OrderStatus,
+        tx?: Prisma.TransactionClient,
+    ): Promise<OrderWithRelations[]> {
+        const client = this.getClient(tx)
+        return client.order.findMany({
+            where: {
+                sellerId,
+                ...(status ? { status } : {}),
+            },
+            include: {
+                orderItems: true,
+                address: true,
+                statusHistory: { orderBy: { createdAt: 'desc' } },
+            },
+            orderBy: { createdAt: 'desc' },
+        })
+    }
+
+    async findOrderByIdForSeller(
+        orderId: string,
+        sellerId: string,
+        tx?: Prisma.TransactionClient,
+    ): Promise<OrderWithRelations | null> {
+        const client = this.getClient(tx)
+        return client.order.findFirst({
+            where: {
+                id: orderId,
+                sellerId,
+            },
+            include: {
+                orderItems: true,
+                address: true,
+                statusHistory: { orderBy: { createdAt: 'desc' } },
+            },
+        })
+    }
 }
