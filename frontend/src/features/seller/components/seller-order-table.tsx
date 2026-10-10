@@ -193,7 +193,7 @@ export function SellerOrderTable({ rows, onRefresh, error }: SellerOrderTablePro
                         setStatusFilter(SELLER_ORDER_STATUS_ALL)
                         return true
                     }}
-                    searchLabel="Tìm theo mã đơn, người nhận, SĐT hoặc sản phẩm..."
+                    searchLabel="Tìm đơn hàng..."
                     exportFileName="danh-sach-don-hang-timmyhub"
                     pagination={true}
                     gridProps={{

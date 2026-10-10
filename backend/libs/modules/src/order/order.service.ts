@@ -577,7 +577,35 @@ export class OrderService {
         const seller = await this.prisma.sellerProfile.findUnique({
             where: { userId },
         })
+
         if (!seller) {
+            // Nếu là ADMIN hoặc SUPER_ADMIN, cho phép xem toàn bộ đơn hàng của sàn
+            const user = await this.prisma.user.findUnique({
+                where: { id: userId },
+                select: { role: true },
+            })
+            if (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') {
+                const orderStatus = status && status in ORDER_STATUS ? (status as OrderStatus) : undefined
+                const orders = await this.prisma.order.findMany({
+                    where: orderStatus ? { status: orderStatus } : undefined,
+                    include: {
+                        orderItems: true,
+                        address: true,
+                        statusHistory: { orderBy: { createdAt: 'desc' } },
+                    },
+                    orderBy: { createdAt: 'desc' },
+                })
+                const sellerIds = Array.from(new Set(orders.map((o) => o.sellerId)))
+                const sellers =
+                    sellerIds.length > 0
+                        ? await this.prisma.sellerProfile.findMany({
+                              where: { id: { in: sellerIds } },
+                          })
+                        : []
+                const shopMap = new Map(sellers.map((s) => [s.id, s.shopName]))
+                return orders.map((o) => this.formatOrder({ ...o, shopName: shopMap.get(o.sellerId) }))
+            }
+
             throw new ForbiddenException('Bạn chưa có hồ sơ người bán hoặc chưa được phê duyệt')
         }
 
@@ -595,11 +623,33 @@ export class OrderService {
         const seller = await this.prisma.sellerProfile.findUnique({
             where: { userId },
         })
+
+        let isPlatformAdmin = false
         if (!seller) {
-            throw new ForbiddenException('Bạn chưa có hồ sơ người bán')
+            const user = await this.prisma.user.findUnique({
+                where: { id: userId },
+                select: { role: true },
+            })
+            if (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') {
+                isPlatformAdmin = true
+            } else {
+                throw new ForbiddenException('Bạn chưa có hồ sơ người bán')
+            }
         }
 
-        const order = await this.orderRepo.findOrderByIdForSeller(orderId, seller.id)
+        const order = seller
+            ? await this.orderRepo.findOrderByIdForSeller(orderId, seller.id)
+            : isPlatformAdmin
+              ? await this.prisma.order.findUnique({
+                    where: { id: orderId },
+                    include: {
+                        orderItems: true,
+                        address: true,
+                        statusHistory: { orderBy: { createdAt: 'desc' } },
+                    },
+                })
+              : null
+
         if (!order) {
             throw new NotFoundException('Không tìm thấy đơn hàng của gian hàng bạn')
         }
@@ -693,32 +743,32 @@ export class OrderService {
             sellerId: o.sellerId,
             ...(o.shopName ? { shopName: o.shopName } : {}),
             status: o.status,
-            totalAmount: o.totalAmount.toString(),
-            currency: o.currency,
+            totalAmount: o.totalAmount != null ? o.totalAmount.toString() : '0',
+            currency: o.currency || 'VND',
             voucherId: o.voucherId ?? null,
-            voucherDiscount: o.voucherDiscount ? o.voucherDiscount.toString() : null,
-            shippingFee: o.shippingFee.toString(),
-            paymentStatus: o.paymentStatus,
+            voucherDiscount: o.voucherDiscount != null ? o.voucherDiscount.toString() : null,
+            shippingFee: o.shippingFee != null ? o.shippingFee.toString() : '0',
+            paymentStatus: o.paymentStatus || 'PENDING',
             paymentMethod: o.paymentMethod,
             addressId: o.addressId,
-            shippingFullName: o.shippingFullName,
-            shippingPhone: o.shippingPhone,
-            shippingAddress: o.shippingAddress,
+            shippingFullName: o.shippingFullName || '',
+            shippingPhone: o.shippingPhone || '',
+            shippingAddress: o.shippingAddress || '',
             customerNote: o.customerNote ?? null,
             cancelReason: o.cancelReason ?? null,
-            createdAt: o.createdAt.toISOString(),
-            updatedAt: o.updatedAt.toISOString(),
-            items: o.orderItems.map((it: OrderItem): OrderItemDetail => ({
+            createdAt: o.createdAt ? o.createdAt.toISOString() : new Date().toISOString(),
+            updatedAt: o.updatedAt ? o.updatedAt.toISOString() : new Date().toISOString(),
+            items: (o.orderItems || []).map((it: OrderItem): OrderItemDetail => ({
                 id: it.id,
                 productId: it.productId,
                 variantId: it.variantId,
-                productName: it.productName,
-                variantLabel: it.variantLabel,
-                sku: it.sku,
-                imageUrl: it.imageUrl,
-                unitPrice: it.unitPrice.toString(),
+                productName: it.productName || '',
+                variantLabel: it.variantLabel || '',
+                sku: it.sku || '',
+                imageUrl: it.imageUrl || '',
+                unitPrice: it.unitPrice != null ? it.unitPrice.toString() : '0',
                 quantity: it.quantity,
-                lineTotal: it.lineTotal.toString(),
+                lineTotal: it.lineTotal != null ? it.lineTotal.toString() : '0',
                 isReviewed: it.isReviewed,
             })),
             statusHistory: o.statusHistory
@@ -728,7 +778,7 @@ export class OrderService {
                       toStatus: sh.toStatus,
                       reason: sh.reason,
                       actorRole: sh.actorRole,
-                      createdAt: sh.createdAt.toISOString(),
+                      createdAt: sh.createdAt ? sh.createdAt.toISOString() : new Date().toISOString(),
                   }))
                 : undefined,
         }

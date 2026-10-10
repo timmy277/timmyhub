@@ -27,10 +27,7 @@ export default async function SellerOrdersPage({ searchParams }: SellerOrdersPag
           : 'Không thể tải danh sách đơn hàng.'
 
     return (
-        <PageContainer
-            title="Quản lý đơn hàng"
-            description="Theo dõi, đóng gói và xử lý đơn hàng của gian hàng bạn trên TimmyHub."
-        >
+        <PageContainer>
             <SellerOrdersView rows={rows} tabs={tabs} currentUserId={actor?.userId || ''} error={error} />
         </PageContainer>
     )

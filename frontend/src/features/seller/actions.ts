@@ -204,7 +204,12 @@ export async function getSellerOrdersAction(status?: string): Promise<SellerActi
         token: actor.accessToken,
     })
 
-    if (!result.ok) return { ok: false, code: result.code }
+    if (!result.ok) {
+        return {
+            ok: false,
+            code: result.status === 403 ? 'FORBIDDEN' : result.status === 401 ? 'UNAUTHORIZED' : result.code,
+        }
+    }
     return { ok: true, data: result.data }
 }
 
