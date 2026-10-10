@@ -120,10 +120,10 @@ export function HomeFooter() {
                     <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 sm:p-10 shadow-sm">
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
                             <div className="lg:col-span-7 space-y-2">
-                                <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                                <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
                                     <IconPath
                                         name="gemini-star"
-                                        className="size-3.5 text-primary animate-pulse transition-transform duration-300 hover:scale-125 hover:rotate-12 hover:drop-shadow-[0_0_10px_var(--color-primary)] cursor-pointer"
+                                        className="size-3.5 text-emerald-800 dark:text-emerald-300 animate-pulse transition-transform duration-300 hover:scale-125 hover:rotate-12 hover:drop-shadow-[0_0_10px_var(--color-primary)] cursor-pointer"
                                     />
                                     Bản tin ưu đãi VIP 2026
                                 </div>
@@ -156,7 +156,7 @@ export function HomeFooter() {
                                     <Button
                                         type="submit"
                                         size="lg"
-                                        className="h-11 rounded-xl font-semibold gap-2 shadow-sm text-white shrink-0"
+                                        className="h-11 rounded-xl font-semibold gap-2 shadow-sm text-primary-foreground shrink-0"
                                     >
                                         <span>Đăng ký</span>
                                         <ChevronRightIcon className="size-4" />
@@ -178,17 +178,17 @@ export function HomeFooter() {
                     {/* Brand Info Column */}
                     <div className="lg:col-span-4 space-y-4">
                         <Link href={ROUTE.HOME} className="inline-flex items-center gap-2.5 font-bold text-xl">
-                            <div className="flex size-9 items-center justify-center rounded-xl bg-primary font-bold text-white shadow-md">
+                            <div className="flex size-9 items-center justify-center rounded-xl bg-primary font-bold text-primary-foreground shadow-md">
                                 T
                             </div>
                             <span className="tracking-tight text-foreground">TimmyHub</span>
                             <Badge
                                 variant="outline"
-                                className="gap-1 border-primary/40 bg-primary/10 text-primary text-[10px] font-semibold"
+                                className="gap-1 border-primary/40 bg-primary/10 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold"
                             >
                                 <IconPath
                                     name="gemini-star"
-                                    className="size-3 text-primary animate-pulse transition-transform duration-300 hover:scale-125 hover:rotate-12 hover:drop-shadow-[0_0_10px_var(--color-primary)] cursor-pointer"
+                                    className="size-3 text-emerald-800 dark:text-emerald-300 animate-pulse transition-transform duration-300 hover:scale-125 hover:rotate-12 hover:drop-shadow-[0_0_10px_var(--color-primary)] cursor-pointer"
                                 />
                                 Sàn TMĐT 2026
                             </Badge>

@@ -553,7 +553,7 @@ const Product3DCard = memo(function Product3DCard({ product: p, isLiked, onToggl
 
                     <div className="mt-auto pt-2 space-y-2">
                         <div className="flex items-baseline gap-1.5">
-                            <span className="text-sm sm:text-base font-extrabold text-primary transition-transform duration-300 group-hover:scale-105 origin-left inline-block">
+                            <span className="text-sm sm:text-base font-extrabold text-emerald-700 dark:text-emerald-400 transition-transform duration-300 group-hover:scale-105 origin-left inline-block">
                                 ₫{p.price}
                             </span>
                             <span className="text-[10px] text-muted-foreground line-through">₫{p.originalPrice}</span>
@@ -760,11 +760,11 @@ export function HomePage() {
                                                 <a href={slide.href}>
                                                     <Button
                                                         size="lg"
-                                                        className="rounded-xl font-semibold gap-2 shadow-lg hover:shadow-primary/25 text-white"
+                                                        className="rounded-xl font-semibold gap-2 shadow-lg hover:shadow-primary/25 bg-primary text-primary-foreground hover:bg-primary/90"
                                                     >
-                                                        <ShoppingBagIcon className="size-4 text-white" />
+                                                        <ShoppingBagIcon className="size-4 text-primary-foreground" />
                                                         {slide.action}
-                                                        <ArrowRightIcon className="size-4 text-white" />
+                                                        <ArrowRightIcon className="size-4 text-primary-foreground" />
                                                     </Button>
                                                 </a>
                                                 <Link href={ROUTE.SELLER_PORTAL}>
@@ -785,15 +785,18 @@ export function HomePage() {
                                             <div className="w-80 rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-md shadow-2xl text-white transition-all duration-500 ease-out hover:scale-105 [transform:rotateY(-8deg)_rotateX(6deg)] hover:[transform:rotateY(0deg)_rotateX(0deg)] motion-reduce:transform-none select-none">
                                                 <div className="flex items-center justify-between border-b border-white/10 pb-3">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-white font-bold text-xs">
+                                                        <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-xs">
                                                             T
                                                         </span>
                                                         <span className="font-bold text-xs tracking-wider uppercase text-white">
                                                             TimmyHub Choice
                                                         </span>
                                                     </div>
-                                                    <Badge className="bg-primary text-white text-[10px] font-semibold gap-1">
-                                                        <IconPath name="gemini-star" className="size-2.5 text-white" />
+                                                    <Badge className="bg-primary text-primary-foreground text-[10px] font-semibold gap-1">
+                                                        <IconPath
+                                                            name="gemini-star"
+                                                            className="size-2.5 text-primary-foreground"
+                                                        />
                                                         Ưu đãi 2026
                                                     </Badge>
                                                 </div>
@@ -819,18 +822,22 @@ export function HomePage() {
 
                                     {/* Slide Bottom Controls & Dots */}
                                     <div className="relative z-10 flex items-center justify-between pt-4">
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1">
                                             {HERO_SLIDES.map((_, dotIndex) => (
                                                 <button
                                                     key={dotIndex}
                                                     onClick={() => setCurrentSlide(dotIndex)}
                                                     aria-label={`Chuyển tới slide ${dotIndex + 1}`}
-                                                    className={`h-2 rounded-full transition-all duration-300 ${
-                                                        dotIndex === currentSlide
-                                                            ? 'w-8 bg-primary'
-                                                            : 'w-2 bg-white/40 hover:bg-white/70'
-                                                    }`}
-                                                />
+                                                    className="group flex min-h-6 min-w-6 items-center justify-center p-1 focus:outline-none"
+                                                >
+                                                    <span
+                                                        className={`h-2 rounded-full transition-all duration-300 ${
+                                                            dotIndex === currentSlide
+                                                                ? 'w-8 bg-primary'
+                                                                : 'w-2 bg-white/40 group-hover:bg-white/70'
+                                                        }`}
+                                                    />
+                                                </button>
                                             ))}
                                         </div>
                                         <div className="flex items-center gap-1.5">
@@ -901,7 +908,7 @@ export function HomePage() {
                         </div>
                         <button
                             onClick={() => toast.info('Xem tất cả danh mục hàng hoá')}
-                            className="group flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                            className="group flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline"
                         >
                             Xem tất cả
                             <ChevronRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -949,7 +956,7 @@ export function HomePage() {
                                     <IconPath name="gemini-star" className="size-4 text-amber-400 animate-pulse" />
                                 </h2>
                             </div>
-                            <Badge className="ml-2 hidden sm:inline-flex text-[10px] bg-primary text-white border-transparent">
+                            <Badge className="ml-2 hidden sm:inline-flex text-[10px] bg-primary text-primary-foreground border-transparent">
                                 Tiết kiệm tối đa
                             </Badge>
                         </div>
@@ -971,7 +978,7 @@ export function HomePage() {
                                     {/* Left Ticket Content */}
                                     <div className="space-y-1.5 min-w-0 pr-3">
                                         <div className="flex items-center gap-1.5">
-                                            <Badge className="text-[10px] px-2 py-0.5 bg-primary text-white border-transparent font-medium">
+                                            <Badge className="text-[10px] px-2 py-0.5 bg-primary text-primary-foreground border-transparent font-medium">
                                                 {v.badge}
                                             </Badge>
                                             <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-0.5">
@@ -994,20 +1001,22 @@ export function HomePage() {
 
                                     {/* Right Ticket Action */}
                                     <div className="shrink-0 flex flex-col items-end gap-2 border-l border-dashed border-border pl-4">
-                                        <span className="font-extrabold text-lg text-primary">{v.value}</span>
+                                        <span className="font-extrabold text-lg text-emerald-700 dark:text-emerald-400">
+                                            {v.value}
+                                        </span>
                                         <Button
                                             size="sm"
                                             variant={isSaved ? 'outline' : 'default'}
                                             onClick={() => handleSaveVoucher(v.id, v.code)}
                                             className={`h-8 rounded-lg text-xs font-semibold px-3 ${
                                                 isSaved
-                                                    ? 'border-primary/40 text-primary hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40'
-                                                    : 'bg-primary text-white hover:bg-primary/90'
+                                                    ? 'border-emerald-600/40 text-emerald-700 dark:text-emerald-400 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40'
+                                                    : 'bg-primary text-primary-foreground hover:bg-primary/90'
                                             }`}
                                         >
                                             {isSaved ? (
                                                 <>
-                                                    <CheckIcon className="size-3.5 mr-1 text-primary" />
+                                                    <CheckIcon className="size-3.5 mr-1 text-emerald-700 dark:text-emerald-400" />
                                                     Đã lưu
                                                 </>
                                             ) : (
@@ -1158,7 +1167,7 @@ export function HomePage() {
                         </div>
                         <button
                             onClick={() => toast.info('Xem thêm video cộng đồng')}
-                            className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+                            className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1"
                         >
                             Xem tất cả
                             <ChevronRightIcon className="size-3.5" />
@@ -1176,8 +1185,8 @@ export function HomePage() {
                                     className={`relative h-44 w-full bg-gradient-to-br ${post.accent} flex items-center justify-center overflow-hidden border-b border-border/50`}
                                 >
                                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-                                    <div className="relative flex size-12 items-center justify-center rounded-full bg-primary text-white shadow-lg transition-transform duration-200 group-hover:scale-110">
-                                        <PlayIcon className="size-5 fill-current ml-0.5 text-white" />
+                                    <div className="relative flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform duration-200 group-hover:scale-110">
+                                        <PlayIcon className="size-5 fill-current ml-0.5 text-primary-foreground" />
                                     </div>
                                     <span className="absolute bottom-2.5 right-2.5 rounded-md bg-black/70 px-2 py-0.5 font-mono text-[10px] font-bold text-white">
                                         {post.videoDuration}
@@ -1191,7 +1200,7 @@ export function HomePage() {
                                 {/* Post Meta */}
                                 <div className="flex flex-1 flex-col p-4 space-y-3">
                                     <div className="flex items-center gap-2.5">
-                                        <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xs ring-1 ring-primary/30">
+                                        <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-emerald-800 dark:text-emerald-300 font-bold text-xs ring-1 ring-primary/30">
                                             {post.avatar}
                                         </div>
                                         <div className="min-w-0 flex-1">
@@ -1214,14 +1223,16 @@ export function HomePage() {
 
                                     {/* Tagged Product Link */}
                                     <div className="mt-auto rounded-xl bg-muted/50 p-2.5 border border-border/60 flex items-center gap-2.5 text-xs">
-                                        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-emerald-800 dark:text-emerald-300">
                                             <ShoppingBagIcon className="size-3.5" />
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <p className="truncate font-semibold text-foreground text-[11px]">
                                                 {post.taggedProduct}
                                             </p>
-                                            <p className="font-extrabold text-primary text-xs">{post.productPrice}</p>
+                                            <p className="font-extrabold text-emerald-700 dark:text-emerald-400 text-xs">
+                                                {post.productPrice}
+                                            </p>
                                         </div>
                                     </div>
 
@@ -1274,8 +1285,8 @@ export function HomePage() {
                                     onClick={() => setProductTab('all')}
                                     className={`rounded-lg px-3 py-1.5 transition-colors ${
                                         productTab === 'all'
-                                            ? 'bg-primary text-white shadow-sm'
-                                            : 'text-muted-foreground hover:text-foreground'
+                                            ? 'bg-primary text-primary-foreground shadow-sm'
+                                            : 'text-foreground/80 hover:text-foreground'
                                     }`}
                                 >
                                     Tất cả
@@ -1284,8 +1295,8 @@ export function HomePage() {
                                     onClick={() => setProductTab('new')}
                                     className={`rounded-lg px-3 py-1.5 transition-colors ${
                                         productTab === 'new'
-                                            ? 'bg-primary text-white shadow-sm'
-                                            : 'text-muted-foreground hover:text-foreground'
+                                            ? 'bg-primary text-primary-foreground shadow-sm'
+                                            : 'text-foreground/80 hover:text-foreground'
                                     }`}
                                 >
                                     Mới nhất
@@ -1294,8 +1305,8 @@ export function HomePage() {
                                     onClick={() => setProductTab('best')}
                                     className={`rounded-lg px-3 py-1.5 transition-colors ${
                                         productTab === 'best'
-                                            ? 'bg-primary text-white shadow-sm'
-                                            : 'text-muted-foreground hover:text-foreground'
+                                            ? 'bg-primary text-primary-foreground shadow-sm'
+                                            : 'text-foreground/80 hover:text-foreground'
                                     }`}
                                 >
                                     Bán chạy
@@ -1412,8 +1423,8 @@ export function HomePage() {
                 >
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center p-6 sm:p-10">
                         <div className="md:col-span-8 space-y-4">
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-bold text-white shadow-sm">
-                                <SparklesIcon className="size-3 text-white" />
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground shadow-sm">
+                                <SparklesIcon className="size-3 text-primary-foreground" />
                                 Độc quyền trên TimmyHub App
                             </span>
                             <h2 className="font-heading text-2xl sm:text-4xl font-extrabold tracking-tight text-foreground leading-tight">
@@ -1426,10 +1437,10 @@ export function HomePage() {
                             <div className="flex flex-wrap items-center gap-3 pt-2">
                                 <Button
                                     size="lg"
-                                    className="rounded-xl font-semibold gap-2 shadow-md bg-primary text-white hover:bg-primary/90"
+                                    className="rounded-xl font-semibold gap-2 shadow-md bg-primary text-primary-foreground hover:bg-primary/90"
                                     onClick={() => toast.info('Tính năng tải ứng dụng iOS sắp ra mắt!')}
                                 >
-                                    <IconPath name="apple" size={16} className="text-white" />
+                                    <IconPath name="apple" size={16} className="text-primary-foreground" />
                                     App Store
                                 </Button>
                                 <Button
@@ -1443,9 +1454,9 @@ export function HomePage() {
                                 <Link href={sellerRoute}>
                                     <Button
                                         size="lg"
-                                        className="rounded-xl font-semibold gap-2 bg-primary text-white hover:bg-primary/90 shadow-sm"
+                                        className="rounded-xl font-semibold gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
                                     >
-                                        <StoreIcon className="size-4 text-white" />
+                                        <StoreIcon className="size-4 text-primary-foreground" />
                                         {sellerLabel}
                                     </Button>
                                 </Link>
@@ -1454,7 +1465,7 @@ export function HomePage() {
 
                         <div className="md:col-span-4 flex justify-center [perspective:800px]">
                             <div className="w-64 rounded-2xl border border-border/60 bg-card p-5 shadow-2xl text-center space-y-3 transition-transform duration-300 hover:rotate-0 hover:scale-105 [transform:rotateY(-6deg)_rotateX(4deg)] motion-reduce:transform-none select-none">
-                                <div className="size-16 mx-auto rounded-2xl bg-primary flex items-center justify-center text-white font-black text-2xl shadow-md">
+                                <div className="size-16 mx-auto rounded-2xl bg-primary flex items-center justify-center text-primary-foreground font-black text-2xl shadow-md">
                                     T
                                 </div>
                                 <h3 className="font-bold text-base text-foreground">TimmyHub Mobile</h3>
@@ -1464,7 +1475,9 @@ export function HomePage() {
                                 <div className="rounded-xl bg-muted p-4 border border-border font-mono text-xs font-bold text-foreground">
                                     [ QR CODE SCAN ]
                                 </div>
-                                <p className="text-[10px] text-primary font-bold">iOS & Android Hỗ Trợ 100%</p>
+                                <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold">
+                                    iOS & Android Hỗ Trợ 100%
+                                </p>
                             </div>
                         </div>
                     </div>

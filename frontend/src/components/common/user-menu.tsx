@@ -24,6 +24,7 @@ import { AccountDialog } from '@/features/account'
 import { getCurrentUserProfileAction } from '@/features/users'
 import { useLogout, useMounted, usePermissions } from '@/hooks'
 import { useUserProfileStore } from '@/stores'
+import { getInitials } from '@/utils'
 
 import { UserAvatar } from './user-avatar'
 
@@ -98,11 +99,14 @@ export function UserMenu() {
         toast.success(t('loggedOut'))
     }
 
+    const initials = isMounted && username ? getInitials(username) : ''
+    const accountLabel = initials ? `${initials} - ${t('account')}` : t('account')
+
     return (
         <>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" aria-label={t('account')} className="rounded-full">
+                    <Button variant="ghost" size="icon" aria-label={accountLabel} className="rounded-full">
                         <UserAvatar name={username} imageUrl={avatar} />
                     </Button>
                 </DropdownMenuTrigger>

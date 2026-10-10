@@ -22,6 +22,7 @@ export function UserAvatar({ name, imageUrl, size, className, fallbackClassName 
             {imageUrl && <AvatarImage src={imageUrl} alt="" />}
             <AvatarFallback
                 suppressHydrationWarning
+                aria-hidden="true"
                 className={cn('bg-primary/10 text-xs font-semibold text-primary', fallbackClassName)}
             >
                 {getInitials(name)}
