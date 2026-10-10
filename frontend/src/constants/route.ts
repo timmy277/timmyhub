@@ -19,4 +19,8 @@ export const ROUTE = {
     ADMIN_PRODUCTS: '/products',
     ADMIN_CATEGORIES: '/categories',
     CART: '/cart',
+    CHECKOUT: '/checkout',
+    CHECKOUT_SUCCESS: (id: string) => `/checkout/success?orderId=${encodeURIComponent(id)}`,
+    ORDERS: '/orders',
+    ORDER_DETAIL: (id: string) => `/orders/${encodeURIComponent(id)}`,
 } as const

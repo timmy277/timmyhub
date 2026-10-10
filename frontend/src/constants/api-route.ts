@@ -90,4 +90,14 @@ export const API_ROUTE = {
         ITEMS: 'v1/cart/items',
         ITEM: (id: string) => `v1/cart/items/${encodeURIComponent(id)}`,
     },
+    ORDER: {
+        ROOT: 'v1/orders',
+        CHECKOUT: 'v1/orders/checkout',
+        DETAIL: (id: string) => `v1/orders/${encodeURIComponent(id)}`,
+    },
+    ADDRESS: {
+        ROOT: 'v1/addresses',
+        DETAIL: (id: string) => `v1/addresses/${encodeURIComponent(id)}`,
+        DEFAULT: (id: string) => `v1/addresses/${encodeURIComponent(id)}/default`,
+    },
 } as const

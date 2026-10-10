@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
     CheckCircle2Icon,
     ChevronRightIcon,
@@ -35,6 +36,7 @@ interface PublicProductDetailViewProps {
 
 export function PublicProductDetailView({ product, relatedProducts = [] }: PublicProductDetailViewProps) {
     const t = useTranslations('productDetail')
+    const router = useRouter()
     // ===== Gallery State =====
     const allImages = useMemo(() => {
         if (product.images && product.images.length > 0) {
@@ -151,9 +153,17 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
     }
 
     const handleBuyNow = () => {
-        toast.info(t('buyNowNotice'), {
-            description: t('buyNowNoticeDesc'),
-        })
+        if (!activeVariant) {
+            toast.error(t('selectVariant'))
+            return
+        }
+        if (stockAvailable <= 0) {
+            toast.error(t('outOfStock'))
+            return
+        }
+        router.push(
+            `${ROUTE.CHECKOUT}?productId=${encodeURIComponent(product.id)}&variantId=${encodeURIComponent(activeVariant.id)}&qty=${quantity}`,
+        )
     }
 
     return (

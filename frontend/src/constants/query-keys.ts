@@ -55,4 +55,13 @@ export const QUERY_KEY = {
         ALL: ['cart'] as const,
         DETAIL: ['cart', 'detail'] as const,
     },
+    ORDER: {
+        ALL: ['order'] as const,
+        MY_ORDERS: (status?: string) => ['order', 'my-orders', status] as const,
+        DETAIL: (id: string) => ['order', 'detail', id] as const,
+    },
+    ADDRESS: {
+        ALL: ['address'] as const,
+        LIST: ['address', 'list'] as const,
+    },
 } as const

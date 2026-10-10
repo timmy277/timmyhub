@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
     AlertCircleIcon,
     ArrowRightIcon,
@@ -45,6 +46,7 @@ interface CartViewProps {
 
 export function CartView({ initialData }: CartViewProps) {
     const t = useTranslations('cart')
+    const router = useRouter()
     const { data: cart } = useCart({ initialData })
     const updateItemMutation = useUpdateCartItem()
     const removeItemMutation = useRemoveCartItem()
@@ -185,9 +187,8 @@ export function CartView({ initialData }: CartViewProps) {
             toast.error(t('page.selectAtLeastOne'))
             return
         }
-        toast.info('Chuyển sang bước thanh toán đơn hàng...', {
-            description: `Đã chọn ${selectedCount} sản phẩm với tổng tiền ${formatCurrencyVND(selectedSubtotal)}`,
-        })
+        const selectedIds = Array.from(selectedItemIds).join(',')
+        router.push(`${ROUTE.CHECKOUT}?items=${encodeURIComponent(selectedIds)}`)
     }
 
     // Trạng thái giỏ hàng rỗng
