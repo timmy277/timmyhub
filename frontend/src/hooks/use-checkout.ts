@@ -23,7 +23,7 @@ import {
 } from '@/features/checkout'
 
 // 1. Hook lấy sổ địa chỉ
-export function useAddresses(options?: { enabled?: boolean }) {
+export function useAddresses(options?: { enabled?: boolean; initialData?: AddressDetail[] }) {
     return useQuery<AddressDetail[]>({
         queryKey: QUERY_KEY.ADDRESS.LIST,
         queryFn: async () => {
@@ -35,6 +35,7 @@ export function useAddresses(options?: { enabled?: boolean }) {
             return res.data
         },
         enabled: options?.enabled ?? true,
+        initialData: options?.initialData,
         staleTime: 60_000,
     })
 }

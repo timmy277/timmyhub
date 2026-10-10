@@ -107,6 +107,7 @@ export function FloatCombobox({
                 items={options}
                 name={name}
                 disabled={disabled}
+                isItemEqualToValue={(a, b) => a?.value === b?.value}
                 value={value === undefined ? undefined : findOption(options, value)}
                 defaultValue={defaultValue === undefined ? undefined : findOption(options, defaultValue)}
                 onValueChange={handleValueChange}

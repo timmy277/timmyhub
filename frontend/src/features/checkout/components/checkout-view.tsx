@@ -86,7 +86,11 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
 
     // Query Cart và Addresses
     const { data: cart } = useCart({ initialData: initialCart })
-    const { data: addresses = [] } = useAddresses()
+    const { data: addresses = initialAddresses } = useAddresses({ initialData: initialAddresses })
+    const addressList = useMemo(
+        () => (addresses && addresses.length > 0 ? addresses : initialAddresses),
+        [addresses, initialAddresses],
+    )
 
     // Nếu là luồng Mua Ngay, query product detail để lấy thông tin variant
     const { data: directProduct, isLoading: isLoadingDirectProduct } = usePublicProductDetail(
@@ -145,14 +149,13 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
 
     // Địa chỉ hiện tại đang chọn (ưu tiên địa chỉ người dùng click chọn -> địa chỉ mặc định -> địa chỉ đầu tiên)
     const activeAddress = useMemo(() => {
-        const addressList = addresses.length > 0 ? addresses : initialAddresses
         if (selectedAddressId) {
             const found = addressList.find((a) => a.id === selectedAddressId)
             if (found) return found
         }
         const defaultAddr = addressList.find((a) => a.isDefault)
         return defaultAddr || addressList[0] || null
-    }, [addresses, initialAddresses, selectedAddressId])
+    }, [addressList, selectedAddressId])
 
     // 3. Phương thức thanh toán & Ghi chú
     const [paymentMethod, setPaymentMethod] = useState<'COD' | 'VNPAY' | 'WALLET'>('COD')
@@ -781,7 +784,27 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
              * DIALOG QUẢN LÝ / CHỌN SỔ ĐỊA CHỈ NHẬN HÀNG
              * ───────────────────────────────────────────────────────────── */}
             <Dialog open={isAddressModalOpen} onOpenChange={setIsAddressModalOpen}>
-                <DialogContent className="sm:max-w-xl max-h-[85vh] overflow-y-auto rounded-2xl">
+                <DialogContent
+                    className="sm:max-w-xl max-h-[85vh] overflow-y-auto rounded-2xl"
+                    onPointerDownOutside={(e) => {
+                        const target = e.target as HTMLElement | null
+                        if (
+                            target?.closest('[data-slot="combobox-content"]') ||
+                            target?.closest('[data-slot="combobox-list"]')
+                        ) {
+                            e.preventDefault()
+                        }
+                    }}
+                    onInteractOutside={(e) => {
+                        const target = e.target as HTMLElement | null
+                        if (
+                            target?.closest('[data-slot="combobox-content"]') ||
+                            target?.closest('[data-slot="combobox-list"]')
+                        ) {
+                            e.preventDefault()
+                        }
+                    }}
+                >
                     <DialogHeader>
                         <DialogTitle className="text-lg font-extrabold flex items-center justify-between">
                             <span>{isNewAddressFormOpen ? t('newAddressModalTitle') : t('addressModalTitle')}</span>
@@ -1001,12 +1024,12 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                     ) : (
                         /* Danh sách địa chỉ hiện tại */
                         <div className="space-y-3 pt-2">
-                            {addresses.length === 0 ? (
+                            {addressList.length === 0 ? (
                                 <div className="text-center py-6 text-xs text-muted-foreground">
                                     Bạn chưa có địa chỉ nào được lưu.
                                 </div>
                             ) : (
-                                addresses.map((addr) => {
+                                addressList.map((addr) => {
                                     const isSelected =
                                         selectedAddressId === addr.id ||
                                         (!selectedAddressId && addr.id === activeAddress?.id)
@@ -1028,11 +1051,8 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                                 type="radio"
                                                 name="select-addr"
                                                 checked={isSelected}
-                                                onChange={() => {
-                                                    setSelectedAddressId(addr.id)
-                                                    setIsAddressModalOpen(false)
-                                                }}
-                                                className="mt-1 size-4 text-primary focus:ring-primary"
+                                                readOnly
+                                                className="pointer-events-none mt-1 size-4 text-primary focus:ring-primary"
                                             />
                                             <div className="flex-1 space-y-1">
                                                 <div className="flex items-center gap-2">
