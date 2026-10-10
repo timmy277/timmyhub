@@ -22,9 +22,18 @@ import {
     WalletIcon,
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Controller, useForm, useWatch, type Resolver } from 'react-hook-form'
 import { toast } from 'sonner'
-import type { AddressDetail, CartDetail, CheckoutInput, CreateAddressInput } from '@timmyhub/contracts'
+import {
+    CreateAddressInputSchema,
+    type AddressDetail,
+    type CartDetail,
+    type CheckoutInput,
+    type CreateAddressInput,
+} from '@timmyhub/contracts'
 
+import { FloatCombobox, FloatInput } from '@/components'
 import {
     Badge,
     Button,
@@ -37,13 +46,19 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    Input,
     Label,
     RadioGroup,
     RadioGroupItem,
     Skeleton,
+    Switch,
 } from '@/components/ui'
-import { ROUTE } from '@/constants'
+import {
+    PROVINCE_OPTIONS,
+    ROUTE,
+    VIETNAM_PROVINCES,
+    getDistrictsByProvinceCode,
+    getWardsByDistrictCode,
+} from '@/constants'
 import { useAddresses, useCart, useCheckout, useCreateAddress, usePublicProductDetail } from '@/hooks'
 import { formatCurrencyVND } from '@/utils'
 
@@ -85,21 +100,47 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
     const [isAddressModalOpen, setIsAddressModalOpen] = useState(false)
     const [isNewAddressFormOpen, setIsNewAddressFormOpen] = useState(false)
 
-    // Form thêm địa chỉ mới
-    const [newAddressForm, setNewAddressForm] = useState<CreateAddressInput>({
-        fullName: '',
-        phone: '',
-        provinceCode: '79',
-        provinceName: 'TP. Hồ Chí Minh',
-        districtCode: '760',
-        districtName: 'Quận 1',
-        wardCode: '26734',
-        wardName: 'Phường Bến Nghé',
-        addressLine1: '',
-        addressLine2: '',
-        label: 'Nhà riêng',
-        isDefault: true,
+    // Form thêm địa chỉ mới sử dụng react-hook-form và Zod schema CreateAddressInputSchema
+    const addressForm = useForm<CreateAddressInput>({
+        resolver: zodResolver(CreateAddressInputSchema) as Resolver<CreateAddressInput>,
+        mode: 'onChange',
+        defaultValues: {
+            fullName: '',
+            phone: '',
+            provinceCode: 'HCM',
+            provinceName: 'Thành phố Hồ Chí Minh',
+            districtCode: 'HCM-Q1',
+            districtName: 'Quận 1',
+            wardCode: 'HCM-Q1-BN',
+            wardName: 'Phường Bến Nghé',
+            addressLine1: '',
+            addressLine2: '',
+            label: 'Nhà riêng',
+            isDefault: addresses.length === 0,
+        },
     })
+
+    const selectedProvinceCode = useWatch({ control: addressForm.control, name: 'provinceCode' })
+    const selectedDistrictCode = useWatch({ control: addressForm.control, name: 'districtCode' })
+
+    const districtOptions = useMemo(() => getDistrictsByProvinceCode(selectedProvinceCode), [selectedProvinceCode])
+
+    const wardOptions = useMemo(
+        () => getWardsByDistrictCode(selectedProvinceCode, selectedDistrictCode),
+        [selectedProvinceCode, selectedDistrictCode],
+    )
+
+    const formatAddressError = (errorMsg?: string) => {
+        if (!errorMsg) return undefined
+        if (errorMsg === 'validation.fullNameMin') return 'Họ tên tối thiểu 2 ký tự'
+        if (errorMsg === 'validation.fullNameMax') return 'Họ tên tối đa 100 ký tự'
+        if (errorMsg === 'validation.phoneInvalid') return 'Số điện thoại không hợp lệ (10 số, đầu 0x)'
+        if (errorMsg === 'validation.provinceRequired') return 'Vui lòng chọn Tỉnh/Thành phố'
+        if (errorMsg === 'validation.districtRequired') return 'Vui lòng chọn Quận/Huyện'
+        if (errorMsg === 'validation.wardRequired') return 'Vui lòng chọn Phường/Xã'
+        if (errorMsg === 'validation.addressLineRequired') return 'Vui lòng nhập địa chỉ cụ thể (tối thiểu 3 ký tự)'
+        return errorMsg
+    }
 
     const createAddressMutation = useCreateAddress()
 
@@ -288,22 +329,17 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
     }
 
     // Xử lý submit form tạo địa chỉ mới
-    const handleCreateAddressSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!newAddressForm.fullName.trim() || !newAddressForm.phone.trim() || !newAddressForm.addressLine1.trim()) {
-            toast.error('Vui lòng điền đầy đủ họ tên, số điện thoại và địa chỉ nhận hàng')
-            return
-        }
-
+    const handleCreateAddressSubmit = addressForm.handleSubmit(async (data) => {
         try {
-            const created = await createAddressMutation.mutateAsync(newAddressForm)
+            const created = await createAddressMutation.mutateAsync(data)
             setSelectedAddressId(created.id)
             setIsNewAddressFormOpen(false)
             setIsAddressModalOpen(false)
+            addressForm.reset()
         } catch {
-            // Error đã toast
+            // Error đã toast trong mutation hook
         }
-    }
+    })
 
     return (
         <div className="relative min-h-screen w-full pb-20">
@@ -369,14 +405,19 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                         <MapPinIcon className="size-5" />
                                         <span>{t('addressTitle')}</span>
                                     </div>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setIsAddressModalOpen(true)}
-                                        className="h-8 text-xs font-semibold rounded-lg"
-                                    >
-                                        {activeAddress ? t('changeAddress') : t('addAddress')}
-                                    </Button>
+                                    {activeAddress && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setIsNewAddressFormOpen(false)
+                                                setIsAddressModalOpen(true)
+                                            }}
+                                            className="h-8 text-xs font-semibold rounded-lg"
+                                        >
+                                            {t('changeAddress')}
+                                        </Button>
+                                    )}
                                 </div>
 
                                 {activeAddress ? (
@@ -557,19 +598,16 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
 
                                     {/* Lời nhắn cho người bán */}
                                     <div className="pt-2">
-                                        <Label
-                                            htmlFor="customer-note"
-                                            className="text-xs font-semibold text-muted-foreground mb-1.5 block"
-                                        >
-                                            {t('customerNote')}
-                                        </Label>
-                                        <Input
+                                        <FloatInput
                                             id="customer-note"
+                                            label={t('customerNote')}
                                             placeholder={t('customerNotePlaceholder')}
                                             value={customerNote}
-                                            onChange={(e) => setCustomerNote(e.target.value)}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                                setCustomerNote(e.target.value)
+                                            }
                                             maxLength={200}
-                                            className="h-10 text-xs rounded-xl"
+                                            size="sm"
                                         />
                                     </div>
                                 </div>
@@ -763,99 +801,178 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                     </DialogHeader>
 
                     {isNewAddressFormOpen ? (
-                        /* Form thêm địa chỉ mới */
+                        /* Form thêm địa chỉ mới dùng FloatInput & FloatCombobox */
                         <form onSubmit={handleCreateAddressSubmit} className="space-y-4 pt-2">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs font-semibold">{t('fullName')}</Label>
-                                    <Input
-                                        value={newAddressForm.fullName}
-                                        onChange={(e) => setNewAddressForm((p) => ({ ...p, fullName: e.target.value }))}
-                                        placeholder="Nguyễn Văn A"
-                                        required
-                                        className="h-9 text-xs rounded-lg"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs font-semibold">{t('phone')}</Label>
-                                    <Input
-                                        value={newAddressForm.phone}
-                                        onChange={(e) => setNewAddressForm((p) => ({ ...p, phone: e.target.value }))}
-                                        placeholder="0912345678"
-                                        required
-                                        className="h-9 text-xs rounded-lg"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs font-semibold">{t('province')}</Label>
-                                    <Input
-                                        value={newAddressForm.provinceName}
-                                        onChange={(e) =>
-                                            setNewAddressForm((p) => ({ ...p, provinceName: e.target.value }))
-                                        }
-                                        required
-                                        className="h-9 text-xs rounded-lg"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs font-semibold">{t('district')}</Label>
-                                    <Input
-                                        value={newAddressForm.districtName}
-                                        onChange={(e) =>
-                                            setNewAddressForm((p) => ({ ...p, districtName: e.target.value }))
-                                        }
-                                        required
-                                        className="h-9 text-xs rounded-lg"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs font-semibold">{t('ward')}</Label>
-                                    <Input
-                                        value={newAddressForm.wardName}
-                                        onChange={(e) => setNewAddressForm((p) => ({ ...p, wardName: e.target.value }))}
-                                        required
-                                        className="h-9 text-xs rounded-lg"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold">{t('addressLine1')}</Label>
-                                <Input
-                                    value={newAddressForm.addressLine1}
-                                    onChange={(e) => setNewAddressForm((p) => ({ ...p, addressLine1: e.target.value }))}
-                                    placeholder="123 Đường Lê Lợi, Toà nhà Bitexco"
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <FloatInput
+                                    label={t('fullName')}
                                     required
-                                    className="h-9 text-xs rounded-lg"
+                                    size="sm"
+                                    reserveErrorSpace
+                                    error={formatAddressError(addressForm.formState.errors.fullName?.message)}
+                                    {...addressForm.register('fullName')}
+                                />
+                                <FloatInput
+                                    label={t('phone')}
+                                    required
+                                    size="sm"
+                                    reserveErrorSpace
+                                    error={formatAddressError(addressForm.formState.errors.phone?.message)}
+                                    {...addressForm.register('phone')}
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs font-semibold">{t('addressLabel')}</Label>
-                                    <Input
-                                        value={newAddressForm.label || ''}
-                                        onChange={(e) => setNewAddressForm((p) => ({ ...p, label: e.target.value }))}
-                                        placeholder="Nhà riêng / Văn phòng"
-                                        className="h-9 text-xs rounded-lg"
-                                    />
-                                </div>
-                                <div className="flex items-center gap-2 pt-6">
-                                    <input
-                                        type="checkbox"
-                                        id="set-default-check"
-                                        checked={Boolean(newAddressForm.isDefault)}
-                                        onChange={(e) =>
-                                            setNewAddressForm((p) => ({ ...p, isDefault: e.target.checked }))
-                                        }
-                                        className="size-4 rounded border-border text-primary focus:ring-primary"
-                                    />
-                                    <Label htmlFor="set-default-check" className="text-xs font-semibold cursor-pointer">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <Controller
+                                    control={addressForm.control}
+                                    name="provinceCode"
+                                    render={({ field }) => (
+                                        <FloatCombobox
+                                            label={t('province')}
+                                            size="sm"
+                                            options={PROVINCE_OPTIONS}
+                                            value={field.value}
+                                            error={formatAddressError(
+                                                addressForm.formState.errors.provinceCode?.message,
+                                            )}
+                                            onValueChange={(code) => {
+                                                if (!code) return
+                                                const prov = VIETNAM_PROVINCES.find((p) => p.code === code)
+                                                field.onChange(code)
+                                                addressForm.setValue('provinceName', prov?.name || code, {
+                                                    shouldValidate: true,
+                                                })
+                                                const newDistricts = getDistrictsByProvinceCode(code)
+                                                const firstDist = newDistricts[0]
+                                                if (firstDist) {
+                                                    addressForm.setValue('districtCode', firstDist.value, {
+                                                        shouldValidate: true,
+                                                    })
+                                                    addressForm.setValue('districtName', firstDist.label, {
+                                                        shouldValidate: true,
+                                                    })
+                                                    const newWards = getWardsByDistrictCode(code, firstDist.value)
+                                                    const firstWard = newWards[0]
+                                                    if (firstWard) {
+                                                        addressForm.setValue('wardCode', firstWard.value, {
+                                                            shouldValidate: true,
+                                                        })
+                                                        addressForm.setValue('wardName', firstWard.label, {
+                                                            shouldValidate: true,
+                                                        })
+                                                    } else {
+                                                        addressForm.setValue('wardCode', '', { shouldValidate: true })
+                                                        addressForm.setValue('wardName', '', { shouldValidate: true })
+                                                    }
+                                                } else {
+                                                    addressForm.setValue('districtCode', '', { shouldValidate: true })
+                                                    addressForm.setValue('districtName', '', { shouldValidate: true })
+                                                    addressForm.setValue('wardCode', '', { shouldValidate: true })
+                                                    addressForm.setValue('wardName', '', { shouldValidate: true })
+                                                }
+                                            }}
+                                        />
+                                    )}
+                                />
+
+                                <Controller
+                                    control={addressForm.control}
+                                    name="districtCode"
+                                    render={({ field }) => (
+                                        <FloatCombobox
+                                            label={t('district')}
+                                            size="sm"
+                                            options={districtOptions}
+                                            value={field.value}
+                                            disabled={districtOptions.length === 0}
+                                            error={formatAddressError(
+                                                addressForm.formState.errors.districtCode?.message,
+                                            )}
+                                            onValueChange={(distCode) => {
+                                                if (!distCode) return
+                                                const dist = districtOptions.find((d) => d.value === distCode)
+                                                field.onChange(distCode)
+                                                addressForm.setValue('districtName', dist?.label || distCode, {
+                                                    shouldValidate: true,
+                                                })
+                                                const newWards = getWardsByDistrictCode(selectedProvinceCode, distCode)
+                                                const firstWard = newWards[0]
+                                                if (firstWard) {
+                                                    addressForm.setValue('wardCode', firstWard.value, {
+                                                        shouldValidate: true,
+                                                    })
+                                                    addressForm.setValue('wardName', firstWard.label, {
+                                                        shouldValidate: true,
+                                                    })
+                                                } else {
+                                                    addressForm.setValue('wardCode', '', { shouldValidate: true })
+                                                    addressForm.setValue('wardName', '', { shouldValidate: true })
+                                                }
+                                            }}
+                                        />
+                                    )}
+                                />
+
+                                <Controller
+                                    control={addressForm.control}
+                                    name="wardCode"
+                                    render={({ field }) => (
+                                        <FloatCombobox
+                                            label={t('ward')}
+                                            size="sm"
+                                            options={wardOptions}
+                                            value={field.value}
+                                            disabled={wardOptions.length === 0}
+                                            error={formatAddressError(addressForm.formState.errors.wardCode?.message)}
+                                            onValueChange={(wardCode) => {
+                                                if (!wardCode) return
+                                                const ward = wardOptions.find((w) => w.value === wardCode)
+                                                field.onChange(wardCode)
+                                                addressForm.setValue('wardName', ward?.label || wardCode, {
+                                                    shouldValidate: true,
+                                                })
+                                            }}
+                                        />
+                                    )}
+                                />
+                            </div>
+
+                            <FloatInput
+                                label={t('addressLine1')}
+                                required
+                                size="sm"
+                                reserveErrorSpace
+                                error={formatAddressError(addressForm.formState.errors.addressLine1?.message)}
+                                {...addressForm.register('addressLine1')}
+                            />
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                                <FloatInput
+                                    label={t('addressLabel')}
+                                    size="sm"
+                                    reserveErrorSpace
+                                    error={formatAddressError(addressForm.formState.errors.label?.message)}
+                                    {...addressForm.register('label')}
+                                />
+
+                                <div className="flex items-center justify-between rounded-lg border border-border/70 px-3.5 h-10 mb-5">
+                                    <Label
+                                        htmlFor="addr-default-switch"
+                                        className="text-xs font-semibold cursor-pointer"
+                                    >
                                         {t('setDefault')}
                                     </Label>
+                                    <Controller
+                                        control={addressForm.control}
+                                        name="isDefault"
+                                        render={({ field }) => (
+                                            <Switch
+                                                id="addr-default-switch"
+                                                checked={Boolean(field.value)}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        )}
+                                    />
                                 </div>
                             </div>
 
@@ -864,7 +981,10 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => setIsNewAddressFormOpen(false)}
+                                    onClick={() => {
+                                        setIsNewAddressFormOpen(false)
+                                        addressForm.reset()
+                                    }}
                                     className="h-9 text-xs rounded-lg"
                                 >
                                     {t('cancel')}
