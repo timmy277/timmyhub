@@ -69,6 +69,7 @@ export function AccountDialog({ open, onOpenChange, defaultTab = 'profile' }: Ac
         const params = new URLSearchParams(searchParams.toString())
         params.set('modal', 'account')
         params.set('tab', key)
+        params.delete('orderId')
         router.replace(`${pathname}?${params.toString()}`, { scroll: false })
     }
 

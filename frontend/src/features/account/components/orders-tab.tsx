@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
     AlertTriangleIcon,
     ExternalLinkIcon,
@@ -34,8 +35,8 @@ import {
     Textarea,
 } from '@/components'
 import { QUERY_KEY, ROUTE } from '@/constants'
-import { cancelOrderAction, getMyOrdersAction } from '@/features/checkout'
-import { OrderCard } from '@/features/orders'
+import { cancelOrderAction, getMyOrdersAction, getOrderByIdAction } from '@/features/checkout'
+import { OrderCard, OrderDetailView } from '@/features/orders'
 
 const CANCEL_REASONS = [
     'Muốn thay đổi địa chỉ giao hàng',
@@ -145,6 +146,80 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
             toast.error(tCommon('errorGeneric'))
         } finally {
             setIsSubmittingCancel(false)
+        }
+    }
+
+    const pathname = usePathname()
+    const router = useRouter()
+    const searchParams = useSearchParams()
+
+    const selectedOrderId = searchParams.get('orderId')
+
+    const orderFromList = useMemo(() => {
+        if (!selectedOrderId) return null
+        return orders.find((o) => o.id === selectedOrderId) ?? null
+    }, [orders, selectedOrderId])
+
+    const {
+        data: fetchedOrder,
+        isLoading: isLoadingOrder,
+        isError: isErrorOrder,
+    } = useQuery({
+        queryKey: QUERY_KEY.ORDER.DETAIL(selectedOrderId!),
+        queryFn: async () => {
+            const res = await getOrderByIdAction(selectedOrderId!)
+            if (!res.ok) throw new Error(res.message || 'Không tìm thấy đơn hàng')
+            return res.data
+        },
+        enabled: Boolean(selectedOrderId && !orderFromList),
+        staleTime: 30_000,
+    })
+
+    const currentOrder = orderFromList ?? fetchedOrder
+
+    const handleViewDetail = (order: OrderDetail) => {
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('orderId', order.id)
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    }
+
+    const handleBackToList = () => {
+        const params = new URLSearchParams(searchParams.toString())
+        params.delete('orderId')
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    }
+
+    if (selectedOrderId) {
+        if (isLoadingOrder && !currentOrder) {
+            return (
+                <div className="space-y-4">
+                    <Skeleton className="h-9 w-44 rounded-lg" />
+                    <Skeleton className="h-44 w-full rounded-2xl" />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <Skeleton className="h-80 md:col-span-2 rounded-xl" />
+                        <Skeleton className="h-80 rounded-xl" />
+                    </div>
+                </div>
+            )
+        }
+
+        if (isErrorOrder || (!currentOrder && !isLoading && !isLoadingOrder)) {
+            return (
+                <Card className="flex flex-col items-center justify-center p-8 text-center border-dashed border-destructive/30 bg-destructive/5">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive mb-3">
+                        <AlertTriangleIcon className="h-6 w-6" />
+                    </div>
+                    <h3 className="text-sm font-semibold">{tCommon('errorTitle')}</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">Không tìm thấy đơn hàng #{selectedOrderId}</p>
+                    <Button size="sm" variant="outline" onClick={handleBackToList} className="mt-4 text-xs">
+                        <span>Quay lại danh sách đơn hàng</span>
+                    </Button>
+                </Card>
+            )
+        }
+
+        if (currentOrder) {
+            return <OrderDetailView initialOrder={currentOrder} onBack={handleBackToList} isModalOrTab />
         }
     }
 
@@ -262,7 +337,12 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
                     ) : (
                         <div className="space-y-4 pt-1">
                             {filteredOrders.map((order) => (
-                                <OrderCard key={order.id} order={order} onCancelClick={(o) => setCancellingOrder(o)} />
+                                <OrderCard
+                                    key={order.id}
+                                    order={order}
+                                    onCancelClick={(o) => setCancellingOrder(o)}
+                                    onViewDetail={handleViewDetail}
+                                />
                             ))}
                         </div>
                     )}

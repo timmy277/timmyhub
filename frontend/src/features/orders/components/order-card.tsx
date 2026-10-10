@@ -11,9 +11,10 @@ import { OrderStatusBadge, PaymentStatusBadge } from './order-status-badge'
 interface OrderCardProps {
     order: OrderDetail
     onCancelClick?: (order: OrderDetail) => void
+    onViewDetail?: (order: OrderDetail) => void
 }
 
-export function OrderCard({ order, onCancelClick }: OrderCardProps) {
+export function OrderCard({ order, onCancelClick, onViewDetail }: OrderCardProps) {
     const canCancel = order.status === 'PENDING' || order.status === 'CONFIRMED'
 
     return (
@@ -111,13 +112,26 @@ export function OrderCard({ order, onCancelClick }: OrderCardProps) {
                         </Button>
                     )}
 
-                    <Link href={ROUTE.ORDER_DETAIL(order.id)}>
-                        <Button variant="default" size="sm" className="text-xs sm:text-sm shadow-sm">
+                    {onViewDetail ? (
+                        <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => onViewDetail(order)}
+                            className="text-xs sm:text-sm shadow-sm"
+                        >
                             <EyeIcon className="h-3.5 w-3.5 mr-1" />
                             Chi tiết
                             <ChevronRightIcon className="h-3.5 w-3.5 ml-0.5" />
                         </Button>
-                    </Link>
+                    ) : (
+                        <Link href={ROUTE.ORDER_DETAIL(order.id)}>
+                            <Button variant="default" size="sm" className="text-xs sm:text-sm shadow-sm">
+                                <EyeIcon className="h-3.5 w-3.5 mr-1" />
+                                Chi tiết
+                                <ChevronRightIcon className="h-3.5 w-3.5 ml-0.5" />
+                            </Button>
+                        </Link>
+                    )}
                 </div>
             </CardFooter>
         </Card>

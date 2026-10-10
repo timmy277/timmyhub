@@ -81,12 +81,14 @@ export function UserMenu() {
             if (pathname === ROUTE.ACCOUNT) {
                 const params = new URLSearchParams(searchParams.toString())
                 params.set('tab', tab)
+                params.delete('orderId')
                 router.push(`${pathname}?${params.toString()}`, { scroll: false })
                 return
             }
             const params = new URLSearchParams(searchParams.toString())
             params.set('modal', 'account')
             params.set('tab', tab)
+            params.delete('orderId')
             router.push(`${pathname}?${params.toString()}`, { scroll: false })
         },
         [pathname, router, searchParams],
@@ -103,6 +105,7 @@ export function UserMenu() {
             } else {
                 params.delete('modal')
                 params.delete('tab')
+                params.delete('orderId')
             }
             const query = params.toString()
             router.push(query ? `${pathname}?${query}` : pathname, { scroll: false })

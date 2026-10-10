@@ -68,6 +68,7 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
     const handleTabChange = (key: TabKey) => {
         const params = new URLSearchParams(searchParams.toString())
         params.set('tab', key)
+        params.delete('orderId')
         router.replace(`${pathname}?${params.toString()}`, { scroll: false })
     }
 

@@ -4,6 +4,7 @@ import React, { useState, useTransition } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import {
     ArrowLeftIcon,
     CopyIcon,
@@ -35,7 +36,7 @@ import {
     DialogTitle,
     Textarea,
 } from '@/components'
-import { ROUTE } from '@/constants'
+import { QUERY_KEY, ROUTE } from '@/constants'
 import { cancelOrderAction } from '@/features/checkout'
 import { formatCurrencyVND } from '@/utils'
 import { OrderStatusBadge, PaymentStatusBadge } from './order-status-badge'
@@ -43,6 +44,8 @@ import { OrderTimeline } from './order-timeline'
 
 interface OrderDetailViewProps {
     initialOrder: OrderDetail
+    onBack?: () => void
+    isModalOrTab?: boolean
 }
 
 const CANCEL_REASONS = [
@@ -54,9 +57,11 @@ const CANCEL_REASONS = [
     'Khác',
 ]
 
-export function OrderDetailView({ initialOrder }: OrderDetailViewProps) {
+export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false }: OrderDetailViewProps) {
     const router = useRouter()
-    const [order, setOrder] = useState<OrderDetail>(initialOrder)
+    const queryClient = useQueryClient()
+    const [cancelledOrder, setCancelledOrder] = useState<OrderDetail | null>(null)
+    const order = (cancelledOrder?.id === initialOrder.id ? cancelledOrder : null) ?? initialOrder
     const [copied, setCopied] = useState(false)
     const [, startTransition] = useTransition()
 
@@ -91,8 +96,10 @@ export function OrderDetailView({ initialOrder }: OrderDetailViewProps) {
             }
 
             toast.success('Đã huỷ đơn hàng thành công')
-            setOrder(res.data)
+            setCancelledOrder(res.data)
             setShowCancelModal(false)
+            await queryClient.invalidateQueries({ queryKey: QUERY_KEY.ORDER.MY_ORDERS() })
+            await queryClient.invalidateQueries({ queryKey: QUERY_KEY.ORDER.DETAIL(order.id) })
             startTransition(() => {
                 router.refresh()
             })
@@ -107,16 +114,27 @@ export function OrderDetailView({ initialOrder }: OrderDetailViewProps) {
     const subtotal = order.items.reduce((sum, it) => sum + Number(it.lineTotal), 0)
 
     return (
-        <div className="container max-w-5xl mx-auto px-4 py-6 sm:py-10 space-y-6">
+        <div className={isModalOrTab ? 'space-y-6' : 'container max-w-5xl mx-auto px-4 py-6 sm:py-10 space-y-6'}>
             {/* Top Navigation */}
             <div className="flex items-center justify-between">
-                <Link
-                    href={ROUTE.ORDERS}
-                    className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
-                >
-                    <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-                    <span>Quay lại danh sách đơn hàng</span>
-                </Link>
+                {onBack ? (
+                    <button
+                        type="button"
+                        onClick={onBack}
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group cursor-pointer"
+                    >
+                        <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+                        <span>Quay lại danh sách đơn hàng</span>
+                    </button>
+                ) : (
+                    <Link
+                        href={ROUTE.ORDERS}
+                        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
+                    >
+                        <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+                        <span>Quay lại danh sách đơn hàng</span>
+                    </Link>
+                )}
 
                 <div className="flex items-center gap-2">
                     {canCancel && (
@@ -124,18 +142,20 @@ export function OrderDetailView({ initialOrder }: OrderDetailViewProps) {
                             variant="outline"
                             size="sm"
                             onClick={() => setShowCancelModal(true)}
-                            className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border-rose-200 dark:border-rose-800"
+                            className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-xs sm:text-sm"
                         >
                             <XCircleIcon className="h-4 w-4 mr-1 text-rose-500" />
                             Huỷ đơn hàng
                         </Button>
                     )}
-                    <Link href="/">
-                        <Button variant="outline" size="sm">
-                            <ShoppingBagIcon className="h-4 w-4 mr-1" />
-                            Mua sắm tiếp
-                        </Button>
-                    </Link>
+                    {!isModalOrTab && (
+                        <Link href="/">
+                            <Button variant="outline" size="sm">
+                                <ShoppingBagIcon className="h-4 w-4 mr-1" />
+                                Mua sắm tiếp
+                            </Button>
+                        </Link>
+                    )}
                 </div>
             </div>
 
