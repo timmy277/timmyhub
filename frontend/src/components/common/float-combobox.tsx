@@ -1,6 +1,6 @@
 'use client'
 
-import { useId } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Combobox as ComboboxPrimitive } from '@base-ui/react'
 import type { VariantProps } from 'class-variance-authority'
 import { useTranslations } from 'next-intl'
@@ -65,6 +65,8 @@ export interface FloatComboboxProps {
     disabled?: boolean
     className?: string
     labelClassName?: string
+    // Container portal để render popup (hữu ích khi nằm trong Dialog/Modal để tránh bị chặn pointer-events)
+    container?: ComboboxPrimitive.Portal.Props['container']
     // Cùng thang kích thước với FloatInput (`sm` = h-10) để ô chọn đứng cạnh ô nhập trong thanh công cụ không lệch.
     size?: VariantProps<typeof floatInputVariants>['size']
 }
@@ -85,11 +87,28 @@ export function FloatCombobox({
     disabled,
     className,
     labelClassName,
+    container: containerProp,
     size = 'default',
 }: FloatComboboxProps) {
     // ===== Hooks =====
     const t = useTranslations('common')
     const generatedId = useId()
+    const rootRef = useRef<HTMLDivElement>(null)
+    const [dialogContainer, setDialogContainer] = useState<HTMLElement | null>(null)
+
+    // Tự động tìm Dialog / Modal cha (nếu có) để portal popup trực tiếp vào bên trong Dialog,
+    // ngăn Radix Dialog FocusScope / DismissableLayer chặn sự kiện click vào các options.
+    useEffect(() => {
+        if (containerProp) return
+        if (rootRef.current) {
+            const dialog = rootRef.current.closest(
+                '[data-slot="dialog-content"], [role="dialog"]',
+            ) as HTMLElement | null
+            if (dialog) {
+                setDialogContainer(dialog)
+            }
+        }
+    }, [containerProp])
 
     // ===== Derived =====
     const inputId = id ?? generatedId
@@ -97,12 +116,13 @@ export function FloatCombobox({
     const hasDescription = Boolean(error ?? helperText)
     // Nút mở danh sách nằm trong input nên phải co lại theo cỡ ô, không thì ở cỡ `sm` nó chiếm gần hết chiều cao.
     const isCompact = size === 'sm'
+    const activeContainer = containerProp ?? dialogContainer
 
     // ===== Handlers =====
     const handleValueChange = (option: FloatOption | null) => onValueChange?.(option?.value ?? null)
 
     return (
-        <div className={className}>
+        <div ref={rootRef} className={className}>
             <Combobox
                 items={options}
                 name={name}
@@ -133,7 +153,7 @@ export function FloatCombobox({
                 </div>
                 {/* Mặc định shadcn cho popup rộng hơn input 28px (chừa chỗ nút trigger của InputGroup); ở đây
                     trigger nằm trong input nên ép bằng đúng chiều rộng input, khớp FloatMultiSelect. */}
-                <ComboboxContent className="min-w-(--anchor-width)">
+                <ComboboxContent className="min-w-(--anchor-width)" container={activeContainer}>
                     <ComboboxEmpty>{emptyText ?? t('noResults')}</ComboboxEmpty>
                     <ComboboxList>
                         {(option: FloatOption) => (
