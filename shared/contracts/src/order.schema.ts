@@ -102,6 +102,24 @@ export const CancelOrderInputSchema = z.object({
 })
 export type CancelOrderInput = z.infer<typeof CancelOrderInputSchema>
 
+export const UpdateOrderStatusInputSchema = z.object({
+    status: z.enum([
+        'PENDING',
+        'CONFIRMED',
+        'PROCESSING',
+        'PACKED',
+        'SHIPPING',
+        'DELIVERED',
+        'COMPLETED',
+        'CANCELLED',
+        'RETURN_REQUESTED',
+        'RETURNED',
+        'REFUNDED',
+    ]),
+    note: z.string().trim().max(300).optional(),
+})
+export type UpdateOrderStatusInput = z.infer<typeof UpdateOrderStatusInputSchema>
+
 export interface OrderStatusHistoryDetail {
     id: string
     fromStatus?: string | null
