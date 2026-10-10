@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
     // để HMR nhận thay đổi của package này giống code trong frontend/ (vẫn cần `pnpm -C shared/contracts run dev` chạy song song).
     transpilePackages: ['@timmyhub/contracts'],
     experimental: {
+        // Router Cache: giữ cache 30s cho dynamic route ở client để khi di chuyển qua lại giữa các trang
+        // không bị gọi lại server và không chớp lại skeleton.
+        staleTimes: {
+            dynamic: 30,
+            static: 300,
+        },
         optimizePackageImports: [
             'lucide-react',
             'date-fns',
