@@ -140,7 +140,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
     }
 
     return (
-        <div className="min-h-screen bg-background pb-16">
+        <div className="relative min-h-screen w-full pb-16">
             {/* Top Breadcrumb Header */}
             <div className="border-b border-border/60 bg-card/60 backdrop-blur-md">
                 <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6">
@@ -176,7 +176,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                      * ════════════════════════════════════════════════════════════════ */}
                     <div className="lg:col-span-6 space-y-4">
                         {/* Main Stage Image with Padded Card Frame */}
-                        <div className="group relative aspect-square w-full rounded-3xl border border-border/80 bg-card p-3 sm:p-4 shadow-md flex items-center justify-center">
+                        <div className="group relative aspect-square w-full rounded-3xl border border-border/80 bg-card/85 backdrop-blur-md p-3 sm:p-4 shadow-md flex items-center justify-center">
                             <div className="relative size-full overflow-hidden rounded-2xl bg-muted/20">
                                 <Image
                                     src={allImages[selectedImageIndex] || allImages[0]!}
@@ -342,7 +342,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
 
                         {/* Interactive Options & Variants */}
                         {product.options && product.options.length > 0 && (
-                            <div className="space-y-4 rounded-2xl border border-border/70 bg-card p-5">
+                            <div className="space-y-4 rounded-2xl border border-border/70 bg-card/85 backdrop-blur-md p-5 shadow-sm">
                                 {product.options.map((option) => (
                                     <div key={option.id} className="space-y-2">
                                         <div className="flex items-center justify-between text-xs">
@@ -453,7 +453,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                 {/* ════════════════════════════════════════════════════════════════
                  * BOTTOM SECTION: DETAILED SPECIFICATIONS & PRODUCT DESCRIPTION
                  * ════════════════════════════════════════════════════════════════ */}
-                <div className="mt-12 rounded-3xl border border-border/80 bg-card p-6 sm:p-8 shadow-sm">
+                <div className="mt-12 rounded-3xl border border-border/80 bg-card/85 backdrop-blur-md p-6 sm:p-8 shadow-sm">
                     <Tabs defaultValue="description" className="space-y-6">
                         <TabsList className="rounded-xl bg-muted/60 p-1 border border-border/60">
                             <TabsTrigger value="description" className="rounded-lg text-xs font-bold px-4">

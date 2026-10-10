@@ -3,9 +3,9 @@ import { Skeleton } from '@/components/ui'
 // Skeleton tải trang chi tiết sản phẩm — giữ nguyên Shell Header/Footer, không unmount hay giật layout.
 export default function ProductDetailLoading() {
     return (
-        <div className="min-h-screen bg-background pb-16">
+        <div className="relative min-h-screen w-full pb-16">
             {/* Breadcrumb Skeleton */}
-            <div className="border-b border-border/60 bg-card/60">
+            <div className="border-b border-border/60 bg-card/60 backdrop-blur-md">
                 <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6">
                     <Skeleton className="h-4 w-64 rounded-md" />
                 </div>
