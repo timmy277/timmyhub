@@ -1,9 +1,12 @@
 'use client'
 
 import React from 'react'
+import Link from 'next/link'
+import { usePathname, useSearchParams } from 'next/navigation'
 import type { OrderDetail } from '@timmyhub/contracts'
+import { Button, EmptyState } from '@/components'
 import { SELLER_ORDER_TAB } from '@/constants'
-import type { SellerOrderTabsState } from '../seller-order-tab-query'
+import { buildSellerOrderTabsHref, type SellerOrderTabsState } from '../seller-order-tab-query'
 import { SellerOrderDetailPanel } from './seller-order-detail-panel'
 import { SellerOrderTable } from './seller-order-table'
 import { SellerOrderTabs } from './seller-order-tabs'
@@ -17,6 +20,8 @@ interface SellerOrdersViewProps {
 }
 
 export function SellerOrdersView({ rows, tabs, currentUserId, initialDetail, error }: SellerOrdersViewProps) {
+    const pathname = usePathname()
+    const searchParams = useSearchParams()
     const { active } = tabs
 
     // Tìm mã đơn của bản ghi chi tiết đang mở để hiển thị nhãn tab
@@ -33,6 +38,8 @@ export function SellerOrdersView({ rows, tabs, currentUserId, initialDetail, err
     const activeOrder =
         active.tab === SELLER_ORDER_TAB.DETAIL ? (rows.find((r) => r.id === active.id) ?? initialDetail ?? null) : null
 
+    const listHref = buildSellerOrderTabsHref(pathname, searchParams, { tab: SELLER_ORDER_TAB.LIST })
+
     return (
         <section className="rounded-xl border border-border/80 bg-card p-4 text-card-foreground shadow-xs">
             {/* Folder Tab Strip */}
@@ -40,8 +47,20 @@ export function SellerOrdersView({ rows, tabs, currentUserId, initialDetail, err
 
             {/* Active Tab Panel */}
             <div className="mt-4">
-                {active.tab === SELLER_ORDER_TAB.DETAIL && activeOrder ? (
-                    <SellerOrderDetailPanel order={activeOrder} />
+                {active.tab === SELLER_ORDER_TAB.DETAIL ? (
+                    activeOrder ? (
+                        <SellerOrderDetailPanel key={activeOrder.id} order={activeOrder} />
+                    ) : (
+                        <EmptyState
+                            title="Không tìm thấy đơn hàng"
+                            description={`Đơn hàng #${active.id.slice(-8).toUpperCase()} không tồn tại hoặc bạn không có quyền xem đơn hàng này.`}
+                            action={
+                                <Button asChild variant="outline" size="sm">
+                                    <Link href={listHref}>Quay lại danh sách đơn hàng</Link>
+                                </Button>
+                            }
+                        />
+                    )
                 ) : (
                     <SellerOrderTable rows={rows} error={error} />
                 )}

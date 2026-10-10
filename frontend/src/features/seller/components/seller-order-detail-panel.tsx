@@ -109,7 +109,13 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
     const searchParams = useSearchParams()
 
     const [order, setOrder] = useState<OrderDetail>(initialOrder)
+    const [prevInitialOrder, setPrevInitialOrder] = useState<OrderDetail>(initialOrder)
     const [isUpdating, setIsUpdating] = useState(false)
+
+    if (prevInitialOrder !== initialOrder) {
+        setPrevInitialOrder(initialOrder)
+        setOrder(initialOrder)
+    }
 
     // Cancel modal state
     const [showCancelModal, setShowCancelModal] = useState(false)

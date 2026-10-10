@@ -489,7 +489,24 @@ export class OrderService {
     }
 
     async getOrderById(userId: string, orderId: string): Promise<OrderDetail> {
-        const order = await this.orderRepo.findOrderById(orderId, userId)
+        let order = await this.orderRepo.findOrderById(orderId, userId)
+        if (!order) {
+            const seller = await this.prisma.sellerProfile.findUnique({
+                where: { userId },
+            })
+            if (seller) {
+                order = await this.orderRepo.findOrderByIdForSeller(orderId, seller.id)
+            }
+        }
+        if (!order) {
+            const user = await this.prisma.user.findUnique({
+                where: { id: userId },
+                select: { roles: true },
+            })
+            if (user?.roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN')) {
+                order = await this.orderRepo.findOrderById(orderId)
+            }
+        }
         if (!order) {
             throw new NotFoundException('Không tìm thấy đơn hàng')
         }

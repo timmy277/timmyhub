@@ -20,7 +20,7 @@ import { SELLER_ORDER_STATUS_ALL, SELLER_ORDER_TAB, USER_TABLE_ROW_HEIGHT_PX } f
 import { useDebouncedValue } from '@/hooks'
 import { updateSellerOrderStatusAction } from '../actions'
 import { buildSellerOrderTabsHref, type SellerOrderTabState } from '../seller-order-tab-query'
-import { createSellerOrderColumns } from './seller-order.columns'
+import { createSellerOrderColumns, ORDER_STATUS_LABEL_MAP } from './seller-order.columns'
 import { AlertTriangleIcon, Loader2Icon, XCircleIcon } from 'lucide-react'
 
 interface SellerOrderTableProps {
@@ -92,7 +92,9 @@ export function SellerOrderTable({ rows, onRefresh, error }: SellerOrderTablePro
                     toast.error(res.message || 'Cập nhật trạng thái đơn hàng thất bại')
                     return
                 }
-                toast.success(`Đã cập nhật đơn #${order.id.slice(-8).toUpperCase()} sang ${nextStatus}`)
+                toast.success(
+                    `Đã cập nhật đơn #${order.id.slice(-8).toUpperCase()} sang ${ORDER_STATUS_LABEL_MAP[nextStatus] || nextStatus}`,
+                )
                 if (onRefresh) onRefresh()
                 router.refresh()
             } catch {
@@ -164,11 +166,11 @@ export function SellerOrderTable({ rows, onRefresh, error }: SellerOrderTablePro
 
             if (debouncedSearch.trim()) {
                 const q = debouncedSearch.toLowerCase().trim()
-                const matchesId = order.id.toLowerCase().includes(q)
-                const matchesBuyer = order.shippingFullName.toLowerCase().includes(q)
-                const matchesPhone = order.shippingPhone.includes(q)
-                const matchesItem = order.items.some(
-                    (it) => it.productName.toLowerCase().includes(q) || (it.sku && it.sku.toLowerCase().includes(q)),
+                const matchesId = order.id?.toLowerCase().includes(q) ?? false
+                const matchesBuyer = order.shippingFullName?.toLowerCase().includes(q) ?? false
+                const matchesPhone = order.shippingPhone?.includes(q) ?? false
+                const matchesItem = (order.items ?? []).some(
+                    (it) => it.productName?.toLowerCase().includes(q) || (it.sku && it.sku.toLowerCase().includes(q)),
                 )
                 return matchesId || matchesBuyer || matchesPhone || matchesItem
             }

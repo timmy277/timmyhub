@@ -17,7 +17,7 @@ interface CreateSellerOrderColumnsOptions {
     actions: SellerOrderColumnActions
 }
 
-const ORDER_STATUS_LABEL_MAP: Record<string, string> = {
+export const ORDER_STATUS_LABEL_MAP: Record<string, string> = {
     PENDING: 'Chờ xác nhận',
     CONFIRMED: 'Đã xác nhận',
     PROCESSING: 'Đang đóng gói',
@@ -28,7 +28,7 @@ const ORDER_STATUS_LABEL_MAP: Record<string, string> = {
     CANCELLED: 'Đã huỷ',
 }
 
-const ORDER_STATUS_TONE_MAP: Record<string, StatusTone> = {
+export const ORDER_STATUS_TONE_MAP: Record<string, StatusTone> = {
     PENDING: StatusTone.NEUTRAL,
     CONFIRMED: StatusTone.NEUTRAL,
     PROCESSING: StatusTone.NEUTRAL,

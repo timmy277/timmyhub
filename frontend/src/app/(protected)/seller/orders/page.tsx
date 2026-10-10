@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
+import type { OrderDetail } from '@timmyhub/contracts'
 import { PageContainer } from '@/components'
+import { SELLER_ORDER_TAB } from '@/constants'
+import { getOrderByIdAction } from '@/features/checkout'
 import { getSellerOrdersAction, parseSellerOrderTabs, SellerOrdersView } from '@/features/seller'
 import { getActor } from '@/lib/actor-permissions'
 
@@ -18,6 +21,14 @@ export default async function SellerOrdersPage({ searchParams }: SellerOrdersPag
     const tabs = parseSellerOrderTabs(params)
     const actor = await getActor()
 
+    let initialDetail: OrderDetail | null = null
+    if (tabs.active.tab === SELLER_ORDER_TAB.DETAIL) {
+        const detailRes = await getOrderByIdAction(tabs.active.id)
+        if (detailRes.ok) {
+            initialDetail = detailRes.data
+        }
+    }
+
     const res = await getSellerOrdersAction()
     const rows = res.ok ? res.data : []
     const error = res.ok
@@ -28,7 +39,13 @@ export default async function SellerOrdersPage({ searchParams }: SellerOrdersPag
 
     return (
         <PageContainer>
-            <SellerOrdersView rows={rows} tabs={tabs} currentUserId={actor?.userId || ''} error={error} />
+            <SellerOrdersView
+                rows={rows}
+                tabs={tabs}
+                currentUserId={actor?.userId || ''}
+                initialDetail={initialDetail}
+                error={error}
+            />
         </PageContainer>
     )
 }
