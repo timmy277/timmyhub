@@ -22,18 +22,10 @@ import {
     WalletIcon,
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { Controller, useForm, useWatch, type Resolver } from 'react-hook-form'
 import { toast } from 'sonner'
-import {
-    CreateAddressInputSchema,
-    type AddressDetail,
-    type CartDetail,
-    type CheckoutInput,
-    type CreateAddressInput,
-} from '@timmyhub/contracts'
+import type { AddressDetail, CartDetail, CheckoutInput } from '@timmyhub/contracts'
 
-import { FloatCombobox, FloatInput } from '@/components'
+import { FloatInput } from '@/components'
 import {
     Badge,
     Button,
@@ -43,24 +35,16 @@ import {
     CardTitle,
     Dialog,
     DialogContent,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
-    Label,
     RadioGroup,
     RadioGroupItem,
     Skeleton,
-    Switch,
 } from '@/components/ui'
-import {
-    PROVINCE_OPTIONS,
-    ROUTE,
-    VIETNAM_PROVINCES,
-    getDistrictsByProvinceCode,
-    getWardsByDistrictCode,
-} from '@/constants'
-import { useAddresses, useCart, useCheckout, useCreateAddress, usePublicProductDetail } from '@/hooks'
+import { ROUTE } from '@/constants'
+import { useAddresses, useCart, useCheckout, usePublicProductDetail } from '@/hooks'
 import { formatCurrencyVND } from '@/utils'
+import { AddressFormDialog } from './address-form-dialog'
 
 interface CheckoutViewProps {
     initialAddresses?: AddressDetail[]
@@ -69,7 +53,6 @@ interface CheckoutViewProps {
 
 export function CheckoutView({ initialAddresses = [], initialCart = null }: CheckoutViewProps) {
     const t = useTranslations('checkout')
-    const tValidation = useTranslations('validation')
     const router = useRouter()
     const searchParams = useSearchParams()
 
@@ -104,48 +87,6 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
     const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
     const [isAddressModalOpen, setIsAddressModalOpen] = useState(false)
     const [isNewAddressFormOpen, setIsNewAddressFormOpen] = useState(false)
-
-    // Form thêm địa chỉ mới sử dụng react-hook-form và Zod schema CreateAddressInputSchema
-    const addressForm = useForm<CreateAddressInput>({
-        resolver: zodResolver(CreateAddressInputSchema) as Resolver<CreateAddressInput>,
-        mode: 'onChange',
-        defaultValues: {
-            fullName: '',
-            phone: '',
-            provinceCode: 'HCM',
-            provinceName: 'Thành phố Hồ Chí Minh',
-            districtCode: 'HCM-Q1',
-            districtName: 'Quận 1',
-            wardCode: 'HCM-Q1-BN',
-            wardName: 'Phường Bến Nghé',
-            addressLine1: '',
-            addressLine2: '',
-            label: 'Nhà riêng',
-            isDefault: addresses.length === 0,
-        },
-    })
-
-    const selectedProvinceCode = useWatch({ control: addressForm.control, name: 'provinceCode' })
-    const selectedDistrictCode = useWatch({ control: addressForm.control, name: 'districtCode' })
-
-    const districtOptions = useMemo(() => getDistrictsByProvinceCode(selectedProvinceCode), [selectedProvinceCode])
-
-    const wardOptions = useMemo(
-        () => getWardsByDistrictCode(selectedProvinceCode, selectedDistrictCode),
-        [selectedProvinceCode, selectedDistrictCode],
-    )
-
-    const formatAddressError = (errorKey?: string): string | undefined => {
-        if (!errorKey) return undefined
-        const key = errorKey.startsWith('validation.') ? errorKey.slice('validation.'.length) : errorKey
-        const translator = tValidation as unknown as { has: (k: string) => boolean; (k: string): string }
-        if (translator.has(key)) {
-            return translator(key)
-        }
-        return errorKey
-    }
-
-    const createAddressMutation = useCreateAddress()
 
     // Địa chỉ hiện tại đang chọn (ưu tiên địa chỉ người dùng click chọn -> địa chỉ mặc định -> địa chỉ đầu tiên)
     const activeAddress = useMemo(() => {
@@ -334,19 +275,6 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
             // Lỗi đã được toast trong onError hook
         }
     }
-
-    // Xử lý submit form tạo địa chỉ mới
-    const handleCreateAddressSubmit = addressForm.handleSubmit(async (data) => {
-        try {
-            const created = await createAddressMutation.mutateAsync(data)
-            setSelectedAddressId(created.id)
-            setIsNewAddressFormOpen(false)
-            setIsAddressModalOpen(false)
-            addressForm.reset()
-        } catch {
-            // Error đã toast trong mutation hook
-        }
-    })
 
     return (
         <div className="relative min-h-screen w-full pb-20">
@@ -789,321 +717,109 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
              * DIALOG QUẢN LÝ / CHỌN SỔ ĐỊA CHỈ NHẬN HÀNG
              * ───────────────────────────────────────────────────────────── */}
             <Dialog open={isAddressModalOpen} onOpenChange={setIsAddressModalOpen}>
-                <DialogContent
-                    className="sm:max-w-xl max-h-[85vh] overflow-y-auto rounded-2xl"
-                    onPointerDownOutside={(e) => {
-                        const target = e.target as HTMLElement | null
-                        if (
-                            target?.closest('[data-slot="combobox-content"]') ||
-                            target?.closest('[data-slot="combobox-list"]')
-                        ) {
-                            e.preventDefault()
-                        }
-                    }}
-                    onInteractOutside={(e) => {
-                        const target = e.target as HTMLElement | null
-                        if (
-                            target?.closest('[data-slot="combobox-content"]') ||
-                            target?.closest('[data-slot="combobox-list"]')
-                        ) {
-                            e.preventDefault()
-                        }
-                    }}
-                >
+                <DialogContent className="sm:max-w-xl max-h-[85vh] overflow-y-auto rounded-2xl">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-extrabold flex items-center justify-between">
-                            <span>{isNewAddressFormOpen ? t('newAddressModalTitle') : t('addressModalTitle')}</span>
-                            {!isNewAddressFormOpen && (
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => setIsNewAddressFormOpen(true)}
-                                    className="text-xs font-bold gap-1 rounded-lg"
-                                >
-                                    <PlusIcon className="size-3" />
-                                    {t('addAddress')}
-                                </Button>
-                            )}
+                            <span>{t('addressModalTitle')}</span>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setIsNewAddressFormOpen(true)}
+                                className="text-xs font-bold gap-1 rounded-lg"
+                            >
+                                <PlusIcon className="size-3" />
+                                {t('addAddress')}
+                            </Button>
                         </DialogTitle>
                     </DialogHeader>
 
-                    {isNewAddressFormOpen ? (
-                        /* Form thêm địa chỉ mới dùng FloatInput & FloatCombobox */
-                        <form onSubmit={handleCreateAddressSubmit} className="space-y-4 pt-2">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <FloatInput
-                                    label={t('fullName')}
-                                    required
-                                    size="sm"
-                                    reserveErrorSpace
-                                    error={formatAddressError(addressForm.formState.errors.fullName?.message)}
-                                    {...addressForm.register('fullName')}
-                                />
-                                <FloatInput
-                                    label={t('phone')}
-                                    required
-                                    size="sm"
-                                    reserveErrorSpace
-                                    error={formatAddressError(addressForm.formState.errors.phone?.message)}
-                                    {...addressForm.register('phone')}
-                                />
+                    {/* Danh sách địa chỉ hiện tại */}
+                    <div className="space-y-3 pt-2">
+                        {addressList.length === 0 ? (
+                            <div className="text-center py-6 text-xs text-muted-foreground">
+                                Bạn chưa có địa chỉ nào được lưu.
                             </div>
+                        ) : (
+                            addressList.map((addr) => {
+                                const isSelected =
+                                    selectedAddressId === addr.id ||
+                                    (!selectedAddressId && addr.id === activeAddress?.id)
 
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <Controller
-                                    control={addressForm.control}
-                                    name="provinceCode"
-                                    render={({ field }) => (
-                                        <FloatCombobox
-                                            label={t('province')}
-                                            size="sm"
-                                            options={PROVINCE_OPTIONS}
-                                            value={field.value}
-                                            error={formatAddressError(
-                                                addressForm.formState.errors.provinceCode?.message,
-                                            )}
-                                            onValueChange={(code) => {
-                                                if (!code) return
-                                                const prov = VIETNAM_PROVINCES.find((p) => p.code === code)
-                                                field.onChange(code)
-                                                addressForm.setValue('provinceName', prov?.name || code, {
-                                                    shouldValidate: true,
-                                                })
-                                                const newDistricts = getDistrictsByProvinceCode(code)
-                                                const firstDist = newDistricts[0]
-                                                if (firstDist) {
-                                                    addressForm.setValue('districtCode', firstDist.value, {
-                                                        shouldValidate: true,
-                                                    })
-                                                    addressForm.setValue('districtName', firstDist.label, {
-                                                        shouldValidate: true,
-                                                    })
-                                                    const newWards = getWardsByDistrictCode(code, firstDist.value)
-                                                    const firstWard = newWards[0]
-                                                    if (firstWard) {
-                                                        addressForm.setValue('wardCode', firstWard.value, {
-                                                            shouldValidate: true,
-                                                        })
-                                                        addressForm.setValue('wardName', firstWard.label, {
-                                                            shouldValidate: true,
-                                                        })
-                                                    } else {
-                                                        addressForm.setValue('wardCode', '', { shouldValidate: true })
-                                                        addressForm.setValue('wardName', '', { shouldValidate: true })
-                                                    }
-                                                } else {
-                                                    addressForm.setValue('districtCode', '', { shouldValidate: true })
-                                                    addressForm.setValue('districtName', '', { shouldValidate: true })
-                                                    addressForm.setValue('wardCode', '', { shouldValidate: true })
-                                                    addressForm.setValue('wardName', '', { shouldValidate: true })
-                                                }
-                                            }}
-                                        />
-                                    )}
-                                />
-
-                                <Controller
-                                    control={addressForm.control}
-                                    name="districtCode"
-                                    render={({ field }) => (
-                                        <FloatCombobox
-                                            label={t('district')}
-                                            size="sm"
-                                            options={districtOptions}
-                                            value={field.value}
-                                            disabled={districtOptions.length === 0}
-                                            error={formatAddressError(
-                                                addressForm.formState.errors.districtCode?.message,
-                                            )}
-                                            onValueChange={(distCode) => {
-                                                if (!distCode) return
-                                                const dist = districtOptions.find((d) => d.value === distCode)
-                                                field.onChange(distCode)
-                                                addressForm.setValue('districtName', dist?.label || distCode, {
-                                                    shouldValidate: true,
-                                                })
-                                                const newWards = getWardsByDistrictCode(selectedProvinceCode, distCode)
-                                                const firstWard = newWards[0]
-                                                if (firstWard) {
-                                                    addressForm.setValue('wardCode', firstWard.value, {
-                                                        shouldValidate: true,
-                                                    })
-                                                    addressForm.setValue('wardName', firstWard.label, {
-                                                        shouldValidate: true,
-                                                    })
-                                                } else {
-                                                    addressForm.setValue('wardCode', '', { shouldValidate: true })
-                                                    addressForm.setValue('wardName', '', { shouldValidate: true })
-                                                }
-                                            }}
-                                        />
-                                    )}
-                                />
-
-                                <Controller
-                                    control={addressForm.control}
-                                    name="wardCode"
-                                    render={({ field }) => (
-                                        <FloatCombobox
-                                            label={t('ward')}
-                                            size="sm"
-                                            options={wardOptions}
-                                            value={field.value}
-                                            disabled={wardOptions.length === 0}
-                                            error={formatAddressError(addressForm.formState.errors.wardCode?.message)}
-                                            onValueChange={(wardCode) => {
-                                                if (!wardCode) return
-                                                const ward = wardOptions.find((w) => w.value === wardCode)
-                                                field.onChange(wardCode)
-                                                addressForm.setValue('wardName', ward?.label || wardCode, {
-                                                    shouldValidate: true,
-                                                })
-                                            }}
-                                        />
-                                    )}
-                                />
-                            </div>
-
-                            <FloatInput
-                                label={t('addressLine1')}
-                                required
-                                size="sm"
-                                reserveErrorSpace
-                                error={formatAddressError(addressForm.formState.errors.addressLine1?.message)}
-                                {...addressForm.register('addressLine1')}
-                            />
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
-                                <FloatInput
-                                    label={t('addressLabel')}
-                                    size="sm"
-                                    reserveErrorSpace
-                                    error={formatAddressError(addressForm.formState.errors.label?.message)}
-                                    {...addressForm.register('label')}
-                                />
-
-                                <div className="flex items-center justify-between rounded-lg border border-border/70 px-3.5 h-10 mb-5">
-                                    <Label
-                                        htmlFor="addr-default-switch"
-                                        className="text-xs font-semibold cursor-pointer"
+                                return (
+                                    <div
+                                        key={addr.id}
+                                        onClick={() => {
+                                            setSelectedAddressId(addr.id)
+                                            setIsAddressModalOpen(false)
+                                        }}
+                                        className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
+                                            isSelected
+                                                ? 'border-primary bg-primary/5 shadow-sm'
+                                                : 'border-border/70 hover:border-border hover:bg-muted/30'
+                                        }`}
                                     >
-                                        {t('setDefault')}
-                                    </Label>
-                                    <Controller
-                                        control={addressForm.control}
-                                        name="isDefault"
-                                        render={({ field }) => (
-                                            <Switch
-                                                id="addr-default-switch"
-                                                checked={Boolean(field.value)}
-                                                onCheckedChange={field.onChange}
-                                            />
-                                        )}
-                                    />
-                                </div>
-                            </div>
-
-                            <DialogFooter className="gap-2 pt-2">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                        setIsNewAddressFormOpen(false)
-                                        addressForm.reset()
-                                    }}
-                                    className="h-9 text-xs rounded-lg"
-                                >
-                                    {t('cancel')}
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    size="sm"
-                                    disabled={createAddressMutation.isPending}
-                                    className="h-9 text-xs font-bold rounded-lg"
-                                >
-                                    {createAddressMutation.isPending ? 'Đang lưu...' : t('save')}
-                                </Button>
-                            </DialogFooter>
-                        </form>
-                    ) : (
-                        /* Danh sách địa chỉ hiện tại */
-                        <div className="space-y-3 pt-2">
-                            {addressList.length === 0 ? (
-                                <div className="text-center py-6 text-xs text-muted-foreground">
-                                    Bạn chưa có địa chỉ nào được lưu.
-                                </div>
-                            ) : (
-                                addressList.map((addr) => {
-                                    const isSelected =
-                                        selectedAddressId === addr.id ||
-                                        (!selectedAddressId && addr.id === activeAddress?.id)
-
-                                    return (
-                                        <div
-                                            key={addr.id}
-                                            onClick={() => {
-                                                setSelectedAddressId(addr.id)
-                                                setIsAddressModalOpen(false)
-                                            }}
-                                            className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
-                                                isSelected
-                                                    ? 'border-primary bg-primary/5 shadow-sm'
-                                                    : 'border-border/70 hover:border-border hover:bg-muted/30'
-                                            }`}
-                                        >
-                                            <input
-                                                type="radio"
-                                                name="select-addr"
-                                                checked={isSelected}
-                                                readOnly
-                                                className="pointer-events-none mt-1 size-4 text-primary focus:ring-primary"
-                                            />
-                                            <div className="flex-1 space-y-1">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-extrabold text-xs sm:text-sm text-foreground">
-                                                        {addr.fullName}
-                                                    </span>
-                                                    <span className="text-xs text-muted-foreground font-mono">
-                                                        ({addr.phone})
-                                                    </span>
-                                                    {addr.isDefault && (
-                                                        <Badge
-                                                            variant="secondary"
-                                                            className="text-[10px] bg-primary/10 text-primary border-primary/20 font-bold"
-                                                        >
-                                                            {t('defaultBadge')}
-                                                        </Badge>
-                                                    )}
-                                                    {addr.label && (
-                                                        <Badge
-                                                            variant="outline"
-                                                            className="text-[10px] font-semibold text-muted-foreground"
-                                                        >
-                                                            {addr.label}
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {[
-                                                        addr.addressLine1,
-                                                        addr.addressLine2,
-                                                        addr.wardName,
-                                                        addr.districtName,
-                                                        addr.provinceName,
-                                                    ]
-                                                        .filter(Boolean)
-                                                        .join(', ')}
-                                                </p>
+                                        <input
+                                            type="radio"
+                                            name="select-addr"
+                                            checked={isSelected}
+                                            readOnly
+                                            className="pointer-events-none mt-1 size-4 text-primary focus:ring-primary"
+                                        />
+                                        <div className="flex-1 space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-extrabold text-xs sm:text-sm text-foreground">
+                                                    {addr.fullName}
+                                                </span>
+                                                <span className="text-xs text-muted-foreground font-mono">
+                                                    ({addr.phone})
+                                                </span>
+                                                {addr.isDefault && (
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="text-[10px] bg-primary/10 text-primary border-primary/20 font-bold"
+                                                    >
+                                                        {t('defaultBadge')}
+                                                    </Badge>
+                                                )}
+                                                {addr.label && (
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="text-[10px] font-semibold text-muted-foreground"
+                                                    >
+                                                        {addr.label}
+                                                    </Badge>
+                                                )}
                                             </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                {[
+                                                    addr.addressLine1,
+                                                    addr.addressLine2,
+                                                    addr.wardName,
+                                                    addr.districtName,
+                                                    addr.provinceName,
+                                                ]
+                                                    .filter(Boolean)
+                                                    .join(', ')}
+                                            </p>
                                         </div>
-                                    )
-                                })
-                            )}
-                        </div>
-                    )}
+                                    </div>
+                                )
+                            })
+                        )}
+                    </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Dùng chung AddressFormDialog chuẩn */}
+            <AddressFormDialog
+                open={isNewAddressFormOpen}
+                onOpenChange={setIsNewAddressFormOpen}
+                onSuccess={(created) => {
+                    setSelectedAddressId(created.id)
+                    setIsNewAddressFormOpen(false)
+                    setIsAddressModalOpen(false)
+                }}
+            />
         </div>
     )
 }
