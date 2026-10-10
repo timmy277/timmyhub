@@ -43,7 +43,7 @@ import { toast } from 'sonner'
 import { IconPath } from '@/components/icons'
 import { Badge, Button } from '@/components/ui'
 import { ROUTE, SELLER_SHOP_ANY_PERMISSION, SELLER_SHOP_PERMISSION } from '@/constants'
-import { useMyShop, usePermissions } from '@/hooks'
+import { useMyShop, usePermissions, usePublicProducts } from '@/hooks'
 
 function formatNumber(num: number): string {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
@@ -461,8 +461,27 @@ const TimerBlock = memo(function TimerBlock({ val, label }: { val: string; label
     )
 })
 
+interface HomeProductItem {
+    id: string
+    name: string
+    slug: string
+    category: string
+    shop: string
+    verified: boolean
+    price: string
+    originalPrice?: string | null
+    discount: number
+    sold: number
+    rating: number
+    reviews: number
+    image?: string
+    emoji?: string
+    isNew?: boolean
+    isBest?: boolean
+}
+
 interface Product3DCardProps {
-    product: (typeof ALL_PRODUCTS)[0]
+    product: HomeProductItem
     isLiked: boolean
     onToggleWishlist: (id: string, name: string) => void
 }
@@ -499,92 +518,115 @@ const Product3DCard = memo(function Product3DCard({ product: p, isLiked, onToggl
 
     return (
         <div className="[perspective:1000px] h-full">
-            <article
-                ref={cardRef}
-                onMouseMove={handleMouseMove}
-                onMouseLeave={handleMouseLeave}
-                style={{
-                    transform: isHovered
-                        ? `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateY(-6px) scale3d(1.02, 1.02, 1.02)`
-                        : 'rotateX(0deg) rotateY(0deg) translateY(0px) scale3d(1, 1, 1)',
-                    transition: isHovered ? 'transform 0.1s ease-out' : 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)',
-                }}
-                className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card p-3.5 shadow-sm hover:shadow-xl hover:shadow-primary/15 hover:border-primary/50 [transform-style:preserve-3d] select-none"
+            <Link
+                href={ROUTE.PRODUCT_DETAIL(p.slug || p.id)}
+                className="block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl"
             >
-                {/* 3D Glare Light Sweep Layer */}
-                <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 z-20 rounded-2xl transition-opacity duration-300"
+                <article
+                    ref={cardRef}
+                    onMouseMove={handleMouseMove}
+                    onMouseLeave={handleMouseLeave}
                     style={{
-                        background: `radial-gradient(circle 240px at ${glare.x}% ${glare.y}%, rgba(255, 255, 255, ${glare.opacity}), transparent)`,
+                        transform: isHovered
+                            ? `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateY(-6px) scale3d(1.02, 1.02, 1.02)`
+                            : 'rotateX(0deg) rotateY(0deg) translateY(0px) scale3d(1, 1, 1)',
+                        transition: isHovered
+                            ? 'transform 0.1s ease-out'
+                            : 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)',
                     }}
-                />
-
-                {/* Product Image & Badges with 3D Popout */}
-                <div className="relative flex h-40 items-center justify-center rounded-xl bg-muted/40 overflow-hidden transition-all duration-300 group-hover:bg-primary/5 [transform:translateZ(20px)]">
-                    <span className="text-6xl transition-transform duration-500 ease-out group-hover:scale-115 group-hover:rotate-3 select-none drop-shadow-sm">
-                        {p.emoji}
-                    </span>
-                    {p.discount > 0 && (
-                        <span className="absolute top-2 left-2 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-6deg]">
-                            -{p.discount}%
-                        </span>
-                    )}
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            onToggleWishlist(p.id, p.name)
+                    className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card p-3.5 shadow-sm hover:shadow-xl hover:shadow-primary/15 hover:border-primary/50 [transform-style:preserve-3d] select-none"
+                >
+                    {/* 3D Glare Light Sweep Layer */}
+                    <div
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 z-20 rounded-2xl transition-opacity duration-300"
+                        style={{
+                            background: `radial-gradient(circle 240px at ${glare.x}% ${glare.y}%, rgba(255, 255, 255, ${glare.opacity}), transparent)`,
                         }}
-                        aria-label="Thêm vào yêu thích"
-                        className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-background/80 text-foreground/80 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-125 active:scale-90 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40 z-30"
-                    >
-                        <HeartIcon
-                            className={`size-3.5 transition-colors duration-200 ${isLiked ? 'fill-rose-500 text-rose-500' : ''}`}
-                        />
-                    </button>
-                </div>
+                    />
 
-                {/* Product Details with 3D Depth */}
-                <div className="mt-3 flex flex-1 flex-col gap-1.5 [transform:translateZ(14px)]">
-                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">{p.category}</span>
-                    <h3 className="line-clamp-2 text-xs font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
-                        {p.name}
-                    </h3>
-
-                    <div className="mt-auto pt-2 space-y-2">
-                        <div className="flex items-baseline gap-1.5">
-                            <span className="text-sm sm:text-base font-extrabold text-emerald-700 dark:text-emerald-400 transition-transform duration-300 group-hover:scale-105 origin-left inline-block">
-                                ₫{p.price}
+                    {/* Product Image & Badges with 3D Popout */}
+                    <div className="relative flex h-44 items-center justify-center rounded-xl bg-muted/40 overflow-hidden transition-all duration-300 group-hover:bg-primary/5 [transform:translateZ(20px)]">
+                        {p.image ? (
+                            <Image
+                                src={p.image}
+                                alt={p.name}
+                                fill
+                                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                                className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+                            />
+                        ) : (
+                            <span className="text-6xl transition-transform duration-500 ease-out group-hover:scale-115 group-hover:rotate-3 select-none drop-shadow-sm">
+                                {p.emoji || '🎁'}
                             </span>
-                            <span className="text-[10px] text-muted-foreground line-through">₫{p.originalPrice}</span>
-                        </div>
-
-                        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                            <span className="flex items-center gap-0.5">
-                                <StarIcon className="size-3 fill-amber-400 text-amber-400 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
-                                <span className="font-semibold text-foreground/90">{p.rating}</span>
-                                <span>({p.reviews})</span>
+                        )}
+                        {p.discount > 0 && (
+                            <span className="absolute top-2 left-2 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-6deg] z-20">
+                                -{p.discount}%
                             </span>
-                            <span suppressHydrationWarning>Đã bán {formatNumber(p.sold)}</span>
-                        </div>
+                        )}
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                onToggleWishlist(p.id, p.name)
+                            }}
+                            aria-label="Thêm vào yêu thích"
+                            className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-background/80 text-foreground/80 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-125 active:scale-90 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40 z-30"
+                        >
+                            <HeartIcon
+                                className={`size-3.5 transition-colors duration-200 ${isLiked ? 'fill-rose-500 text-rose-500' : ''}`}
+                            />
+                        </button>
+                    </div>
 
-                        {/* Seller Footer */}
-                        <div className="pt-2.5 border-t border-border/60 flex items-center justify-between gap-1.5 text-xs">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                                <div className="flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
-                                    <StoreIcon className="size-3" />
-                                </div>
-                                <span className="truncate text-[11px] font-semibold text-foreground group-hover:text-primary transition-colors">
-                                    {p.shop}
+                    {/* Product Details with 3D Depth */}
+                    <div className="mt-3 flex flex-1 flex-col gap-1.5 [transform:translateZ(14px)]">
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase">{p.category}</span>
+                        <h3 className="line-clamp-2 text-xs font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
+                            {p.name}
+                        </h3>
+
+                        <div className="mt-auto pt-2 space-y-2">
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="text-sm sm:text-base font-extrabold text-emerald-700 dark:text-emerald-400 transition-transform duration-300 group-hover:scale-105 origin-left inline-block">
+                                    ₫{p.price}
                                 </span>
-                                {p.verified && (
-                                    <CheckCircle2Icon className="size-3.5 text-primary shrink-0 transition-transform duration-300 group-hover:scale-125" />
+                                {p.originalPrice && (
+                                    <span className="text-[10px] text-muted-foreground line-through">
+                                        ₫{p.originalPrice}
+                                    </span>
                                 )}
+                            </div>
+
+                            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                                <span className="flex items-center gap-0.5">
+                                    <StarIcon className="size-3 fill-amber-400 text-amber-400 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
+                                    <span className="font-semibold text-foreground/90">{p.rating}</span>
+                                    <span>({p.reviews})</span>
+                                </span>
+                                <span suppressHydrationWarning>Đã bán {formatNumber(p.sold)}</span>
+                            </div>
+
+                            {/* Seller Footer */}
+                            <div className="pt-2.5 border-t border-border/60 flex items-center justify-between gap-1.5 text-xs">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <div className="flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
+                                        <StoreIcon className="size-3" />
+                                    </div>
+                                    <span className="truncate text-[11px] font-semibold text-foreground group-hover:text-primary transition-colors">
+                                        {p.shop}
+                                    </span>
+                                    {p.verified && (
+                                        <CheckCircle2Icon className="size-3.5 text-primary shrink-0 transition-transform duration-300 group-hover:scale-125" />
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </article>
+                </article>
+            </Link>
         </div>
     )
 })
@@ -679,11 +721,70 @@ export function HomePage() {
         })
     }, [])
 
+    // Lấy danh sách sản phẩm thật đã được duyệt từ backend
+    const { data: publicProductsData } = usePublicProducts({ pageSize: 30 })
+
+    const approvedRandomProducts = useMemo<HomeProductItem[]>(() => {
+        const rawItems = publicProductsData?.items || []
+        if (rawItems.length === 0) {
+            return ALL_PRODUCTS.map((p) => ({
+                id: p.id,
+                name: p.name,
+                slug: p.id,
+                category: p.category,
+                shop: p.shop,
+                verified: p.verified,
+                price: p.price,
+                originalPrice: p.originalPrice,
+                discount: p.discount,
+                sold: p.sold,
+                rating: p.rating,
+                reviews: p.reviews,
+                emoji: p.emoji,
+                isNew: p.isNew,
+                isBest: p.isBest,
+            }))
+        }
+
+        // Lấy 10 sản phẩm ngẫu nhiên ổn định (deterministic hash để tránh hydration mismatch và giữ React purity)
+        const sorted = [...rawItems].sort((a, b) => {
+            const hashA = (a.id || '').split('').reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) | 0, 0)
+            const hashB = (b.id || '').split('').reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) | 0, 0)
+            return hashA - hashB
+        })
+        const tenItems = sorted.slice(0, 10)
+
+        return tenItems.map((p, idx) => {
+            const currPrice = p.minPrice ? Number(p.minPrice) : 299000
+            const maxP = p.maxPrice ? Number(p.maxPrice) : currPrice * 1.25
+            const discount = maxP > currPrice ? Math.round(((maxP - currPrice) / maxP) * 100) : 0
+
+            return {
+                id: p.id,
+                name: p.name,
+                slug: p.slug || p.id,
+                category: p.categoryName || 'Sản phẩm',
+                shop: p.shopName || 'TimmyHub Mall',
+                verified: true,
+                price: new Intl.NumberFormat('vi-VN').format(currPrice),
+                originalPrice: maxP > currPrice ? new Intl.NumberFormat('vi-VN').format(maxP) : null,
+                discount,
+                sold: p.soldCount || 120 + idx * 35,
+                rating: p.ratingAvg ? Number(p.ratingAvg.toFixed(1)) : 4.9,
+                reviews: p.ratingCount || 56 + idx * 11,
+                image: p.images?.[0],
+                emoji: '🛍️',
+                isNew: idx % 2 === 0,
+                isBest: idx % 2 === 1,
+            }
+        })
+    }, [publicProductsData?.items])
+
     const filteredProducts = useMemo(() => {
-        if (productTab === 'new') return ALL_PRODUCTS.filter((p) => p.isNew)
-        if (productTab === 'best') return ALL_PRODUCTS.filter((p) => p.isBest)
-        return ALL_PRODUCTS
-    }, [productTab])
+        if (productTab === 'new') return approvedRandomProducts.filter((p) => p.isNew)
+        if (productTab === 'best') return approvedRandomProducts.filter((p) => p.isBest)
+        return approvedRandomProducts
+    }, [approvedRandomProducts, productTab])
 
     return (
         <div className="relative min-h-screen w-full overflow-hidden">
@@ -1359,56 +1460,65 @@ export function HomePage() {
                     ) : (
                         <div className="space-y-3">
                             {filteredProducts.map((p) => (
-                                <article
-                                    key={p.id}
-                                    className="group flex flex-col sm:flex-row items-center gap-4 rounded-2xl border border-border/70 bg-card p-4 transition-all duration-300 ease-out hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/10 hover:border-primary/50"
-                                >
-                                    <div className="flex size-24 shrink-0 items-center justify-center rounded-xl bg-muted/40 text-4xl select-none transition-all duration-500 ease-out group-hover:scale-115 group-hover:rotate-3 group-hover:bg-primary/5">
-                                        {p.emoji}
-                                    </div>
-                                    <div className="flex-1 min-w-0 space-y-1">
-                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                            <span className="font-semibold">{p.category}</span>
-                                            <span>•</span>
-                                            <span>{p.shop}</span>
-                                            {p.verified && (
-                                                <CheckCircle2Icon className="size-3.5 text-primary transition-transform duration-300 group-hover:scale-110" />
+                                <Link key={p.id} href={ROUTE.PRODUCT_DETAIL(p.slug || p.id)} className="block group">
+                                    <article className="flex flex-col sm:flex-row items-center gap-4 rounded-2xl border border-border/70 bg-card p-4 transition-all duration-300 ease-out hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/10 hover:border-primary/50">
+                                        <div className="relative flex size-24 shrink-0 items-center justify-center rounded-xl bg-muted/40 overflow-hidden text-4xl select-none transition-all duration-500 ease-out group-hover:scale-105 group-hover:bg-primary/5">
+                                            {p.image ? (
+                                                <Image
+                                                    src={p.image}
+                                                    alt={p.name}
+                                                    fill
+                                                    sizes="96px"
+                                                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                                                />
+                                            ) : (
+                                                p.emoji
                                             )}
                                         </div>
-                                        <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
-                                            {p.name}
-                                        </h3>
-                                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                            <span className="flex items-center gap-1">
-                                                <StarIcon className="size-3.5 fill-amber-400 text-amber-400 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
-                                                <span className="font-bold text-foreground">{p.rating}</span>
-                                                <span>({p.reviews})</span>
-                                            </span>
-                                            <span suppressHydrationWarning>Đã bán {formatNumber(p.sold)}</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-3 pt-2 sm:pt-0">
-                                        <div className="text-left sm:text-right">
-                                            <p className="text-lg font-extrabold text-primary transition-transform duration-300 group-hover:scale-105 origin-right">
-                                                ₫{p.price}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground line-through">
-                                                ₫{p.originalPrice}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center gap-2 rounded-xl bg-muted/60 px-3 py-1.5 border border-border/60 transition-colors group-hover:border-primary/40">
-                                            <div className="flex size-5 items-center justify-center rounded-md bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
-                                                <StoreIcon className="size-3" />
+                                        <div className="flex-1 min-w-0 space-y-1">
+                                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                <span className="font-semibold">{p.category}</span>
+                                                <span>•</span>
+                                                <span>{p.shop}</span>
+                                                {p.verified && (
+                                                    <CheckCircle2Icon className="size-3.5 text-primary transition-transform duration-300 group-hover:scale-110" />
+                                                )}
                                             </div>
-                                            <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
-                                                {p.shop}
-                                            </span>
-                                            {p.verified && (
-                                                <CheckCircle2Icon className="size-3.5 text-primary transition-transform duration-300 group-hover:scale-125" />
-                                            )}
+                                            <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors line-clamp-2">
+                                                {p.name}
+                                            </h3>
+                                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                                <span className="flex items-center gap-1">
+                                                    <StarIcon className="size-3.5 fill-amber-400 text-amber-400 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
+                                                    <span className="font-bold text-foreground">{p.rating}</span>
+                                                    <span>({p.reviews})</span>
+                                                </span>
+                                                <span suppressHydrationWarning>Đã bán {formatNumber(p.sold)}</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                </article>
+                                        <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-3 pt-2 sm:pt-0">
+                                            <div className="text-left sm:text-right">
+                                                <p className="text-lg font-extrabold text-primary transition-transform duration-300 group-hover:scale-105 origin-right">
+                                                    ₫{p.price}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground line-through">
+                                                    ₫{p.originalPrice}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-2 rounded-xl bg-muted/60 px-3 py-1.5 border border-border/60 transition-colors group-hover:border-primary/40">
+                                                <div className="flex size-5 items-center justify-center rounded-md bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
+                                                    <StoreIcon className="size-3" />
+                                                </div>
+                                                <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                                                    {p.shop}
+                                                </span>
+                                                {p.verified && (
+                                                    <CheckCircle2Icon className="size-3.5 text-primary transition-transform duration-300 group-hover:scale-125" />
+                                                )}
+                                            </div>
+                                        </div>
+                                    </article>
+                                </Link>
                             ))}
                         </div>
                     )}

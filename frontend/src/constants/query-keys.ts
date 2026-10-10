@@ -39,6 +39,8 @@ export const QUERY_KEY = {
     },
     PRODUCTS: {
         ALL: ['products'] as const,
+        PUBLIC_LIST: (filters?: Record<string, unknown>) => ['products', 'public-list', filters] as const,
+        PUBLIC_DETAIL: (idOrSlug: string) => ['products', 'public-detail', idOrSlug] as const,
         SELLER_LIST: (filters?: Record<string, unknown>) => ['products', 'seller-list', filters] as const,
         ADMIN_LIST: (filters?: Record<string, unknown>) => ['products', 'admin-list', filters] as const,
         DETAIL: (id: string) => ['products', 'detail', id] as const,
