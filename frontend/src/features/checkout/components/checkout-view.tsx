@@ -69,6 +69,7 @@ interface CheckoutViewProps {
 
 export function CheckoutView({ initialAddresses = [], initialCart = null }: CheckoutViewProps) {
     const t = useTranslations('checkout')
+    const tValidation = useTranslations('validation')
     const router = useRouter()
     const searchParams = useSearchParams()
 
@@ -130,16 +131,14 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
         [selectedProvinceCode, selectedDistrictCode],
     )
 
-    const formatAddressError = (errorMsg?: string) => {
-        if (!errorMsg) return undefined
-        if (errorMsg === 'validation.fullNameMin') return 'Họ tên tối thiểu 2 ký tự'
-        if (errorMsg === 'validation.fullNameMax') return 'Họ tên tối đa 100 ký tự'
-        if (errorMsg === 'validation.phoneInvalid') return 'Số điện thoại không hợp lệ (10 số, đầu 0x)'
-        if (errorMsg === 'validation.provinceRequired') return 'Vui lòng chọn Tỉnh/Thành phố'
-        if (errorMsg === 'validation.districtRequired') return 'Vui lòng chọn Quận/Huyện'
-        if (errorMsg === 'validation.wardRequired') return 'Vui lòng chọn Phường/Xã'
-        if (errorMsg === 'validation.addressLineRequired') return 'Vui lòng nhập địa chỉ cụ thể (tối thiểu 3 ký tự)'
-        return errorMsg
+    const formatAddressError = (errorKey?: string): string | undefined => {
+        if (!errorKey) return undefined
+        const key = errorKey.startsWith('validation.') ? errorKey.slice('validation.'.length) : errorKey
+        const translator = tValidation as unknown as { has: (k: string) => boolean; (k: string): string }
+        if (translator.has(key)) {
+            return translator(key)
+        }
+        return errorKey
     }
 
     const createAddressMutation = useCreateAddress()

@@ -545,10 +545,12 @@
     "confirmPasswordRequired": "Vui lòng xác nhận mật khẩu mới",
     "passwordsDoNotMatch": "Mật khẩu xác nhận không khớp",
     "fullNameRequired": "Vui lòng nhập họ tên người nhận",
-    "addressLineRequired": "Vui lòng nhập địa chỉ cụ thể (tối thiểu 5 ký tự)",
-    "provinceRequired": "Vui lòng nhập Tỉnh / Thành phố",
-    "districtRequired": "Vui lòng nhập Quận / Huyện",
-    "wardRequired": "Vui lòng nhập Phường / Xã"
+    "fullNameMin": "Họ và tên tối thiểu 2 ký tự",
+    "fullNameMax": "Họ và tên tối đa 100 ký tự",
+    "addressLineRequired": "Vui lòng nhập địa chỉ cụ thể (tối thiểu 3 ký tự)",
+    "provinceRequired": "Vui lòng chọn Tỉnh / Thành phố",
+    "districtRequired": "Vui lòng chọn Quận / Huyện",
+    "wardRequired": "Vui lòng chọn Phường / Xã"
   },
   "sellerApplications": {
     "pageTitle": "Duyệt người bán",

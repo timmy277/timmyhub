@@ -545,10 +545,12 @@
     "confirmPasswordRequired": "Please confirm your new password",
     "passwordsDoNotMatch": "Passwords do not match",
     "fullNameRequired": "Please enter recipient full name",
-    "addressLineRequired": "Please enter specific street address (at least 5 characters)",
-    "provinceRequired": "Please enter Province / City",
-    "districtRequired": "Please enter District",
-    "wardRequired": "Please enter Ward"
+    "fullNameMin": "Full name must be at least 2 characters",
+    "fullNameMax": "Full name must not exceed 100 characters",
+    "addressLineRequired": "Please enter specific street address (at least 3 characters)",
+    "provinceRequired": "Please select Province / City",
+    "districtRequired": "Please select District",
+    "wardRequired": "Please select Ward"
   },
   "sellerApplications": {
     "pageTitle": "Seller Approvals",
