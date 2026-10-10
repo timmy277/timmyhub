@@ -7,9 +7,11 @@ import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import {
     ArrowLeftIcon,
+    ChevronRightIcon,
     CopyIcon,
     CheckIcon,
     CreditCardIcon,
+    HomeIcon,
     MapPinIcon,
     PhoneIcon,
     StoreIcon,
@@ -114,289 +116,327 @@ export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false }: 
     const subtotal = order.items.reduce((sum, it) => sum + Number(it.lineTotal), 0)
 
     return (
-        <div className={isModalOrTab ? 'space-y-6' : 'container max-w-5xl mx-auto px-4 py-6 sm:py-10 space-y-6'}>
-            {/* Top Navigation */}
-            <div className="flex items-center justify-between">
-                {onBack ? (
-                    <button
-                        type="button"
-                        onClick={onBack}
-                        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group cursor-pointer"
-                    >
-                        <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-                        <span>Quay lại danh sách đơn hàng</span>
-                    </button>
-                ) : (
-                    <Link
-                        href={ROUTE.ORDERS}
-                        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
-                    >
-                        <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-                        <span>Quay lại danh sách đơn hàng</span>
-                    </Link>
-                )}
-
-                <div className="flex items-center gap-2">
-                    {canCancel && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowCancelModal(true)}
-                            className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-xs sm:text-sm"
+        <div className={isModalOrTab ? 'space-y-6 w-full' : 'w-full min-h-screen pb-16'}>
+            {/* Top Breadcrumb Header for standalone page */}
+            {!isModalOrTab && (
+                <div className="border-b border-border/60 bg-card/60 backdrop-blur-md">
+                    <div className="mx-auto max-w-7xl px-4 py-3.5 sm:px-6 lg:px-8">
+                        <nav
+                            aria-label="Breadcrumb"
+                            className="flex items-center gap-1.5 text-xs text-muted-foreground"
                         >
-                            <XCircleIcon className="h-4 w-4 mr-1 text-rose-500" />
-                            Huỷ đơn hàng
-                        </Button>
-                    )}
-                    {!isModalOrTab && (
-                        <Link href="/">
-                            <Button variant="outline" size="sm">
-                                <ShoppingBagIcon className="h-4 w-4 mr-1" />
-                                Mua sắm tiếp
-                            </Button>
+                            <Link
+                                href={ROUTE.HOME}
+                                className="hover:text-foreground transition-colors flex items-center gap-1.5"
+                            >
+                                <HomeIcon className="size-3.5 text-primary" />
+                                <span>Trang chủ</span>
+                            </Link>
+                            <ChevronRightIcon className="size-3 text-muted-foreground/60" />
+                            <Link href={ROUTE.ORDERS} className="hover:text-foreground transition-colors">
+                                Đơn hàng của tôi
+                            </Link>
+                            <ChevronRightIcon className="size-3 text-muted-foreground/60" />
+                            <span className="font-medium text-foreground">Đơn #{order.id}</span>
+                        </nav>
+                    </div>
+                </div>
+            )}
+
+            <div className={isModalOrTab ? 'space-y-6' : 'mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6'}>
+                {/* Top Navigation Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    {onBack ? (
+                        <button
+                            type="button"
+                            onClick={onBack}
+                            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group cursor-pointer"
+                        >
+                            <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+                            <span>Quay lại danh sách đơn hàng</span>
+                        </button>
+                    ) : (
+                        <Link
+                            href={ROUTE.ORDERS}
+                            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
+                        >
+                            <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+                            <span>Quay lại danh sách đơn hàng</span>
                         </Link>
                     )}
-                </div>
-            </div>
 
-            {/* Order Header Card */}
-            <Card className="border border-border/80 shadow-sm overflow-hidden">
-                <CardHeader className="bg-muted/30 border-b border-border/50 px-4 py-4 sm:px-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground uppercase tracking-wider">Mã đơn:</span>
-                                <span className="font-mono font-bold text-base sm:text-lg text-foreground">
-                                    {order.id}
-                                </span>
-                                <button
-                                    onClick={handleCopyId}
-                                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                                    title="Sao chép mã đơn"
-                                >
-                                    {copied ? (
-                                        <CheckIcon className="h-4 w-4 text-emerald-600" />
-                                    ) : (
-                                        <CopyIcon className="h-4 w-4" />
-                                    )}
-                                </button>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                                Ngày đặt hàng: {new Date(order.createdAt).toLocaleString('vi-VN')}
-                            </p>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2">
-                            <PaymentStatusBadge status={order.paymentStatus} method={order.paymentMethod} />
-                            <OrderStatusBadge status={order.status} />
-                        </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {canCancel && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowCancelModal(true)}
+                                className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-xs sm:text-sm"
+                            >
+                                <XCircleIcon className="h-4 w-4 mr-1 text-rose-500" />
+                                Huỷ đơn hàng
+                            </Button>
+                        )}
+                        {!isModalOrTab && (
+                            <Link href="/">
+                                <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+                                    <ShoppingBagIcon className="h-4 w-4 mr-1" />
+                                    Mua sắm tiếp
+                                </Button>
+                            </Link>
+                        )}
                     </div>
-                </CardHeader>
+                </div>
 
-                <CardContent className="p-4 sm:p-6">
-                    {/* Visual Timeline */}
-                    <OrderTimeline order={order} />
-                </CardContent>
-            </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Left 2 Cols: Items & Shop */}
-                <div className="md:col-span-2 space-y-6">
-                    {/* Items Card */}
-                    <Card className="border border-border/80 shadow-sm">
-                        <CardHeader className="px-4 py-3 sm:px-6 border-b border-border/50 bg-muted/20">
-                            <div className="flex items-center gap-2">
-                                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                    <StoreIcon className="h-4 w-4" />
+                {/* Order Header Card */}
+                <Card className="border border-border/80 shadow-xs overflow-hidden">
+                    <CardHeader className="bg-muted/30 border-b border-border/50 px-4 py-4 sm:px-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="space-y-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                                        Mã đơn:
+                                    </span>
+                                    <span className="font-mono font-bold text-base sm:text-lg text-foreground">
+                                        {order.id}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={handleCopyId}
+                                        className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                                        title="Sao chép mã đơn"
+                                    >
+                                        {copied ? (
+                                            <CheckIcon className="h-4 w-4 text-emerald-600" />
+                                        ) : (
+                                            <CopyIcon className="h-4 w-4" />
+                                        )}
+                                    </button>
                                 </div>
-                                <CardTitle className="text-base font-semibold">
-                                    {order.shopName || 'TimmyHub Mall'}
-                                </CardTitle>
+                                <p className="text-xs text-muted-foreground">
+                                    Ngày đặt hàng: {new Date(order.createdAt).toLocaleString('vi-VN')}
+                                </p>
                             </div>
-                        </CardHeader>
 
-                        <CardContent className="p-4 sm:p-6 divide-y divide-border/40">
-                            {order.items.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className="py-3.5 first:pt-0 last:pb-0 flex items-center gap-3 sm:gap-4"
-                                >
-                                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-muted/20">
-                                        <Image
-                                            src={
-                                                item.imageUrl ||
-                                                'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80'
-                                            }
-                                            alt={item.productName}
-                                            fill
-                                            className="object-cover"
-                                        />
-                                    </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <PaymentStatusBadge status={order.paymentStatus} method={order.paymentMethod} />
+                                <OrderStatusBadge status={order.status} />
+                            </div>
+                        </div>
+                    </CardHeader>
 
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="font-medium text-sm sm:text-base text-foreground line-clamp-2">
-                                            {item.productName}
-                                        </h4>
-                                        {item.variantLabel && item.variantLabel !== 'Mặc định' && (
-                                            <p className="text-xs text-muted-foreground mt-0.5">
-                                                Phân loại:{' '}
-                                                <span className="font-medium text-foreground/80">
-                                                    {item.variantLabel}
-                                                </span>
-                                            </p>
-                                        )}
-                                        {item.sku && (
-                                            <p className="text-[11px] font-mono text-muted-foreground/80 mt-0.5">
-                                                SKU: {item.sku}
-                                            </p>
-                                        )}
-                                        <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
-                                            <span>
-                                                Số lượng: <strong className="text-foreground">{item.quantity}</strong>
-                                            </span>
-                                            <span>&bull;</span>
-                                            <span>Đơn giá: {formatCurrencyVND(item.unitPrice)}</span>
-                                        </div>
-                                    </div>
+                    <CardContent className="p-4 sm:p-6">
+                        {/* Visual Timeline */}
+                        <OrderTimeline order={order} />
+                    </CardContent>
+                </Card>
 
-                                    <div className="text-right shrink-0">
-                                        <span className="font-bold text-sm sm:text-base text-foreground">
-                                            {formatCurrencyVND(item.lineTotal)}
-                                        </span>
+                {/* Main Content Grid: 1 col on mobile, 12 cols on desktop */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    {/* Left Cols: Items & Shop */}
+                    <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+                        {/* Items Card */}
+                        <Card className="border border-border/80 shadow-xs">
+                            <CardHeader className="px-4 py-3 sm:px-6 border-b border-border/50 bg-muted/20">
+                                <div className="flex items-center gap-2">
+                                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                        <StoreIcon className="h-4 w-4" />
                                     </div>
+                                    <CardTitle className="text-base font-semibold">
+                                        {order.shopName || 'TimmyHub Mall'}
+                                    </CardTitle>
                                 </div>
-                            ))}
-                        </CardContent>
-                    </Card>
-
-                    {/* Status History Audit Log */}
-                    {order.statusHistory && order.statusHistory.length > 0 && (
-                        <Card className="border border-border/80 shadow-sm">
-                            <CardHeader className="px-4 py-3 sm:px-6 border-b border-border/50">
-                                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
-                                    <HistoryIcon className="h-4 w-4 text-primary" />
-                                    Lịch sử cập nhật đơn hàng
-                                </CardTitle>
                             </CardHeader>
-                            <CardContent className="p-4 sm:p-6 space-y-3">
-                                {order.statusHistory.map((hist) => (
-                                    <div key={hist.id} className="flex items-start gap-3 text-xs sm:text-sm">
-                                        <div className="h-2 w-2 rounded-full bg-primary mt-1.5 shrink-0" />
-                                        <div className="flex-1">
-                                            <div className="flex items-baseline justify-between gap-2">
-                                                <span className="font-medium text-foreground">
-                                                    {hist.reason || `Chuyển trạng thái sang ${hist.toStatus}`}
-                                                </span>
-                                                <span className="text-[11px] text-muted-foreground shrink-0">
-                                                    {new Date(hist.createdAt).toLocaleString('vi-VN')}
-                                                </span>
+
+                            <CardContent className="p-4 sm:p-6 divide-y divide-border/40">
+                                {order.items.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        className="py-3.5 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4"
+                                    >
+                                        <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                                            <div className="relative h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-muted/20">
+                                                <Image
+                                                    src={
+                                                        item.imageUrl ||
+                                                        'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80'
+                                                    }
+                                                    alt={item.productName}
+                                                    fill
+                                                    className="object-cover"
+                                                />
                                             </div>
-                                            {hist.actorRole && (
-                                                <span className="text-[11px] text-muted-foreground">
-                                                    Bởi: {hist.actorRole}
-                                                </span>
-                                            )}
+
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="font-medium text-sm sm:text-base text-foreground line-clamp-2">
+                                                    {item.productName}
+                                                </h4>
+                                                {item.variantLabel && item.variantLabel !== 'Mặc định' && (
+                                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                                        Phân loại:{' '}
+                                                        <span className="font-medium text-foreground/80">
+                                                            {item.variantLabel}
+                                                        </span>
+                                                    </p>
+                                                )}
+                                                {item.sku && (
+                                                    <p className="text-[11px] font-mono text-muted-foreground/80 mt-0.5">
+                                                        SKU: {item.sku}
+                                                    </p>
+                                                )}
+                                                <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-muted-foreground">
+                                                    <span>
+                                                        Số lượng:{' '}
+                                                        <strong className="text-foreground">{item.quantity}</strong>
+                                                    </span>
+                                                    <span>&bull;</span>
+                                                    <span>Đơn giá: {formatCurrencyVND(item.unitPrice)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="text-right shrink-0 sm:self-center flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-border/40">
+                                            <span className="text-xs text-muted-foreground sm:hidden">Tổng:</span>
+                                            <span className="font-bold text-sm sm:text-base text-foreground">
+                                                {formatCurrencyVND(item.lineTotal)}
+                                            </span>
                                         </div>
                                     </div>
                                 ))}
                             </CardContent>
                         </Card>
-                    )}
-                </div>
 
-                {/* Right Col: Address & Payment Summary */}
-                <div className="space-y-6">
-                    {/* Delivery Address Card */}
-                    <Card className="border border-border/80 shadow-sm">
-                        <CardHeader className="px-4 py-3 sm:px-6 border-b border-border/50">
-                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
-                                <MapPinIcon className="h-4 w-4 text-primary" />
-                                Địa chỉ nhận hàng
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4 sm:p-6 space-y-2 text-sm">
-                            <div className="flex items-center gap-2 font-semibold text-foreground">
-                                <UserIcon className="h-4 w-4 text-muted-foreground" />
-                                <span>{order.shippingFullName}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <PhoneIcon className="h-4 w-4 text-muted-foreground" />
-                                <span>{order.shippingPhone}</span>
-                            </div>
-                            <p className="text-muted-foreground text-xs leading-relaxed pt-1 border-t border-border/40">
-                                {order.shippingAddress}
-                            </p>
+                        {/* Status History Audit Log */}
+                        {order.statusHistory && order.statusHistory.length > 0 && (
+                            <Card className="border border-border/80 shadow-sm">
+                                <CardHeader className="px-4 py-3 sm:px-6 border-b border-border/50">
+                                    <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                                        <HistoryIcon className="h-4 w-4 text-primary" />
+                                        Lịch sử cập nhật đơn hàng
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 sm:p-6 space-y-3">
+                                    {order.statusHistory.map((hist) => (
+                                        <div key={hist.id} className="flex items-start gap-3 text-xs sm:text-sm">
+                                            <div className="h-2 w-2 rounded-full bg-primary mt-1.5 shrink-0" />
+                                            <div className="flex-1">
+                                                <div className="flex items-baseline justify-between gap-2">
+                                                    <span className="font-medium text-foreground">
+                                                        {hist.reason || `Chuyển trạng thái sang ${hist.toStatus}`}
+                                                    </span>
+                                                    <span className="text-[11px] text-muted-foreground shrink-0">
+                                                        {new Date(hist.createdAt).toLocaleString('vi-VN')}
+                                                    </span>
+                                                </div>
+                                                {hist.actorRole && (
+                                                    <span className="text-[11px] text-muted-foreground">
+                                                        Bởi: {hist.actorRole}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        )}
+                    </div>
 
-                            {order.customerNote && (
-                                <div className="mt-3 pt-2 border-t border-border/40 text-xs">
-                                    <span className="font-medium text-foreground block">Ghi chú của bạn:</span>
-                                    <span className="text-muted-foreground italic">
-                                        &ldquo;{order.customerNote}&rdquo;
-                                    </span>
+                    {/* Right Col: Address & Payment Summary */}
+                    <div className="space-y-6">
+                        {/* Delivery Address Card */}
+                        <Card className="border border-border/80 shadow-sm">
+                            <CardHeader className="px-4 py-3 sm:px-6 border-b border-border/50">
+                                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                                    <MapPinIcon className="h-4 w-4 text-primary" />
+                                    Địa chỉ nhận hàng
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 sm:p-6 space-y-2 text-sm">
+                                <div className="flex items-center gap-2 font-semibold text-foreground">
+                                    <UserIcon className="h-4 w-4 text-muted-foreground" />
+                                    <span>{order.shippingFullName}</span>
                                 </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Payment Summary Card */}
-                    <Card className="border border-border/80 shadow-sm">
-                        <CardHeader className="px-4 py-3 sm:px-6 border-b border-border/50">
-                            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
-                                <CreditCardIcon className="h-4 w-4 text-primary" />
-                                Thông tin thanh toán
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4 sm:p-6 space-y-3 text-sm">
-                            <div className="flex justify-between text-muted-foreground">
-                                <span>Tổng tiền hàng:</span>
-                                <span className="font-medium text-foreground">{formatCurrencyVND(subtotal)}</span>
-                            </div>
-
-                            <div className="flex justify-between text-muted-foreground">
-                                <span>Phí vận chuyển:</span>
-                                <span className="font-medium text-foreground">
-                                    {Number(order.shippingFee) > 0 ? formatCurrencyVND(order.shippingFee) : 'Miễn phí'}
-                                </span>
-                            </div>
-
-                            {order.voucherDiscount && Number(order.voucherDiscount) > 0 && (
-                                <div className="flex justify-between text-emerald-600">
-                                    <span>Giảm giá voucher:</span>
-                                    <span>-{formatCurrencyVND(order.voucherDiscount)}</span>
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <PhoneIcon className="h-4 w-4 text-muted-foreground" />
+                                    <span>{order.shippingPhone}</span>
                                 </div>
-                            )}
+                                <p className="text-muted-foreground text-xs leading-relaxed pt-1 border-t border-border/40">
+                                    {order.shippingAddress}
+                                </p>
 
-                            <div className="pt-2 border-t border-border/60 flex justify-between items-baseline">
-                                <span className="font-semibold text-foreground">Tổng thanh toán:</span>
-                                <span className="text-lg font-bold text-primary">
-                                    {formatCurrencyVND(order.totalAmount)}
-                                </span>
-                            </div>
+                                {order.customerNote && (
+                                    <div className="mt-3 pt-2 border-t border-border/40 text-xs">
+                                        <span className="font-medium text-foreground block">Ghi chú của bạn:</span>
+                                        <span className="text-muted-foreground italic">
+                                            &ldquo;{order.customerNote}&rdquo;
+                                        </span>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
 
-                            <div className="pt-2 border-t border-border/40 text-xs space-y-1.5">
+                        {/* Payment Summary Card */}
+                        <Card className="border border-border/80 shadow-sm">
+                            <CardHeader className="px-4 py-3 sm:px-6 border-b border-border/50">
+                                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                                    <CreditCardIcon className="h-4 w-4 text-primary" />
+                                    Thông tin thanh toán
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 sm:p-6 space-y-3 text-sm">
                                 <div className="flex justify-between text-muted-foreground">
-                                    <span>Phương thức:</span>
-                                    <span className="font-medium text-foreground">
-                                        {order.paymentMethod === 'VNPAY'
-                                            ? 'Cổng thanh toán VNPay'
-                                            : order.paymentMethod === 'COD'
-                                              ? 'Thanh toán khi nhận hàng (COD)'
-                                              : order.paymentMethod}
-                                    </span>
+                                    <span>Tổng tiền hàng:</span>
+                                    <span className="font-medium text-foreground">{formatCurrencyVND(subtotal)}</span>
                                 </div>
+
                                 <div className="flex justify-between text-muted-foreground">
-                                    <span>Trạng thái:</span>
+                                    <span>Phí vận chuyển:</span>
                                     <span className="font-medium text-foreground">
-                                        {order.paymentStatus === 'COMPLETED'
-                                            ? 'Đã thanh toán'
-                                            : order.paymentStatus === 'PENDING'
-                                              ? 'Chờ thanh toán'
-                                              : order.paymentStatus}
+                                        {Number(order.shippingFee) > 0
+                                            ? formatCurrencyVND(order.shippingFee)
+                                            : 'Miễn phí'}
                                     </span>
                                 </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+
+                                {order.voucherDiscount && Number(order.voucherDiscount) > 0 && (
+                                    <div className="flex justify-between text-emerald-600">
+                                        <span>Giảm giá voucher:</span>
+                                        <span>-{formatCurrencyVND(order.voucherDiscount)}</span>
+                                    </div>
+                                )}
+
+                                <div className="pt-2 border-t border-border/60 flex justify-between items-baseline">
+                                    <span className="font-semibold text-foreground">Tổng thanh toán:</span>
+                                    <span className="text-lg font-bold text-primary">
+                                        {formatCurrencyVND(order.totalAmount)}
+                                    </span>
+                                </div>
+
+                                <div className="pt-2 border-t border-border/40 text-xs space-y-1.5">
+                                    <div className="flex justify-between text-muted-foreground">
+                                        <span>Phương thức:</span>
+                                        <span className="font-medium text-foreground">
+                                            {order.paymentMethod === 'VNPAY'
+                                                ? 'Cổng thanh toán VNPay'
+                                                : order.paymentMethod === 'COD'
+                                                  ? 'Thanh toán khi nhận hàng (COD)'
+                                                  : order.paymentMethod}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between text-muted-foreground">
+                                        <span>Trạng thái:</span>
+                                        <span className="font-medium text-foreground">
+                                            {order.paymentStatus === 'COMPLETED'
+                                                ? 'Đã thanh toán'
+                                                : order.paymentStatus === 'PENDING'
+                                                  ? 'Chờ thanh toán'
+                                                  : order.paymentStatus}
+                                        </span>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
             </div>
 

@@ -18,5 +18,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function AccountPage() {
     const user = await getCurrentUserDetailAction()
-    return <AccountShell initialUser={user} />
+    return (
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <AccountShell initialUser={user} />
+        </div>
+    )
 }
