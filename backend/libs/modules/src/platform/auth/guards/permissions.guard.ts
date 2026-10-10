@@ -45,9 +45,21 @@ export class PermissionsGuard implements CanActivate {
             throw new ApiError('FORBIDDEN', { messageKey: apiMessageKey('auth.forbiddenPermission') })
         }
 
-        const { user } = context.switchToHttp().getRequest<Request>()
+        const req = context.switchToHttp().getRequest<Request>()
+        const { user } = req
         if (!user) throw new ApiError('UNAUTHORIZED')
         if (isSuperAdmin(user.roles)) return true
+
+        // Thao tác xem/sửa hồ sơ của chính mình (own scope cho identity:users:read và identity:users:update)
+        const isSelfUser = Boolean(req.params?.userId && req.params.userId === user.id)
+        if (
+            isSelfUser &&
+            required.every(
+                (permission) => permission === 'identity:users:read' || permission === 'identity:users:update',
+            )
+        ) {
+            return true
+        }
 
         const effective = await this.permissionResolver.getEffectivePermissions(user.id)
         const allowed = required.every((permission) => effective.has(permission))

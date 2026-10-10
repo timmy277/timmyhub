@@ -137,4 +137,30 @@ describe('PermissionsGuard', () => {
 
         await expect(guard.canActivate(buildNamedContext({ id: 'u1', roles: [UserRole.USER] }))).resolves.toBe(true)
     })
+
+    it('cho phép xem hồ sơ chính mình khi userId trùng user.id mà không cần identity:users:read', async () => {
+        const { guard } = buildGuard(['identity:users:read'], [], { id: 'u1', roles: [UserRole.USER] })
+        const context = {
+            switchToHttp: () => ({
+                getRequest: () => ({ user: { id: 'u1', roles: [UserRole.USER] }, params: { userId: 'u1' } }),
+            }),
+            getHandler: () => ({ name: 'detail' }),
+            getClass: () => ({ name: 'UsersController' }),
+        } as unknown as ExecutionContext
+
+        await expect(guard.canActivate(context)).resolves.toBe(true)
+    })
+
+    it('từ chối xem hồ sơ người khác khi userId khác user.id và thiếu identity:users:read', async () => {
+        const { guard } = buildGuard(['identity:users:read'], [], { id: 'u1', roles: [UserRole.USER] })
+        const context = {
+            switchToHttp: () => ({
+                getRequest: () => ({ user: { id: 'u1', roles: [UserRole.USER] }, params: { userId: 'u2' } }),
+            }),
+            getHandler: () => ({ name: 'detail' }),
+            getClass: () => ({ name: 'UsersController' }),
+        } as unknown as ExecutionContext
+
+        await expect(guard.canActivate(context)).rejects.toMatchObject({ code: 'FORBIDDEN', status: 403 })
+    })
 })
