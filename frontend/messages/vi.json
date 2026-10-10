@@ -577,6 +577,7 @@
     "provinceRequired": "Vui lòng chọn Tỉnh / Thành phố",
     "districtRequired": "Vui lòng chọn Quận / Huyện",
     "wardRequired": "Vui lòng chọn Phường / Xã",
+    "priceInvalid": "Giá bán không hợp lệ (phải là số dương)",
     "productNameMin": "Tên sản phẩm phải có ít nhất 3 ký tự",
     "productNameMax": "Tên sản phẩm không được vượt quá 200 ký tự",
     "productDescriptionMin": "Mô tả sản phẩm phải có ít nhất 10 ký tự",

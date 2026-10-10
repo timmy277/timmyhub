@@ -111,7 +111,10 @@ export async function createProductAction(input: CreateProductInput): Promise<Pr
     }
 
     const parsed = CreateProductInputSchema.safeParse(input)
-    if (!parsed.success) return { ok: false, code: 'VALIDATION_FAILED' }
+    if (!parsed.success) {
+        const firstIssue = parsed.error.issues[0]
+        return { ok: false, code: 'VALIDATION_FAILED', message: firstIssue?.message }
+    }
 
     const result = await fetchBackend<ProductDetail>(API_ROUTE.CATALOG.SELLER_PRODUCTS, {
         token: actor.accessToken,

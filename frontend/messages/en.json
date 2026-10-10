@@ -577,6 +577,7 @@
     "provinceRequired": "Please select province/city",
     "districtRequired": "Please select district",
     "wardRequired": "Please select ward",
+    "priceInvalid": "Invalid price (must be a positive number)",
     "productNameMin": "Product name must be at least 3 characters",
     "productNameMax": "Product name cannot exceed 200 characters",
     "productDescriptionMin": "Product description must be at least 10 characters",

@@ -62,6 +62,21 @@ type VariantOverride = {
     stock?: number
     sku?: string
 }
+function findFirstErrorMessage(err: unknown): string | undefined {
+    if (!err || typeof err !== 'object') return undefined
+    if (
+        'message' in err &&
+        typeof (err as { message?: unknown }).message === 'string' &&
+        (err as { message: string }).message
+    ) {
+        return (err as { message: string }).message
+    }
+    for (const val of Object.values(err)) {
+        const nested = findFirstErrorMessage(val)
+        if (nested) return nested
+    }
+    return undefined
+}
 
 export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = false }: CreateProductModalProps) {
     const t = useTranslations('products.dialog')
@@ -396,7 +411,8 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                 onOpenChange(false)
                 onSucceeded()
             } else {
-                toast.error(tMsg('createFailed', { error: res.message || res.code }))
+                const errorMsg = res.message ? getErrorMessage(res.message) || res.message : res.code
+                toast.error(tMsg('createFailed', { error: errorMsg }))
             }
         } catch {
             toast.error(tMsg('createFailed', { error: '' }))
@@ -414,11 +430,11 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
             }
             variants = [
                 {
-                    price: singlePrice,
-                    compareAtPrice: singleComparePrice ? singleComparePrice : null,
-                    stock: singleStock,
-                    weightGram: singleWeight,
-                    sku: singleSku || undefined,
+                    price: String(singlePrice).trim(),
+                    compareAtPrice: singleComparePrice?.trim() ? singleComparePrice.trim() : null,
+                    stock: Number(singleStock) >= 0 ? Number(singleStock) : 0,
+                    weightGram: Number(singleWeight) > 0 ? Number(singleWeight) : 200,
+                    sku: singleSku?.trim() || undefined,
                     isDefault: true,
                 },
             ]
@@ -435,12 +451,12 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
             }))
 
             variants = variantsMatrix.map((vm, idx) => ({
-                sku: vm.sku || undefined,
+                sku: vm.sku?.trim() || undefined,
                 optionValues: vm.optionValues,
-                price: vm.price,
-                compareAtPrice: vm.compareAtPrice,
-                stock: vm.stock,
-                weightGram: vm.weightGram,
+                price: String(vm.price || '').trim(),
+                compareAtPrice: vm.compareAtPrice?.trim() ? vm.compareAtPrice.trim() : null,
+                stock: Number(vm.stock) >= 0 ? Number(vm.stock) : 0,
+                weightGram: Number(vm.weightGram) > 0 ? Number(vm.weightGram) : 200,
                 isDefault: idx === 0,
             }))
         }
@@ -454,8 +470,8 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
         void form.handleSubmit(
             (data) => onSubmit(data as CreateProductInput),
             (errors) => {
-                const firstError = Object.values(errors)[0]
-                const formatted = getErrorMessage(firstError?.message)
+                const firstErrorMessage = findFirstErrorMessage(errors)
+                const formatted = getErrorMessage(firstErrorMessage)
                 if (formatted) {
                     toast.error(formatted)
                 } else {
@@ -750,7 +766,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
 
                 {form.formState.errors.images && (
                     <p className="text-[11px] text-destructive font-medium mt-1">
-                        {getErrorMessage(form.formState.errors.images.message)}
+                        {getErrorMessage(findFirstErrorMessage(form.formState.errors.images))}
                     </p>
                 )}
             </div>
@@ -1078,6 +1094,14 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                             </div>
                         )}
                     </div>
+                )}
+                {(form.formState.errors.variants || form.formState.errors.options) && (
+                    <p className="text-[11px] text-destructive font-medium mt-1">
+                        {getErrorMessage(
+                            findFirstErrorMessage(form.formState.errors.variants) ||
+                                findFirstErrorMessage(form.formState.errors.options),
+                        )}
+                    </p>
                 )}
             </div>
         </div>
