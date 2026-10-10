@@ -4,10 +4,10 @@ import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
-    ArrowLeftIcon,
     CheckCircle2Icon,
     ChevronRightIcon,
     HeartIcon,
+    HomeIcon,
     MinusIcon,
     PlusIcon,
     RotateCcwIcon,
@@ -147,9 +147,9 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                     <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <Link
                             href={ROUTE.HOME}
-                            className="hover:text-foreground transition-colors flex items-center gap-1"
+                            className="hover:text-foreground transition-colors flex items-center gap-1.5"
                         >
-                            <ArrowLeftIcon className="size-3.5" />
+                            <HomeIcon className="size-3.5 text-primary" />
                             <span>Trang chủ</span>
                         </Link>
                         <ChevronRightIcon className="size-3 text-muted-foreground/60" />
@@ -175,19 +175,21 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                      * LEFT COLUMN: MULTI-IMAGE GALLERY (ALL PHOTOS DISPLAYED)
                      * ════════════════════════════════════════════════════════════════ */}
                     <div className="lg:col-span-6 space-y-4">
-                        {/* Main Stage Image */}
-                        <div className="group relative aspect-square w-full overflow-hidden rounded-3xl border border-border/80 bg-muted/30 shadow-md">
-                            <Image
-                                src={allImages[selectedImageIndex] || allImages[0]!}
-                                alt={product.name}
-                                fill
-                                priority
-                                sizes="(max-width: 1024px) 100vw, 50vw"
-                                className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                            />
+                        {/* Main Stage Image with Padded Card Frame */}
+                        <div className="group relative aspect-square w-full rounded-3xl border border-border/80 bg-card p-3 sm:p-4 shadow-md flex items-center justify-center">
+                            <div className="relative size-full overflow-hidden rounded-2xl bg-muted/20">
+                                <Image
+                                    src={allImages[selectedImageIndex] || allImages[0]!}
+                                    alt={product.name}
+                                    fill
+                                    priority
+                                    sizes="(max-width: 1024px) 100vw, 50vw"
+                                    className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                                />
+                            </div>
 
                             {/* Floating Badges */}
-                            <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
+                            <div className="absolute top-5 left-5 flex flex-col gap-2 z-10">
                                 {discountPercent > 0 && (
                                     <Badge className="bg-destructive text-white font-extrabold text-xs px-2.5 py-1 shadow-md">
                                         GIẢM {discountPercent}%
@@ -199,7 +201,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                             </div>
 
                             {/* Actions Top Right */}
-                            <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+                            <div className="absolute top-5 right-5 flex items-center gap-2 z-10">
                                 <button
                                     onClick={handleShare}
                                     aria-label="Chia sẻ sản phẩm"
@@ -221,7 +223,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                             </div>
 
                             {/* Current Image Indicator */}
-                            <div className="absolute bottom-4 right-4 rounded-full bg-black/60 px-3 py-1 font-mono text-xs font-semibold text-white backdrop-blur-md z-10">
+                            <div className="absolute bottom-5 right-5 rounded-full bg-black/60 px-3 py-1 font-mono text-xs font-semibold text-white backdrop-blur-md z-10">
                                 {selectedImageIndex + 1} / {allImages.length} ảnh
                             </div>
                         </div>
@@ -239,19 +241,21 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                         <button
                                             key={`${imgUrl}-${idx}`}
                                             onClick={() => setSelectedImageIndex(idx)}
-                                            className={`relative size-20 sm:size-24 shrink-0 overflow-hidden rounded-2xl border-2 transition-all duration-200 focus-visible:outline-none ${
+                                            className={`relative size-20 sm:size-24 shrink-0 rounded-2xl border-2 p-1 bg-card transition-all duration-200 focus-visible:outline-none ${
                                                 isSelected
-                                                    ? 'border-primary ring-2 ring-primary/40 ring-offset-2 scale-105 shadow-md'
+                                                    ? 'border-primary ring-2 ring-primary/40 ring-offset-2 ring-offset-background scale-105 shadow-md'
                                                     : 'border-border/70 opacity-75 hover:opacity-100 hover:border-foreground/40'
                                             }`}
                                         >
-                                            <Image
-                                                src={imgUrl}
-                                                alt={`${product.name} - ảnh ${idx + 1}`}
-                                                fill
-                                                sizes="96px"
-                                                className="object-cover"
-                                            />
+                                            <div className="relative size-full overflow-hidden rounded-xl bg-muted/20">
+                                                <Image
+                                                    src={imgUrl}
+                                                    alt={`${product.name} - ảnh ${idx + 1}`}
+                                                    fill
+                                                    sizes="96px"
+                                                    className="object-cover"
+                                                />
+                                            </div>
                                         </button>
                                     )
                                 })}

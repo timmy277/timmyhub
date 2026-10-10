@@ -17,8 +17,8 @@ import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 
 import { IconPath } from '@/components/icons'
-import { Badge, FloatInput } from '@/components'
-import { Button } from '@/components/ui'
+import { Badge } from '@/components'
+import { Button, Input } from '@/components/ui'
 import { QUERY_KEY, ROUTE, SELLER_SHOP_ANY_PERMISSION, SELLER_SHOP_PERMISSION } from '@/constants'
 import { getMyShopAction } from '@/features/seller'
 import { usePermissions } from '@/hooks'
@@ -143,14 +143,14 @@ export function HomeFooter() {
                             <div className="lg:col-span-5">
                                 <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2">
                                     <div className="relative flex-1">
-                                        <MailIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                                        <FloatInput
+                                        <MailIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground z-10 pointer-events-none" />
+                                        <Input
                                             type="email"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            label={t('newsletterLabel')}
+                                            aria-label={t('newsletterLabel')}
                                             placeholder={t('newsletterPlaceholder')}
-                                            className="h-11 pl-10 rounded-xl bg-background/80 border-border/80 focus-visible:ring-primary"
+                                            className="h-11 pl-10 rounded-xl bg-background/80 border-border/80 focus-visible:ring-primary text-sm shadow-none"
                                         />
                                     </div>
                                     <Button
