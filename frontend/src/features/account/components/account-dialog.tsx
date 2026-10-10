@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { BellIcon, CalendarIcon, LockIcon, MapPinIcon, PackageIcon, ShieldCheckIcon, UserIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 
 import { UserAvatar } from '@/components/common'
@@ -29,6 +29,12 @@ import { SecurityTab } from './security-tab'
 
 export type AccountTabKey = 'profile' | 'orders' | 'security' | 'addresses' | 'notifications'
 
+const VALID_TABS: readonly AccountTabKey[] = ['profile', 'orders', 'security', 'addresses', 'notifications'] as const
+
+function isValidAccountTab(tab: string | null): tab is AccountTabKey {
+    return Boolean(tab && (VALID_TABS as readonly string[]).includes(tab))
+}
+
 const NAV_ITEMS: {
     key: AccountTabKey
     labelKey: 'tabs.profile' | 'tabs.orders' | 'tabs.security' | 'tabs.addresses' | 'tabs.notifications'
@@ -51,16 +57,20 @@ export function AccountDialog({ open, onOpenChange, defaultTab = 'profile' }: Ac
     const t = useTranslations('account')
     const tCommon = useTranslations('common')
     const { data: session } = useSession()
-    const [selectedTab, setSelectedTab] = useState<AccountTabKey | null>(null)
-    const [prevOpen, setPrevOpen] = useState(open)
+    const router = useRouter()
+    const pathname = usePathname()
+    const searchParams = useSearchParams()
     const profileOverride = useUserProfileStore((state) => state.override)
 
-    if (open !== prevOpen) {
-        setPrevOpen(open)
-        setSelectedTab(null)
-    }
+    const queryTab = searchParams.get('tab')
+    const activeTab: AccountTabKey = isValidAccountTab(queryTab) ? queryTab : defaultTab
 
-    const activeTab = selectedTab ?? defaultTab
+    const handleTabChange = (key: AccountTabKey) => {
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('modal', 'account')
+        params.set('tab', key)
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    }
 
     const {
         data: user,
@@ -147,7 +157,7 @@ export function AccountDialog({ open, onOpenChange, defaultTab = 'profile' }: Ac
                                         <button
                                             key={item.key}
                                             type="button"
-                                            onClick={() => setSelectedTab(item.key)}
+                                            onClick={() => handleTabChange(item.key)}
                                             className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition-all text-left whitespace-nowrap ${
                                                 isActive
                                                     ? 'bg-primary text-primary-foreground shadow-xs font-semibold'

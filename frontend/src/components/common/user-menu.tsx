@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { BadgeCheckIcon, LayoutGridIcon, LogOutIcon, PackageIcon, StoreIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 
@@ -71,18 +71,25 @@ export function UserMenu() {
 
     // ===== Handlers =====
     const router = useRouter()
+    const pathname = usePathname()
     const searchParams = useSearchParams()
     const isAccountOpen = searchParams.get('modal') === 'account'
     const accountTab = (searchParams.get('tab') as AccountTabKey) || 'profile'
 
     const handleOpenAccount = useCallback(
         (tab: AccountTabKey = 'profile') => {
+            if (pathname === ROUTE.ACCOUNT) {
+                const params = new URLSearchParams(searchParams.toString())
+                params.set('tab', tab)
+                router.push(`${pathname}?${params.toString()}`, { scroll: false })
+                return
+            }
             const params = new URLSearchParams(searchParams.toString())
             params.set('modal', 'account')
             params.set('tab', tab)
-            router.push(`?${params.toString()}`, { scroll: false })
+            router.push(`${pathname}?${params.toString()}`, { scroll: false })
         },
-        [router, searchParams],
+        [pathname, router, searchParams],
     )
 
     const handleAccountOpenChange = useCallback(
@@ -90,13 +97,17 @@ export function UserMenu() {
             const params = new URLSearchParams(searchParams.toString())
             if (open) {
                 params.set('modal', 'account')
+                if (!params.has('tab')) {
+                    params.set('tab', 'profile')
+                }
             } else {
                 params.delete('modal')
                 params.delete('tab')
             }
-            router.push(`?${params.toString()}`, { scroll: false })
+            const query = params.toString()
+            router.push(query ? `${pathname}?${query}` : pathname, { scroll: false })
         },
-        [router, searchParams],
+        [pathname, router, searchParams],
     )
 
     const handleLogOut = () => {

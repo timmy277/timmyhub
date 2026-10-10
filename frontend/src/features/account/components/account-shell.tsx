@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
     BellIcon,
@@ -13,6 +12,7 @@ import {
     UserIcon,
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 
 import type { UserDetail } from '@timmyhub/contracts'
@@ -30,6 +30,12 @@ import { ProfileTab } from './profile-tab'
 import { SecurityTab } from './security-tab'
 
 type TabKey = 'profile' | 'orders' | 'security' | 'addresses' | 'notifications'
+
+const VALID_TABS: readonly TabKey[] = ['profile', 'orders', 'security', 'addresses', 'notifications'] as const
+
+function isValidAccountTab(tab: string | null): tab is TabKey {
+    return Boolean(tab && (VALID_TABS as readonly string[]).includes(tab))
+}
 
 const NAV_ITEMS: {
     key: TabKey
@@ -51,8 +57,19 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
     const t = useTranslations('account')
     const tCommon = useTranslations('common')
     const { data: session } = useSession()
-    const [activeTab, setActiveTab] = useState<TabKey>('profile')
+    const router = useRouter()
+    const pathname = usePathname()
+    const searchParams = useSearchParams()
     const profileOverride = useUserProfileStore((state) => state.override)
+
+    const queryTab = searchParams.get('tab')
+    const activeTab: TabKey = isValidAccountTab(queryTab) ? queryTab : 'profile'
+
+    const handleTabChange = (key: TabKey) => {
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('tab', key)
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    }
 
     const {
         data: user,
@@ -179,7 +196,7 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
                                 <button
                                     key={item.key}
                                     type="button"
-                                    onClick={() => setActiveTab(item.key)}
+                                    onClick={() => handleTabChange(item.key)}
                                     className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
                                         isActive
                                             ? 'bg-primary text-primary-foreground shadow-xs'
@@ -202,7 +219,7 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
                                 <button
                                     key={item.key}
                                     type="button"
-                                    onClick={() => setActiveTab(item.key)}
+                                    onClick={() => handleTabChange(item.key)}
                                     className={`flex w-full items-center gap-3 rounded-lg px-3.5 py-2.5 text-xs font-medium transition-all ${
                                         isActive
                                             ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
