@@ -234,7 +234,7 @@ export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false }: 
                 {/* Main Content Grid: 1 col on mobile, 12 cols on desktop */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     {/* Left Cols: Items & Shop */}
-                    <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+                    <div className="lg:col-span-7 xl:col-span-8 space-y-6 min-w-0">
                         {/* Items Card */}
                         <Card className="border border-border/80 shadow-xs">
                             <CardHeader className="px-4 py-3 sm:px-6 border-b border-border/50 bg-muted/20">
@@ -354,7 +354,7 @@ export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false }: 
                     </div>
 
                     {/* Right Col: Address & Payment Summary */}
-                    <div className="space-y-6">
+                    <div className="lg:col-span-5 xl:col-span-4 space-y-6 min-w-0">
                         {/* Delivery Address Card */}
                         <Card className="border border-border/80 shadow-sm">
                             <CardHeader className="px-4 py-3 sm:px-6 border-b border-border/50">
