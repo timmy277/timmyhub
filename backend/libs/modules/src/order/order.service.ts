@@ -582,19 +582,12 @@ export class OrderService {
             // Nếu là ADMIN hoặc SUPER_ADMIN, cho phép xem toàn bộ đơn hàng của sàn
             const user = await this.prisma.user.findUnique({
                 where: { id: userId },
-                select: { role: true },
+                select: { roles: true },
             })
-            if (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') {
+            const isAdmin = user?.roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN')
+            if (isAdmin) {
                 const orderStatus = status && status in ORDER_STATUS ? (status as OrderStatus) : undefined
-                const orders = await this.prisma.order.findMany({
-                    where: orderStatus ? { status: orderStatus } : undefined,
-                    include: {
-                        orderItems: true,
-                        address: true,
-                        statusHistory: { orderBy: { createdAt: 'desc' } },
-                    },
-                    orderBy: { createdAt: 'desc' },
-                })
+                const orders = await this.orderRepo.findAllOrders(orderStatus)
                 const sellerIds = Array.from(new Set(orders.map((o) => o.sellerId)))
                 const sellers =
                     sellerIds.length > 0
@@ -604,6 +597,11 @@ export class OrderService {
                         : []
                 const shopMap = new Map(sellers.map((s) => [s.id, s.shopName]))
                 return orders.map((o) => this.formatOrder({ ...o, shopName: shopMap.get(o.sellerId) }))
+            }
+
+            const isSeller = user?.roles?.some((r) => r === 'SELLER')
+            if (isSeller) {
+                return []
             }
 
             throw new ForbiddenException('Bạn chưa có hồ sơ người bán hoặc chưa được phê duyệt')
@@ -628,9 +626,10 @@ export class OrderService {
         if (!seller) {
             const user = await this.prisma.user.findUnique({
                 where: { id: userId },
-                select: { role: true },
+                select: { roles: true },
             })
-            if (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') {
+            const isAdmin = user?.roles?.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN')
+            if (isAdmin) {
                 isPlatformAdmin = true
             } else {
                 throw new ForbiddenException('Bạn chưa có hồ sơ người bán')
@@ -640,14 +639,7 @@ export class OrderService {
         const order = seller
             ? await this.orderRepo.findOrderByIdForSeller(orderId, seller.id)
             : isPlatformAdmin
-              ? await this.prisma.order.findUnique({
-                    where: { id: orderId },
-                    include: {
-                        orderItems: true,
-                        address: true,
-                        statusHistory: { orderBy: { createdAt: 'desc' } },
-                    },
-                })
+              ? await this.orderRepo.findOrderById(orderId)
               : null
 
         if (!order) {
@@ -710,7 +702,13 @@ export class OrderService {
             { maxWait: 10000, timeout: 20000 },
         )
 
-        return this.formatOrder({ ...updatedOrder, shopName: seller.shopName })
+        const shop = seller
+            ? seller
+            : await this.prisma.sellerProfile.findUnique({
+                  where: { id: updatedOrder.sellerId },
+              })
+
+        return this.formatOrder({ ...updatedOrder, shopName: shop?.shopName })
     }
 
     // ===== Helpers =====

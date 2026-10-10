@@ -83,15 +83,26 @@ export function FloatSelect({
                         aria-invalid={Boolean(error)}
                         aria-describedby={hasDescription ? descriptionId : undefined}
                         disabled={disabled}
+                        data-size="float"
+                        style={{
+                            height: size === 'sm' ? '2.5rem' : '3rem',
+                            minHeight: size === 'sm' ? '2.5rem' : '3rem',
+                        }}
                         className={cn(
                             floatInputVariants({ variant: 'outlined', size }),
                             'flex w-full items-center justify-between text-left font-normal cursor-pointer select-none',
-                            size === 'sm' ? 'h-10 text-xs px-2.5' : 'h-12 text-sm px-3',
+                            size === 'sm' ? 'h-10 min-h-10 text-xs px-2.5 py-0' : 'h-12 min-h-12 text-sm px-3 py-0',
                             error && 'border-destructive focus-visible:ring-destructive/20',
                             triggerClassName,
                         )}
                     >
-                        <span className={cn('block truncate', !hasValue && !isOpen && 'opacity-0')}>
+                        <span
+                            className={cn(
+                                'block truncate',
+                                size === 'sm' && 'text-xs',
+                                !hasValue && !isOpen && 'opacity-0',
+                            )}
+                        >
                             <SelectValue placeholder={placeholder} />
                         </span>
                     </SelectTrigger>

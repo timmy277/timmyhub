@@ -126,6 +126,19 @@ export class OrderRepository {
         })
     }
 
+    async findAllOrders(status?: OrderStatus, tx?: Prisma.TransactionClient): Promise<OrderWithRelations[]> {
+        const client = this.getClient(tx)
+        return client.order.findMany({
+            where: status ? { status } : {},
+            include: {
+                orderItems: true,
+                address: true,
+                statusHistory: { orderBy: { createdAt: 'desc' } },
+            },
+            orderBy: { createdAt: 'desc' },
+        })
+    }
+
     async findOrdersBySellerId(
         sellerId: string,
         status?: OrderStatus,
