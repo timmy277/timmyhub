@@ -24,6 +24,7 @@ import type { ProductDetail, ProductSummary } from '@timmyhub/contracts'
 
 import { Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
 import { ROUTE } from '@/constants'
+import { useAddToCart } from '@/hooks'
 
 interface PublicProductDetailViewProps {
     product: ProductDetail
@@ -49,6 +50,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
     const [selectedImageIndex, setSelectedImageIndex] = useState(0)
     const [isWishlist, setIsWishlist] = useState(false)
     const [quantity, setQuantity] = useState(1)
+    const addToCartMutation = useAddToCart()
 
     // ===== Options & Variant Selection =====
     // Lưu option đã chọn theo ID: Record<optionId, valueId>
@@ -126,11 +128,30 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
         })
     }
 
-    const handleAddToCart = () => {
-        toast.success(`Đã thêm ${quantity} sản phẩm vào giỏ hàng!`, {
-            description: `${product.name} (SL: ${quantity})`,
-            icon: <ShoppingCartIcon className="size-4 text-primary" />,
-        })
+    const handleAddToCart = async () => {
+        if (!activeVariant) {
+            toast.error('Vui lòng chọn phân loại sản phẩm!')
+            return
+        }
+
+        if (stockAvailable <= 0) {
+            toast.error('Sản phẩm hiện đang tạm hết hàng!')
+            return
+        }
+
+        try {
+            await addToCartMutation.mutateAsync({
+                variantId: activeVariant.id,
+                quantity,
+            })
+            toast.success(`Đã thêm ${quantity} sản phẩm vào giỏ hàng!`, {
+                description: `${product.name} (SL: ${quantity})`,
+                icon: <ShoppingCartIcon className="size-4 text-primary" />,
+            })
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Không thể thêm sản phẩm vào giỏ hàng'
+            toast.error(message)
+        }
     }
 
     const handleBuyNow = () => {
@@ -415,10 +436,15 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                 size="lg"
                                 variant="outline"
                                 onClick={handleAddToCart}
+                                disabled={addToCartMutation.isPending || stockAvailable <= 0}
                                 className="h-12 rounded-2xl font-bold gap-2 text-emerald-800 dark:text-emerald-300 border-primary/40 hover:bg-primary/10 shadow-sm"
                             >
-                                <ShoppingCartIcon className="size-4" />
-                                Thêm vào giỏ hàng
+                                {addToCartMutation.isPending ? (
+                                    <span className="size-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                                ) : (
+                                    <ShoppingCartIcon className="size-4" />
+                                )}
+                                {addToCartMutation.isPending ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
                             </Button>
                             <Button
                                 size="lg"

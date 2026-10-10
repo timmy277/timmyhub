@@ -7,6 +7,7 @@ import { IdentityModule } from '@timmyhub/modules/identity'
 import { MediaModule } from '@timmyhub/modules/media'
 import { PlatformModule } from '@timmyhub/modules/platform'
 import { SellerModule } from '@timmyhub/modules/seller'
+import { CartModule } from '@timmyhub/modules/cart'
 import { PrismaModule } from '@timmyhub/prisma'
 
 @Module({
@@ -19,6 +20,7 @@ import { PrismaModule } from '@timmyhub/prisma'
         CatalogModule,
         MediaModule,
         SellerModule,
+        CartModule,
     ],
 })
 export class AppModule {}

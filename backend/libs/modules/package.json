@@ -33,6 +33,10 @@
     "./platform/auth": {
       "types": "./dist/platform/auth/index.d.ts",
       "default": "./dist/platform/auth/index.js"
+    },
+    "./cart": {
+      "types": "./dist/cart/index.d.ts",
+      "default": "./dist/cart/index.js"
     }
   },
   "scripts": {

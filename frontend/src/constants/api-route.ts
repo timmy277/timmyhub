@@ -85,4 +85,9 @@ export const API_ROUTE = {
         ADMIN_CATEGORIES: 'v1/admin/categories',
         ADMIN_CATEGORY_DETAIL: (id: string) => `v1/admin/categories/${encodeURIComponent(id)}`,
     },
+    CART: {
+        ROOT: 'v1/cart',
+        ITEMS: 'v1/cart/items',
+        ITEM: (id: string) => `v1/cart/items/${encodeURIComponent(id)}`,
+    },
 } as const

@@ -14,8 +14,9 @@ export const ROUTE = {
     SELLER_ORDERS: '/seller/orders',
     SELLER_SETTINGS: '/seller/settings',
     ADMIN_SELLER_APPLICATIONS: '/seller-applications',
-    PRODUCTS: '/products',
     PRODUCT_DETAIL: (idOrSlug: string) => `/products/${idOrSlug}`,
+    PRODUCTS: '/products',
     ADMIN_PRODUCTS: '/products',
     ADMIN_CATEGORIES: '/categories',
+    CART: '/cart',
 } as const

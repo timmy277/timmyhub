@@ -51,4 +51,8 @@ export const QUERY_KEY = {
         ADMIN_LIST: (filters?: Record<string, unknown>) => ['categories', 'admin-list', filters] as const,
         DETAIL: (id: string) => ['categories', 'detail', id] as const,
     },
+    CART: {
+        ALL: ['cart'] as const,
+        DETAIL: ['cart', 'detail'] as const,
+    },
 } as const

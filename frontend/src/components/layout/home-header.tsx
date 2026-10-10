@@ -8,6 +8,7 @@ import { Button, Skeleton } from '@/components/ui'
 import { DASHBOARD_PERMISSION, ROUTE, SELLER_SHOP_PERMISSION } from '@/constants'
 import { getMyShopAction } from '@/features/seller'
 import { getActor } from '@/lib/actor-permissions'
+import { CartButton } from './cart-button'
 
 // AppBar độc lập trên trang chủ — không bị bọc trong sidebar.
 // Hiển thị logo TimmyHub, các công cụ đổi theme/ngôn ngữ, thông báo, menu tài khoản.
@@ -65,6 +66,7 @@ export async function HomeHeader() {
                 <ThemeMenu />
                 <ThemeModeToggle />
                 <NotificationMenu />
+                <CartButton />
                 <Suspense fallback={<Skeleton className="h-8 w-8 rounded-full" />}>
                     <UserMenu />
                 </Suspense>
