@@ -593,13 +593,13 @@ export const VIETNAM_PROVINCES: LocationProvince[] = [
         ],
     },
     {
-        code: 'TN',
+        code: 'TNI',
         name: 'Tỉnh Tây Ninh',
         districts: [
             {
-                code: 'TN-TN',
+                code: 'TNI-TN',
                 name: 'Thành phố Tây Ninh',
-                wards: [{ code: 'TN-TN-P1', name: 'Phường 1' }],
+                wards: [{ code: 'TNI-TN-P1', name: 'Phường 1' }],
             },
         ],
     },
@@ -747,13 +747,13 @@ export const VIETNAM_PROVINCES: LocationProvince[] = [
         ],
     },
     {
-        code: 'TN',
+        code: 'TNG',
         name: 'Tỉnh Thái Nguyên',
         districts: [
             {
-                code: 'TN-TN',
+                code: 'TNG-TN',
                 name: 'Thành phố Thái Nguyên',
-                wards: [{ code: 'TN-TN-PC', name: 'Phường Phan Đình Phùng' }],
+                wards: [{ code: 'TNG-TN-PC', name: 'Phường Phan Đình Phùng' }],
             },
         ],
     },
