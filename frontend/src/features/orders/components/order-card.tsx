@@ -47,7 +47,10 @@ export function OrderCard({ order, onCancelClick, onViewDetail }: OrderCardProps
             <CardContent className="p-4 sm:p-6 divide-y divide-border/40">
                 {order.items.map((item) => (
                     <div key={item.id} className="py-3 first:pt-0 last:pb-0 flex items-center gap-3 sm:gap-4">
-                        <div className="relative h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-lg border border-border/60 bg-muted/20">
+                        <Link
+                            href={item.productId ? ROUTE.PRODUCT_DETAIL(item.productId) : '#'}
+                            className="group relative h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-lg border border-border/60 bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
                             <Image
                                 src={
                                     item.imageUrl ||
@@ -55,13 +58,22 @@ export function OrderCard({ order, onCancelClick, onViewDetail }: OrderCardProps
                                 }
                                 alt={item.productName}
                                 fill
-                                className="object-cover"
+                                className="object-cover transition-transform duration-300 group-hover:scale-105"
                             />
-                        </div>
+                        </Link>
 
                         <div className="flex-1 min-w-0">
                             <h4 className="font-medium text-sm sm:text-base text-foreground line-clamp-2">
-                                {item.productName}
+                                {item.productId ? (
+                                    <Link
+                                        href={ROUTE.PRODUCT_DETAIL(item.productId)}
+                                        className="transition-colors hover:text-primary hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                                    >
+                                        {item.productName}
+                                    </Link>
+                                ) : (
+                                    item.productName
+                                )}
                             </h4>
                             {item.variantLabel && item.variantLabel !== 'Mặc định' && (
                                 <p className="text-xs text-muted-foreground mt-0.5">

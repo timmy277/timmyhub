@@ -255,7 +255,10 @@ export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false }: 
                                         className="py-3.5 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4"
                                     >
                                         <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                                            <div className="relative h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-muted/20">
+                                            <Link
+                                                href={item.productId ? ROUTE.PRODUCT_DETAIL(item.productId) : '#'}
+                                                className="group relative h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                            >
                                                 <Image
                                                     src={
                                                         item.imageUrl ||
@@ -263,13 +266,22 @@ export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false }: 
                                                     }
                                                     alt={item.productName}
                                                     fill
-                                                    className="object-cover"
+                                                    className="object-cover transition-transform duration-300 group-hover:scale-105"
                                                 />
-                                            </div>
+                                            </Link>
 
                                             <div className="flex-1 min-w-0">
                                                 <h4 className="font-medium text-sm sm:text-base text-foreground line-clamp-2">
-                                                    {item.productName}
+                                                    {item.productId ? (
+                                                        <Link
+                                                            href={ROUTE.PRODUCT_DETAIL(item.productId)}
+                                                            className="transition-colors hover:text-primary hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                                                        >
+                                                            {item.productName}
+                                                        </Link>
+                                                    ) : (
+                                                        item.productName
+                                                    )}
                                                 </h4>
                                                 {item.variantLabel && item.variantLabel !== 'Mặc định' && (
                                                     <p className="text-xs text-muted-foreground mt-0.5">
