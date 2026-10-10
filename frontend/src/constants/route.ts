@@ -21,6 +21,7 @@ export const ROUTE = {
     CART: '/cart',
     CHECKOUT: '/checkout',
     CHECKOUT_SUCCESS: (id: string) => `/checkout/success?orderId=${encodeURIComponent(id)}`,
+    PAYMENT_RESULT: '/payment/result',
     ORDERS: '/orders',
     ORDER_DETAIL: (id: string) => `/orders/${encodeURIComponent(id)}`,
 } as const

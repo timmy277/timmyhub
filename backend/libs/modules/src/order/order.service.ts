@@ -14,12 +14,14 @@ import { ORDER_STATUS } from '@timmyhub/contracts'
 
 import type { OrderWithRelations } from './order.repository'
 import { OrderRepository } from './order.repository'
+import { VnpayService } from './vnpay.service'
 
 @Injectable()
 export class OrderService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly orderRepo: OrderRepository,
+        private readonly vnpayService: VnpayService,
     ) {}
 
     // ===== Address Management =====
@@ -118,7 +120,12 @@ export class OrderService {
 
     // ===== Checkout & Orders =====
 
-    async checkout(userId: string, input: CheckoutInput, idempotencyKeyHeader?: string): Promise<CheckoutResult> {
+    async checkout(
+        userId: string,
+        input: CheckoutInput,
+        idempotencyKeyHeader?: string,
+        clientIp = '127.0.0.1',
+    ): Promise<CheckoutResult> {
         const key = idempotencyKeyHeader || input.idempotencyKey
 
         // 1. Kiểm tra Idempotency để chống duplicate submit
@@ -126,314 +133,344 @@ export class OrderService {
             const existingOrders = await this.orderRepo.findOrdersByIdempotencyPrefix(key)
             if (existingOrders.length > 0) {
                 const totalAmount = existingOrders.reduce((sum, o) => sum + Number(o.totalAmount), 0).toString()
+                let paymentUrl: string | null = null
+
+                if (existingOrders[0]!.paymentMethod === 'VNPAY') {
+                    const existingPayment = await this.prisma.payment.findUnique({
+                        where: { orderId: existingOrders[0]!.id },
+                    })
+                    if (!existingPayment || existingPayment.status === 'PENDING') {
+                        const vnpayRes = await this.vnpayService.createPaymentUrl(
+                            existingOrders.map((o) => ({ id: o.id, totalAmount: o.totalAmount })),
+                            clientIp,
+                        )
+                        paymentUrl = vnpayRes.url
+                    }
+                }
 
                 return {
                     orders: existingOrders.map((o) => this.formatOrder(o)),
                     totalAmount,
                     paymentMethod: existingOrders[0]!.paymentMethod,
+                    paymentUrl,
                 }
             }
         }
 
         // 2. Chạy toàn bộ giao dịch Checkout trong Prisma ACID $transaction
-        const createdOrders = await this.prisma.$transaction(async (tx) => {
-            // Bước A: Xác định địa chỉ giao hàng
-            let address: Address
-            if (input.newAddress) {
-                // Tạo địa chỉ mới
-                const isDefault = input.newAddress.isDefault || false
-                if (isDefault) {
-                    await tx.address.updateMany({
-                        where: { userId, isDefault: true },
-                        data: { isDefault: false },
+        const createdOrders = await this.prisma.$transaction(
+            async (tx) => {
+                // Bước A: Xác định địa chỉ giao hàng
+                let address: Address
+                if (input.newAddress) {
+                    // Tạo địa chỉ mới
+                    const isDefault = input.newAddress.isDefault || false
+                    if (isDefault) {
+                        await tx.address.updateMany({
+                            where: { userId, isDefault: true },
+                            data: { isDefault: false },
+                        })
+                    }
+                    address = await tx.address.create({
+                        data: {
+                            userId,
+                            fullName: input.newAddress.fullName,
+                            phone: input.newAddress.phone,
+                            provinceCode: input.newAddress.provinceCode,
+                            provinceName: input.newAddress.provinceName,
+                            districtCode: input.newAddress.districtCode,
+                            districtName: input.newAddress.districtName,
+                            wardCode: input.newAddress.wardCode,
+                            wardName: input.newAddress.wardName,
+                            addressLine1: input.newAddress.addressLine1,
+                            addressLine2: input.newAddress.addressLine2 ?? null,
+                            label: input.newAddress.label ?? null,
+                            isDefault,
+                        },
                     })
+                } else if (input.addressId) {
+                    const foundAddress = await tx.address.findFirst({
+                        where: { id: input.addressId, userId },
+                    })
+                    if (!foundAddress) {
+                        throw new BadRequestException('Địa chỉ giao hàng không hợp lệ')
+                    }
+                    address = foundAddress
+                } else {
+                    // Lấy địa chỉ mặc định của user
+                    const defaultAddress = await tx.address.findFirst({
+                        where: { userId },
+                        orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
+                    })
+                    if (!defaultAddress) {
+                        throw new BadRequestException('Vui lòng cung cấp địa chỉ nhận hàng')
+                    }
+                    address = defaultAddress
                 }
-                address = await tx.address.create({
-                    data: {
-                        userId,
-                        fullName: input.newAddress.fullName,
-                        phone: input.newAddress.phone,
-                        provinceCode: input.newAddress.provinceCode,
-                        provinceName: input.newAddress.provinceName,
-                        districtCode: input.newAddress.districtCode,
-                        districtName: input.newAddress.districtName,
-                        wardCode: input.newAddress.wardCode,
-                        wardName: input.newAddress.wardName,
-                        addressLine1: input.newAddress.addressLine1,
-                        addressLine2: input.newAddress.addressLine2 ?? null,
-                        label: input.newAddress.label ?? null,
-                        isDefault,
+
+                // Bước B: Xác định danh sách mặt hàng cần mua
+                let orderLineItems: Array<{ variantId: string; quantity: number; cartItemId?: string }> = []
+
+                if (input.directItem) {
+                    // Luồng "Mua ngay"
+                    orderLineItems = [
+                        {
+                            variantId: input.directItem.variantId,
+                            quantity: input.directItem.quantity,
+                        },
+                    ]
+                } else {
+                    // Luồng Checkout từ giỏ hàng
+                    const cart = await tx.cart.findUnique({
+                        where: { userId },
+                        include: { items: true },
+                    })
+
+                    if (!cart || cart.items.length === 0) {
+                        throw new BadRequestException('Giỏ hàng trống, không thể thanh toán')
+                    }
+
+                    const selectedCartItems =
+                        input.cartItemIds && input.cartItemIds.length > 0
+                            ? cart.items.filter((item) => input.cartItemIds!.includes(item.id))
+                            : cart.items
+
+                    if (selectedCartItems.length === 0) {
+                        throw new BadRequestException('Vui lòng chọn ít nhất một sản phẩm để thanh toán')
+                    }
+
+                    orderLineItems = selectedCartItems.map((item) => ({
+                        variantId: item.variantId,
+                        quantity: item.quantity,
+                        cartItemId: item.id,
+                    }))
+                }
+
+                // Bước C: Khóa và kiểm tra các variants & tồn kho
+                const variantIds = orderLineItems.map((item) => item.variantId)
+                const variants = await tx.productVariant.findMany({
+                    where: { id: { in: variantIds } },
+                    include: {
+                        product: true,
+                        inventory: true,
                     },
                 })
-            } else if (input.addressId) {
-                const foundAddress = await tx.address.findFirst({
-                    where: { id: input.addressId, userId },
+
+                const variantMap = new Map(variants.map((v) => [v.id, v]))
+
+                // Lấy option values để sinh nhãn variant
+                const allOptionValueIds = Array.from(
+                    new Set(variants.flatMap((v) => (v.optionKey ? v.optionKey.split(':') : [])).filter(Boolean)),
+                )
+                const optionValues =
+                    allOptionValueIds.length > 0
+                        ? await tx.productOptionValue.findMany({
+                              where: { id: { in: allOptionValueIds } },
+                              include: { option: true },
+                          })
+                        : []
+                const optionValueMap = new Map(optionValues.map((ov) => [ov.id, `${ov.option.name}: ${ov.value}`]))
+
+                // Nhóm theo shopId
+                const shopGroups = new Map<
+                    string,
+                    Array<{
+                        variant: (typeof variants)[number]
+                        quantity: number
+                        unitPrice: Prisma.Decimal
+                        lineTotal: Prisma.Decimal
+                        variantLabel: string
+                        imageUrl: string
+                    }>
+                >()
+
+                for (const item of orderLineItems) {
+                    const variant = variantMap.get(item.variantId)
+                    if (!variant) {
+                        throw new BadRequestException(`Biến thể sản phẩm không tồn tại (ID: ${item.variantId})`)
+                    }
+
+                    const product = variant.product
+                    if (product.status !== 'APPROVED' || product.isSuspended || !variant.isActive) {
+                        throw new BadRequestException(`Sản phẩm "${product.name}" hiện không còn mở bán`)
+                    }
+
+                    // Kiểm tra tồn kho
+                    const availableStock = variant.inventory
+                        ? Math.max(0, variant.inventory.onHand - variant.inventory.reserved)
+                        : 0
+
+                    if (availableStock < item.quantity) {
+                        throw new BadRequestException(
+                            `Sản phẩm "${product.name}" (${variant.sku}) chỉ còn ${availableStock} sản phẩm, không đủ số lượng yêu cầu (${item.quantity})`,
+                        )
+                    }
+
+                    const unitPrice = variant.price
+                    const lineTotal = new Prisma.Decimal(unitPrice).mul(item.quantity)
+
+                    // Nhãn thuộc tính
+                    const variantLabel = variant.optionKey
+                        ? variant.optionKey
+                              .split(':')
+                              .map((ovId) => optionValueMap.get(ovId) || '')
+                              .filter(Boolean)
+                              .join(', ') || 'Mặc định'
+                        : 'Mặc định'
+
+                    const imageUrl =
+                        product.images && product.images.length > 0
+                            ? product.images[0]!
+                            : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80'
+
+                    const shopItems = shopGroups.get(product.shopId) || []
+                    shopItems.push({
+                        variant,
+                        quantity: item.quantity,
+                        unitPrice,
+                        lineTotal,
+                        variantLabel,
+                        imageUrl,
+                    })
+                    shopGroups.set(product.shopId, shopItems)
+                }
+
+                // Lấy thông tin các shops
+                const shopIds = Array.from(shopGroups.keys())
+                const shops = await tx.sellerProfile.findMany({
+                    where: { id: { in: shopIds } },
                 })
-                if (!foundAddress) {
-                    throw new BadRequestException('Địa chỉ giao hàng không hợp lệ')
-                }
-                address = foundAddress
-            } else {
-                // Lấy địa chỉ mặc định của user
-                const defaultAddress = await tx.address.findFirst({
-                    where: { userId },
-                    orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
-                })
-                if (!defaultAddress) {
-                    throw new BadRequestException('Vui lòng cung cấp địa chỉ nhận hàng')
-                }
-                address = defaultAddress
-            }
+                const shopMap = new Map(shops.map((s) => [s.id, s.shopName]))
 
-            // Bước B: Xác định danh sách mặt hàng cần mua
-            let orderLineItems: Array<{ variantId: string; quantity: number; cartItemId?: string }> = []
+                const ordersList: Array<OrderWithRelations & { shopName: string }> = []
+                const baseIdempotency = key || `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
 
-            if (input.directItem) {
-                // Luồng "Mua ngay"
-                orderLineItems = [
-                    {
-                        variantId: input.directItem.variantId,
-                        quantity: input.directItem.quantity,
-                    },
-                ]
-            } else {
-                // Luồng Checkout từ giỏ hàng
-                const cart = await tx.cart.findUnique({
-                    where: { userId },
-                    include: { items: true },
-                })
+                // Bước D: Tạo từng Order cho từng Shop và giữ tồn kho
+                let shopIndex = 0
+                for (const [shopId, items] of shopGroups.entries()) {
+                    shopIndex++
+                    const subtotal = items.reduce((acc, it) => acc.add(it.lineTotal), new Prisma.Decimal(0))
+                    const shippingFee = new Prisma.Decimal(0) // Miễn phí vận chuyển
+                    const totalAmount = subtotal.add(shippingFee)
+                    const orderKey = `${baseIdempotency}-${shopIndex}`
 
-                if (!cart || cart.items.length === 0) {
-                    throw new BadRequestException('Giỏ hàng trống, không thể thanh toán')
-                }
+                    const fullAddressString = [
+                        address.addressLine1,
+                        address.addressLine2,
+                        address.wardName,
+                        address.districtName,
+                        address.provinceName,
+                    ]
+                        .filter(Boolean)
+                        .join(', ')
 
-                const selectedCartItems =
-                    input.cartItemIds && input.cartItemIds.length > 0
-                        ? cart.items.filter((item) => input.cartItemIds!.includes(item.id))
-                        : cart.items
-
-                if (selectedCartItems.length === 0) {
-                    throw new BadRequestException('Vui lòng chọn ít nhất một sản phẩm để thanh toán')
-                }
-
-                orderLineItems = selectedCartItems.map((item) => ({
-                    variantId: item.variantId,
-                    quantity: item.quantity,
-                    cartItemId: item.id,
-                }))
-            }
-
-            // Bước C: Khóa và kiểm tra các variants & tồn kho
-            const variantIds = orderLineItems.map((item) => item.variantId)
-            const variants = await tx.productVariant.findMany({
-                where: { id: { in: variantIds } },
-                include: {
-                    product: true,
-                    inventory: true,
-                },
-            })
-
-            const variantMap = new Map(variants.map((v) => [v.id, v]))
-
-            // Lấy option values để sinh nhãn variant
-            const allOptionValueIds = Array.from(
-                new Set(variants.flatMap((v) => (v.optionKey ? v.optionKey.split(':') : [])).filter(Boolean)),
-            )
-            const optionValues =
-                allOptionValueIds.length > 0
-                    ? await tx.productOptionValue.findMany({
-                          where: { id: { in: allOptionValueIds } },
-                          include: { option: true },
-                      })
-                    : []
-            const optionValueMap = new Map(optionValues.map((ov) => [ov.id, `${ov.option.name}: ${ov.value}`]))
-
-            // Nhóm theo shopId
-            const shopGroups = new Map<
-                string,
-                Array<{
-                    variant: (typeof variants)[number]
-                    quantity: number
-                    unitPrice: Prisma.Decimal
-                    lineTotal: Prisma.Decimal
-                    variantLabel: string
-                    imageUrl: string
-                }>
-            >()
-
-            for (const item of orderLineItems) {
-                const variant = variantMap.get(item.variantId)
-                if (!variant) {
-                    throw new BadRequestException(`Biến thể sản phẩm không tồn tại (ID: ${item.variantId})`)
-                }
-
-                const product = variant.product
-                if (product.status !== 'APPROVED' || product.isSuspended || !variant.isActive) {
-                    throw new BadRequestException(`Sản phẩm "${product.name}" hiện không còn mở bán`)
-                }
-
-                // Kiểm tra tồn kho
-                const availableStock = variant.inventory
-                    ? Math.max(0, variant.inventory.onHand - variant.inventory.reserved)
-                    : 0
-
-                if (availableStock < item.quantity) {
-                    throw new BadRequestException(
-                        `Sản phẩm "${product.name}" (${variant.sku}) chỉ còn ${availableStock} sản phẩm, không đủ số lượng yêu cầu (${item.quantity})`,
-                    )
-                }
-
-                const unitPrice = variant.price
-                const lineTotal = new Prisma.Decimal(unitPrice).mul(item.quantity)
-
-                // Nhãn thuộc tính
-                const variantLabel = variant.optionKey
-                    ? variant.optionKey
-                          .split(':')
-                          .map((ovId) => optionValueMap.get(ovId) || '')
-                          .filter(Boolean)
-                          .join(', ') || 'Mặc định'
-                    : 'Mặc định'
-
-                const imageUrl =
-                    product.images && product.images.length > 0
-                        ? product.images[0]!
-                        : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80'
-
-                const shopItems = shopGroups.get(product.shopId) || []
-                shopItems.push({
-                    variant,
-                    quantity: item.quantity,
-                    unitPrice,
-                    lineTotal,
-                    variantLabel,
-                    imageUrl,
-                })
-                shopGroups.set(product.shopId, shopItems)
-            }
-
-            // Lấy thông tin các shops
-            const shopIds = Array.from(shopGroups.keys())
-            const shops = await tx.sellerProfile.findMany({
-                where: { id: { in: shopIds } },
-            })
-            const shopMap = new Map(shops.map((s) => [s.id, s.shopName]))
-
-            const ordersList: Array<OrderWithRelations & { shopName: string }> = []
-            const baseIdempotency = key || `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
-
-            // Bước D: Tạo từng Order cho từng Shop và giữ tồn kho
-            let shopIndex = 0
-            for (const [shopId, items] of shopGroups.entries()) {
-                shopIndex++
-                const subtotal = items.reduce((acc, it) => acc.add(it.lineTotal), new Prisma.Decimal(0))
-                const shippingFee = new Prisma.Decimal(0) // Miễn phí vận chuyển
-                const totalAmount = subtotal.add(shippingFee)
-                const orderKey = `${baseIdempotency}-${shopIndex}`
-
-                const fullAddressString = [
-                    address.addressLine1,
-                    address.addressLine2,
-                    address.wardName,
-                    address.districtName,
-                    address.provinceName,
-                ]
-                    .filter(Boolean)
-                    .join(', ')
-
-                const order = await tx.order.create({
-                    data: {
-                        buyerId: userId,
-                        sellerId: shopId,
-                        status: 'PENDING',
-                        totalAmount,
-                        currency: 'VND',
-                        shippingFee,
-                        paymentStatus: 'PENDING',
-                        paymentMethod: input.paymentMethod,
-                        address: {
-                            connect: { id: address.id },
-                        },
-                        shippingFullName: address.fullName,
-                        shippingPhone: address.phone,
-                        shippingAddress: fullAddressString,
-                        customerNote: input.customerNote ?? null,
-                        idempotencyKey: orderKey,
-                        orderItems: {
-                            create: items.map((it) => ({
-                                productId: it.variant.productId,
-                                variantId: it.variant.id,
-                                productName: it.variant.product.name,
-                                variantLabel: it.variantLabel,
-                                sku: it.variant.sku,
-                                imageUrl: it.imageUrl,
-                                unitPrice: it.unitPrice,
-                                quantity: it.quantity,
-                                lineTotal: it.lineTotal,
-                            })),
-                        },
-                        statusHistory: {
-                            create: {
-                                toStatus: 'PENDING',
-                                reason: 'Đặt hàng thành công',
-                                actorId: userId,
-                                actorRole: 'BUYER',
+                    const order = await tx.order.create({
+                        data: {
+                            buyerId: userId,
+                            sellerId: shopId,
+                            status: 'PENDING',
+                            totalAmount,
+                            currency: 'VND',
+                            shippingFee,
+                            paymentStatus: 'PENDING',
+                            paymentMethod: input.paymentMethod,
+                            address: {
+                                connect: { id: address.id },
+                            },
+                            shippingFullName: address.fullName,
+                            shippingPhone: address.phone,
+                            shippingAddress: fullAddressString,
+                            customerNote: input.customerNote ?? null,
+                            idempotencyKey: orderKey,
+                            orderItems: {
+                                create: items.map((it) => ({
+                                    productId: it.variant.productId,
+                                    variantId: it.variant.id,
+                                    productName: it.variant.product.name,
+                                    variantLabel: it.variantLabel,
+                                    sku: it.variant.sku,
+                                    imageUrl: it.imageUrl,
+                                    unitPrice: it.unitPrice,
+                                    quantity: it.quantity,
+                                    lineTotal: it.lineTotal,
+                                })),
+                            },
+                            statusHistory: {
+                                create: {
+                                    toStatus: 'PENDING',
+                                    reason: 'Đặt hàng thành công',
+                                    actorId: userId,
+                                    actorRole: 'BUYER',
+                                },
                             },
                         },
-                    },
-                    include: {
-                        orderItems: true,
-                        address: true,
-                    },
-                })
+                        include: {
+                            orderItems: true,
+                            address: true,
+                        },
+                    })
 
-                // Trừ tồn kho & tăng số lượng bán
-                for (const it of items) {
-                    if (it.variant.inventory) {
-                        await tx.inventoryItem.update({
-                            where: { id: it.variant.inventory.id },
+                    // Trừ tồn kho & tăng số lượng bán
+                    for (const it of items) {
+                        if (it.variant.inventory) {
+                            await tx.inventoryItem.update({
+                                where: { id: it.variant.inventory.id },
+                                data: {
+                                    reserved: { increment: it.quantity },
+                                },
+                            })
+                        }
+
+                        await tx.product.update({
+                            where: { id: it.variant.productId },
                             data: {
-                                reserved: { increment: it.quantity },
+                                totalStock: { decrement: it.quantity },
+                                soldCount: { increment: it.quantity },
                             },
                         })
                     }
 
-                    await tx.product.update({
-                        where: { id: it.variant.productId },
-                        data: {
-                            totalStock: { decrement: it.quantity },
-                            soldCount: { increment: it.quantity },
-                        },
+                    ordersList.push({
+                        ...order,
+                        shopName: shopMap.get(shopId) || 'TimmyHub Mall',
                     })
                 }
 
-                ordersList.push({
-                    ...order,
-                    shopName: shopMap.get(shopId) || 'TimmyHub Mall',
-                })
-            }
+                // Bước E: Xoá các mặt hàng đã đặt khỏi Cart (nếu mua từ cart)
+                const cartItemIdsToDelete = orderLineItems
+                    .map((it) => it.cartItemId)
+                    .filter((id): id is string => Boolean(id))
 
-            // Bước E: Xoá các mặt hàng đã đặt khỏi Cart (nếu mua từ cart)
-            const cartItemIdsToDelete = orderLineItems
-                .map((it) => it.cartItemId)
-                .filter((id): id is string => Boolean(id))
+                if (cartItemIdsToDelete.length > 0) {
+                    await tx.cartItem.deleteMany({
+                        where: { id: { in: cartItemIdsToDelete } },
+                    })
+                }
 
-            if (cartItemIdsToDelete.length > 0) {
-                await tx.cartItem.deleteMany({
-                    where: { id: { in: cartItemIdsToDelete } },
-                })
-            }
-
-            return ordersList
-        })
+                return ordersList
+            },
+            {
+                maxWait: 10000,
+                timeout: 30000,
+            },
+        )
 
         const totalAmount = createdOrders.reduce((sum, o) => sum + Number(o.totalAmount), 0).toString()
+
+        let paymentUrl: string | null = null
+        if (input.paymentMethod === 'VNPAY') {
+            const vnpayRes = await this.vnpayService.createPaymentUrl(
+                createdOrders.map((o) => ({ id: o.id, totalAmount: o.totalAmount })),
+                clientIp,
+            )
+            paymentUrl = vnpayRes.url
+        }
 
         return {
             orders: createdOrders.map((o) => this.formatOrder(o)),
             totalAmount,
             paymentMethod: input.paymentMethod,
-            paymentUrl: input.paymentMethod === 'VNPAY' ? '/checkout/vnpay-mock' : null,
+            paymentUrl,
         }
     }
 

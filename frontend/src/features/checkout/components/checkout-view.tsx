@@ -318,6 +318,11 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
 
         try {
             const result = await checkoutMutation.mutateAsync(payload)
+            if (result.paymentUrl) {
+                toast.success('Đang chuyển hướng tới cổng thanh toán VNPay...')
+                window.location.href = result.paymentUrl
+                return
+            }
             toast.success('Đặt hàng thành công!')
             if (result.orders && result.orders.length > 0) {
                 const firstOrderId = result.orders[0]!.id
