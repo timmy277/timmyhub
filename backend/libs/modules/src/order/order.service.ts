@@ -343,7 +343,7 @@ export class OrderService {
                 })
                 const shopMap = new Map(shops.map((s) => [s.id, { shopName: s.shopName, shopSlug: s.shopSlug }]))
 
-                const ordersList: Array<OrderWithRelations & { shopName: string; shopSlug?: string }> = []
+                const ordersList: Array<OrderWithRelations & { shopName: string; shopSlug?: string | undefined }> = []
                 const baseIdempotency = key || `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
 
                 // Bước C.2: Xác thực & tính toán voucher đa tầng (Shopee-Style: Freeship + Sàn + Shop)
