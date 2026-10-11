@@ -239,15 +239,17 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
     const uniqueShopCount = checkoutItems.length || 1
     const standardShippingFee = 30000 * uniqueShopCount
 
-    // 5. Trạng thái Voucher đa tầng (Shopee Voucher Model: Freeship + Giảm giá sàn/shop)
+    // 5. Trạng thái Voucher đa tầng (Shopee Voucher Model: Freeship + Sàn TimmyHub + Shop)
     const [voucherCodeInput, setVoucherCodeInput] = useState('')
     const [appliedShippingVoucher, setAppliedShippingVoucher] = useState<VoucherItem | null>(null)
-    const [appliedDiscountVoucher, setAppliedDiscountVoucher] = useState<VoucherItem | null>(null)
+    const [appliedPlatformVoucher, setAppliedPlatformVoucher] = useState<VoucherItem | null>(null)
+    const [appliedShopVouchers, setAppliedShopVouchers] = useState<Record<string, VoucherItem>>({})
     const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false)
     const [voucherModalInput, setVoucherModalInput] = useState('')
     const [voucherCategoryTab, setVoucherCategoryTab] = useState<'ALL' | 'SHIPPING' | 'DISCOUNT' | 'SAVED'>('ALL')
     const [selectedModalShippingCode, setSelectedModalShippingCode] = useState<string | null>(null)
-    const [selectedModalDiscountCode, setSelectedModalDiscountCode] = useState<string | null>(null)
+    const [selectedModalPlatformCode, setSelectedModalPlatformCode] = useState<string | null>(null)
+    const [selectedModalShopCodes, setSelectedModalShopCodes] = useState<Record<string, string>>({})
 
     const validateVoucherMutation = useValidateVoucher()
     const { data: availableVouchers = [], isLoading: isLoadingAvailableVouchers } = useAvailableVouchers(subtotal)
@@ -264,11 +266,21 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
         return map
     }, [myUserVouchers])
 
-    // Danh sách tổng hợp voucher (Vouchers có sẵn trên sàn + Vouchers trong ví)
+    // Bản đồ tổng tiền hàng của từng gian hàng trong đơn
+    const shopSubtotals = useMemo(() => {
+        const map = new Map<string, number>()
+        for (const shop of checkoutItems) {
+            const total = shop.items.reduce((s, it) => s + (Number(it.lineTotal) || 0), 0)
+            map.set(shop.shopId, total)
+        }
+        return map
+    }, [checkoutItems])
+
+    // Danh sách voucher hợp nhất giữa các voucher công khai và voucher đã lưu trong ví
     const combinedVouchers = useMemo(() => {
         const voucherMap = new Map<string, { voucher: VoucherItem; isSaved: boolean }>()
 
-        // 1. Thêm các voucher có sẵn từ sàn
+        // 1. Thêm các voucher có sẵn từ sàn & shop
         for (const v of availableVouchers) {
             voucherMap.set(v.code, {
                 voucher: v,
@@ -290,18 +302,20 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
 
         return list.map(({ voucher: v, isSaved }) => {
             const minOrder = Number(v.minOrderValue) || 0
-            const isEligible = subtotal >= minOrder
-            const remaining = minOrder > subtotal ? minOrder - subtotal : 0
+            const hasShop = v.sellerId ? shopSubtotals.has(v.sellerId) : true
+            const effectiveSub = v.sellerId ? shopSubtotals.get(v.sellerId) || 0 : subtotal
+            const isEligible = hasShop && effectiveSub >= minOrder
+            const remaining = minOrder > effectiveSub ? minOrder - effectiveSub : 0
 
             let estimatedDiscount = 0
             if (isEligible) {
                 if (v.type === 'PERCENTAGE') {
-                    estimatedDiscount = Math.floor((subtotal * v.value) / 100)
+                    estimatedDiscount = Math.floor((effectiveSub * v.value) / 100)
                     if (v.maxDiscount && estimatedDiscount > v.maxDiscount) {
                         estimatedDiscount = v.maxDiscount
                     }
                 } else if (v.type === 'FIXED_AMOUNT') {
-                    estimatedDiscount = Math.min(subtotal, v.value)
+                    estimatedDiscount = Math.min(effectiveSub, v.value)
                 } else if (v.type === 'FREE_SHIPPING') {
                     const cap = v.value > 0 ? v.value : standardShippingFee
                     estimatedDiscount = Math.min(standardShippingFee, cap)
@@ -317,7 +331,7 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                 estimatedDiscount,
             }
         })
-    }, [availableVouchers, myUserVouchers, savedVoucherMap, subtotal, standardShippingFee])
+    }, [availableVouchers, myUserVouchers, savedVoucherMap, subtotal, standardShippingFee, shopSubtotals])
 
     // Số lượng cho từng tab phân loại
     const modalTabCounts = useMemo(() => {
@@ -346,7 +360,7 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
         [filteredModalVouchers],
     )
 
-    // 1. Tính toán giảm giá phí vận chuyển chính xác
+    // 1. Tính toán giảm giá phí vận chuyển chính xác (Freeship)
     const shippingDiscount = useMemo(() => {
         if (!appliedShippingVoucher) return 0
         const minOrder = Number(appliedShippingVoucher.minOrderValue) || 0
@@ -356,22 +370,53 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
         return Math.min(standardShippingFee, cap)
     }, [appliedShippingVoucher, subtotal, standardShippingFee])
 
-    // 2. Tính toán giảm giá sản phẩm chính xác
-    const productDiscount = useMemo(() => {
-        if (!appliedDiscountVoucher) return 0
-        const minOrder = Number(appliedDiscountVoucher.minOrderValue) || 0
+    // 2. Tính toán giảm giá từ từng Shop
+    const shopDiscountDetails = useMemo(() => {
+        const details: Array<{ shopId: string; voucher: VoucherItem; discount: number }> = []
+        for (const [shopId, v] of Object.entries(appliedShopVouchers)) {
+            const shopSub = shopSubtotals.get(shopId) || 0
+            const minOrder = Number(v.minOrderValue) || 0
+            if (shopSub >= minOrder) {
+                let disc = 0
+                if (v.type === 'PERCENTAGE') {
+                    const raw = Math.floor((shopSub * Number(v.value)) / 100)
+                    disc = v.maxDiscount ? Math.min(raw, Number(v.maxDiscount)) : raw
+                } else if (v.type === 'FIXED_AMOUNT') {
+                    disc = Math.min(shopSub, Number(v.value))
+                }
+                if (disc > 0) {
+                    details.push({ shopId, voucher: v, discount: disc })
+                }
+            }
+        }
+        return details
+    }, [appliedShopVouchers, shopSubtotals])
+
+    const totalShopDiscount = useMemo(() => {
+        return shopDiscountDetails.reduce((sum, item) => sum + item.discount, 0)
+    }, [shopDiscountDetails])
+
+    // 3. Tính toán giảm giá từ sàn TimmyHub
+    const platformDiscount = useMemo(() => {
+        if (!appliedPlatformVoucher) return 0
+        const minOrder = Number(appliedPlatformVoucher.minOrderValue) || 0
         if (subtotal < minOrder) return 0
 
+        const availableSubtotal = Math.max(0, subtotal - totalShopDiscount)
         let disc = 0
-        if (appliedDiscountVoucher.type === 'PERCENTAGE') {
-            const raw = Math.floor((subtotal * Number(appliedDiscountVoucher.value)) / 100)
-            disc = appliedDiscountVoucher.maxDiscount ? Math.min(raw, Number(appliedDiscountVoucher.maxDiscount)) : raw
-        } else if (appliedDiscountVoucher.type === 'FIXED_AMOUNT') {
-            disc = Math.min(subtotal, Number(appliedDiscountVoucher.value))
+        if (appliedPlatformVoucher.type === 'PERCENTAGE') {
+            const raw = Math.floor((subtotal * Number(appliedPlatformVoucher.value)) / 100)
+            const capped = appliedPlatformVoucher.maxDiscount
+                ? Math.min(raw, Number(appliedPlatformVoucher.maxDiscount))
+                : raw
+            disc = Math.min(availableSubtotal, capped)
+        } else if (appliedPlatformVoucher.type === 'FIXED_AMOUNT') {
+            disc = Math.min(availableSubtotal, Number(appliedPlatformVoucher.value))
         }
         return Math.max(0, disc)
-    }, [appliedDiscountVoucher, subtotal])
+    }, [appliedPlatformVoucher, subtotal, totalShopDiscount])
 
+    const productDiscount = totalShopDiscount + platformDiscount
     const netShippingFee = Math.max(0, standardShippingFee - shippingDiscount)
     const totalAmount = Math.max(0, subtotal + netShippingFee - productDiscount)
 
@@ -384,9 +429,11 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
         }
 
         try {
+            const shopIds = checkoutItems.map((g) => g.shopId)
             const result = await validateVoucherMutation.mutateAsync({
                 code,
                 subtotal,
+                shopIds,
             })
 
             if (result.valid && result.voucher) {
@@ -395,10 +442,14 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                     setAppliedShippingVoucher(v)
                     setSelectedModalShippingCode(v.code)
                     toast.success(`Áp dụng mã Freeship ${v.code} thành công!`)
+                } else if (v.sellerId) {
+                    setAppliedShopVouchers((prev) => ({ ...prev, [v.sellerId!]: v }))
+                    setSelectedModalShopCodes((prev) => ({ ...prev, [v.sellerId!]: v.code }))
+                    toast.success(`Áp dụng mã Shop ${v.code} thành công!`)
                 } else {
-                    setAppliedDiscountVoucher(v)
-                    setSelectedModalDiscountCode(v.code)
-                    toast.success(`Áp dụng mã giảm giá ${v.code} thành công!`)
+                    setAppliedPlatformVoucher(v)
+                    setSelectedModalPlatformCode(v.code)
+                    toast.success(`Áp dụng mã TimmyHub ${v.code} thành công!`)
                 }
                 setVoucherCodeInput('')
                 setVoucherModalInput('')
@@ -419,10 +470,24 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
         toast.info('Đã gỡ mã miễn phí vận chuyển')
     }
 
-    const handleRemoveDiscountVoucher = () => {
-        setAppliedDiscountVoucher(null)
-        setSelectedModalDiscountCode(null)
-        toast.info('Đã gỡ mã giảm giá')
+    const handleRemovePlatformVoucher = () => {
+        setAppliedPlatformVoucher(null)
+        setSelectedModalPlatformCode(null)
+        toast.info('Đã gỡ mã giảm giá TimmyHub')
+    }
+
+    const handleRemoveShopVoucher = (shopId: string) => {
+        setAppliedShopVouchers((prev) => {
+            const next = { ...prev }
+            delete next[shopId]
+            return next
+        })
+        setSelectedModalShopCodes((prev) => {
+            const next = { ...prev }
+            delete next[shopId]
+            return next
+        })
+        toast.info('Đã gỡ mã giảm giá của Shop')
     }
 
     // 6. Đặt hàng Mutation
@@ -444,8 +509,12 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
             addressId: activeAddress.id,
             paymentMethod,
             customerNote: customerNote.trim() || undefined,
-            voucherCode: appliedDiscountVoucher?.code || appliedShippingVoucher?.code || undefined,
-            voucherCodes: [appliedShippingVoucher?.code, appliedDiscountVoucher?.code].filter(Boolean) as string[],
+            voucherCode: appliedPlatformVoucher?.code || appliedShippingVoucher?.code || undefined,
+            voucherCodes: [
+                appliedShippingVoucher?.code,
+                appliedPlatformVoucher?.code,
+                ...Object.values(appliedShopVouchers).map((v) => v.code),
+            ].filter(Boolean) as string[],
             idempotencyKey: `chk_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
         }
 
@@ -855,9 +924,14 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                             setSelectedModalShippingCode(
                                                 appliedShippingVoucher ? appliedShippingVoucher.code : null,
                                             )
-                                            setSelectedModalDiscountCode(
-                                                appliedDiscountVoucher ? appliedDiscountVoucher.code : null,
+                                            setSelectedModalPlatformCode(
+                                                appliedPlatformVoucher ? appliedPlatformVoucher.code : null,
                                             )
+                                            const shopCodes: Record<string, string> = {}
+                                            for (const [sId, v] of Object.entries(appliedShopVouchers)) {
+                                                shopCodes[sId] = v.code
+                                            }
+                                            setSelectedModalShopCodes(shopCodes)
                                             setIsVoucherModalOpen(true)
                                         }}
                                         className="text-xs font-bold text-primary hover:underline cursor-pointer"
@@ -867,7 +941,9 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                 </div>
                             </CardHeader>
                             <CardContent className="p-4 sm:p-5 space-y-3">
-                                {appliedShippingVoucher || appliedDiscountVoucher ? (
+                                {appliedShippingVoucher ||
+                                appliedPlatformVoucher ||
+                                Object.keys(appliedShopVouchers).length > 0 ? (
                                     <div className="space-y-2">
                                         {appliedShippingVoucher && (
                                             <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
@@ -904,7 +980,7 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                                 </Button>
                                             </div>
                                         )}
-                                        {appliedDiscountVoucher && (
+                                        {appliedPlatformVoucher && (
                                             <div className="flex items-center justify-between p-3 rounded-xl bg-purple-500/10 border border-purple-500/30">
                                                 <div className="flex items-center gap-2.5 min-w-0">
                                                     <div className="size-8 rounded-lg bg-purple-500/20 text-purple-700 dark:text-purple-400 flex items-center justify-center shrink-0">
@@ -913,19 +989,19 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                                     <div className="min-w-0">
                                                         <div className="flex items-center gap-1.5">
                                                             <span className="font-mono font-black text-xs text-foreground uppercase tracking-wider truncate">
-                                                                {appliedDiscountVoucher.code}
+                                                                {appliedPlatformVoucher.code}
                                                             </span>
                                                             <Badge
                                                                 variant="secondary"
                                                                 className="text-[10px] bg-purple-500/20 text-purple-700 dark:text-purple-400 border-0 py-0 px-1.5 font-bold"
                                                             >
-                                                                Giảm -{formatCurrencyVND(productDiscount)}
+                                                                Sàn TimmyHub -{formatCurrencyVND(platformDiscount)}
                                                             </Badge>
                                                         </div>
                                                         <p className="text-[11px] text-muted-foreground truncate">
-                                                            {appliedDiscountVoucher.description ||
-                                                                appliedDiscountVoucher.campaignName ||
-                                                                'Giảm giá đơn hàng'}
+                                                            {appliedPlatformVoucher.description ||
+                                                                appliedPlatformVoucher.campaignName ||
+                                                                'Giảm giá sàn TimmyHub'}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -933,13 +1009,50 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                                     type="button"
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={handleRemoveDiscountVoucher}
+                                                    onClick={handleRemovePlatformVoucher}
                                                     className="h-7 px-2 text-xs font-semibold text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 rounded-lg shrink-0"
                                                 >
                                                     {t('voucherRemove')}
                                                 </Button>
                                             </div>
                                         )}
+                                        {shopDiscountDetails.map(({ shopId, voucher: sv, discount: sDisc }) => (
+                                            <div
+                                                key={shopId}
+                                                className="flex items-center justify-between p-3 rounded-xl bg-blue-500/10 border border-blue-500/30"
+                                            >
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                    <div className="size-8 rounded-lg bg-blue-500/20 text-blue-700 dark:text-blue-400 flex items-center justify-center shrink-0">
+                                                        <StoreIcon className="size-4" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="font-mono font-black text-xs text-foreground uppercase tracking-wider truncate">
+                                                                {sv.code}
+                                                            </span>
+                                                            <Badge
+                                                                variant="secondary"
+                                                                className="text-[10px] bg-blue-500/20 text-blue-700 dark:text-blue-400 border-0 py-0 px-1.5 font-bold"
+                                                            >
+                                                                Shop -{formatCurrencyVND(sDisc)}
+                                                            </Badge>
+                                                        </div>
+                                                        <p className="text-[11px] text-muted-foreground truncate">
+                                                            {sv.description || 'Giảm giá Shop'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleRemoveShopVoucher(shopId)}
+                                                    className="h-7 px-2 text-xs font-semibold text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 rounded-lg shrink-0"
+                                                >
+                                                    {t('voucherRemove')}
+                                                </Button>
+                                            </div>
+                                        ))}
                                     </div>
                                 ) : (
                                     <div className="flex gap-2">
@@ -1019,15 +1132,27 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                             <span className="font-bold">-{formatCurrencyVND(shippingDiscount)}</span>
                                         </div>
                                     )}
-                                    {productDiscount > 0 && (
+                                    {platformDiscount > 0 && (
                                         <div className="flex justify-between text-purple-700 dark:text-purple-400">
                                             <span className="flex items-center gap-1">
                                                 <TagIcon className="size-3" />
-                                                Giảm giá voucher ({appliedDiscountVoucher?.code}):
+                                                Voucher TimmyHub ({appliedPlatformVoucher?.code}):
                                             </span>
-                                            <span className="font-bold">-{formatCurrencyVND(productDiscount)}</span>
+                                            <span className="font-bold">-{formatCurrencyVND(platformDiscount)}</span>
                                         </div>
                                     )}
+                                    {shopDiscountDetails.map(({ shopId, voucher: sv, discount: sDisc }) => (
+                                        <div
+                                            key={shopId}
+                                            className="flex justify-between text-blue-700 dark:text-blue-400"
+                                        >
+                                            <span className="flex items-center gap-1">
+                                                <StoreIcon className="size-3" />
+                                                Voucher Shop ({sv.code}):
+                                            </span>
+                                            <span className="font-bold">-{formatCurrencyVND(sDisc)}</span>
+                                        </div>
+                                    ))}
                                 </div>
 
                                 <div className="pt-3 border-t border-border/60 flex items-baseline justify-between">
@@ -1315,15 +1440,28 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                                 const isSeller = Boolean(v.sellerId)
                                                 const isSelected = isShipping
                                                     ? selectedModalShippingCode === v.code
-                                                    : selectedModalDiscountCode === v.code
+                                                    : isSeller
+                                                      ? selectedModalShopCodes[v.sellerId!] === v.code
+                                                      : selectedModalPlatformCode === v.code
 
                                                 const handleToggle = () => {
                                                     if (isShipping) {
                                                         setSelectedModalShippingCode((prev) =>
                                                             prev === v.code ? null : v.code,
                                                         )
+                                                    } else if (isSeller) {
+                                                        const sId = v.sellerId!
+                                                        setSelectedModalShopCodes((prev) => {
+                                                            const next = { ...prev }
+                                                            if (next[sId] === v.code) {
+                                                                delete next[sId]
+                                                            } else {
+                                                                next[sId] = v.code
+                                                            }
+                                                            return next
+                                                        })
                                                     } else {
-                                                        setSelectedModalDiscountCode((prev) =>
+                                                        setSelectedModalPlatformCode((prev) =>
                                                             prev === v.code ? null : v.code,
                                                         )
                                                     }
@@ -1513,7 +1651,9 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                     {/* Footer Modal: Hành động Đồng ý / Bỏ chọn (Shopee-Style Multi-Voucher Footer) */}
                     <div className="p-4 bg-muted/40 border-t border-border/60 flex items-center justify-between gap-3">
                         <div className="text-xs min-w-0">
-                            {selectedModalShippingCode || selectedModalDiscountCode ? (
+                            {selectedModalShippingCode ||
+                            selectedModalPlatformCode ||
+                            Object.keys(selectedModalShopCodes).length > 0 ? (
                                 <div className="space-y-0.5">
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                         <span className="text-muted-foreground font-medium">Đã chọn:</span>
@@ -1525,20 +1665,30 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                                 Freeship: {selectedModalShippingCode}
                                             </Badge>
                                         )}
-                                        {selectedModalDiscountCode && (
+                                        {selectedModalPlatformCode && (
                                             <Badge
                                                 variant="secondary"
                                                 className="bg-purple-500/15 text-purple-700 dark:text-purple-400 font-mono text-[11px] py-0"
                                             >
-                                                Giảm giá: {selectedModalDiscountCode}
+                                                Sàn: {selectedModalPlatformCode}
                                             </Badge>
                                         )}
+                                        {Object.entries(selectedModalShopCodes).map(([sId, code]) => (
+                                            <Badge
+                                                key={sId}
+                                                variant="secondary"
+                                                className="bg-blue-500/15 text-blue-700 dark:text-blue-400 font-mono text-[11px] py-0"
+                                            >
+                                                Shop: {code}
+                                            </Badge>
+                                        ))}
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => {
                                             setSelectedModalShippingCode(null)
-                                            setSelectedModalDiscountCode(null)
+                                            setSelectedModalPlatformCode(null)
+                                            setSelectedModalShopCodes({})
                                         }}
                                         className="text-[11px] text-destructive hover:underline cursor-pointer block"
                                     >
@@ -1572,21 +1722,32 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                         ? combinedVouchers.find((cv) => cv.voucher.code === selectedModalShippingCode)
                                               ?.voucher || null
                                         : null
-                                    const discV = selectedModalDiscountCode
-                                        ? combinedVouchers.find((cv) => cv.voucher.code === selectedModalDiscountCode)
+                                    const platV = selectedModalPlatformCode
+                                        ? combinedVouchers.find((cv) => cv.voucher.code === selectedModalPlatformCode)
                                               ?.voucher || null
                                         : null
+                                    const shopMap: Record<string, VoucherItem> = {}
+                                    for (const [sId, c] of Object.entries(selectedModalShopCodes)) {
+                                        const found = combinedVouchers.find((cv) => cv.voucher.code === c)?.voucher
+                                        if (found) {
+                                            shopMap[sId] = found
+                                        }
+                                    }
 
                                     setAppliedShippingVoucher(shipV)
-                                    setAppliedDiscountVoucher(discV)
+                                    setAppliedPlatformVoucher(platV)
+                                    setAppliedShopVouchers(shopMap)
                                     setIsVoucherModalOpen(false)
 
-                                    if (shipV && discV) {
-                                        toast.success(`Đã áp dụng 2 voucher: ${shipV.code} & ${discV.code}`)
+                                    const totalCount = (shipV ? 1 : 0) + (platV ? 1 : 0) + Object.keys(shopMap).length
+                                    if (totalCount > 1) {
+                                        toast.success(`Đã áp dụng thành công ${totalCount} voucher!`)
                                     } else if (shipV) {
                                         toast.success(`Đã áp dụng mã Freeship ${shipV.code}`)
-                                    } else if (discV) {
-                                        toast.success(`Đã áp dụng mã giảm giá ${discV.code}`)
+                                    } else if (platV) {
+                                        toast.success(`Đã áp dụng mã giảm giá ${platV.code}`)
+                                    } else if (Object.keys(shopMap).length > 0) {
+                                        toast.success(`Đã áp dụng mã giảm giá Shop!`)
                                     } else {
                                         toast.info('Đã bỏ áp dụng voucher')
                                     }

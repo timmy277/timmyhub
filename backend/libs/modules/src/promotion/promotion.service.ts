@@ -786,6 +786,7 @@ export class PromotionService {
                 maxDiscount: voucher.maxDiscount != null ? Number(voucher.maxDiscount) : null,
                 description: voucher.description ?? null,
                 campaignName: voucher.campaign?.name ?? null,
+                sellerId: voucher.sellerId ?? null,
             },
             discountAmount,
             finalTotal,

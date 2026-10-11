@@ -344,6 +344,7 @@ export interface ValidateVoucherResult {
         maxDiscount?: number | null
         description?: string | null
         campaignName?: string | null
+        sellerId?: string | null
     }
     discountAmount: number
     finalTotal: number

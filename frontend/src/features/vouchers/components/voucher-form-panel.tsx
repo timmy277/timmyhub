@@ -319,9 +319,11 @@ export function VoucherFormPanel({ initialData, campaignOptions, onSuccess, isSe
                                         <SelectItem value={VOUCHER_TYPE.FIXED_AMOUNT}>
                                             {t('typeFixedAmount')}
                                         </SelectItem>
-                                        <SelectItem value={VOUCHER_TYPE.FREE_SHIPPING}>
-                                            {t('typeFreeShipping')}
-                                        </SelectItem>
+                                        {!isSeller && (
+                                            <SelectItem value={VOUCHER_TYPE.FREE_SHIPPING}>
+                                                {t('typeFreeShipping')}
+                                            </SelectItem>
+                                        )}
                                     </FloatSelect>
                                 )}
                             />
