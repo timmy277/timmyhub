@@ -17,6 +17,7 @@ import {
     ShoppingCartIcon,
     StarIcon,
     StoreIcon,
+    TicketIcon,
     TruckIcon,
     ZapIcon,
 } from 'lucide-react'
@@ -24,9 +25,20 @@ import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import type { ProductDetail, ProductSummary } from '@timmyhub/contracts'
 
-import { Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
+import {
+    Badge,
+    Button,
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
+} from '@/components/ui'
 import { ROUTE } from '@/constants'
-import { useAddToCart } from '@/hooks'
+import { useAddToCart, useMySavedVoucherIds, usePublicAvailableVouchers, useSaveUserVoucher } from '@/hooks'
 import { formatCurrencyVND } from '@/utils'
 
 interface PublicProductDetailViewProps {
@@ -49,6 +61,22 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
     const [isWishlist, setIsWishlist] = useState(false)
     const [quantity, setQuantity] = useState(1)
     const addToCartMutation = useAddToCart()
+
+    // ===== Voucher / Promotion State =====
+    const { data: availableVouchers = [] } = usePublicAvailableVouchers()
+    const { data: savedVoucherIds = [] } = useMySavedVoucherIds()
+    const saveVoucherMutation = useSaveUserVoucher()
+    const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false)
+
+    // Lọc voucher áp dụng cho sản phẩm này: Freeship, Sàn TimmyHub, hoặc Shop tương ứng
+    const applicableVouchers = useMemo(() => {
+        return availableVouchers.filter((v) => {
+            if (v.type === 'FREE_SHIPPING') return true
+            if (v.sellerId && v.sellerId === product.shopId) return true
+            if (!v.sellerId) return true
+            return false
+        })
+    }, [availableVouchers, product.shopId])
 
     // ===== Options & Variant Selection =====
     // Lưu option đã chọn theo ID: Record<optionId, valueId>
@@ -369,6 +397,83 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                             </div>
                         </div>
 
+                        {/* Voucher & Khuyến mãi dành riêng cho sản phẩm này */}
+                        {applicableVouchers.length > 0 && (
+                            <div className="rounded-2xl border border-border/80 bg-card/90 p-4 shadow-sm backdrop-blur-md space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <TicketIcon className="size-4 text-primary" />
+                                        <span className="text-xs font-bold text-foreground">
+                                            Voucher & Khuyến mãi ({applicableVouchers.length})
+                                        </span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsVoucherModalOpen(true)}
+                                        className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                                    >
+                                        <span>Xem tất cả</span>
+                                        <ChevronRightIcon className="size-3.5" />
+                                    </button>
+                                </div>
+
+                                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                                    {applicableVouchers.slice(0, 4).map((v) => {
+                                        const isSaved = savedVoucherIds.includes(v.id)
+                                        const isShipping = v.type === 'FREE_SHIPPING'
+                                        const isShop = Boolean(v.sellerId)
+
+                                        const label = isShipping
+                                            ? `Freeship ${v.value > 0 ? formatCurrencyVND(v.value) : '30k'}`
+                                            : v.type === 'PERCENTAGE'
+                                              ? `Giảm ${v.value}%`
+                                              : `Giảm ${formatCurrencyVND(v.value)}`
+
+                                        return (
+                                            <div
+                                                key={v.id}
+                                                onClick={() => setIsVoucherModalOpen(true)}
+                                                className="group flex items-center shrink-0 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-all cursor-pointer overflow-hidden shadow-2xs"
+                                            >
+                                                <div className="px-2.5 py-1.5 flex items-center gap-1.5 border-r border-dashed border-primary/30">
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className={`text-[9px] font-bold px-1 py-0 border-0 ${
+                                                            isShipping
+                                                                ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'
+                                                                : isShop
+                                                                  ? 'bg-blue-500/20 text-blue-700 dark:text-blue-400'
+                                                                  : 'bg-purple-500/20 text-purple-700 dark:text-purple-400'
+                                                        }`}
+                                                    >
+                                                        {isShipping ? 'Freeship' : isShop ? 'Shop' : 'Sàn'}
+                                                    </Badge>
+                                                    <span className="text-xs font-bold text-foreground font-mono">
+                                                        {label}
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        saveVoucherMutation.mutate({ voucherId: v.id, code: v.code })
+                                                    }}
+                                                    disabled={saveVoucherMutation.isPending}
+                                                    className={`px-2.5 py-1.5 text-[11px] font-bold transition-colors ${
+                                                        isSaved
+                                                            ? 'text-muted-foreground bg-muted/40 cursor-default'
+                                                            : 'text-primary hover:text-primary/80 hover:bg-primary/15'
+                                                    }`}
+                                                >
+                                                    {isSaved ? 'Đã lưu' : 'Lưu'}
+                                                </button>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Interactive Options & Variants */}
                         {product.options && product.options.length > 0 && (
                             <div className="space-y-4 rounded-2xl border border-border/70 bg-card/85 backdrop-blur-md p-5 shadow-sm">
@@ -622,6 +727,108 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                     </div>
                 )}
             </main>
+
+            {/* Modal Chi tiết Voucher áp dụng */}
+            <Dialog open={isVoucherModalOpen} onOpenChange={setIsVoucherModalOpen}>
+                <DialogContent className="max-w-lg p-0 overflow-hidden rounded-3xl">
+                    <DialogHeader className="p-5 pb-3 border-b border-border/60 bg-muted/20">
+                        <div className="flex items-center gap-2">
+                            <TicketIcon className="size-5 text-primary" />
+                            <DialogTitle className="text-base font-extrabold text-foreground">
+                                Voucher & Khuyến Mãi
+                            </DialogTitle>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                            Lưu mã vào ví để được tự động áp dụng giảm giá khi thanh toán
+                        </p>
+                    </DialogHeader>
+
+                    <div className="p-5 max-h-[60vh] overflow-y-auto space-y-3">
+                        {applicableVouchers.length === 0 ? (
+                            <div className="text-center py-8 text-xs text-muted-foreground">
+                                Hiện chưa có mã giảm giá nào cho sản phẩm này.
+                            </div>
+                        ) : (
+                            applicableVouchers.map((v) => {
+                                const isSaved = savedVoucherIds.includes(v.id)
+                                const isShipping = v.type === 'FREE_SHIPPING'
+                                const isShop = Boolean(v.sellerId)
+
+                                return (
+                                    <div
+                                        key={v.id}
+                                        className="p-3.5 rounded-2xl border border-border/70 hover:border-primary/40 bg-card transition-all flex items-center justify-between gap-3 shadow-2xs"
+                                    >
+                                        <div className="flex items-start gap-3 min-w-0">
+                                            <div
+                                                className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${
+                                                    isShipping
+                                                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                                                        : isShop
+                                                          ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                                                          : 'bg-purple-500/10 text-purple-700 dark:text-purple-400'
+                                                }`}
+                                            >
+                                                {isShipping ? (
+                                                    <TruckIcon className="size-5" />
+                                                ) : isShop ? (
+                                                    <StoreIcon className="size-5" />
+                                                ) : (
+                                                    <TicketIcon className="size-5" />
+                                                )}
+                                            </div>
+                                            <div className="space-y-1 min-w-0">
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    <span className="font-mono font-black text-xs text-foreground uppercase tracking-wider">
+                                                        {v.code}
+                                                    </span>
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="text-[9px] font-bold px-1 py-0 border-0"
+                                                    >
+                                                        {isShipping ? 'Freeship' : isShop ? 'Shop' : 'Sàn TimmyHub'}
+                                                    </Badge>
+                                                </div>
+                                                <p className="text-xs font-bold text-foreground">
+                                                    {v.description ||
+                                                        (isShipping
+                                                            ? `Miễn phí vận chuyển đến ${formatCurrencyVND(v.value || 30000)}`
+                                                            : v.type === 'PERCENTAGE'
+                                                              ? `Giảm ${v.value}%${v.maxDiscount ? ` tối đa ${formatCurrencyVND(v.maxDiscount)}` : ''}`
+                                                              : `Giảm ${formatCurrencyVND(v.value)}`)}
+                                                </p>
+                                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground flex-wrap">
+                                                    <span>Đơn tối thiểu {formatCurrencyVND(v.minOrderValue || 0)}</span>
+                                                    <span>•</span>
+                                                    <span>
+                                                        HSD:{' '}
+                                                        {v.endDate
+                                                            ? new Date(v.endDate).toLocaleDateString('vi-VN')
+                                                            : 'Vô thời hạn'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant={isSaved ? 'outline' : 'default'}
+                                            disabled={saveVoucherMutation.isPending}
+                                            onClick={() =>
+                                                saveVoucherMutation.mutate({ voucherId: v.id, code: v.code })
+                                            }
+                                            className="h-8 px-3 text-xs font-bold rounded-xl shrink-0"
+                                        >
+                                            {isSaved ? 'Đã lưu' : 'Lưu'}
+                                        </Button>
+                                    </div>
+                                )
+                            })
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
