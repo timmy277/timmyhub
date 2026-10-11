@@ -114,5 +114,12 @@ export const API_ROUTE = {
             `v1/admin/campaigns/${encodeURIComponent(campaignId)}/products/${encodeURIComponent(productId)}/review`,
         VALIDATE_VOUCHER: 'v1/promotions/validate-voucher',
         AVAILABLE_VOUCHERS: 'v1/promotions/available-vouchers',
+        SELLER_VOUCHERS: 'v1/seller/vouchers',
+        SELLER_VOUCHER_DETAIL: (id: string) => `v1/seller/vouchers/${encodeURIComponent(id)}`,
+        SELLER_VOUCHER_STATUS: (id: string) => `v1/seller/vouchers/${encodeURIComponent(id)}/status`,
+        SAVE_VOUCHER: (id: string) => `v1/promotions/vouchers/${encodeURIComponent(id)}/save`,
+        MY_SAVED_VOUCHERS: 'v1/promotions/my-saved-vouchers',
+        MY_VOUCHERS: 'v1/promotions/my-vouchers',
+        CLAIM_VOUCHER_CODE: 'v1/promotions/claim-code',
     },
 } as const

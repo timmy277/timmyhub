@@ -2,7 +2,15 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRightIcon, CheckCircle2Icon, HomeIcon, MapPinIcon, PackageIcon, ShoppingBagIcon } from 'lucide-react'
+import {
+    ArrowRightIcon,
+    CheckCircle2Icon,
+    HomeIcon,
+    MapPinIcon,
+    PackageIcon,
+    ShoppingBagIcon,
+    TicketIcon,
+} from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { OrderDetail } from '@timmyhub/contracts'
 
@@ -119,12 +127,53 @@ export function CheckoutSuccessView({ orderId, initialOrder = null }: CheckoutSu
                             </div>
                         </div>
 
-                        {/* Order Total */}
-                        <div className="p-5 sm:p-6 bg-muted/15 flex items-baseline justify-between text-sm">
-                            <span className="font-bold text-foreground">Tổng thanh toán:</span>
-                            <span className="text-xl font-black text-emerald-700 dark:text-emerald-400">
-                                {formatCurrencyVND(order.totalAmount)}
-                            </span>
+                        {/* Order Total & Voucher Breakdown */}
+                        <div className="p-5 sm:p-6 bg-muted/15 space-y-2.5 text-xs sm:text-sm">
+                            {order.vouchers && order.vouchers.length > 0 ? (
+                                <div className="space-y-1.5 pb-2 border-b border-border/40">
+                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                        <span className="flex items-center gap-1 font-medium">
+                                            <TicketIcon className="size-3.5 text-primary" />
+                                            Voucher đã áp dụng ({order.vouchers.length}):
+                                        </span>
+                                        {Number(order.voucherDiscount) > 0 && (
+                                            <span className="font-bold text-emerald-600">
+                                                -{formatCurrencyVND(order.voucherDiscount)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {order.vouchers.map((vc) => (
+                                            <Badge
+                                                key={vc.id || vc.code}
+                                                variant="secondary"
+                                                className={`text-[11px] font-mono font-bold py-0.5 px-2 ${
+                                                    vc.type === 'FREE_SHIPPING'
+                                                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                                                        : 'bg-purple-500/15 text-purple-700 dark:text-purple-400'
+                                                }`}
+                                            >
+                                                {vc.code}: -{formatCurrencyVND(vc.discount)}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : Number(order.voucherDiscount) > 0 ? (
+                                <div className="flex justify-between items-center text-xs text-emerald-600 pb-2 border-b border-border/40">
+                                    <span className="flex items-center gap-1">
+                                        <TicketIcon className="size-3.5" />
+                                        Mã giảm giá ({order.voucherCode || 'Áp dụng'}):
+                                    </span>
+                                    <span className="font-bold">-{formatCurrencyVND(order.voucherDiscount)}</span>
+                                </div>
+                            ) : null}
+
+                            <div className="flex items-baseline justify-between">
+                                <span className="font-bold text-foreground">Tổng thanh toán:</span>
+                                <span className="text-xl font-black text-emerald-700 dark:text-emerald-400">
+                                    {formatCurrencyVND(order.totalAmount)}
+                                </span>
+                            </div>
                         </div>
                     </Card>
                 ) : (

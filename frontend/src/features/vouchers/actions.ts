@@ -6,6 +6,7 @@ import type {
     ApiErrorCode,
     CreateVoucherInput,
     UpdateVoucherInput,
+    UserVoucherItem,
     VoucherDetail,
     VoucherItem,
     VoucherListQuery,
@@ -244,5 +245,290 @@ export async function deleteVoucherAction(id: string): Promise<VoucherActionResu
     }
 
     revalidatePath(ROUTE.ADMIN_VOUCHERS)
+    return { ok: true, data: result.data }
+}
+
+// ==========================================
+// SELLER VOUCHER ACTIONS
+// ==========================================
+
+export async function listSellerVouchersAction(
+    query?: VoucherListQuery,
+): Promise<VoucherActionResult<{ items: VoucherItem[]; total: number; page: number; pageSize: number }>> {
+    const actor = await getActor()
+    if (!actor) {
+        return { ok: false, code: 'UNAUTHORIZED', message: 'Bạn cần đăng nhập để xem danh sách voucher shop.' }
+    }
+
+    const result = await fetchBackend<{ items: VoucherItem[]; total: number; page: number; pageSize: number }>(
+        API_ROUTE.PROMOTION.SELLER_VOUCHERS,
+        {
+            token: actor.accessToken,
+            query: {
+                page: query?.page,
+                pageSize: query?.pageSize,
+                q: query?.q,
+                type: query?.type,
+                isActive: typeof query?.isActive === 'boolean' ? String(query.isActive) : undefined,
+            },
+        },
+    )
+
+    if (!result.ok) {
+        return {
+            ok: false,
+            code: result.code,
+            message: formatBackendErrorMessage(result.code, result.status),
+        }
+    }
+
+    return { ok: true, data: result.data }
+}
+
+export async function getSellerVoucherDetailAction(id: string): Promise<VoucherActionResult<VoucherDetail>> {
+    const actor = await getActor()
+    if (!actor) {
+        return { ok: false, code: 'UNAUTHORIZED', message: 'Bạn cần đăng nhập để xem chi tiết voucher shop.' }
+    }
+
+    const result = await fetchBackend<VoucherDetail>(API_ROUTE.PROMOTION.SELLER_VOUCHER_DETAIL(id), {
+        token: actor.accessToken,
+    })
+
+    if (!result.ok) {
+        return {
+            ok: false,
+            code: result.code,
+            message: formatBackendErrorMessage(result.code, result.status),
+        }
+    }
+
+    return { ok: true, data: result.data }
+}
+
+export async function createSellerVoucherAction(input: CreateVoucherInput): Promise<VoucherActionResult<VoucherItem>> {
+    const actor = await getActor()
+    if (!actor) {
+        return { ok: false, code: 'UNAUTHORIZED', message: 'Bạn cần đăng nhập để tạo voucher.' }
+    }
+
+    const parsed = CreateVoucherInputSchema.safeParse(input)
+    if (!parsed.success) {
+        return { ok: false, code: 'VALIDATION_FAILED', message: parsed.error.issues[0]?.message }
+    }
+
+    const result = await fetchBackend<VoucherItem>(API_ROUTE.PROMOTION.SELLER_VOUCHERS, {
+        token: actor.accessToken,
+        method: 'POST',
+        body: parsed.data,
+    })
+
+    if (!result.ok) {
+        return {
+            ok: false,
+            code: result.code,
+            message: formatBackendErrorMessage(result.code, result.status),
+        }
+    }
+
+    revalidatePath(ROUTE.SELLER_VOUCHERS)
+    return { ok: true, data: result.data }
+}
+
+export async function updateSellerVoucherAction(
+    id: string,
+    input: UpdateVoucherInput,
+): Promise<VoucherActionResult<VoucherItem>> {
+    const actor = await getActor()
+    if (!actor) {
+        return { ok: false, code: 'UNAUTHORIZED', message: 'Bạn cần đăng nhập để sửa voucher.' }
+    }
+
+    const parsed = UpdateVoucherInputSchema.safeParse(input)
+    if (!parsed.success) {
+        return { ok: false, code: 'VALIDATION_FAILED', message: parsed.error.issues[0]?.message }
+    }
+
+    const result = await fetchBackend<VoucherItem>(API_ROUTE.PROMOTION.SELLER_VOUCHER_DETAIL(id), {
+        token: actor.accessToken,
+        method: 'PATCH',
+        body: parsed.data,
+    })
+
+    if (!result.ok) {
+        return {
+            ok: false,
+            code: result.code,
+            message: formatBackendErrorMessage(result.code, result.status),
+        }
+    }
+
+    revalidatePath(ROUTE.SELLER_VOUCHERS)
+    return { ok: true, data: result.data }
+}
+
+export async function toggleSellerVoucherStatusAction(
+    id: string,
+    isActive: boolean,
+): Promise<VoucherActionResult<VoucherItem>> {
+    const actor = await getActor()
+    if (!actor) {
+        return { ok: false, code: 'UNAUTHORIZED', message: 'Bạn cần đăng nhập để đổi trạng thái voucher.' }
+    }
+
+    const result = await fetchBackend<VoucherItem>(API_ROUTE.PROMOTION.SELLER_VOUCHER_STATUS(id), {
+        token: actor.accessToken,
+        method: 'PATCH',
+        body: { isActive },
+    })
+
+    if (!result.ok) {
+        return {
+            ok: false,
+            code: result.code,
+            message: formatBackendErrorMessage(result.code, result.status),
+        }
+    }
+
+    revalidatePath(ROUTE.SELLER_VOUCHERS)
+    return { ok: true, data: result.data }
+}
+
+export async function deleteSellerVoucherAction(id: string): Promise<VoucherActionResult<{ success: boolean }>> {
+    const actor = await getActor()
+    if (!actor) {
+        return { ok: false, code: 'UNAUTHORIZED', message: 'Bạn cần đăng nhập để xóa voucher.' }
+    }
+
+    const result = await fetchBackend<{ success: boolean }>(API_ROUTE.PROMOTION.SELLER_VOUCHER_DETAIL(id), {
+        token: actor.accessToken,
+        method: 'DELETE',
+    })
+
+    if (!result.ok) {
+        return {
+            ok: false,
+            code: result.code,
+            message: formatBackendErrorMessage(result.code, result.status),
+        }
+    }
+
+    revalidatePath(ROUTE.SELLER_VOUCHERS)
+    return { ok: true, data: result.data }
+}
+
+// ==========================================
+// USER VOUCHER CLAIM / SAVE ACTIONS
+// ==========================================
+
+export async function saveUserVoucherAction(
+    voucherId: string,
+): Promise<VoucherActionResult<{ saved: boolean; voucherId: string }>> {
+    const actor = await getActor()
+    if (!actor) {
+        return { ok: false, code: 'UNAUTHORIZED', message: 'Vui lòng đăng nhập để lưu mã voucher vào ví của bạn.' }
+    }
+
+    const result = await fetchBackend<{ saved: boolean; voucherId: string }>(
+        API_ROUTE.PROMOTION.SAVE_VOUCHER(voucherId),
+        {
+            token: actor.accessToken,
+            method: 'POST',
+        },
+    )
+
+    if (!result.ok) {
+        return {
+            ok: false,
+            code: result.code,
+            message: formatBackendErrorMessage(result.code, result.status),
+        }
+    }
+
+    return { ok: true, data: result.data }
+}
+
+export async function getMySavedVoucherIdsAction(): Promise<VoucherActionResult<string[]>> {
+    const actor = await getActor()
+    if (!actor) {
+        return { ok: true, data: [] }
+    }
+
+    const result = await fetchBackend<string[]>(API_ROUTE.PROMOTION.MY_SAVED_VOUCHERS, {
+        token: actor.accessToken,
+    })
+
+    if (!result.ok) {
+        return { ok: true, data: [] }
+    }
+
+    return { ok: true, data: result.data }
+}
+
+export async function getAvailableVouchersAction(subtotal?: number): Promise<VoucherActionResult<VoucherItem[]>> {
+    const actor = await getActor()
+    const query = subtotal ? `?subtotal=${encodeURIComponent(subtotal)}` : ''
+    const result = await fetchBackend<VoucherItem[]>(`${API_ROUTE.PROMOTION.AVAILABLE_VOUCHERS}${query}`, {
+        token: actor?.accessToken,
+    })
+
+    if (!result.ok) {
+        return {
+            ok: false,
+            code: result.code,
+            message: formatBackendErrorMessage(result.code, result.status),
+        }
+    }
+
+    return { ok: true, data: result.data }
+}
+
+export async function getMyUserVouchersAction(status?: string): Promise<VoucherActionResult<UserVoucherItem[]>> {
+    const actor = await getActor()
+    if (!actor) {
+        return { ok: true, data: [] }
+    }
+
+    const query = status ? `?status=${encodeURIComponent(status)}` : ''
+    const result = await fetchBackend<UserVoucherItem[]>(`${API_ROUTE.PROMOTION.MY_VOUCHERS}${query}`, {
+        token: actor.accessToken,
+    })
+
+    if (!result.ok) {
+        return {
+            ok: false,
+            code: result.code,
+            message: formatBackendErrorMessage(result.code, result.status),
+        }
+    }
+
+    return { ok: true, data: result.data }
+}
+
+export async function claimVoucherByCodeAction(
+    code: string,
+): Promise<VoucherActionResult<{ saved: boolean; voucherId: string; code: string }>> {
+    const actor = await getActor()
+    if (!actor) {
+        return { ok: false, code: 'UNAUTHORIZED', message: 'Vui lòng đăng nhập để lưu mã voucher.' }
+    }
+
+    const result = await fetchBackend<{ saved: boolean; voucherId: string; code: string }>(
+        API_ROUTE.PROMOTION.CLAIM_VOUCHER_CODE,
+        {
+            token: actor.accessToken,
+            method: 'POST',
+            body: { code },
+        },
+    )
+
+    if (!result.ok) {
+        return {
+            ok: false,
+            code: result.code,
+            message: formatBackendErrorMessage(result.code, result.status),
+        }
+    }
+
     return { ok: true, data: result.data }
 }

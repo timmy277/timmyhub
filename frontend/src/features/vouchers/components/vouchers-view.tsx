@@ -21,9 +21,18 @@ interface VouchersViewProps {
     initialDetail?: VoucherDetail | null
     campaignOptions?: { value: string; label: string }[]
     error?: string
+    isSeller?: boolean
 }
 
-export function VouchersView({ rows, tabs, currentUserId, initialDetail, campaignOptions, error }: VouchersViewProps) {
+export function VouchersView({
+    rows,
+    tabs,
+    currentUserId,
+    initialDetail,
+    campaignOptions,
+    error,
+    isSeller,
+}: VouchersViewProps) {
     const t = useTranslations('vouchers')
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -51,10 +60,10 @@ export function VouchersView({ rows, tabs, currentUserId, initialDetail, campaig
             {/* Active Tab Panel */}
             <div className="mt-4">
                 {active.tab === VOUCHER_TAB.CREATE ? (
-                    <VoucherFormPanel campaignOptions={campaignOptions} />
+                    <VoucherFormPanel campaignOptions={campaignOptions} isSeller={isSeller} />
                 ) : active.tab === VOUCHER_TAB.DETAIL ? (
                     activeVoucher ? (
-                        <VoucherDetailPanel key={activeVoucher.id} voucher={activeVoucher} />
+                        <VoucherDetailPanel key={activeVoucher.id} voucher={activeVoucher} isSeller={isSeller} />
                     ) : (
                         <EmptyState
                             title={t('notFoundTitle')}
@@ -67,7 +76,7 @@ export function VouchersView({ rows, tabs, currentUserId, initialDetail, campaig
                         />
                     )
                 ) : (
-                    <VoucherTable rows={rows} error={error} />
+                    <VoucherTable rows={rows} error={error} isSeller={isSeller} />
                 )}
             </div>
         </section>

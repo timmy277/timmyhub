@@ -8,6 +8,7 @@ import type {
     CreateAddressInput,
     OrderDetail,
     OrderItemDetail,
+    OrderVoucherDetail,
     UpdateAddressInput,
 } from '@timmyhub/contracts'
 import { ORDER_STATUS } from '@timmyhub/contracts'
@@ -149,7 +150,7 @@ export class OrderService {
                 }
 
                 return {
-                    orders: existingOrders.map((o) => this.formatOrder(o)),
+                    orders: await this.attachVoucherDetailsToOrders(existingOrders),
                     totalAmount,
                     paymentMethod: existingOrders[0]!.paymentMethod,
                     paymentUrl,
@@ -345,8 +346,17 @@ export class OrderService {
                 const ordersList: Array<OrderWithRelations & { shopName: string }> = []
                 const baseIdempotency = key || `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
 
-                // Bước C.2: Xác thực & tính toán voucher (nếu có)
-                let appliedVoucher: {
+                // Bước C.2: Xác thực & tính toán voucher đa tầng (Shopee-Style: Freeship + Sàn + Shop)
+                const rawCodes: string[] = []
+                if (Array.isArray(input.voucherCodes)) {
+                    rawCodes.push(...input.voucherCodes)
+                }
+                if (input.voucherCode && !rawCodes.includes(input.voucherCode)) {
+                    rawCodes.push(input.voucherCode)
+                }
+                const voucherCodes = Array.from(new Set(rawCodes.map((c) => c.trim().toUpperCase()))).filter(Boolean)
+
+                const appliedVouchers: Array<{
                     id: string
                     code: string
                     type: string
@@ -354,33 +364,37 @@ export class OrderService {
                     maxDiscount: Prisma.Decimal | null
                     sellerId: string | null
                     paymentMethods: string[]
-                } | null = null
-                let totalVoucherDiscount = new Prisma.Decimal(0)
+                    minOrderValue: Prisma.Decimal | null
+                }> = []
 
-                if (input.voucherCode) {
-                    const vCode = input.voucherCode.trim().toUpperCase()
+                const now = new Date()
+                const overallSubtotal = Array.from(shopGroups.values()).reduce(
+                    (sum, items) => sum.add(items.reduce((acc, it) => acc.add(it.lineTotal), new Prisma.Decimal(0))),
+                    new Prisma.Decimal(0),
+                )
+
+                for (const vCode of voucherCodes) {
                     const voucher = await tx.voucher.findUnique({
                         where: { code: vCode },
                     })
 
                     if (!voucher) {
-                        throw new BadRequestException('Mã voucher không tồn tại')
+                        throw new BadRequestException(`Mã voucher "${vCode}" không tồn tại`)
                     }
 
                     if (!voucher.isActive) {
-                        throw new BadRequestException('Mã voucher hiện đang bị khóa')
+                        throw new BadRequestException(`Mã voucher "${vCode}" hiện đang bị khóa`)
                     }
 
-                    const now = new Date()
                     if (voucher.startDate > now) {
-                        throw new BadRequestException('Mã voucher chưa đến thời gian áp dụng')
+                        throw new BadRequestException(`Mã voucher "${vCode}" chưa đến thời gian áp dụng`)
                     }
                     if (voucher.endDate < now) {
-                        throw new BadRequestException('Mã voucher đã hết hạn sử dụng')
+                        throw new BadRequestException(`Mã voucher "${vCode}" đã hết hạn sử dụng`)
                     }
 
                     if (voucher.usageLimit != null && voucher.usedCount >= voucher.usageLimit) {
-                        throw new BadRequestException('Mã voucher đã hết lượt sử dụng')
+                        throw new BadRequestException(`Mã voucher "${vCode}" đã hết lượt sử dụng`)
                     }
 
                     if (voucher.perUserLimit) {
@@ -389,71 +403,144 @@ export class OrderService {
                         })
                         if (userUsedCount >= voucher.perUserLimit) {
                             throw new BadRequestException(
-                                `Bạn đã sử dụng tối đa (${voucher.perUserLimit} lần) mã voucher này`,
+                                `Bạn đã sử dụng tối đa (${voucher.perUserLimit} lần) mã voucher "${vCode}"`,
                             )
                         }
                     }
 
-                    const overallSubtotal = Array.from(shopGroups.values()).reduce(
-                        (sum, items) =>
-                            sum.add(items.reduce((acc, it) => acc.add(it.lineTotal), new Prisma.Decimal(0))),
-                        new Prisma.Decimal(0),
-                    )
-
-                    if (voucher.minOrderValue != null && overallSubtotal.lessThan(voucher.minOrderValue)) {
-                        throw new BadRequestException('Đơn hàng chưa đạt giá trị tối thiểu để áp dụng voucher')
+                    if (voucher.paymentMethods.length > 0 && !voucher.paymentMethods.includes(input.paymentMethod)) {
+                        throw new BadRequestException(
+                            `Mã voucher "${vCode}" không áp dụng cho phương thức thanh toán đã chọn`,
+                        )
                     }
 
                     if (voucher.sellerId) {
-                        const hasShop = shopGroups.has(voucher.sellerId)
-                        if (!hasShop) {
-                            throw new BadRequestException('Mã voucher không áp dụng cho các gian hàng trong đơn này')
+                        const shopItems = shopGroups.get(voucher.sellerId)
+                        if (!shopItems || shopItems.length === 0) {
+                            throw new BadRequestException(
+                                `Mã voucher "${vCode}" chỉ áp dụng cho sản phẩm của shop tương ứng`,
+                            )
+                        }
+                        const shopSubtotal = shopItems.reduce((acc, it) => acc.add(it.lineTotal), new Prisma.Decimal(0))
+                        if (voucher.minOrderValue != null && shopSubtotal.lessThan(voucher.minOrderValue)) {
+                            throw new BadRequestException(
+                                `Đơn hàng tại Shop chưa đạt giá trị tối thiểu để áp dụng voucher "${vCode}"`,
+                            )
+                        }
+                    } else {
+                        if (voucher.minOrderValue != null && overallSubtotal.lessThan(voucher.minOrderValue)) {
+                            throw new BadRequestException(
+                                `Đơn hàng chưa đạt giá trị tối thiểu để áp dụng voucher "${vCode}"`,
+                            )
                         }
                     }
 
-                    if (voucher.paymentMethods.length > 0 && !voucher.paymentMethods.includes(input.paymentMethod)) {
-                        throw new BadRequestException('Mã voucher không áp dụng cho phương thức thanh toán đã chọn')
+                    // Quy tắc xếp chồng Shopee: Tối đa 1 Freeship, 1 mã sàn TimmyHub, 1 mã cho mỗi Shop
+                    if (voucher.type === 'FREE_SHIPPING') {
+                        const hasFreeship = appliedVouchers.some((v) => v.type === 'FREE_SHIPPING')
+                        if (hasFreeship) {
+                            throw new BadRequestException(
+                                'Chỉ được áp dụng tối đa 1 mã miễn phí vận chuyển cho mỗi đơn hàng',
+                            )
+                        }
+                    } else if (!voucher.sellerId) {
+                        const hasPlatform = appliedVouchers.some((v) => v.type !== 'FREE_SHIPPING' && !v.sellerId)
+                        if (hasPlatform) {
+                            throw new BadRequestException(
+                                'Chỉ được áp dụng tối đa 1 mã giảm giá TimmyHub cho mỗi đơn hàng',
+                            )
+                        }
+                    } else {
+                        const hasShopVoucher = appliedVouchers.some((v) => v.sellerId === voucher.sellerId)
+                        if (hasShopVoucher) {
+                            throw new BadRequestException('Chỉ được áp dụng tối đa 1 mã giảm giá của Shop này')
+                        }
                     }
 
-                    // Tính mức giảm
-                    if (voucher.type === 'PERCENTAGE') {
-                        const rawDiscount = overallSubtotal.mul(voucher.value).div(100)
-                        totalVoucherDiscount =
-                            voucher.maxDiscount != null
-                                ? rawDiscount.greaterThan(voucher.maxDiscount)
-                                    ? voucher.maxDiscount
-                                    : rawDiscount
-                                : rawDiscount
-                    } else if (voucher.type === 'FIXED_AMOUNT') {
-                        totalVoucherDiscount = overallSubtotal.greaterThan(voucher.value)
-                            ? voucher.value
-                            : overallSubtotal
-                    } else if (voucher.type === 'FREE_SHIPPING') {
-                        totalVoucherDiscount = new Prisma.Decimal(30000).greaterThan(voucher.value)
-                            ? voucher.value
-                            : new Prisma.Decimal(30000)
-                    }
-
-                    appliedVoucher = voucher
+                    appliedVouchers.push(voucher)
                 }
 
-                // Bước D: Tạo từng Order cho từng Shop và giữ tồn kho
-                let remainingDiscount = totalVoucherDiscount
+                // Phí vận chuyển tiêu chuẩn 30.000₫ cho mỗi shop trong đơn
+                const standardShippingPerShop = new Prisma.Decimal(30000)
+                const totalStandardShipping = standardShippingPerShop.mul(shopGroups.size)
+
+                // 1. Tính mức giảm phí vận chuyển (Freeship)
+                const freeshipVoucher = appliedVouchers.find((v) => v.type === 'FREE_SHIPPING')
+                let totalShippingDiscount = new Prisma.Decimal(0)
+                if (freeshipVoucher) {
+                    const cap = freeshipVoucher.value.greaterThan(0) ? freeshipVoucher.value : totalStandardShipping
+                    totalShippingDiscount = totalStandardShipping.greaterThan(cap) ? cap : totalStandardShipping
+                }
+
+                // 2. Tính mức giảm giá của từng Shop
+                const shopDiscountMap = new Map<
+                    string,
+                    { voucher: (typeof appliedVouchers)[0]; amount: Prisma.Decimal }
+                >()
+                for (const v of appliedVouchers) {
+                    if (v.type !== 'FREE_SHIPPING' && v.sellerId) {
+                        const items = shopGroups.get(v.sellerId) || []
+                        const shopSub = items.reduce((acc, it) => acc.add(it.lineTotal), new Prisma.Decimal(0))
+                        let disc = new Prisma.Decimal(0)
+                        if (v.type === 'PERCENTAGE') {
+                            const raw = shopSub.mul(v.value).div(100)
+                            disc = v.maxDiscount != null && raw.greaterThan(v.maxDiscount) ? v.maxDiscount : raw
+                        } else {
+                            disc = shopSub.greaterThan(v.value) ? v.value : shopSub
+                        }
+                        shopDiscountMap.set(v.sellerId, { voucher: v, amount: disc })
+                    }
+                }
+
+                // 3. Tính mức giảm giá sàn TimmyHub
+                const platformVoucher = appliedVouchers.find((v) => v.type !== 'FREE_SHIPPING' && !v.sellerId)
+                let totalPlatformDiscount = new Prisma.Decimal(0)
+                if (platformVoucher) {
+                    if (platformVoucher.type === 'PERCENTAGE') {
+                        const raw = overallSubtotal.mul(platformVoucher.value).div(100)
+                        totalPlatformDiscount =
+                            platformVoucher.maxDiscount != null && raw.greaterThan(platformVoucher.maxDiscount)
+                                ? platformVoucher.maxDiscount
+                                : raw
+                    } else {
+                        totalPlatformDiscount = overallSubtotal.greaterThan(platformVoucher.value)
+                            ? platformVoucher.value
+                            : overallSubtotal
+                    }
+                }
+
+                // Bước D: Tạo từng Order cho từng Shop và phân bổ ưu đãi chính xác
+                let remainingShippingDiscount = totalShippingDiscount
+                let remainingPlatformDiscount = totalPlatformDiscount
                 let shopIndex = 0
+
                 for (const [shopId, items] of shopGroups.entries()) {
                     shopIndex++
                     const subtotal = items.reduce((acc, it) => acc.add(it.lineTotal), new Prisma.Decimal(0))
-                    const shippingFee = new Prisma.Decimal(0) // Miễn phí vận chuyển
 
-                    let orderDiscount = new Prisma.Decimal(0)
-                    if (appliedVoucher) {
-                        if (!appliedVoucher.sellerId || appliedVoucher.sellerId === shopId) {
-                            orderDiscount = remainingDiscount.greaterThan(subtotal) ? subtotal : remainingDiscount
-                            remainingDiscount = remainingDiscount.sub(orderDiscount)
-                        }
+                    // Giảm phí vận chuyển cho shop này (tối đa 30.000₫)
+                    const shopShippingDiscount = remainingShippingDiscount.greaterThan(standardShippingPerShop)
+                        ? standardShippingPerShop
+                        : remainingShippingDiscount
+                    remainingShippingDiscount = remainingShippingDiscount.sub(shopShippingDiscount)
+                    const netShippingFee = standardShippingPerShop.sub(shopShippingDiscount)
+
+                    // Giảm giá từ shop voucher
+                    const shopVoucherEntry = shopDiscountMap.get(shopId)
+                    const shopDiscount = shopVoucherEntry ? shopVoucherEntry.amount : new Prisma.Decimal(0)
+
+                    // Giảm giá từ sàn TimmyHub (phân bổ phần còn lại của shop)
+                    const availableForPlatform = subtotal.sub(shopDiscount)
+                    let shopPlatformDiscount = new Prisma.Decimal(0)
+                    if (availableForPlatform.greaterThan(0)) {
+                        shopPlatformDiscount = remainingPlatformDiscount.greaterThan(availableForPlatform)
+                            ? availableForPlatform
+                            : remainingPlatformDiscount
+                        remainingPlatformDiscount = remainingPlatformDiscount.sub(shopPlatformDiscount)
                     }
 
-                    const rawTotal = subtotal.add(shippingFee).sub(orderDiscount)
+                    const orderVoucherDiscount = shopShippingDiscount.add(shopDiscount).add(shopPlatformDiscount)
+                    const rawTotal = subtotal.add(netShippingFee).sub(shopDiscount).sub(shopPlatformDiscount)
                     const totalAmount = rawTotal.greaterThan(0) ? rawTotal : new Prisma.Decimal(0)
                     const orderKey = `${baseIdempotency}-${shopIndex}`
 
@@ -467,6 +554,9 @@ export class OrderService {
                         .filter(Boolean)
                         .join(', ')
 
+                    const primaryVoucherId =
+                        platformVoucher?.id || shopVoucherEntry?.voucher.id || freeshipVoucher?.id || null
+
                     const order = await tx.order.create({
                         data: {
                             buyerId: userId,
@@ -474,9 +564,9 @@ export class OrderService {
                             status: 'PENDING',
                             totalAmount,
                             currency: 'VND',
-                            voucherId: orderDiscount.greaterThan(0) && appliedVoucher ? appliedVoucher.id : null,
-                            voucherDiscount: orderDiscount.greaterThan(0) ? orderDiscount : null,
-                            shippingFee,
+                            voucherId: orderVoucherDiscount.greaterThan(0) ? primaryVoucherId : null,
+                            voucherDiscount: orderVoucherDiscount.greaterThan(0) ? orderVoucherDiscount : null,
+                            shippingFee: netShippingFee,
                             paymentStatus: 'PENDING',
                             paymentMethod: input.paymentMethod,
                             address: {
@@ -515,13 +605,34 @@ export class OrderService {
                         },
                     })
 
-                    if (orderDiscount.greaterThan(0) && appliedVoucher) {
+                    // Ghi nhận VoucherUsageLog cho từng voucher đóng góp vào đơn hàng này
+                    if (freeshipVoucher && shopShippingDiscount.greaterThan(0)) {
                         await tx.voucherUsageLog.create({
                             data: {
-                                voucherId: appliedVoucher.id,
+                                voucherId: freeshipVoucher.id,
                                 userId,
                                 orderId: order.id,
-                                discount: orderDiscount,
+                                discount: shopShippingDiscount,
+                            },
+                        })
+                    }
+                    if (shopVoucherEntry && shopDiscount.greaterThan(0)) {
+                        await tx.voucherUsageLog.create({
+                            data: {
+                                voucherId: shopVoucherEntry.voucher.id,
+                                userId,
+                                orderId: order.id,
+                                discount: shopDiscount,
+                            },
+                        })
+                    }
+                    if (platformVoucher && shopPlatformDiscount.greaterThan(0)) {
+                        await tx.voucherUsageLog.create({
+                            data: {
+                                voucherId: platformVoucher.id,
+                                userId,
+                                orderId: order.id,
+                                discount: shopPlatformDiscount,
                             },
                         })
                     }
@@ -552,11 +663,18 @@ export class OrderService {
                     })
                 }
 
-                if (appliedVoucher && totalVoucherDiscount.greaterThan(0)) {
+                // Cập nhật lượt dùng & đánh dấu trạng thái USED trong ví voucher của khách
+                for (const v of appliedVouchers) {
                     await tx.voucher.update({
-                        where: { id: appliedVoucher.id },
+                        where: { id: v.id },
                         data: {
                             usedCount: { increment: 1 },
+                        },
+                    })
+                    await tx.userVoucher.updateMany({
+                        where: { userId, voucherId: v.id },
+                        data: {
+                            status: 'USED',
                         },
                     })
                 }
@@ -592,7 +710,7 @@ export class OrderService {
         }
 
         return {
-            orders: createdOrders.map((o) => this.formatOrder(o)),
+            orders: await this.attachVoucherDetailsToOrders(createdOrders),
             totalAmount,
             paymentMethod: input.paymentMethod,
             paymentUrl,
@@ -610,7 +728,7 @@ export class OrderService {
                   })
                 : []
         const shopMap = new Map(sellers.map((s) => [s.id, s.shopName]))
-        return orders.map((o) => this.formatOrder({ ...o, shopName: shopMap.get(o.sellerId) }))
+        return this.attachVoucherDetailsToOrders(orders.map((o) => ({ ...o, shopName: shopMap.get(o.sellerId) })))
     }
 
     async getOrderById(userId: string, orderId: string): Promise<OrderDetail> {
@@ -638,7 +756,8 @@ export class OrderService {
         const seller = await this.prisma.sellerProfile.findUnique({
             where: { id: order.sellerId },
         })
-        return this.formatOrder({ ...order, shopName: seller?.shopName })
+        const [formatted] = await this.attachVoucherDetailsToOrders([{ ...order, shopName: seller?.shopName }])
+        return formatted!
     }
 
     async cancelOrder(userId: string, orderId: string, reason?: string): Promise<OrderDetail> {
@@ -712,7 +831,8 @@ export class OrderService {
             where: { id: updatedOrder.sellerId },
         })
 
-        return this.formatOrder({ ...updatedOrder, shopName: seller?.shopName })
+        const [formatted] = await this.attachVoucherDetailsToOrders([{ ...updatedOrder, shopName: seller?.shopName }])
+        return formatted!
     }
 
     async getSellerOrders(userId: string, status?: string): Promise<OrderDetail[]> {
@@ -738,7 +858,9 @@ export class OrderService {
                           })
                         : []
                 const shopMap = new Map(sellers.map((s) => [s.id, s.shopName]))
-                return orders.map((o) => this.formatOrder({ ...o, shopName: shopMap.get(o.sellerId) }))
+                return this.attachVoucherDetailsToOrders(
+                    orders.map((o) => ({ ...o, shopName: shopMap.get(o.sellerId) })),
+                )
             }
 
             const isSeller = user?.roles?.some((r) => r === 'SELLER')
@@ -751,7 +873,7 @@ export class OrderService {
 
         const orderStatus = status && status in ORDER_STATUS ? (status as OrderStatus) : undefined
         const orders = await this.orderRepo.findOrdersBySellerId(seller.id, orderStatus)
-        return orders.map((o) => this.formatOrder({ ...o, shopName: seller.shopName }))
+        return this.attachVoucherDetailsToOrders(orders.map((o) => ({ ...o, shopName: seller.shopName })))
     }
 
     async updateSellerOrderStatus(
@@ -856,7 +978,8 @@ export class OrderService {
                   where: { id: updatedOrder.sellerId },
               })
 
-        return this.formatOrder({ ...updatedOrder, shopName: shop?.shopName })
+        const [formatted] = await this.attachVoucherDetailsToOrders([{ ...updatedOrder, shopName: shop?.shopName }])
+        return formatted!
     }
 
     // ===== Helpers =====
@@ -882,7 +1005,44 @@ export class OrderService {
         }
     }
 
-    private formatOrder(o: OrderWithRelations & { shopName?: string | undefined }): OrderDetail {
+    private async attachVoucherDetailsToOrders(
+        orders: Array<OrderWithRelations & { shopName?: string | undefined }>,
+    ): Promise<OrderDetail[]> {
+        if (orders.length === 0) return []
+        const orderIds = orders.map((o) => o.id)
+        const usageLogs = await this.prisma.voucherUsageLog.findMany({
+            where: { orderId: { in: orderIds } },
+            include: { voucher: true },
+        })
+
+        const logsByOrderId = new Map<
+            string,
+            Array<{ id: string; code: string; type: string; discount: string; description: string | null }>
+        >()
+        for (const log of usageLogs) {
+            const list = logsByOrderId.get(log.orderId) || []
+            list.push({
+                id: log.voucher.id,
+                code: log.voucher.code,
+                type: log.voucher.type,
+                discount: log.discount.toString(),
+                description: log.voucher.description,
+            })
+            logsByOrderId.set(log.orderId, list)
+        }
+
+        return orders.map((o) => {
+            const orderVouchers = logsByOrderId.get(o.id) || []
+            const voucherCode = orderVouchers.map((v) => v.code).join(', ') || null
+            return this.formatOrder(o, orderVouchers, voucherCode)
+        })
+    }
+
+    private formatOrder(
+        o: OrderWithRelations & { shopName?: string | undefined },
+        orderVouchers?: OrderVoucherDetail[],
+        voucherCode?: string | null,
+    ): OrderDetail {
         return {
             id: o.id,
             buyerId: o.buyerId,
@@ -893,6 +1053,8 @@ export class OrderService {
             currency: o.currency || 'VND',
             voucherId: o.voucherId ?? null,
             voucherDiscount: o.voucherDiscount != null ? o.voucherDiscount.toString() : null,
+            voucherCode: voucherCode ?? null,
+            vouchers: orderVouchers && orderVouchers.length > 0 ? orderVouchers : undefined,
             shippingFee: o.shippingFee != null ? o.shippingFee.toString() : '0',
             paymentStatus: o.paymentStatus || 'PENDING',
             paymentMethod: o.paymentMethod,

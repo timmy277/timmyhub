@@ -22,10 +22,12 @@ import {
     HistoryIcon,
     ShoppingBagIcon,
     RotateCcwIcon,
+    TicketIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { OrderDetail } from '@timmyhub/contracts'
 import {
+    Badge,
     Button,
     Card,
     CardContent,
@@ -456,12 +458,61 @@ export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false }: 
                                     </span>
                                 </div>
 
-                                {order.voucherDiscount && Number(order.voucherDiscount) > 0 && (
-                                    <div className="flex justify-between text-emerald-600">
-                                        <span>Giảm giá voucher:</span>
-                                        <span>-{formatCurrencyVND(order.voucherDiscount)}</span>
+                                {order.vouchers && order.vouchers.length > 0 ? (
+                                    <div className="space-y-2 py-1 border-t border-border/40">
+                                        <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                                            <span className="flex items-center gap-1.5">
+                                                <TicketIcon className="size-3.5 text-primary" />
+                                                Voucher đã sử dụng ({order.vouchers.length}):
+                                            </span>
+                                            {Number(order.voucherDiscount) > 0 && (
+                                                <span className="text-emerald-600 font-bold">
+                                                    -{formatCurrencyVND(order.voucherDiscount)}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            {order.vouchers.map((vc) => (
+                                                <div
+                                                    key={vc.id || vc.code}
+                                                    className="flex items-center justify-between text-xs p-2 rounded-lg bg-muted/40 border border-border/50"
+                                                >
+                                                    <div className="flex items-center gap-1.5 min-w-0">
+                                                        <Badge
+                                                            variant="secondary"
+                                                            className={`text-[10px] font-mono font-bold py-0 px-1.5 ${
+                                                                vc.type === 'FREE_SHIPPING'
+                                                                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                                                                    : 'bg-purple-500/15 text-purple-700 dark:text-purple-400'
+                                                            }`}
+                                                        >
+                                                            {vc.code}
+                                                        </Badge>
+                                                        <span className="text-muted-foreground text-[11px] truncate">
+                                                            {vc.description ||
+                                                                (vc.type === 'FREE_SHIPPING'
+                                                                    ? 'Miễn phí vận chuyển'
+                                                                    : 'Mã giảm giá')}
+                                                        </span>
+                                                    </div>
+                                                    <span className="font-semibold text-emerald-600 shrink-0 ml-2">
+                                                        -{formatCurrencyVND(vc.discount)}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                )}
+                                ) : Number(order.voucherDiscount) > 0 || order.voucherCode ? (
+                                    <div className="flex justify-between items-center text-emerald-600 text-xs">
+                                        <span className="flex items-center gap-1">
+                                            <TicketIcon className="size-3.5" />
+                                            Voucher ({order.voucherCode || 'Áp dụng'}):
+                                        </span>
+                                        <span className="font-semibold">
+                                            -{formatCurrencyVND(order.voucherDiscount || 0)}
+                                        </span>
+                                    </div>
+                                ) : null}
 
                                 <div className="pt-2 border-t border-border/60 flex justify-between items-baseline">
                                     <span className="font-semibold text-foreground">Tổng thanh toán:</span>

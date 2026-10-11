@@ -47,13 +47,19 @@ import {
 
 import { listAdminCampaignsAction } from '@/features/campaigns'
 
-import { createVoucherAction, updateVoucherAction } from '../actions'
+import {
+    createSellerVoucherAction,
+    createVoucherAction,
+    updateSellerVoucherAction,
+    updateVoucherAction,
+} from '../actions'
 import { buildVoucherTabsHref } from '../voucher-tab-query'
 
 interface VoucherFormPanelProps {
     initialData?: VoucherDetail | VoucherItem | null
     campaignOptions?: { value: string; label: string }[]
     onSuccess?: (saved: VoucherItem) => void
+    isSeller?: boolean
 }
 
 interface VoucherFormValues {
@@ -85,7 +91,7 @@ function safeParseDate(val?: unknown): Date | null {
     return isNaN(parsed.getTime()) ? null : parsed
 }
 
-export function VoucherFormPanel({ initialData, campaignOptions, onSuccess }: VoucherFormPanelProps) {
+export function VoucherFormPanel({ initialData, campaignOptions, onSuccess, isSeller = false }: VoucherFormPanelProps) {
     const t = useTranslations('vouchers')
     const tApi = useTranslations('api')
     const router = useRouter()
@@ -123,7 +129,7 @@ export function VoucherFormPanel({ initialData, campaignOptions, onSuccess }: Vo
     const [dynamicCampaigns, setDynamicCampaigns] = useState<{ value: string; label: string }[]>([])
 
     useEffect(() => {
-        if (campaignOptions && campaignOptions.length > 0) return
+        if (isSeller || (campaignOptions && campaignOptions.length > 0)) return
         let isMounted = true
         void listAdminCampaignsAction({ page: 1, pageSize: 100 }).then((res) => {
             if (isMounted && res.ok) {
@@ -133,7 +139,7 @@ export function VoucherFormPanel({ initialData, campaignOptions, onSuccess }: Vo
         return () => {
             isMounted = false
         }
-    }, [campaignOptions])
+    }, [campaignOptions, isSeller])
 
     const campaignList = campaignOptions && campaignOptions.length > 0 ? campaignOptions : dynamicCampaigns
 
@@ -196,10 +202,12 @@ export function VoucherFormPanel({ initialData, campaignOptions, onSuccess }: Vo
                     startDate: startDateObj.toISOString(),
                     endDate: endDateObj.toISOString(),
                     description: values.description.trim() || null,
-                    campaignId: values.campaignId?.trim() || null,
+                    campaignId: isSeller ? null : values.campaignId?.trim() || null,
                     isActive: values.isActive,
                 }
-                const res = await updateVoucherAction(initialData.id, updatePayload)
+                const res = isSeller
+                    ? await updateSellerVoucherAction(initialData.id, updatePayload)
+                    : await updateVoucherAction(initialData.id, updatePayload)
                 if (!res.ok) {
                     toast.error(res.message || t('updateFailed'))
                     return
@@ -219,13 +227,15 @@ export function VoucherFormPanel({ initialData, campaignOptions, onSuccess }: Vo
                     startDate: startDateObj.toISOString(),
                     endDate: endDateObj.toISOString(),
                     description: values.description.trim() || null,
-                    campaignId: values.campaignId?.trim() || null,
+                    campaignId: isSeller ? null : values.campaignId?.trim() || null,
                     isActive: values.isActive,
                     categoryIds: [],
                     productIds: [],
                     paymentMethods: [],
                 }
-                const res = await createVoucherAction(createPayload)
+                const res = isSeller
+                    ? await createSellerVoucherAction(createPayload)
+                    : await createVoucherAction(createPayload)
                 if (!res.ok) {
                     toast.error(res.message || t('createFailed'))
                     return
@@ -316,30 +326,32 @@ export function VoucherFormPanel({ initialData, campaignOptions, onSuccess }: Vo
                                 )}
                             />
 
-                            <div className="sm:col-span-2">
-                                <Controller
-                                    control={control}
-                                    name="campaignId"
-                                    render={({ field }) => (
-                                        <FloatSelect
-                                            label={t('formCampaignLabel')}
-                                            value={field.value ?? '__none__'}
-                                            onValueChange={(val) => field.onChange(val === '__none__' ? null : val)}
-                                            error={toFieldErrorMessage(errors.campaignId?.message, tApi)}
-                                            helperText={t('formCampaignHelp')}
-                                            disabled={isSubmitting}
-                                            labelClassName={ON_CARD_LABEL_CLASS}
-                                        >
-                                            <SelectItem value="__none__">{t('campaignNone')}</SelectItem>
-                                            {campaignList.map((c) => (
-                                                <SelectItem key={c.value} value={c.value}>
-                                                    {c.label}
-                                                </SelectItem>
-                                            ))}
-                                        </FloatSelect>
-                                    )}
-                                />
-                            </div>
+                            {!isSeller && (
+                                <div className="sm:col-span-2">
+                                    <Controller
+                                        control={control}
+                                        name="campaignId"
+                                        render={({ field }) => (
+                                            <FloatSelect
+                                                label={t('formCampaignLabel')}
+                                                value={field.value ?? '__none__'}
+                                                onValueChange={(val) => field.onChange(val === '__none__' ? null : val)}
+                                                error={toFieldErrorMessage(errors.campaignId?.message, tApi)}
+                                                helperText={t('formCampaignHelp')}
+                                                disabled={isSubmitting}
+                                                labelClassName={ON_CARD_LABEL_CLASS}
+                                            >
+                                                <SelectItem value="__none__">{t('campaignNone')}</SelectItem>
+                                                {campaignList.map((c) => (
+                                                    <SelectItem key={c.value} value={c.value}>
+                                                        {c.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </FloatSelect>
+                                        )}
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         <FloatTextarea

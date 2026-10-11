@@ -4,10 +4,11 @@ import { PrismaModule } from '@timmyhub/prisma'
 import { PromotionPublicController } from './promotion-public.controller'
 import { PromotionController } from './promotion.controller'
 import { PromotionService } from './promotion.service'
+import { SellerVoucherController } from './seller-voucher.controller'
 
 @Module({
     imports: [PrismaModule],
-    controllers: [PromotionController, PromotionPublicController],
+    controllers: [PromotionController, PromotionPublicController, SellerVoucherController],
     providers: [PromotionService],
     exports: [PromotionService],
 })

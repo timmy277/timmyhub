@@ -3,7 +3,15 @@
 import { useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
-import { BadgeCheckIcon, LayoutGridIcon, LogOutIcon, PackageIcon, ShoppingBagIcon, StoreIcon } from 'lucide-react'
+import {
+    BadgeCheckIcon,
+    LayoutGridIcon,
+    LogOutIcon,
+    PackageIcon,
+    ShoppingBagIcon,
+    StoreIcon,
+    TicketIcon,
+} from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -171,6 +179,12 @@ export function UserMenu() {
                             <DropdownMenuItem onSelect={() => handleOpenAccount('orders')}>
                                 <PackageIcon aria-hidden />
                                 {isSeller ? t('buyerOrders') : t('myOrders')}
+                            </DropdownMenuItem>
+                        )}
+                        {!canAccessDashboard && (
+                            <DropdownMenuItem onSelect={() => handleOpenAccount('vouchers')}>
+                                <TicketIcon aria-hidden />
+                                {t('myVouchers') || 'Kho Voucher'}
                             </DropdownMenuItem>
                         )}
                         <DropdownMenuItem onSelect={() => handleOpenAccount('profile')}>

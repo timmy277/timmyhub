@@ -2,7 +2,16 @@
 
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { BellIcon, CalendarIcon, LockIcon, MapPinIcon, PackageIcon, ShieldCheckIcon, UserIcon } from 'lucide-react'
+import {
+    BellIcon,
+    CalendarIcon,
+    LockIcon,
+    MapPinIcon,
+    PackageIcon,
+    ShieldCheckIcon,
+    TicketIcon,
+    UserIcon,
+} from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -19,10 +28,18 @@ import { NotificationsTab } from './notifications-tab'
 import { OrdersTab } from './orders-tab'
 import { ProfileTab } from './profile-tab'
 import { SecurityTab } from './security-tab'
+import { VouchersTab } from './vouchers-tab'
 
-export type AccountTabKey = 'profile' | 'orders' | 'security' | 'addresses' | 'notifications'
+export type AccountTabKey = 'profile' | 'orders' | 'vouchers' | 'security' | 'addresses' | 'notifications'
 
-const VALID_TABS: readonly AccountTabKey[] = ['profile', 'orders', 'security', 'addresses', 'notifications'] as const
+const VALID_TABS: readonly AccountTabKey[] = [
+    'profile',
+    'orders',
+    'vouchers',
+    'security',
+    'addresses',
+    'notifications',
+] as const
 
 function isValidAccountTab(tab: string | null): tab is AccountTabKey {
     return Boolean(tab && (VALID_TABS as readonly string[]).includes(tab))
@@ -30,11 +47,13 @@ function isValidAccountTab(tab: string | null): tab is AccountTabKey {
 
 const NAV_ITEMS: {
     key: AccountTabKey
-    labelKey: 'tabs.profile' | 'tabs.orders' | 'tabs.security' | 'tabs.addresses' | 'tabs.notifications'
+    labelKey:
+        'tabs.profile' | 'tabs.orders' | 'tabs.vouchers' | 'tabs.security' | 'tabs.addresses' | 'tabs.notifications'
     icon: React.ComponentType<{ className?: string }>
 }[] = [
     { key: 'profile', labelKey: 'tabs.profile', icon: UserIcon },
     { key: 'orders', labelKey: 'tabs.orders', icon: PackageIcon },
+    { key: 'vouchers', labelKey: 'tabs.vouchers', icon: TicketIcon },
     { key: 'security', labelKey: 'tabs.security', icon: ShieldCheckIcon },
     { key: 'addresses', labelKey: 'tabs.addresses', icon: MapPinIcon },
     { key: 'notifications', labelKey: 'tabs.notifications', icon: BellIcon },
@@ -73,14 +92,17 @@ export function AccountDialog({ open, onOpenChange, defaultTab = 'profile' }: Ac
 
     const navItems = useMemo(() => {
         if (isAdmin) {
-            return NAV_ITEMS.filter((item) => item.key !== 'orders' && item.key !== 'addresses')
+            return NAV_ITEMS.filter(
+                (item) => item.key !== 'orders' && item.key !== 'addresses' && item.key !== 'vouchers',
+            )
         }
         return NAV_ITEMS
     }, [isAdmin])
 
     const queryTab = searchParams.get('tab')
     const rawTab: AccountTabKey = isValidAccountTab(queryTab) ? queryTab : defaultTab
-    const activeTab: AccountTabKey = isAdmin && (rawTab === 'orders' || rawTab === 'addresses') ? 'profile' : rawTab
+    const activeTab: AccountTabKey =
+        isAdmin && (rawTab === 'orders' || rawTab === 'addresses' || rawTab === 'vouchers') ? 'profile' : rawTab
 
     const handleTabChange = (key: AccountTabKey) => {
         const params = new URLSearchParams(searchParams.toString())
@@ -193,6 +215,7 @@ export function AccountDialog({ open, onOpenChange, defaultTab = 'profile' }: Ac
                             {!isAdmin && activeTab === 'orders' && (
                                 <OrdersTab onCloseDialog={() => onOpenChange(false)} />
                             )}
+                            {!isAdmin && activeTab === 'vouchers' && <VouchersTab />}
                             {activeTab === 'security' && <SecurityTab user={user} />}
                             {!isAdmin && activeTab === 'addresses' && <AddressesTab />}
                             {activeTab === 'notifications' && <NotificationsTab />}

@@ -12,6 +12,7 @@ export const ROUTE = {
     SELLER_REGISTER: '/seller/register',
     SELLER_PORTAL: '/seller/portal',
     SELLER_ORDERS: '/seller/orders',
+    SELLER_VOUCHERS: '/seller/vouchers',
     SELLER_SETTINGS: '/seller/settings',
     ADMIN_SELLER_APPLICATIONS: '/seller-applications',
     PRODUCT_DETAIL: (idOrSlug: string) => `/products/${idOrSlug}`,
@@ -26,4 +27,6 @@ export const ROUTE = {
     PAYMENT_RESULT: '/payment/result',
     ORDERS: '/orders',
     ORDER_DETAIL: (id: string) => `/orders/${encodeURIComponent(id)}`,
+    MY_VOUCHERS: '/account?tab=vouchers',
+    ACCOUNT_VOUCHERS: '/account?tab=vouchers',
 } as const

@@ -128,6 +128,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
                 excludePermission: DASHBOARD_PERMISSION,
             },
             {
+                titleKey: 'sellerVouchers',
+                url: ROUTE.SELLER_VOUCHERS,
+                icon: TicketIcon,
+                requirePermission: SELLER_SHOP_PERMISSION,
+                excludePermission: DASHBOARD_PERMISSION,
+            },
+            {
                 titleKey: 'sellerSettings',
                 url: ROUTE.SELLER_SETTINGS,
                 icon: SettingsIcon,
@@ -179,6 +186,10 @@ export const BREADCRUMB_ROUTES: Readonly<Record<string, readonly BreadcrumbEntry
     [ROUTE.SELLER_ORDERS]: [
         { titleKey: 'sellerOverview', url: ROUTE.SELLER_PORTAL },
         { titleKey: 'sellerOrders', url: ROUTE.SELLER_ORDERS },
+    ],
+    [ROUTE.SELLER_VOUCHERS]: [
+        { titleKey: 'sellerOverview', url: ROUTE.SELLER_PORTAL },
+        { titleKey: 'sellerVouchers', url: ROUTE.SELLER_VOUCHERS },
     ],
     [ROUTE.SELLER_SETTINGS]: [
         { titleKey: 'sellerOverview', url: ROUTE.SELLER_PORTAL },

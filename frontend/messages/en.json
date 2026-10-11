@@ -204,12 +204,14 @@
     "sellerPortal": "Seller Channel",
     "sellerOverview": "Overview",
     "sellerOrders": "Orders",
+    "sellerVouchers": "Shop Vouchers",
     "sellerSettings": "Store Settings",
     "becomeSeller": "Become a Seller",
     "adminSection": "System Administration",
     "sellerSection": "Seller Channel",
     "vouchers": "Vouchers",
-    "campaigns": "Promotion Campaigns"
+    "campaigns": "Promotion Campaigns",
+    "myVouchers": "My Vouchers"
   },
   "theme": {
     "triggerLabel": "Open theme customizer",
@@ -455,7 +457,8 @@
       "orders": "My Orders",
       "security": "Security & Password",
       "addresses": "Address Book",
-      "notifications": "Notification Settings"
+      "notifications": "Notification Settings",
+      "vouchers": "Vouchers"
     },
     "memberSince": "Member since {date}",
     "errorLoadTitle": "Unable to load account information",
@@ -1412,7 +1415,19 @@
     "voucherMinOrder": "Min order {min}",
     "voucherExpiry": "Exp: {date}",
     "voucherConditionNotMet": "Conditions not met",
-    "noVouchersAvailable": "No vouchers currently available"
+    "noVouchersAvailable": "No vouchers currently available",
+    "voucherEligibleTitle": "Eligible vouchers",
+    "voucherIneligibleTitle": "Ineligible vouchers",
+    "voucherIneligibleSection": "Ineligible for use",
+    "voucherSelectBtn": "Confirm",
+    "voucherBackBtn": "Back",
+    "voucherDeselect": "Deselect",
+    "voucherSelectedLabel": "Selected:",
+    "voucherNotSelected": "No voucher selected",
+    "voucherTabAll": "All",
+    "voucherTabShipping": "Free Shipping",
+    "voucherTabDiscount": "Discounts",
+    "voucherTabWallet": "In Wallet"
   },
   "sellerOrders": {
     "tabList": "Order List",
@@ -1634,7 +1649,23 @@
     "previewDiscountAmount": "SAVE {amount}",
     "previewFreeShipping": "FREE SHIPPING",
     "minOrderValueLabel": "Minimum order value",
-    "discountDirectCash": "Direct cash discount"
+    "discountDirectCash": "Direct cash discount",
+    "myVouchersTitle": "My Voucher Wallet",
+    "myVouchersSubtitle": "Manage and apply saved discounts and free shipping vouchers from TimmyHub and Shops.",
+    "voucherCountAvailable": "available",
+    "inputCodePlaceholder": "Enter voucher code...",
+    "saveVoucher": "Save to wallet",
+    "tabAvailable": "Available",
+    "tabAll": "All",
+    "tabUsed": "Used",
+    "tabExpired": "Expired",
+    "searchVoucherPlaceholder": "Search code...",
+    "filterType": "Voucher type:",
+    "emptyVoucherTitle": "No vouchers in this section",
+    "emptyVoucherDesc": "Claim more Free Shipping and hot discount codes on the Homepage to save on your orders.",
+    "browseVouchers": "Explore vouchers on Homepage",
+    "expiringSoon": "Expiring soon",
+    "useNow": "Use now"
   },
   "campaigns": {
     "metaTitle": "Promotion Campaigns · TimmyHub",

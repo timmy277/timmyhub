@@ -13,10 +13,11 @@ import {
     EyeIcon,
     RotateCcwIcon,
     Loader2Icon,
+    TicketIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { OrderDetail } from '@timmyhub/contracts'
-import { Button, Card, CardContent, CardFooter, CardHeader } from '@/components'
+import { Badge, Button, Card, CardContent, CardFooter, CardHeader } from '@/components'
 import { QUERY_KEY, ROUTE } from '@/constants'
 import { addToCartAction } from '@/features/cart'
 import { formatCurrencyVND } from '@/utils'
@@ -151,11 +152,35 @@ export function OrderCard({ order, onCancelClick, onViewDetail }: OrderCardProps
                 </div>
 
                 <div className="flex flex-wrap items-center justify-end gap-3 w-full sm:w-auto">
-                    <div className="flex items-baseline gap-1.5 mr-1">
-                        <span className="text-xs text-muted-foreground">Thành tiền:</span>
-                        <span className="text-base sm:text-lg font-bold text-primary">
-                            {formatCurrencyVND(order.totalAmount)}
-                        </span>
+                    <div className="flex flex-col items-end mr-1">
+                        {order.vouchers && order.vouchers.length > 0 ? (
+                            <div className="flex items-center gap-1 flex-wrap justify-end mb-0.5">
+                                {order.vouchers.map((vc) => (
+                                    <Badge
+                                        key={vc.id || vc.code}
+                                        variant="secondary"
+                                        className="text-[10px] font-mono py-0 px-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20"
+                                    >
+                                        <TicketIcon className="size-2.5 mr-0.5 inline" />
+                                        {vc.code} (-{formatCurrencyVND(vc.discount)})
+                                    </Badge>
+                                ))}
+                            </div>
+                        ) : Number(order.voucherDiscount) > 0 ? (
+                            <Badge
+                                variant="secondary"
+                                className="text-[10px] font-mono py-0 px-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 mb-0.5"
+                            >
+                                <TicketIcon className="size-2.5 mr-0.5 inline" />
+                                {order.voucherCode || 'Voucher'} (-{formatCurrencyVND(order.voucherDiscount)})
+                            </Badge>
+                        ) : null}
+                        <div className="flex items-baseline gap-1.5">
+                            <span className="text-xs text-muted-foreground">Thành tiền:</span>
+                            <span className="text-base sm:text-lg font-bold text-primary">
+                                {formatCurrencyVND(order.totalAmount)}
+                            </span>
+                        </div>
                     </div>
 
                     {canCancel && onCancelClick && (

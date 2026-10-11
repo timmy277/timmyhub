@@ -204,12 +204,14 @@
     "sellerPortal": "Kênh Người Bán",
     "sellerOverview": "Tổng quan",
     "sellerOrders": "Đơn hàng",
+    "sellerVouchers": "Mã giảm giá",
     "sellerSettings": "Cài đặt gian hàng",
     "becomeSeller": "Trở thành Người Bán",
     "adminSection": "Quản trị hệ thống",
     "sellerSection": "Kênh Người Bán",
     "vouchers": "Mã giảm giá",
-    "campaigns": "Chiến dịch khuyến mãi"
+    "campaigns": "Chiến dịch khuyến mãi",
+    "myVouchers": "Kho Voucher"
   },
   "theme": {
     "triggerLabel": "Mở tuỳ chỉnh giao diện",
@@ -455,7 +457,8 @@
       "orders": "Đơn hàng của tôi",
       "security": "Bảo mật & Mật khẩu",
       "addresses": "Sổ địa chỉ",
-      "notifications": "Cài đặt thông báo"
+      "notifications": "Cài đặt thông báo",
+      "vouchers": "Kho Voucher"
     },
     "memberSince": "Thành viên từ {date}",
     "errorLoadTitle": "Không thể tải thông tin tài khoản",
@@ -1412,7 +1415,19 @@
     "voucherMinOrder": "Đơn tối thiểu {min}",
     "voucherExpiry": "HSD: {date}",
     "voucherConditionNotMet": "Chưa đủ điều kiện",
-    "noVouchersAvailable": "Hiện không có voucher nào phù hợp"
+    "noVouchersAvailable": "Hiện không có voucher nào phù hợp",
+    "voucherEligibleTitle": "Mã có thể áp dụng",
+    "voucherIneligibleTitle": "Mã chưa đủ điều kiện",
+    "voucherIneligibleSection": "Chưa đủ điều kiện sử dụng",
+    "voucherSelectBtn": "Đồng ý",
+    "voucherBackBtn": "Trở lại",
+    "voucherDeselect": "Bỏ chọn",
+    "voucherSelectedLabel": "Đã chọn:",
+    "voucherNotSelected": "Chưa chọn voucher",
+    "voucherTabAll": "Tất cả",
+    "voucherTabShipping": "Freeship",
+    "voucherTabDiscount": "Giảm giá",
+    "voucherTabWallet": "Ví voucher"
   },
   "sellerOrders": {
     "tabList": "Danh sách đơn hàng",
@@ -1634,7 +1649,23 @@
     "previewDiscountAmount": "GIẢM {amount}",
     "previewFreeShipping": "MIỄN PHÍ VẬN CHUYỂN",
     "minOrderValueLabel": "Đơn hàng tối thiểu",
-    "discountDirectCash": "Giảm thẳng tiền mặt"
+    "discountDirectCash": "Giảm thẳng tiền mặt",
+    "myVouchersTitle": "Kho Voucher của tôi",
+    "myVouchersSubtitle": "Quản lý và sử dụng các mã giảm giá, miễn phí vận chuyển đã lưu từ TimmyHub và Shop.",
+    "voucherCountAvailable": "khả dụng",
+    "inputCodePlaceholder": "Nhập mã voucher...",
+    "saveVoucher": "Lưu vào ví",
+    "tabAvailable": "Khả dụng",
+    "tabAll": "Tất cả",
+    "tabUsed": "Đã sử dụng",
+    "tabExpired": "Hết hiệu lực",
+    "searchVoucherPlaceholder": "Tìm mã...",
+    "filterType": "Loại mã:",
+    "emptyVoucherTitle": "Chưa có mã giảm giá nào ở mục này",
+    "emptyVoucherDesc": "Lưu thêm các mã Freeship và giảm giá hấp dẫn tại Trang chủ để tiết kiệm hơn khi mua sắm.",
+    "browseVouchers": "Săn voucher tại Trang chủ",
+    "expiringSoon": "Sắp hết hạn",
+    "useNow": "Dùng ngay"
   },
   "campaigns": {
     "metaTitle": "Quản lý chiến dịch khuyến mãi · TimmyHub",

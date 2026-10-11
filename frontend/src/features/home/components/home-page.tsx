@@ -43,7 +43,14 @@ import { toast } from 'sonner'
 import { IconPath } from '@/components/icons'
 import { Badge, Button } from '@/components/ui'
 import { ROUTE, SELLER_SHOP_ANY_PERMISSION, SELLER_SHOP_PERMISSION } from '@/constants'
-import { useMyShop, usePermissions, usePublicProducts } from '@/hooks'
+import {
+    useMyShop,
+    useMySavedVoucherIds,
+    usePermissions,
+    usePublicAvailableVouchers,
+    usePublicProducts,
+    useSaveUserVoucher,
+} from '@/hooks'
 import { formatCurrencyVND } from '@/utils'
 
 function formatNumber(num: number): string {
@@ -684,24 +691,84 @@ export function HomePage() {
         return () => clearInterval(interval)
     }, [])
 
-    // 3. Saved Vouchers State
-    const [savedVouchers, setSavedVouchers] = useState<Set<string>>(new Set(['v-01']))
+    // 3. Saved Vouchers State & Real Promotion Vouchers
+    const { data: realVouchers = [] } = usePublicAvailableVouchers()
+    const { data: mySavedVoucherIds = [] } = useMySavedVoucherIds()
+    const saveVoucherMutation = useSaveUserVoucher()
 
-    const handleSaveVoucher = useCallback((voucherId: string, code: string) => {
-        setSavedVouchers((prev) => {
-            const next = new Set(prev)
-            if (next.has(voucherId)) {
-                next.delete(voucherId)
-                toast.info(`Đã gỡ mã ${code}`)
-            } else {
-                next.add(voucherId)
-                toast.success(`Đã lưu mã ${code} vào ví voucher của bạn!`, {
-                    description: 'Áp dụng tự động tại bước thanh toán.',
-                })
-            }
-            return next
+    const savedVouchersSet = useMemo(() => new Set(mySavedVoucherIds), [mySavedVoucherIds])
+
+    const displayVouchers = useMemo(() => {
+        if (!realVouchers || realVouchers.length === 0) {
+            return INITIAL_VOUCHERS.map((v) => ({ ...v, isReal: false }))
+        }
+
+        // Ưu tiên hiển thị mã Free Shipping lên đầu, sau đó sắp xếp theo giá trị giảm
+        const sorted = [...realVouchers].sort((a, b) => {
+            if (a.type === 'FREE_SHIPPING' && b.type !== 'FREE_SHIPPING') return -1
+            if (b.type === 'FREE_SHIPPING' && a.type !== 'FREE_SHIPPING') return 1
+            return b.value - a.value
         })
-    }, [])
+
+        return sorted.slice(0, 6).map((v) => {
+            const now = new Date()
+            const end = new Date(v.endDate)
+            const diffDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+            const expiry =
+                diffDays > 1 ? `Còn ${diffDays} ngày` : diffDays === 1 ? 'Hết hạn ngày mai' : 'Hết hạn hôm nay'
+
+            let badge = 'Toàn sàn'
+            if (v.type === 'FREE_SHIPPING') badge = 'Freeship 0Đ'
+            else if (v.sellerId) badge = 'Voucher Shop'
+            else if (v.campaignName) badge = v.campaignName
+
+            let title = v.description || ''
+            if (!title) {
+                if (v.type === 'FREE_SHIPPING') {
+                    title = v.value
+                        ? `Freeship giảm đến ${formatCurrencyVND(v.value)}`
+                        : 'Miễn phí vận chuyển toàn quốc'
+                } else if (v.type === 'PERCENTAGE') {
+                    title = `Giảm ${v.value}%${v.maxDiscount ? ` tối đa ${formatCurrencyVND(v.maxDiscount)}` : ''}`
+                } else {
+                    title = `Giảm ngay ${formatCurrencyVND(v.value)}`
+                }
+            }
+
+            let valueDisplay = ''
+            if (v.type === 'FREE_SHIPPING') {
+                valueDisplay = 'FREE'
+            } else if (v.type === 'PERCENTAGE') {
+                valueDisplay = `${v.value}%`
+            } else {
+                valueDisplay = v.value >= 1000 ? `${v.value / 1000}K₫` : formatCurrencyVND(v.value)
+            }
+
+            return {
+                id: v.id,
+                title,
+                type: v.type,
+                value: valueDisplay,
+                minSpend: v.minOrderValue ? formatCurrencyVND(v.minOrderValue) : '0₫',
+                maxDiscount: v.maxDiscount ? formatCurrencyVND(v.maxDiscount) : undefined,
+                expiry,
+                code: v.code,
+                badge,
+                isReal: true,
+            }
+        })
+    }, [realVouchers])
+
+    const handleSaveVoucher = useCallback(
+        (voucherId: string, code: string, isReal?: boolean) => {
+            if (isReal) {
+                saveVoucherMutation.mutate({ voucherId, code })
+            } else {
+                toast.info(`Mã ${code} đã sẵn sàng áp dụng tại bước thanh toán.`)
+            }
+        },
+        [saveVoucherMutation],
+    )
 
     // 4. Products Tab & View Mode
     const [productTab, setProductTab] = useState<'all' | 'new' | 'best'>('all')
@@ -1067,8 +1134,10 @@ export function HomePage() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {INITIAL_VOUCHERS.map((v) => {
-                            const isSaved = savedVouchers.has(v.id)
+                        {displayVouchers.map((v) => {
+                            const isSaved = savedVouchersSet.has(v.id)
+                            const isPending =
+                                saveVoucherMutation.isPending && saveVoucherMutation.variables?.voucherId === v.id
                             return (
                                 <div
                                     key={v.id}
@@ -1110,7 +1179,8 @@ export function HomePage() {
                                         <Button
                                             size="sm"
                                             variant={isSaved ? 'outline' : 'default'}
-                                            onClick={() => handleSaveVoucher(v.id, v.code)}
+                                            disabled={isPending}
+                                            onClick={() => handleSaveVoucher(v.id, v.code, v.isReal)}
                                             className={`h-8 rounded-lg text-xs font-semibold px-3 ${
                                                 isSaved
                                                     ? 'border-emerald-600/40 text-emerald-700 dark:text-emerald-400 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40'
@@ -1122,6 +1192,8 @@ export function HomePage() {
                                                     <CheckIcon className="size-3.5 mr-1 text-emerald-700 dark:text-emerald-400" />
                                                     Đã lưu
                                                 </>
+                                            ) : isPending ? (
+                                                'Đang lưu...'
                                             ) : (
                                                 'Lưu mã'
                                             )}

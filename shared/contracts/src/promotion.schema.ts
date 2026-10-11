@@ -174,6 +174,15 @@ export interface VoucherDetail extends VoucherItem {
     totalDiscountAmount?: number | undefined
 }
 
+export interface UserVoucherItem {
+    id: string
+    userId: string
+    voucherId: string
+    savedAt: string
+    status: 'SAVED' | 'USED' | 'EXPIRED'
+    voucher: VoucherItem
+}
+
 // ===== Promotion Campaign Schemas =====
 
 export const CreatePromotionCampaignInputSchema = z

@@ -10,6 +10,7 @@ import {
     MapPinIcon,
     PackageIcon,
     ShieldCheckIcon,
+    TicketIcon,
     UserIcon,
 } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
@@ -30,10 +31,18 @@ import { NotificationsTab } from './notifications-tab'
 import { OrdersTab } from './orders-tab'
 import { ProfileTab } from './profile-tab'
 import { SecurityTab } from './security-tab'
+import { VouchersTab } from './vouchers-tab'
 
-type TabKey = 'profile' | 'orders' | 'security' | 'addresses' | 'notifications'
+type TabKey = 'profile' | 'orders' | 'vouchers' | 'security' | 'addresses' | 'notifications'
 
-const VALID_TABS: readonly TabKey[] = ['profile', 'orders', 'security', 'addresses', 'notifications'] as const
+const VALID_TABS: readonly TabKey[] = [
+    'profile',
+    'orders',
+    'vouchers',
+    'security',
+    'addresses',
+    'notifications',
+] as const
 
 function isValidAccountTab(tab: string | null): tab is TabKey {
     return Boolean(tab && (VALID_TABS as readonly string[]).includes(tab))
@@ -41,11 +50,13 @@ function isValidAccountTab(tab: string | null): tab is TabKey {
 
 const NAV_ITEMS: {
     key: TabKey
-    labelKey: 'tabs.profile' | 'tabs.orders' | 'tabs.security' | 'tabs.addresses' | 'tabs.notifications'
+    labelKey:
+        'tabs.profile' | 'tabs.orders' | 'tabs.vouchers' | 'tabs.security' | 'tabs.addresses' | 'tabs.notifications'
     icon: React.ComponentType<{ className?: string }>
 }[] = [
     { key: 'profile', labelKey: 'tabs.profile', icon: UserIcon },
     { key: 'orders', labelKey: 'tabs.orders', icon: PackageIcon },
+    { key: 'vouchers', labelKey: 'tabs.vouchers', icon: TicketIcon },
     { key: 'security', labelKey: 'tabs.security', icon: ShieldCheckIcon },
     { key: 'addresses', labelKey: 'tabs.addresses', icon: MapPinIcon },
     { key: 'notifications', labelKey: 'tabs.notifications', icon: BellIcon },
@@ -84,14 +95,17 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
 
     const navItems = useMemo(() => {
         if (isAdmin) {
-            return NAV_ITEMS.filter((item) => item.key !== 'orders' && item.key !== 'addresses')
+            return NAV_ITEMS.filter(
+                (item) => item.key !== 'orders' && item.key !== 'addresses' && item.key !== 'vouchers',
+            )
         }
         return NAV_ITEMS
     }, [isAdmin])
 
     const queryTab = searchParams.get('tab')
     const rawTab: TabKey = isValidAccountTab(queryTab) ? queryTab : 'profile'
-    const activeTab: TabKey = isAdmin && (rawTab === 'orders' || rawTab === 'addresses') ? 'profile' : rawTab
+    const activeTab: TabKey =
+        isAdmin && (rawTab === 'orders' || rawTab === 'addresses' || rawTab === 'vouchers') ? 'profile' : rawTab
 
     const handleTabChange = (key: TabKey) => {
         const params = new URLSearchParams(searchParams.toString())
@@ -263,6 +277,7 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
                 <div className="lg:col-span-3">
                     {activeTab === 'profile' && <ProfileTab user={user} onProfileUpdated={() => refetch()} />}
                     {!isAdmin && activeTab === 'orders' && <OrdersTab />}
+                    {!isAdmin && activeTab === 'vouchers' && <VouchersTab />}
                     {activeTab === 'security' && <SecurityTab user={user} />}
                     {!isAdmin && activeTab === 'addresses' && <AddressesTab />}
                     {activeTab === 'notifications' && <NotificationsTab />}

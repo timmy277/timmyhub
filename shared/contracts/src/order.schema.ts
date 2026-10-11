@@ -80,6 +80,7 @@ export const CheckoutInputSchema = z.object({
     directItem: CheckoutItemInputSchema.optional(),
     customerNote: z.string().trim().max(500).optional(),
     voucherCode: z.string().trim().optional(),
+    voucherCodes: z.array(z.string().trim()).optional(),
     idempotencyKey: z.string().trim().optional(),
 })
 export type CheckoutInput = z.infer<typeof CheckoutInputSchema>
@@ -130,6 +131,14 @@ export interface OrderStatusHistoryDetail {
     createdAt: string
 }
 
+export interface OrderVoucherDetail {
+    id: string
+    code: string
+    type: string
+    discount: string
+    description?: string | null
+}
+
 export interface OrderDetail {
     id: string
     buyerId: string
@@ -140,6 +149,8 @@ export interface OrderDetail {
     currency: string
     voucherId?: string | null
     voucherDiscount?: string | null
+    voucherCode?: string | null
+    vouchers?: OrderVoucherDetail[] | undefined
     shippingFee: string
     paymentStatus: string
     paymentMethod: PaymentMethodType

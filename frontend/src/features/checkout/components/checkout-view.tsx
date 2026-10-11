@@ -5,9 +5,11 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
+    AlertCircleIcon,
     ArrowLeftIcon,
     BanknoteIcon,
     CheckCircle2Icon,
+    CheckIcon,
     ChevronRightIcon,
     CreditCardIcon,
     HomeIcon,
@@ -25,7 +27,7 @@ import {
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
-import type { AddressDetail, CartDetail, CheckoutInput, ValidateVoucherResult } from '@timmyhub/contracts'
+import type { AddressDetail, CartDetail, CheckoutInput, UserVoucherItem, VoucherItem } from '@timmyhub/contracts'
 
 import { FloatInput } from '@/components'
 import {
@@ -49,6 +51,7 @@ import {
     useAvailableVouchers,
     useCart,
     useCheckout,
+    useMyUserVouchers,
     usePublicProductDetail,
     useValidateVoucher,
 } from '@/hooks'
@@ -232,39 +235,147 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
         }, 0)
     }, [checkoutItems])
 
-    const shippingFee = 0 // Miễn phí vận chuyển
+    // Phí vận chuyển tiêu chuẩn 30.000₫ cho mỗi shop trong đơn
+    const uniqueShopCount = checkoutItems.length || 1
+    const standardShippingFee = 30000 * uniqueShopCount
 
-    // 5. Trạng thái Voucher / Mã giảm giá
+    // 5. Trạng thái Voucher đa tầng (Shopee Voucher Model: Freeship + Giảm giá sàn/shop)
     const [voucherCodeInput, setVoucherCodeInput] = useState('')
-    const [appliedVoucher, setAppliedVoucher] = useState<ValidateVoucherResult['voucher'] | null>(null)
+    const [appliedShippingVoucher, setAppliedShippingVoucher] = useState<VoucherItem | null>(null)
+    const [appliedDiscountVoucher, setAppliedDiscountVoucher] = useState<VoucherItem | null>(null)
     const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false)
     const [voucherModalInput, setVoucherModalInput] = useState('')
+    const [voucherCategoryTab, setVoucherCategoryTab] = useState<'ALL' | 'SHIPPING' | 'DISCOUNT' | 'SAVED'>('ALL')
+    const [selectedModalShippingCode, setSelectedModalShippingCode] = useState<string | null>(null)
+    const [selectedModalDiscountCode, setSelectedModalDiscountCode] = useState<string | null>(null)
 
     const validateVoucherMutation = useValidateVoucher()
-    const { data: availableVouchers = [], isLoading: isLoadingVouchers } = useAvailableVouchers(subtotal)
+    const { data: availableVouchers = [], isLoading: isLoadingAvailableVouchers } = useAvailableVouchers(subtotal)
+    const { data: myUserVouchers = [], isLoading: isLoadingMyVouchers } = useMyUserVouchers('SAVED')
 
-    // Tính toán số tiền được giảm từ voucher
-    const voucherDiscount = useMemo(() => {
-        if (!appliedVoucher) return 0
-        if (appliedVoucher.minOrderValue && subtotal < appliedVoucher.minOrderValue) return 0
+    const isLoadingVouchers = isLoadingAvailableVouchers || isLoadingMyVouchers
+
+    // Map các mã voucher đã lưu trong ví của user
+    const savedVoucherMap = useMemo(() => {
+        const map = new Map<string, UserVoucherItem>()
+        for (const item of myUserVouchers) {
+            map.set(item.voucher.code, item)
+        }
+        return map
+    }, [myUserVouchers])
+
+    // Danh sách tổng hợp voucher (Vouchers có sẵn trên sàn + Vouchers trong ví)
+    const combinedVouchers = useMemo(() => {
+        const voucherMap = new Map<string, { voucher: VoucherItem; isSaved: boolean }>()
+
+        // 1. Thêm các voucher có sẵn từ sàn
+        for (const v of availableVouchers) {
+            voucherMap.set(v.code, {
+                voucher: v,
+                isSaved: savedVoucherMap.has(v.code),
+            })
+        }
+
+        // 2. Thêm các voucher trong ví nếu chưa có trong availableVouchers
+        for (const uv of myUserVouchers) {
+            if (!voucherMap.has(uv.voucher.code) && uv.voucher.isActive) {
+                voucherMap.set(uv.voucher.code, {
+                    voucher: uv.voucher,
+                    isSaved: true,
+                })
+            }
+        }
+
+        const list = Array.from(voucherMap.values())
+
+        return list.map(({ voucher: v, isSaved }) => {
+            const minOrder = Number(v.minOrderValue) || 0
+            const isEligible = subtotal >= minOrder
+            const remaining = minOrder > subtotal ? minOrder - subtotal : 0
+
+            let estimatedDiscount = 0
+            if (isEligible) {
+                if (v.type === 'PERCENTAGE') {
+                    estimatedDiscount = Math.floor((subtotal * v.value) / 100)
+                    if (v.maxDiscount && estimatedDiscount > v.maxDiscount) {
+                        estimatedDiscount = v.maxDiscount
+                    }
+                } else if (v.type === 'FIXED_AMOUNT') {
+                    estimatedDiscount = Math.min(subtotal, v.value)
+                } else if (v.type === 'FREE_SHIPPING') {
+                    const cap = v.value > 0 ? v.value : standardShippingFee
+                    estimatedDiscount = Math.min(standardShippingFee, cap)
+                }
+            }
+
+            return {
+                voucher: v,
+                isSaved,
+                isEligible,
+                remaining,
+                minOrder,
+                estimatedDiscount,
+            }
+        })
+    }, [availableVouchers, myUserVouchers, savedVoucherMap, subtotal, standardShippingFee])
+
+    // Số lượng cho từng tab phân loại
+    const modalTabCounts = useMemo(() => {
+        return {
+            ALL: combinedVouchers.length,
+            SHIPPING: combinedVouchers.filter((x) => x.voucher.type === 'FREE_SHIPPING').length,
+            DISCOUNT: combinedVouchers.filter((x) => x.voucher.type !== 'FREE_SHIPPING').length,
+            SAVED: combinedVouchers.filter((x) => x.isSaved).length,
+        }
+    }, [combinedVouchers])
+
+    // Lọc theo Tab phân loại trong modal
+    const filteredModalVouchers = useMemo(() => {
+        return combinedVouchers.filter(({ voucher: v, isSaved }) => {
+            if (voucherCategoryTab === 'SHIPPING') return v.type === 'FREE_SHIPPING'
+            if (voucherCategoryTab === 'DISCOUNT') return v.type !== 'FREE_SHIPPING'
+            if (voucherCategoryTab === 'SAVED') return isSaved
+            return true
+        })
+    }, [combinedVouchers, voucherCategoryTab])
+
+    // Chia nhóm: Thỏa mãn điều kiện (Eligible) vs Chưa đạt điều kiện (Ineligible)
+    const eligibleVouchers = useMemo(() => filteredModalVouchers.filter((x) => x.isEligible), [filteredModalVouchers])
+    const ineligibleVouchers = useMemo(
+        () => filteredModalVouchers.filter((x) => !x.isEligible),
+        [filteredModalVouchers],
+    )
+
+    // 1. Tính toán giảm giá phí vận chuyển chính xác
+    const shippingDiscount = useMemo(() => {
+        if (!appliedShippingVoucher) return 0
+        const minOrder = Number(appliedShippingVoucher.minOrderValue) || 0
+        if (subtotal < minOrder) return 0
+        const val = Number(appliedShippingVoucher.value)
+        const cap = val > 0 ? val : standardShippingFee
+        return Math.min(standardShippingFee, cap)
+    }, [appliedShippingVoucher, subtotal, standardShippingFee])
+
+    // 2. Tính toán giảm giá sản phẩm chính xác
+    const productDiscount = useMemo(() => {
+        if (!appliedDiscountVoucher) return 0
+        const minOrder = Number(appliedDiscountVoucher.minOrderValue) || 0
+        if (subtotal < minOrder) return 0
 
         let disc = 0
-        if (appliedVoucher.type === 'PERCENTAGE') {
-            disc = Math.floor((subtotal * appliedVoucher.value) / 100)
-            if (appliedVoucher.maxDiscount && disc > appliedVoucher.maxDiscount) {
-                disc = appliedVoucher.maxDiscount
-            }
-        } else if (appliedVoucher.type === 'FIXED_AMOUNT') {
-            disc = Math.min(subtotal, appliedVoucher.value)
-        } else if (appliedVoucher.type === 'FREE_SHIPPING') {
-            disc = shippingFee
+        if (appliedDiscountVoucher.type === 'PERCENTAGE') {
+            const raw = Math.floor((subtotal * Number(appliedDiscountVoucher.value)) / 100)
+            disc = appliedDiscountVoucher.maxDiscount ? Math.min(raw, Number(appliedDiscountVoucher.maxDiscount)) : raw
+        } else if (appliedDiscountVoucher.type === 'FIXED_AMOUNT') {
+            disc = Math.min(subtotal, Number(appliedDiscountVoucher.value))
         }
         return Math.max(0, disc)
-    }, [appliedVoucher, subtotal, shippingFee])
+    }, [appliedDiscountVoucher, subtotal])
 
-    const totalAmount = Math.max(0, subtotal + shippingFee - voucherDiscount)
+    const netShippingFee = Math.max(0, standardShippingFee - shippingDiscount)
+    const totalAmount = Math.max(0, subtotal + netShippingFee - productDiscount)
 
-    // Áp dụng voucher
+    // Áp dụng voucher qua nhập mã
     const handleApplyVoucher = async (codeToApply?: string) => {
         const code = (codeToApply || voucherCodeInput).trim().toUpperCase()
         if (!code) {
@@ -279,11 +390,19 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
             })
 
             if (result.valid && result.voucher) {
-                setAppliedVoucher(result.voucher)
-                setVoucherCodeInput(result.voucher.code)
-                setVoucherModalInput(result.voucher.code)
+                const v = result.voucher as VoucherItem
+                if (v.type === 'FREE_SHIPPING') {
+                    setAppliedShippingVoucher(v)
+                    setSelectedModalShippingCode(v.code)
+                    toast.success(`Áp dụng mã Freeship ${v.code} thành công!`)
+                } else {
+                    setAppliedDiscountVoucher(v)
+                    setSelectedModalDiscountCode(v.code)
+                    toast.success(`Áp dụng mã giảm giá ${v.code} thành công!`)
+                }
+                setVoucherCodeInput('')
+                setVoucherModalInput('')
                 setIsVoucherModalOpen(false)
-                toast.success('Áp dụng mã giảm giá thành công!')
             } else {
                 toast.error('Mã giảm giá không hợp lệ')
             }
@@ -293,12 +412,17 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
         }
     }
 
-    // Gỡ voucher đã áp dụng
-    const handleRemoveVoucher = () => {
-        setAppliedVoucher(null)
-        setVoucherCodeInput('')
-        setVoucherModalInput('')
-        toast.info('Đã hủy áp dụng mã giảm giá')
+    // Gỡ từng voucher
+    const handleRemoveShippingVoucher = () => {
+        setAppliedShippingVoucher(null)
+        setSelectedModalShippingCode(null)
+        toast.info('Đã gỡ mã miễn phí vận chuyển')
+    }
+
+    const handleRemoveDiscountVoucher = () => {
+        setAppliedDiscountVoucher(null)
+        setSelectedModalDiscountCode(null)
+        toast.info('Đã gỡ mã giảm giá')
     }
 
     // 6. Đặt hàng Mutation
@@ -320,7 +444,8 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
             addressId: activeAddress.id,
             paymentMethod,
             customerNote: customerNote.trim() || undefined,
-            voucherCode: appliedVoucher ? appliedVoucher.code : undefined,
+            voucherCode: appliedDiscountVoucher?.code || appliedShippingVoucher?.code || undefined,
+            voucherCodes: [appliedShippingVoucher?.code, appliedDiscountVoucher?.code].filter(Boolean) as string[],
             idempotencyKey: `chk_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
         }
 
@@ -727,6 +852,12 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                         type="button"
                                         onClick={() => {
                                             setVoucherModalInput(voucherCodeInput)
+                                            setSelectedModalShippingCode(
+                                                appliedShippingVoucher ? appliedShippingVoucher.code : null,
+                                            )
+                                            setSelectedModalDiscountCode(
+                                                appliedDiscountVoucher ? appliedDiscountVoucher.code : null,
+                                            )
                                             setIsVoucherModalOpen(true)
                                         }}
                                         className="text-xs font-bold text-primary hover:underline cursor-pointer"
@@ -736,40 +867,79 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                 </div>
                             </CardHeader>
                             <CardContent className="p-4 sm:p-5 space-y-3">
-                                {appliedVoucher ? (
-                                    <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-                                        <div className="flex items-center gap-2.5 min-w-0">
-                                            <div className="size-8 rounded-lg bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                                                <TagIcon className="size-4" />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="font-mono font-black text-xs text-foreground uppercase tracking-wider truncate">
-                                                        {appliedVoucher.code}
-                                                    </span>
-                                                    <Badge
-                                                        variant="secondary"
-                                                        className="text-[10px] bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-0 py-0 px-1.5 font-bold"
-                                                    >
-                                                        -{formatCurrencyVND(voucherDiscount)}
-                                                    </Badge>
+                                {appliedShippingVoucher || appliedDiscountVoucher ? (
+                                    <div className="space-y-2">
+                                        {appliedShippingVoucher && (
+                                            <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                    <div className="size-8 rounded-lg bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                                        <TruckIcon className="size-4" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="font-mono font-black text-xs text-foreground uppercase tracking-wider truncate">
+                                                                {appliedShippingVoucher.code}
+                                                            </span>
+                                                            <Badge
+                                                                variant="secondary"
+                                                                className="text-[10px] bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-0 py-0 px-1.5 font-bold"
+                                                            >
+                                                                Freeship -{formatCurrencyVND(shippingDiscount)}
+                                                            </Badge>
+                                                        </div>
+                                                        <p className="text-[11px] text-muted-foreground truncate">
+                                                            {appliedShippingVoucher.description ||
+                                                                'Miễn phí vận chuyển'}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <p className="text-[11px] text-muted-foreground truncate">
-                                                    {appliedVoucher.description ||
-                                                        appliedVoucher.campaignName ||
-                                                        'Voucher TimmyHub'}
-                                                </p>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={handleRemoveShippingVoucher}
+                                                    className="h-7 px-2 text-xs font-semibold text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 rounded-lg shrink-0"
+                                                >
+                                                    {t('voucherRemove')}
+                                                </Button>
                                             </div>
-                                        </div>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={handleRemoveVoucher}
-                                            className="h-7 px-2 text-xs font-semibold text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 rounded-lg shrink-0"
-                                        >
-                                            {t('voucherRemove')}
-                                        </Button>
+                                        )}
+                                        {appliedDiscountVoucher && (
+                                            <div className="flex items-center justify-between p-3 rounded-xl bg-purple-500/10 border border-purple-500/30">
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                    <div className="size-8 rounded-lg bg-purple-500/20 text-purple-700 dark:text-purple-400 flex items-center justify-center shrink-0">
+                                                        <TagIcon className="size-4" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="font-mono font-black text-xs text-foreground uppercase tracking-wider truncate">
+                                                                {appliedDiscountVoucher.code}
+                                                            </span>
+                                                            <Badge
+                                                                variant="secondary"
+                                                                className="text-[10px] bg-purple-500/20 text-purple-700 dark:text-purple-400 border-0 py-0 px-1.5 font-bold"
+                                                            >
+                                                                Giảm -{formatCurrencyVND(productDiscount)}
+                                                            </Badge>
+                                                        </div>
+                                                        <p className="text-[11px] text-muted-foreground truncate">
+                                                            {appliedDiscountVoucher.description ||
+                                                                appliedDiscountVoucher.campaignName ||
+                                                                'Giảm giá đơn hàng'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={handleRemoveDiscountVoucher}
+                                                    className="h-7 px-2 text-xs font-semibold text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 rounded-lg shrink-0"
+                                                >
+                                                    {t('voucherRemove')}
+                                                </Button>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="flex gap-2">
@@ -821,22 +991,43 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                     </div>
                                     <div className="flex justify-between text-muted-foreground">
                                         <span>{t('shippingFee')}</span>
-                                        <span className="font-semibold text-emerald-700 dark:text-emerald-400">
-                                            {t('freeShipping')}
-                                        </span>
+                                        <div>
+                                            {shippingDiscount > 0 ? (
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="line-through text-muted-foreground/60 text-[11px]">
+                                                        {formatCurrencyVND(standardShippingFee)}
+                                                    </span>
+                                                    <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                                                        {netShippingFee > 0
+                                                            ? formatCurrencyVND(netShippingFee)
+                                                            : t('freeShipping')}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <span className="font-semibold text-foreground">
+                                                    {formatCurrencyVND(standardShippingFee)}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="flex justify-between text-muted-foreground">
-                                        <span>{t('voucherDiscount')}</span>
-                                        <span
-                                            className={
-                                                voucherDiscount > 0
-                                                    ? 'font-bold text-emerald-700 dark:text-emerald-400'
-                                                    : 'font-semibold text-muted-foreground'
-                                            }
-                                        >
-                                            {voucherDiscount > 0 ? `-${formatCurrencyVND(voucherDiscount)}` : '-0₫'}
-                                        </span>
-                                    </div>
+                                    {shippingDiscount > 0 && (
+                                        <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
+                                            <span className="flex items-center gap-1">
+                                                <TruckIcon className="size-3" />
+                                                Giảm phí ship ({appliedShippingVoucher?.code}):
+                                            </span>
+                                            <span className="font-bold">-{formatCurrencyVND(shippingDiscount)}</span>
+                                        </div>
+                                    )}
+                                    {productDiscount > 0 && (
+                                        <div className="flex justify-between text-purple-700 dark:text-purple-400">
+                                            <span className="flex items-center gap-1">
+                                                <TagIcon className="size-3" />
+                                                Giảm giá voucher ({appliedDiscountVoucher?.code}):
+                                            </span>
+                                            <span className="font-bold">-{formatCurrencyVND(productDiscount)}</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="pt-3 border-t border-border/60 flex items-baseline justify-between">
@@ -1000,20 +1191,24 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
              * DIALOG CHỌN HOẶC NHẬP MÃ GIẢM GIÁ (VOUCHER)
              * ───────────────────────────────────────────────────────────── */}
             <Dialog open={isVoucherModalOpen} onOpenChange={setIsVoucherModalOpen}>
-                <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col rounded-2xl p-0 overflow-hidden">
+                <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col rounded-2xl p-0 overflow-hidden">
+                    {/* Header Modal */}
                     <DialogHeader className="p-5 pb-3 border-b border-border/60">
                         <DialogTitle className="text-base font-extrabold flex items-center gap-2">
                             <TicketIcon className="size-5 text-primary" />
-                            <span>{t('voucherModalTitle')}</span>
+                            <span>{t('voucherModalTitle') || 'Chọn TimmyHub Voucher'}</span>
                         </DialogTitle>
-                        <p className="text-xs text-muted-foreground">{t('voucherModalDesc')}</p>
+                        <p className="text-xs text-muted-foreground">
+                            {t('voucherModalDesc') ||
+                                'Chọn 1 mã giảm giá hoặc mã miễn phí vận chuyển tốt nhất cho đơn hàng của bạn'}
+                        </p>
                     </DialogHeader>
 
-                    {/* Thanh nhập voucher trực tiếp trong popup */}
+                    {/* Thanh nhập voucher trực tiếp (Shopee-Style Claim/Apply Bar) */}
                     <div className="p-4 bg-muted/20 border-b border-border/60 flex gap-2">
                         <input
                             type="text"
-                            placeholder={t('voucherPlaceholder')}
+                            placeholder={t('voucherPlaceholder') || 'Nhập mã voucher tại đây...'}
                             value={voucherModalInput}
                             onChange={(e) => setVoucherModalInput(e.target.value.toUpperCase())}
                             onKeyDown={(e) => {
@@ -1032,124 +1227,376 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                             className="h-9 px-4 text-xs font-bold rounded-lg shrink-0 gap-1"
                         >
                             {validateVoucherMutation.isPending && <Loader2Icon className="size-3 animate-spin" />}
-                            {t('voucherApply')}
+                            {t('voucherApply') || 'Áp dụng'}
                         </Button>
                     </div>
 
-                    {/* Danh sách voucher khả dụng */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                        <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                            {t('voucherAvailableList')}
-                        </div>
-
-                        {isLoadingVouchers ? (
-                            <div className="space-y-2.5 py-2">
-                                <Skeleton className="h-20 w-full rounded-xl" />
-                                <Skeleton className="h-20 w-full rounded-xl" />
-                            </div>
-                        ) : availableVouchers.length === 0 ? (
-                            <div className="text-center py-10 text-xs text-muted-foreground space-y-2">
-                                <TicketIcon className="size-8 mx-auto text-muted-foreground/40" />
-                                <p>{t('noVouchersAvailable')}</p>
-                            </div>
-                        ) : (
-                            availableVouchers.map((v) => {
-                                const isCurrent = appliedVoucher?.id === v.id
-                                const minOrder = Number(v.minOrderValue) || 0
-                                const isEligible = subtotal >= minOrder
-
-                                let discountBadge = ''
-                                if (v.type === 'PERCENTAGE') {
-                                    discountBadge = `Giảm ${v.value}%${v.maxDiscount ? ` (Tối đa ${formatCurrencyVND(v.maxDiscount)})` : ''}`
-                                } else if (v.type === 'FIXED_AMOUNT') {
-                                    discountBadge = `Giảm ${formatCurrencyVND(v.value)}`
-                                } else if (v.type === 'FREE_SHIPPING') {
-                                    discountBadge = `Miễn phí vận chuyển`
-                                }
-
-                                return (
-                                    <div
-                                        key={v.id}
-                                        className={`p-3.5 rounded-xl border transition-all flex items-center justify-between gap-3 ${
-                                            isCurrent
-                                                ? 'border-emerald-500 bg-emerald-500/5 shadow-sm ring-1 ring-emerald-500/30'
-                                                : isEligible
-                                                  ? 'border-border/70 hover:border-primary/50 hover:bg-muted/20 bg-card'
-                                                  : 'border-border/40 bg-muted/10 opacity-60'
+                    {/* Tabs phân loại Voucher kiểu Shopee */}
+                    <div className="flex items-center gap-1.5 px-4 pt-3 pb-2 border-b border-border/60 overflow-x-auto no-scrollbar">
+                        {(
+                            [
+                                { key: 'ALL', label: t('voucherTabAll') || 'Tất cả', count: modalTabCounts.ALL },
+                                {
+                                    key: 'SHIPPING',
+                                    label: t('voucherTabShipping') || 'Freeship',
+                                    count: modalTabCounts.SHIPPING,
+                                },
+                                {
+                                    key: 'DISCOUNT',
+                                    label: t('voucherTabDiscount') || 'Giảm giá',
+                                    count: modalTabCounts.DISCOUNT,
+                                },
+                                {
+                                    key: 'SAVED',
+                                    label: t('voucherTabWallet') || 'Ví voucher',
+                                    count: modalTabCounts.SAVED,
+                                },
+                            ] as const
+                        ).map((tab) => {
+                            const isActive = voucherCategoryTab === tab.key
+                            return (
+                                <button
+                                    key={tab.key}
+                                    type="button"
+                                    onClick={() => setVoucherCategoryTab(tab.key)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                                        isActive
+                                            ? 'bg-primary text-primary-foreground shadow-xs'
+                                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                                    }`}
+                                >
+                                    <span>{tab.label}</span>
+                                    <span
+                                        className={`px-1 rounded-full text-[10px] ${
+                                            isActive
+                                                ? 'bg-primary-foreground/20 text-primary-foreground'
+                                                : 'bg-muted text-muted-foreground'
                                         }`}
                                     >
-                                        <div className="flex items-start gap-3 min-w-0">
-                                            <div
-                                                className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${
-                                                    isEligible
-                                                        ? 'bg-primary/10 text-primary'
-                                                        : 'bg-muted text-muted-foreground'
-                                                }`}
-                                            >
-                                                <TagIcon className="size-5" />
-                                            </div>
-                                            <div className="space-y-1 min-w-0">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="font-mono font-black text-xs text-foreground uppercase tracking-wider">
-                                                        {v.code}
-                                                    </span>
-                                                    <Badge
-                                                        variant="secondary"
-                                                        className="text-[10px] font-bold bg-primary/15 text-primary border-0 py-0 px-1.5"
-                                                    >
-                                                        {discountBadge}
-                                                    </Badge>
-                                                </div>
-                                                <p className="text-xs font-semibold text-foreground/90 truncate">
-                                                    {v.description || v.campaignName || v.code}
-                                                </p>
-                                                <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
-                                                    <span>
-                                                        {t('voucherMinOrder', {
-                                                            min: formatCurrencyVND(minOrder),
-                                                        })}
-                                                    </span>
-                                                    {v.endDate && (
-                                                        <span>
-                                                            {t('voucherExpiry', {
-                                                                date: new Date(v.endDate).toLocaleDateString('vi-VN'),
-                                                            })}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                {!isEligible && (
-                                                    <p className="text-[10px] font-medium text-rose-500">
-                                                        {t('voucherConditionNotMet')} (cần thêm{' '}
-                                                        {formatCurrencyVND(minOrder - subtotal)})
-                                                    </p>
-                                                )}
-                                            </div>
+                                        {tab.count}
+                                    </span>
+                                </button>
+                            )
+                        })}
+                    </div>
+
+                    {/* Danh sách voucher cuộn */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-5">
+                        {isLoadingVouchers ? (
+                            <div className="space-y-3 py-2">
+                                <Skeleton className="h-24 w-full rounded-2xl" />
+                                <Skeleton className="h-24 w-full rounded-2xl" />
+                                <Skeleton className="h-24 w-full rounded-2xl" />
+                            </div>
+                        ) : filteredModalVouchers.length === 0 ? (
+                            <div className="text-center py-12 text-xs text-muted-foreground space-y-2">
+                                <TicketIcon className="size-8 mx-auto text-muted-foreground/40" />
+                                <p>{t('noVouchersAvailable') || 'Không có mã giảm giá nào phù hợp ở mục này.'}</p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* 1. NHÓM VOUCHER THỎA MÃN ĐIỀU KIỆN (Shopee Style) */}
+                                {eligibleVouchers.length > 0 && (
+                                    <div className="space-y-2.5">
+                                        <div className="flex items-center justify-between text-xs font-bold text-foreground">
+                                            <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
+                                                <CheckCircle2Icon className="size-3.5" />
+                                                {t('voucherEligibleTitle') || 'Mã có thể áp dụng'} (
+                                                {eligibleVouchers.length})
+                                            </span>
+                                            <span className="text-[11px] text-muted-foreground font-normal">
+                                                Đã đạt điều kiện đơn hàng
+                                            </span>
                                         </div>
 
-                                        <div className="shrink-0 pl-2">
-                                            {isCurrent ? (
-                                                <Badge
-                                                    variant="secondary"
-                                                    className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-bold text-xs py-1 px-2.5"
-                                                >
-                                                    {t('voucherApplied')}
-                                                </Badge>
-                                            ) : (
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    disabled={!isEligible || validateVoucherMutation.isPending}
-                                                    onClick={() => handleApplyVoucher(v.code)}
-                                                    className="h-8 px-3 text-xs font-bold rounded-lg"
-                                                >
-                                                    {t('voucherApply')}
-                                                </Button>
-                                            )}
+                                        <div className="space-y-2.5">
+                                            {eligibleVouchers.map(({ voucher: v, isSaved, estimatedDiscount }) => {
+                                                const isShipping = v.type === 'FREE_SHIPPING'
+                                                const isSeller = Boolean(v.sellerId)
+                                                const isSelected = isShipping
+                                                    ? selectedModalShippingCode === v.code
+                                                    : selectedModalDiscountCode === v.code
+
+                                                const handleToggle = () => {
+                                                    if (isShipping) {
+                                                        setSelectedModalShippingCode((prev) =>
+                                                            prev === v.code ? null : v.code,
+                                                        )
+                                                    } else {
+                                                        setSelectedModalDiscountCode((prev) =>
+                                                            prev === v.code ? null : v.code,
+                                                        )
+                                                    }
+                                                }
+
+                                                return (
+                                                    <div
+                                                        key={v.id}
+                                                        onClick={handleToggle}
+                                                        className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer ${
+                                                            isSelected
+                                                                ? 'border-primary bg-primary/5 shadow-sm ring-1 ring-primary/40'
+                                                                : 'border-border/70 hover:border-primary/50 hover:bg-muted/20 bg-card'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-start gap-3 min-w-0">
+                                                            {/* Icon nhận diện loại voucher */}
+                                                            <div
+                                                                className={`size-11 rounded-xl flex items-center justify-center shrink-0 ${
+                                                                    isShipping
+                                                                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                                                                        : isSeller
+                                                                          ? 'bg-purple-500/10 text-purple-700 dark:text-purple-400'
+                                                                          : 'bg-primary/10 text-primary'
+                                                                }`}
+                                                            >
+                                                                {isShipping ? (
+                                                                    <TruckIcon className="size-5" />
+                                                                ) : isSeller ? (
+                                                                    <StoreIcon className="size-5" />
+                                                                ) : (
+                                                                    <TagIcon className="size-5" />
+                                                                )}
+                                                            </div>
+
+                                                            <div className="space-y-1 min-w-0">
+                                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                                    <span className="font-mono font-black text-xs text-foreground uppercase tracking-wider">
+                                                                        {v.code}
+                                                                    </span>
+                                                                    <Badge
+                                                                        variant="secondary"
+                                                                        className="text-[10px] font-bold bg-muted text-foreground border-0 py-0 px-1.5"
+                                                                    >
+                                                                        {isShipping
+                                                                            ? 'Freeship'
+                                                                            : isSeller
+                                                                              ? 'Shop'
+                                                                              : v.campaignName || 'TimmyHub'}
+                                                                    </Badge>
+                                                                    {isSaved && (
+                                                                        <Badge
+                                                                            variant="outline"
+                                                                            className="text-[9px] font-bold bg-primary/10 text-primary border-primary/30 py-0 px-1.5"
+                                                                        >
+                                                                            Trong ví
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+
+                                                                <p className="text-xs font-bold text-foreground truncate">
+                                                                    {v.description ||
+                                                                        (isShipping
+                                                                            ? `Miễn phí vận chuyển đến ${formatCurrencyVND(v.value || 30000)}`
+                                                                            : `Giảm ${v.value}%${v.maxDiscount ? ` tối đa ${formatCurrencyVND(v.maxDiscount)}` : ''}`)}
+                                                                </p>
+
+                                                                <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
+                                                                    <span>
+                                                                        Đơn tối thiểu{' '}
+                                                                        <strong className="text-foreground">
+                                                                            {formatCurrencyVND(v.minOrderValue || 0)}
+                                                                        </strong>
+                                                                    </span>
+                                                                    <span>•</span>
+                                                                    <span>
+                                                                        HSD:{' '}
+                                                                        {v.endDate
+                                                                            ? new Date(v.endDate).toLocaleDateString(
+                                                                                  'vi-VN',
+                                                                              )
+                                                                            : ''}
+                                                                    </span>
+                                                                </div>
+
+                                                                {estimatedDiscount > 0 && (
+                                                                    <div className="text-[11px] font-extrabold text-emerald-700 dark:text-emerald-400">
+                                                                        Tiết kiệm {formatCurrencyVND(estimatedDiscount)}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Checkbox / Radio Selection */}
+                                                        <div className="shrink-0 pl-2">
+                                                            <div
+                                                                className={`size-5 rounded-md border flex items-center justify-center transition-all ${
+                                                                    isSelected
+                                                                        ? 'bg-primary border-primary text-primary-foreground shadow-sm'
+                                                                        : 'border-border/80 bg-background'
+                                                                }`}
+                                                            >
+                                                                {isSelected && (
+                                                                    <CheckIcon className="size-3.5 stroke-[3]" />
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
                                         </div>
                                     </div>
-                                )
-                            })
+                                )}
+
+                                {/* Nhóm B: Không đủ điều kiện */}
+                                {ineligibleVouchers.length > 0 && (
+                                    <div className="space-y-3 pt-2">
+                                        <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                            <AlertCircleIcon className="size-3.5 text-amber-500" />
+                                            <span>
+                                                {t('voucherIneligibleSection') || 'Chưa đủ điều kiện sử dụng'} (
+                                                {ineligibleVouchers.length})
+                                            </span>
+                                        </div>
+
+                                        <div className="space-y-2.5">
+                                            {ineligibleVouchers.map(({ voucher: v, isSaved, remaining, minOrder }) => {
+                                                const isShipping = v.type === 'FREE_SHIPPING'
+                                                const isSeller = Boolean(v.sellerId)
+
+                                                return (
+                                                    <div
+                                                        key={v.id}
+                                                        className="p-3.5 rounded-2xl border border-border/50 bg-muted/20 opacity-60 flex items-center justify-between gap-3 cursor-not-allowed select-none"
+                                                    >
+                                                        <div className="flex items-start gap-3 min-w-0">
+                                                            <div className="size-11 rounded-xl bg-muted text-muted-foreground flex items-center justify-center shrink-0">
+                                                                {isShipping ? (
+                                                                    <TruckIcon className="size-5" />
+                                                                ) : isSeller ? (
+                                                                    <StoreIcon className="size-5" />
+                                                                ) : (
+                                                                    <TagIcon className="size-5" />
+                                                                )}
+                                                            </div>
+
+                                                            <div className="space-y-1 min-w-0">
+                                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                                    <span className="font-mono font-bold text-xs text-muted-foreground uppercase tracking-wider">
+                                                                        {v.code}
+                                                                    </span>
+                                                                    {isSaved && (
+                                                                        <Badge
+                                                                            variant="outline"
+                                                                            className="text-[9px] bg-muted/40 text-muted-foreground border-border/60 py-0 px-1"
+                                                                        >
+                                                                            Trong ví
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+
+                                                                <p className="text-xs font-semibold text-muted-foreground truncate">
+                                                                    {v.description || v.code}
+                                                                </p>
+
+                                                                <p className="text-[10px] font-semibold text-rose-500">
+                                                                    Chưa đạt đơn tối thiểu {formatCurrencyVND(minOrder)}{' '}
+                                                                    (Mua thêm {formatCurrencyVND(remaining)})
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Disabled Checkbox */}
+                                                        <div className="shrink-0 pl-2">
+                                                            <div className="size-5 rounded-md border border-border/40 bg-muted/40" />
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
+                    </div>
+
+                    {/* Footer Modal: Hành động Đồng ý / Bỏ chọn (Shopee-Style Multi-Voucher Footer) */}
+                    <div className="p-4 bg-muted/40 border-t border-border/60 flex items-center justify-between gap-3">
+                        <div className="text-xs min-w-0">
+                            {selectedModalShippingCode || selectedModalDiscountCode ? (
+                                <div className="space-y-0.5">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-muted-foreground font-medium">Đã chọn:</span>
+                                        {selectedModalShippingCode && (
+                                            <Badge
+                                                variant="secondary"
+                                                className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-mono text-[11px] py-0"
+                                            >
+                                                Freeship: {selectedModalShippingCode}
+                                            </Badge>
+                                        )}
+                                        {selectedModalDiscountCode && (
+                                            <Badge
+                                                variant="secondary"
+                                                className="bg-purple-500/15 text-purple-700 dark:text-purple-400 font-mono text-[11px] py-0"
+                                            >
+                                                Giảm giá: {selectedModalDiscountCode}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedModalShippingCode(null)
+                                            setSelectedModalDiscountCode(null)
+                                        }}
+                                        className="text-[11px] text-destructive hover:underline cursor-pointer block"
+                                    >
+                                        {t('voucherDeselect') || 'Bỏ chọn tất cả'}
+                                    </button>
+                                </div>
+                            ) : (
+                                <span className="text-muted-foreground">
+                                    {t('voucherNotSelected') || 'Chưa chọn voucher nào'}
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setIsVoucherModalOpen(false)}
+                                className="h-9 px-4 text-xs font-bold rounded-xl"
+                            >
+                                {t('voucherBackBtn') || 'Trở lại'}
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                disabled={validateVoucherMutation.isPending}
+                                onClick={() => {
+                                    // Áp dụng selection từ modal
+                                    const shipV = selectedModalShippingCode
+                                        ? combinedVouchers.find((cv) => cv.voucher.code === selectedModalShippingCode)
+                                              ?.voucher || null
+                                        : null
+                                    const discV = selectedModalDiscountCode
+                                        ? combinedVouchers.find((cv) => cv.voucher.code === selectedModalDiscountCode)
+                                              ?.voucher || null
+                                        : null
+
+                                    setAppliedShippingVoucher(shipV)
+                                    setAppliedDiscountVoucher(discV)
+                                    setIsVoucherModalOpen(false)
+
+                                    if (shipV && discV) {
+                                        toast.success(`Đã áp dụng 2 voucher: ${shipV.code} & ${discV.code}`)
+                                    } else if (shipV) {
+                                        toast.success(`Đã áp dụng mã Freeship ${shipV.code}`)
+                                    } else if (discV) {
+                                        toast.success(`Đã áp dụng mã giảm giá ${discV.code}`)
+                                    } else {
+                                        toast.info('Đã bỏ áp dụng voucher')
+                                    }
+                                }}
+                                className="h-9 px-5 text-xs font-bold rounded-xl gap-1.5"
+                            >
+                                {validateVoucherMutation.isPending && <Loader2Icon className="size-3.5 animate-spin" />}
+                                {t('voucherSelectBtn') || 'Đồng ý'}
+                            </Button>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>

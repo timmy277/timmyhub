@@ -237,14 +237,39 @@ export function createSellerOrderColumns({ t, actions }: CreateSellerOrderColumn
         {
             headerName: t ? t('columnTotal') : 'Tổng tiền',
             field: 'totalAmount',
-            width: 140,
+            width: 150,
             flex: 0,
             cellRenderer: (params: ICellRendererParams<OrderDetail>) => {
                 if (!params.data) return null
+                const order = params.data
+                const hasVouchers = order.vouchers && order.vouchers.length > 0
+                const hasDiscount = Number(order.voucherDiscount) > 0
                 return (
-                    <span className="text-xs font-bold text-foreground block py-2">
-                        {formatCurrencyVND(params.data.totalAmount)}
-                    </span>
+                    <div className="py-1">
+                        <span className="text-xs font-bold text-foreground block">
+                            {formatCurrencyVND(order.totalAmount)}
+                        </span>
+                        {hasVouchers ? (
+                            <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                                {order.vouchers!.map((vc) => (
+                                    <span
+                                        key={vc.id || vc.code}
+                                        className="text-[10px] font-mono px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold"
+                                        title={`${vc.code}: -${formatCurrencyVND(vc.discount)}`}
+                                    >
+                                        {vc.code}
+                                    </span>
+                                ))}
+                            </div>
+                        ) : hasDiscount ? (
+                            <span
+                                className="text-[10px] font-mono px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold inline-block mt-0.5"
+                                title={`-${formatCurrencyVND(order.voucherDiscount || 0)}`}
+                            >
+                                {order.voucherCode || 'Voucher'}
+                            </span>
+                        ) : null}
+                    </div>
                 )
             },
         },

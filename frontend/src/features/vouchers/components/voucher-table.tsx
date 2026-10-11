@@ -9,7 +9,12 @@ import type { VoucherItem } from '@timmyhub/contracts'
 import { AgGridTable, ConfirmDialog, FloatCombobox } from '@/components'
 import { VOUCHER_TAB, VOUCHER_TABLE_ROW_HEIGHT_PX } from '@/constants'
 
-import { deleteVoucherAction, toggleVoucherStatusAction } from '../actions'
+import {
+    deleteSellerVoucherAction,
+    deleteVoucherAction,
+    toggleSellerVoucherStatusAction,
+    toggleVoucherStatusAction,
+} from '../actions'
 import { buildVoucherTabsHref, type VoucherTabState } from '../voucher-tab-query'
 import { createVoucherColumns } from '@/config'
 
@@ -17,12 +22,13 @@ interface VoucherTableProps {
     rows: VoucherItem[]
     error?: string
     onRefresh?: () => void
+    isSeller?: boolean
 }
 
 const TYPE_FILTER_ALL = 'ALL'
 const STATUS_FILTER_ALL = 'ALL'
 
-export function VoucherTable({ rows, error, onRefresh }: VoucherTableProps) {
+export function VoucherTable({ rows, error, onRefresh, isSeller = false }: VoucherTableProps) {
     const t = useTranslations('vouchers')
     const router = useRouter()
     const pathname = usePathname()
@@ -86,7 +92,9 @@ export function VoucherTable({ rows, error, onRefresh }: VoucherTableProps) {
         async (item: VoucherItem) => {
             try {
                 const nextActive = !item.isActive
-                const res = await toggleVoucherStatusAction(item.id, nextActive)
+                const res = isSeller
+                    ? await toggleSellerVoucherStatusAction(item.id, nextActive)
+                    : await toggleVoucherStatusAction(item.id, nextActive)
                 if (!res.ok) {
                     toast.error(res.message || t('toggleFailed'))
                     return
@@ -100,13 +108,15 @@ export function VoucherTable({ rows, error, onRefresh }: VoucherTableProps) {
                 toast.error(t('toggleError'))
             }
         },
-        [onRefresh, router, t],
+        [isSeller, onRefresh, router, t],
     )
 
     const handleConfirmDelete = async () => {
         if (!deletingVoucher) return
         try {
-            const res = await deleteVoucherAction(deletingVoucher.id)
+            const res = isSeller
+                ? await deleteSellerVoucherAction(deletingVoucher.id)
+                : await deleteVoucherAction(deletingVoucher.id)
             if (!res.ok) {
                 toast.error(res.message || t('deleteFailed'))
                 return

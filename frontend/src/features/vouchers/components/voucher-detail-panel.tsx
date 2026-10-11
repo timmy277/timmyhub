@@ -12,16 +12,26 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ConfirmDialog,
 import { StatusTone, VOUCHER_TAB } from '@/constants'
 import { formatCurrencyVND, formatTimestamp } from '@/utils'
 
-import { deleteVoucherAction, toggleVoucherStatusAction } from '../actions'
+import {
+    deleteSellerVoucherAction,
+    deleteVoucherAction,
+    toggleSellerVoucherStatusAction,
+    toggleVoucherStatusAction,
+} from '../actions'
 import { buildVoucherTabsHref } from '../voucher-tab-query'
 import { VoucherFormPanel } from './voucher-form-panel'
 
 interface VoucherDetailPanelProps {
     voucher: VoucherDetail
     onVoucherUpdated?: (updated: VoucherDetail) => void
+    isSeller?: boolean
 }
 
-export function VoucherDetailPanel({ voucher: initialVoucher, onVoucherUpdated }: VoucherDetailPanelProps) {
+export function VoucherDetailPanel({
+    voucher: initialVoucher,
+    onVoucherUpdated,
+    isSeller = false,
+}: VoucherDetailPanelProps) {
     const t = useTranslations('vouchers')
     const router = useRouter()
     const pathname = usePathname()
@@ -39,7 +49,9 @@ export function VoucherDetailPanel({ voucher: initialVoucher, onVoucherUpdated }
     const handleToggleStatus = async () => {
         try {
             const nextActive = !voucher.isActive
-            const res = await toggleVoucherStatusAction(voucher.id, nextActive)
+            const res = isSeller
+                ? await toggleSellerVoucherStatusAction(voucher.id, nextActive)
+                : await toggleVoucherStatusAction(voucher.id, nextActive)
             if (!res.ok) {
                 toast.error(res.message || t('toggleFailed'))
                 return
@@ -58,7 +70,7 @@ export function VoucherDetailPanel({ voucher: initialVoucher, onVoucherUpdated }
 
     const handleConfirmDelete = async () => {
         try {
-            const res = await deleteVoucherAction(voucher.id)
+            const res = isSeller ? await deleteSellerVoucherAction(voucher.id) : await deleteVoucherAction(voucher.id)
             if (!res.ok) {
                 toast.error(res.message || t('deleteFailed'))
                 return
@@ -76,6 +88,7 @@ export function VoucherDetailPanel({ voucher: initialVoucher, onVoucherUpdated }
         return (
             <VoucherFormPanel
                 initialData={voucher}
+                isSeller={isSeller}
                 onSuccess={(saved) => {
                     setVoucher({ ...voucher, ...saved })
                     setIsEditing(false)

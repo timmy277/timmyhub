@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+    BadRequestException,
+    ConflictException,
+    ForbiddenException,
+    Injectable,
+    NotFoundException,
+} from '@nestjs/common'
 import { Prisma } from '@timmyhub/prisma'
 import { PrismaService } from '@timmyhub/prisma'
 import type {
@@ -11,6 +17,7 @@ import type {
     PromotionCampaignListQuery,
     UpdatePromotionCampaignInput,
     UpdateVoucherInput,
+    UserVoucherItem,
     ValidateVoucherInput,
     ValidateVoucherResult,
     VoucherDetail,
@@ -761,7 +768,8 @@ export class PromotionService {
         } else if (voucher.type === 'FIXED_AMOUNT') {
             discountAmount = Math.min(Number(voucher.value), subtotal)
         } else if (voucher.type === 'FREE_SHIPPING') {
-            discountAmount = Math.min(Number(voucher.value), 30000)
+            const vVal = Number(voucher.value)
+            discountAmount = vVal > 0 ? Math.min(vVal, 30000) : 30000
         }
 
         discountAmount = Math.round(discountAmount)
@@ -803,6 +811,205 @@ export class PromotionService {
         })
 
         return available.map((v) => this.mapVoucherRecord(v as unknown as VoucherDbPayload))
+    }
+
+    // ==========================================
+    // SELLER VOUCHER MANAGEMENT
+    // ==========================================
+
+    private async getSellerProfileOrThrow(userId: string) {
+        const seller = await this.prisma.sellerProfile.findUnique({
+            where: { userId },
+        })
+        if (!seller) {
+            throw new ForbiddenException('Bạn chưa có hồ sơ người bán hoặc chưa được phê duyệt')
+        }
+        return seller
+    }
+
+    async listSellerVouchers(
+        userId: string,
+        query: VoucherListQuery,
+    ): Promise<{
+        items: VoucherItem[]
+        total: number
+        page: number
+        pageSize: number
+    }> {
+        const seller = await this.getSellerProfileOrThrow(userId)
+        return this.listAdminVouchers({
+            ...query,
+            sellerId: seller.id,
+            scope: 'SELLER',
+        })
+    }
+
+    async getSellerVoucherDetail(userId: string, id: string): Promise<VoucherDetail> {
+        const seller = await this.getSellerProfileOrThrow(userId)
+        const v = await this.getVoucherDetail(id)
+        if (v.sellerId !== seller.id) {
+            throw new NotFoundException('Không tìm thấy voucher trong gian hàng của bạn')
+        }
+        return v
+    }
+
+    async createSellerVoucher(userId: string, body: CreateVoucherInput): Promise<VoucherItem> {
+        const seller = await this.getSellerProfileOrThrow(userId)
+        const payload: CreateVoucherInput = {
+            ...body,
+            sellerId: seller.id,
+            campaignId: undefined,
+        }
+        return this.createVoucher(payload, userId)
+    }
+
+    async updateSellerVoucher(userId: string, id: string, body: UpdateVoucherInput): Promise<VoucherItem> {
+        const seller = await this.getSellerProfileOrThrow(userId)
+        const existing = await this.prisma.voucher.findUnique({ where: { id } })
+        if (!existing || existing.sellerId !== seller.id) {
+            throw new NotFoundException('Không tìm thấy voucher trong gian hàng của bạn')
+        }
+        const payload: UpdateVoucherInput = {
+            ...body,
+            sellerId: seller.id,
+        }
+        return this.updateVoucher(id, payload, userId)
+    }
+
+    async toggleSellerVoucherStatus(userId: string, id: string, isActive: boolean): Promise<VoucherItem> {
+        const seller = await this.getSellerProfileOrThrow(userId)
+        const existing = await this.prisma.voucher.findUnique({ where: { id } })
+        if (!existing || existing.sellerId !== seller.id) {
+            throw new NotFoundException('Không tìm thấy voucher trong gian hàng của bạn')
+        }
+        return this.toggleVoucherStatus(id, isActive, userId)
+    }
+
+    async deleteSellerVoucher(userId: string, id: string): Promise<{ success: boolean }> {
+        const seller = await this.getSellerProfileOrThrow(userId)
+        const existing = await this.prisma.voucher.findUnique({ where: { id } })
+        if (!existing || existing.sellerId !== seller.id) {
+            throw new NotFoundException('Không tìm thấy voucher trong gian hàng của bạn')
+        }
+        return this.deleteVoucher(id, userId)
+    }
+
+    // ==========================================
+    // USER VOUCHER WALLET (CLAIM / SAVE)
+    // ==========================================
+
+    async saveUserVoucher(userId: string, voucherId: string): Promise<{ saved: boolean; voucherId: string }> {
+        const voucher = await this.prisma.voucher.findUnique({
+            where: { id: voucherId },
+        })
+
+        if (!voucher) {
+            throw new NotFoundException('Không tìm thấy voucher')
+        }
+
+        if (!voucher.isActive) {
+            throw new BadRequestException('Voucher hiện không khả dụng')
+        }
+
+        const now = new Date()
+        if (voucher.endDate < now) {
+            throw new BadRequestException('Voucher đã hết hạn sử dụng')
+        }
+
+        if (voucher.usageLimit != null && voucher.usedCount >= voucher.usageLimit) {
+            throw new BadRequestException('Voucher đã hết lượt sử dụng')
+        }
+
+        const existing = await this.prisma.userVoucher.findUnique({
+            where: {
+                userId_voucherId: {
+                    userId,
+                    voucherId,
+                },
+            },
+        })
+
+        if (existing) {
+            if (existing.status === 'SAVED') {
+                // Đã lưu -> toggle huỷ lưu
+                await this.prisma.userVoucher.delete({
+                    where: { id: existing.id },
+                })
+                return { saved: false, voucherId }
+            } else {
+                await this.prisma.userVoucher.update({
+                    where: { id: existing.id },
+                    data: { status: 'SAVED', savedAt: new Date() },
+                })
+                return { saved: true, voucherId }
+            }
+        }
+
+        await this.prisma.userVoucher.create({
+            data: {
+                userId,
+                voucherId,
+                status: 'SAVED',
+            },
+        })
+
+        return { saved: true, voucherId }
+    }
+
+    async getUserSavedVoucherIds(userId: string): Promise<string[]> {
+        const userVouchers = await this.prisma.userVoucher.findMany({
+            where: {
+                userId,
+                status: 'SAVED',
+            },
+            select: { voucherId: true },
+        })
+        return userVouchers.map((uv) => uv.voucherId)
+    }
+
+    async getMyUserVouchers(userId: string, status?: 'SAVED' | 'USED' | 'EXPIRED'): Promise<UserVoucherItem[]> {
+        const userVouchers = await this.prisma.userVoucher.findMany({
+            where: {
+                userId,
+                ...(status ? { status } : {}),
+            },
+            include: {
+                voucher: {
+                    include: {
+                        campaign: {
+                            select: { name: true },
+                        },
+                    },
+                },
+            },
+            orderBy: { savedAt: 'desc' },
+        })
+
+        return userVouchers.map((uv) => ({
+            id: uv.id,
+            userId: uv.userId,
+            voucherId: uv.voucherId,
+            savedAt: uv.savedAt.toISOString(),
+            status: uv.status,
+            voucher: this.mapVoucherRecord(uv.voucher as unknown as VoucherDbPayload),
+        }))
+    }
+
+    async claimVoucherByCode(
+        userId: string,
+        rawCode: string,
+    ): Promise<{ saved: boolean; voucherId: string; code: string }> {
+        const code = rawCode.trim().toUpperCase()
+        const voucher = await this.prisma.voucher.findUnique({
+            where: { code },
+        })
+
+        if (!voucher) {
+            throw new NotFoundException('Không tìm thấy mã voucher này')
+        }
+
+        const res = await this.saveUserVoucher(userId, voucher.id)
+        return { ...res, code: voucher.code }
     }
 
     // ==========================================
