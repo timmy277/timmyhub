@@ -166,11 +166,11 @@ export function VoucherDetailPanel({ voucher: initialVoucher, onVoucherUpdated }
                         <p className="text-xs text-muted-foreground">
                             {voucher.type === 'PERCENTAGE'
                                 ? voucher.maxDiscount
-                                    ? `Tối đa ${formatCurrencyVND(voucher.maxDiscount)}`
-                                    : 'Không giới hạn tối đa'
+                                    ? t('maxDiscountCap', { amount: formatCurrencyVND(voucher.maxDiscount) })
+                                    : t('noMaxDiscountCap')
                                 : voucher.type === 'FREE_SHIPPING'
-                                  ? 'Miễn phí vận chuyển'
-                                  : 'Giảm thẳng tiền mặt'}
+                                  ? t('typeFreeShipping')
+                                  : t('discountDirectCash')}
                         </p>
                     </div>
 
@@ -182,7 +182,7 @@ export function VoucherDetailPanel({ voucher: initialVoucher, onVoucherUpdated }
                         <p className="text-xl font-bold text-foreground">
                             {voucher.minOrderValue ? formatCurrencyVND(voucher.minOrderValue) : '0 ₫'}
                         </p>
-                        <p className="text-xs text-muted-foreground">Đơn hàng tối thiểu</p>
+                        <p className="text-xs text-muted-foreground">{t('minOrderValueLabel')}</p>
                     </div>
 
                     {/* Metric 3 */}
@@ -193,7 +193,9 @@ export function VoucherDetailPanel({ voucher: initialVoucher, onVoucherUpdated }
                         <p className="text-xl font-bold text-foreground">
                             {voucher.usedCount} / {voucher.usageLimit != null ? voucher.usageLimit : '∞'}
                         </p>
-                        <p className="text-xs text-muted-foreground">{voucher.perUserLimit} lượt / người mua</p>
+                        <p className="text-xs text-muted-foreground">
+                            {t('perCustomerUnit', { count: voucher.perUserLimit })}
+                        </p>
                     </div>
 
                     {/* Metric 4 */}
@@ -205,7 +207,7 @@ export function VoucherDetailPanel({ voucher: initialVoucher, onVoucherUpdated }
                             {voucher.totalDiscountAmount ? formatCurrencyVND(voucher.totalDiscountAmount) : '0 ₫'}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                            {voucher.totalOrdersDiscounted ?? 0} đơn đã áp dụng
+                            {t('ordersDiscounted', { count: voucher.totalOrdersDiscounted ?? 0 })}
                         </p>
                     </div>
                 </CardContent>

@@ -1599,7 +1599,21 @@
     "formCampaignLabel": "Promotional Campaign",
     "formCampaignHelp": "Link to a campaign (or leave empty for standalone voucher)",
     "campaignNone": "None (Standalone voucher)",
-    "columnCampaign": "Campaign"
+    "columnCampaign": "Campaign",
+    "totalUsageLimit": "Total usage limit:",
+    "perCustomerLimit": "Limit per customer:",
+    "usesUnit": "{count} uses",
+    "perCustomerUnit": "{count} uses / shopper",
+    "ordersDiscounted": "{count} orders applied",
+    "formActiveCheckboxDesc": "Allow shoppers to collect and redeem this voucher immediately",
+    "noMinOrder": "No minimum spend required",
+    "noMaxDiscountCap": "No maximum cap",
+    "noTimeConfigured": "Validity period not set",
+    "previewDiscountPercent": "SAVE {percent}%",
+    "previewDiscountAmount": "SAVE {amount}",
+    "previewFreeShipping": "FREE SHIPPING",
+    "minOrderValueLabel": "Minimum order value",
+    "discountDirectCash": "Direct cash discount"
   },
   "campaigns": {
     "metaTitle": "Promotion Campaigns · TimmyHub",

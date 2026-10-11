@@ -1599,7 +1599,21 @@
     "formCampaignLabel": "Chiến dịch áp dụng",
     "formCampaignHelp": "Chọn chiến dịch liên kết (hoặc để trống nếu là voucher độc lập)",
     "campaignNone": "Không thuộc chiến dịch (Voucher độc lập)",
-    "columnCampaign": "Chiến dịch"
+    "columnCampaign": "Chiến dịch",
+    "totalUsageLimit": "Giới hạn tổng lượt dùng:",
+    "perCustomerLimit": "Mỗi khách được dùng:",
+    "usesUnit": "{count} lượt",
+    "perCustomerUnit": "{count} lượt / người mua",
+    "ordersDiscounted": "{count} đơn đã áp dụng",
+    "formActiveCheckboxDesc": "Cho phép khách hàng lưu và sử dụng mã ngay lập tức",
+    "noMinOrder": "Không giới hạn đơn tối thiểu",
+    "noMaxDiscountCap": "Không giới hạn tối đa",
+    "noTimeConfigured": "Chưa cài đặt thời gian",
+    "previewDiscountPercent": "GIẢM {percent}%",
+    "previewDiscountAmount": "GIẢM {amount}",
+    "previewFreeShipping": "MIỄN PHÍ VẬN CHUYỂN",
+    "minOrderValueLabel": "Đơn hàng tối thiểu",
+    "discountDirectCash": "Giảm thẳng tiền mặt"
   },
   "campaigns": {
     "metaTitle": "Quản lý chiến dịch khuyến mãi · TimmyHub",

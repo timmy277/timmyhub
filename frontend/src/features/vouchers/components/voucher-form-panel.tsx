@@ -154,6 +154,7 @@ export function VoucherFormPanel({ initialData, campaignOptions, onSuccess }: Vo
     const watchedMinOrder = useWatch({ control, name: 'minOrderValue' })
     const watchedMaxDiscount = useWatch({ control, name: 'maxDiscount' })
     const watchedUsageLimit = useWatch({ control, name: 'usageLimit' })
+    const watchedPerUserLimit = useWatch({ control, name: 'perUserLimit' })
     const watchedStartDate = useWatch({ control, name: 'startDate' })
     const watchedEndDate = useWatch({ control, name: 'endDate' })
     const watchedIsActive = useWatch({ control, name: 'isActive' })
@@ -493,10 +494,12 @@ export function VoucherFormPanel({ initialData, campaignOptions, onSuccess }: Vo
                                     </p>
                                     <h3 className="text-lg font-black tracking-tight text-primary mt-0.5">
                                         {watchedType === VOUCHER_TYPE.PERCENTAGE
-                                            ? `GIẢM ${watchedValue || 0}%`
+                                            ? t('previewDiscountPercent', { percent: watchedValue || 0 })
                                             : watchedType === VOUCHER_TYPE.FIXED_AMOUNT
-                                              ? `GIẢM ${formatCurrencyVND(watchedValue || 0)}`
-                                              : 'FREE SHIPPING'}
+                                              ? t('previewDiscountAmount', {
+                                                    amount: formatCurrencyVND(watchedValue || 0),
+                                                })
+                                              : t('previewFreeShipping')}
                                     </h3>
                                 </div>
                                 <div className="rounded-lg bg-primary/15 p-2 text-primary">
@@ -524,7 +527,7 @@ export function VoucherFormPanel({ initialData, campaignOptions, onSuccess }: Vo
                                     <span>
                                         {watchedMinOrder
                                             ? t('minOrderRequired', { amount: formatCurrencyVND(watchedMinOrder) })
-                                            : 'Không giới hạn đơn tối thiểu'}
+                                            : t('noMinOrder')}
                                     </span>
                                 </p>
                                 {watchedType === VOUCHER_TYPE.PERCENTAGE && watchedMaxDiscount ? (
@@ -545,7 +548,7 @@ export function VoucherFormPanel({ initialData, campaignOptions, onSuccess }: Vo
                                                   start: formatDisplayDate(safeParseDate(watchedStartDate)),
                                                   end: formatDisplayDate(safeParseDate(watchedEndDate)),
                                               })
-                                            : 'Chưa cài đặt thời gian'}
+                                            : t('noTimeConfigured')}
                                     </span>
                                 </p>
                             </div>
@@ -576,7 +579,7 @@ export function VoucherFormPanel({ initialData, campaignOptions, onSuccess }: Vo
                                             {t('formActiveCheckbox')}
                                         </label>
                                         <p className="text-[11px] text-muted-foreground">
-                                            Cho phép khách hàng lưu và sử dụng mã ngay lập tức
+                                            {t('formActiveCheckboxDesc')}
                                         </p>
                                     </div>
                                     <Switch
@@ -592,14 +595,23 @@ export function VoucherFormPanel({ initialData, campaignOptions, onSuccess }: Vo
                         {/* Summary checklist */}
                         <div className="rounded-lg bg-muted/40 p-3 text-xs space-y-2">
                             <div className="flex justify-between items-center text-muted-foreground">
-                                <span>Giới hạn tổng lượt dùng:</span>
+                                <span>{t('totalUsageLimit')}</span>
                                 <span className="font-semibold text-foreground">
-                                    {watchedUsageLimit ? `${watchedUsageLimit} lượt` : t('unlimited')}
+                                    {watchedUsageLimit ? t('usesUnit', { count: watchedUsageLimit }) : t('unlimited')}
                                 </span>
                             </div>
                             <div className="flex justify-between items-center text-muted-foreground">
-                                <span>Mỗi khách được dùng:</span>
-                                <span className="font-semibold text-foreground">{defaultValues.perUserLimit} lượt</span>
+                                <span>{t('perCustomerLimit')}</span>
+                                <span className="font-semibold text-foreground">
+                                    {t('usesUnit', {
+                                        count:
+                                            watchedPerUserLimit != null &&
+                                            !isNaN(Number(watchedPerUserLimit)) &&
+                                            Number(watchedPerUserLimit) > 0
+                                                ? Number(watchedPerUserLimit)
+                                                : defaultValues.perUserLimit || 1,
+                                    })}
+                                </span>
                             </div>
                         </div>
                     </div>
