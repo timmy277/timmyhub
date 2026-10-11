@@ -9,11 +9,14 @@ import {
     UserIcon,
     XCircleIcon,
 } from 'lucide-react'
+import type { useTranslations } from 'next-intl'
 
 import type { OrderDetail, OrderStatusType } from '@timmyhub/contracts'
 import { RowActions, StatusBadge, type RowAction } from '@/components'
 import { AG_GRID_NO_EXPORT, StatusTone } from '@/constants'
 import { formatCurrencyVND, formatTimestamp, rowActionsColumnWidth } from '@/utils'
+
+export type SellerOrdersTranslator = ReturnType<typeof useTranslations<'sellerOrders'>>
 
 export interface SellerOrderColumnActions {
     onDetail: (order: OrderDetail) => void
@@ -23,6 +26,7 @@ export interface SellerOrderColumnActions {
 }
 
 interface CreateSellerOrderColumnsOptions {
+    t?: SellerOrdersTranslator
     actions: SellerOrderColumnActions
 }
 
@@ -48,12 +52,36 @@ export const ORDER_STATUS_TONE_MAP: Record<string, StatusTone> = {
     CANCELLED: StatusTone.DANGER,
 }
 
-export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOptions): ColDef<OrderDetail>[] {
+export function getSellerOrderStatusLabel(status: string, t?: SellerOrdersTranslator): string {
+    if (t) {
+        switch (status) {
+            case 'PENDING':
+                return t('statusPending')
+            case 'CONFIRMED':
+                return t('statusConfirmed')
+            case 'PROCESSING':
+                return t('statusProcessing')
+            case 'PACKED':
+                return t('statusPacked')
+            case 'SHIPPING':
+                return t('statusShipping')
+            case 'DELIVERED':
+                return t('statusDelivered')
+            case 'COMPLETED':
+                return t('statusCompleted')
+            case 'CANCELLED':
+                return t('statusCancelled')
+        }
+    }
+    return ORDER_STATUS_LABEL_MAP[status] ?? status
+}
+
+export function createSellerOrderColumns({ t, actions }: CreateSellerOrderColumnsOptions): ColDef<OrderDetail>[] {
     const buildRowActions = (order: OrderDetail): RowAction[] => {
         const rowActions: RowAction[] = [
             {
                 key: 'view',
-                label: 'Xem chi tiết',
+                label: t ? t('actionView') : 'Xem chi tiết',
                 ariaLabel: `Xem chi tiết đơn ${order.id}`,
                 icon: EyeIcon,
                 onClick: () => actions.onDetail(order),
@@ -64,14 +92,14 @@ export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOp
             rowActions.push(
                 {
                     key: 'confirm',
-                    label: 'Xác nhận đơn',
+                    label: t ? t('actionConfirm') : 'Xác nhận đơn',
                     ariaLabel: `Xác nhận đơn ${order.id}`,
                     icon: CheckCircle2Icon,
                     onClick: () => actions.onUpdateStatus(order, 'CONFIRMED'),
                 },
                 {
                     key: 'cancel',
-                    label: 'Huỷ đơn hàng',
+                    label: t ? t('actionCancel') : 'Huỷ đơn hàng',
                     ariaLabel: `Huỷ đơn ${order.id}`,
                     icon: XCircleIcon,
                     destructive: true,
@@ -81,7 +109,7 @@ export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOp
         } else if (order.status === 'CONFIRMED') {
             rowActions.push({
                 key: 'process',
-                label: 'Chuẩn bị hàng',
+                label: t ? t('actionProcess') : 'Chuẩn bị hàng',
                 ariaLabel: `Chuẩn bị hàng đơn ${order.id}`,
                 icon: PackageIcon,
                 onClick: () => actions.onUpdateStatus(order, 'PROCESSING'),
@@ -89,7 +117,7 @@ export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOp
         } else if (order.status === 'PROCESSING' || order.status === 'PACKED') {
             rowActions.push({
                 key: 'ship',
-                label: 'Giao cho ĐVVC',
+                label: t ? t('actionShip') : 'Giao cho ĐVVC',
                 ariaLabel: `Bàn giao vận chuyển đơn ${order.id}`,
                 icon: TruckIcon,
                 onClick: () => actions.onUpdateStatus(order, 'SHIPPING'),
@@ -97,7 +125,7 @@ export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOp
         } else if (order.status === 'SHIPPING') {
             rowActions.push({
                 key: 'deliver',
-                label: 'Xác nhận Đã giao',
+                label: t ? t('actionDeliver') : 'Xác nhận Đã giao',
                 ariaLabel: `Xác nhận đã giao đơn ${order.id}`,
                 icon: CheckCircle2Icon,
                 onClick: () => actions.onUpdateStatus(order, 'DELIVERED'),
@@ -106,7 +134,7 @@ export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOp
 
         rowActions.push({
             key: 'print',
-            label: 'In phiếu đóng gói',
+            label: t ? t('actionPrint') : 'In phiếu đóng gói',
             ariaLabel: `In phiếu đơn ${order.id}`,
             icon: PrinterIcon,
             onClick: () => actions.onPrint(order),
@@ -117,7 +145,7 @@ export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOp
 
     return [
         {
-            headerName: 'Mã đơn',
+            headerName: t ? t('columnOrderId') : 'Mã đơn',
             field: 'id',
             width: 150,
             flex: 0,
@@ -138,14 +166,14 @@ export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOp
             },
         },
         {
-            headerName: 'Ngày đặt',
+            headerName: t ? t('columnCreatedAt') : 'Ngày đặt',
             field: 'createdAt',
             width: 155,
             flex: 0,
             valueFormatter: (params) => (params.value ? formatTimestamp(params.value as string) : '—'),
         },
         {
-            headerName: 'Khách hàng',
+            headerName: t ? t('columnCustomer') : 'Khách hàng',
             field: 'shippingFullName',
             width: 160,
             flex: 1,
@@ -160,7 +188,7 @@ export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOp
             },
         },
         {
-            headerName: 'Số điện thoại',
+            headerName: t ? t('columnPhone') : 'Số điện thoại',
             field: 'shippingPhone',
             width: 130,
             flex: 0,
@@ -175,7 +203,7 @@ export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOp
             },
         },
         {
-            headerName: 'Địa chỉ giao hàng',
+            headerName: t ? t('columnShippingAddress') : 'Địa chỉ giao hàng',
             field: 'shippingAddress',
             flex: 1.5,
             minWidth: 200,
@@ -192,18 +220,22 @@ export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOp
             },
         },
         {
-            headerName: 'Số SP',
+            headerName: t ? t('columnItemCount') : 'Số SP',
             colId: 'itemCount',
             width: 90,
             flex: 0,
             valueGetter: (params) => params.data?.items?.length ?? 0,
             cellRenderer: (params: ICellRendererParams<OrderDetail>) => {
                 const count = params.data?.items?.length ?? 0
-                return <span className="text-xs font-medium text-foreground">{count} món</span>
+                return (
+                    <span className="text-xs font-medium text-foreground">
+                        {t ? t('itemsCount', { count }) : `${count} món`}
+                    </span>
+                )
             },
         },
         {
-            headerName: 'Tổng tiền',
+            headerName: t ? t('columnTotal') : 'Tổng tiền',
             field: 'totalAmount',
             width: 140,
             flex: 0,
@@ -217,7 +249,7 @@ export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOp
             },
         },
         {
-            headerName: 'Phương thức TT',
+            headerName: t ? t('columnPaymentMethod') : 'Phương thức TT',
             field: 'paymentMethod',
             width: 125,
             flex: 0,
@@ -231,7 +263,7 @@ export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOp
             },
         },
         {
-            headerName: 'Trạng thái TT',
+            headerName: t ? t('columnPaymentStatus') : 'Trạng thái TT',
             field: 'paymentStatus',
             width: 140,
             flex: 0,
@@ -240,7 +272,17 @@ export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOp
                 const isPaid = params.data.paymentStatus === 'PAID' || params.data.paymentStatus === 'COMPLETED'
                 const isFailed = params.data.paymentStatus === 'FAILED'
                 const tone = isPaid ? StatusTone.SUCCESS : isFailed ? StatusTone.DANGER : StatusTone.NEUTRAL
-                const label = isPaid ? 'Đã thanh toán' : isFailed ? 'Thanh toán lỗi' : 'Chưa thanh toán'
+                const label = isPaid
+                    ? t
+                        ? t('paymentPaid')
+                        : 'Đã thanh toán'
+                    : isFailed
+                      ? t
+                          ? t('paymentFailed')
+                          : 'Thanh toán lỗi'
+                      : t
+                        ? t('paymentUnpaid')
+                        : 'Chưa thanh toán'
                 return (
                     <div className="flex items-center py-2">
                         <StatusBadge tone={tone} label={label} />
@@ -249,7 +291,7 @@ export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOp
             },
         },
         {
-            headerName: 'Trạng thái đơn',
+            headerName: t ? t('columnOrderStatus') : 'Trạng thái đơn',
             field: 'status',
             width: 145,
             flex: 0,
@@ -257,7 +299,7 @@ export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOp
                 if (!params.data) return null
                 const status = params.data.status
                 const tone = ORDER_STATUS_TONE_MAP[status] ?? StatusTone.NEUTRAL
-                const label = ORDER_STATUS_LABEL_MAP[status] ?? status
+                const label = getSellerOrderStatusLabel(status, t)
                 return (
                     <div className="flex items-center py-2">
                         <StatusBadge tone={tone} label={label} />
@@ -266,7 +308,7 @@ export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOp
             },
         },
         {
-            headerName: 'Thao tác',
+            headerName: t ? t('columnActions') : 'Thao tác',
             colId: 'actions',
             pinned: 'right',
             width: rowActionsColumnWidth(3),

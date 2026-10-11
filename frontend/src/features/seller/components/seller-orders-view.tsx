@@ -4,6 +4,7 @@ import React from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import type { OrderDetail } from '@timmyhub/contracts'
+import { useTranslations } from 'next-intl'
 import { Button, EmptyState } from '@/components'
 import { SELLER_ORDER_TAB } from '@/constants'
 import { buildSellerOrderTabsHref, type SellerOrderTabsState } from '../seller-order-tab-query'
@@ -20,6 +21,7 @@ interface SellerOrdersViewProps {
 }
 
 export function SellerOrdersView({ rows, tabs, currentUserId, initialDetail, error }: SellerOrdersViewProps) {
+    const t = useTranslations('sellerOrders')
     const pathname = usePathname()
     const searchParams = useSearchParams()
     const { active } = tabs
@@ -52,11 +54,11 @@ export function SellerOrdersView({ rows, tabs, currentUserId, initialDetail, err
                         <SellerOrderDetailPanel key={activeOrder.id} order={activeOrder} />
                     ) : (
                         <EmptyState
-                            title="Không tìm thấy đơn hàng"
-                            description={`Đơn hàng #${active.id.slice(-8).toUpperCase()} không tồn tại hoặc bạn không có quyền xem đơn hàng này.`}
+                            title={t('notFoundTitle')}
+                            description={t('notFoundDesc', { code: active.id.slice(-8).toUpperCase() })}
                             action={
                                 <Button asChild variant="outline" size="sm">
-                                    <Link href={listHref}>Quay lại danh sách đơn hàng</Link>
+                                    <Link href={listHref}>{t('backToList')}</Link>
                                 </Button>
                             }
                         />

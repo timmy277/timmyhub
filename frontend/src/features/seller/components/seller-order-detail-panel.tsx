@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
@@ -21,6 +21,7 @@ import {
     UserIcon,
     XCircleIcon,
 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import type { OrderDetail, OrderStatusType, UpdateOrderStatusInput } from '@timmyhub/contracts'
 import {
@@ -39,71 +40,53 @@ import {
     Textarea,
 } from '@/components'
 import { ROUTE, SELLER_ORDER_TAB } from '@/constants'
-import { formatCurrencyVND } from '@/utils'
+import { formatCurrencyVND, formatTimestamp } from '@/utils'
 import { updateSellerOrderStatusAction } from '../actions'
 import { buildSellerOrderTabsHref } from '../seller-order-tab-query'
+import { getSellerOrderStatusLabel } from './seller-order.columns'
 
 interface SellerOrderDetailPanelProps {
     order: OrderDetail
     onOrderUpdated?: (updated: OrderDetail) => void
 }
 
-const SELLER_CANCEL_REASONS = [
-    'Hết hàng trong kho',
-    'Khách hàng yêu cầu huỷ đơn',
-    'Không thể liên hệ với người mua để xác nhận',
-    'Sai sót về thông tin giá hoặc sản phẩm',
-    'Địa chỉ giao hàng nằm ngoài khu vực hỗ trợ',
-    'Khác',
-]
-
-const STATUS_BADGE_MAP: Record<
-    string,
-    { label: string; className: string; icon: React.ComponentType<{ className?: string }> }
-> = {
+const STATUS_CONFIG_MAP: Record<string, { className: string; icon: React.ComponentType<{ className?: string }> }> = {
     PENDING: {
-        label: 'Chờ xác nhận',
         className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30',
         icon: ClockIcon,
     },
     CONFIRMED: {
-        label: 'Đã xác nhận',
         className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30',
         icon: CheckCircle2Icon,
     },
     PROCESSING: {
-        label: 'Đang đóng gói',
         className: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30',
         icon: PackageIcon,
     },
     PACKED: {
-        label: 'Đã đóng gói',
         className: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30',
         icon: PackageIcon,
     },
     SHIPPING: {
-        label: 'Đang giao hàng',
         className: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30',
         icon: TruckIcon,
     },
     DELIVERED: {
-        label: 'Đã hoàn thành',
         className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
         icon: CheckCircle2Icon,
     },
     COMPLETED: {
-        label: 'Đã hoàn thành',
         className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
         icon: CheckCircle2Icon,
     },
     CANCELLED: {
-        label: 'Đã huỷ',
         className: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30',
         icon: XCircleIcon,
     },
 }
 
 export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: SellerOrderDetailPanelProps) {
+    const t = useTranslations('sellerOrders')
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -117,9 +100,21 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
         setOrder(initialOrder)
     }
 
+    const cancelReasons = useMemo(
+        () => [
+            { key: 'reasonOutOfStock', label: t('reasonOutOfStock') },
+            { key: 'reasonBuyerRequest', label: t('reasonBuyerRequest') },
+            { key: 'reasonCannotContact', label: t('reasonCannotContact') },
+            { key: 'reasonWrongPrice', label: t('reasonWrongPrice') },
+            { key: 'reasonOutsideArea', label: t('reasonOutsideArea') },
+            { key: 'reasonOther', label: t('reasonOther') },
+        ],
+        [t],
+    )
+
     // Cancel modal state
     const [showCancelModal, setShowCancelModal] = useState(false)
-    const [selectedReason, setSelectedReason] = useState<string>(SELLER_CANCEL_REASONS[0]!)
+    const [selectedReason, setSelectedReason] = useState<string>(cancelReasons[0]?.label || '')
     const [customReason, setCustomReason] = useState('')
     const [isSubmittingCancel, setIsSubmittingCancel] = useState(false)
 
@@ -134,24 +129,30 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                 status: nextStatus as UpdateOrderStatusInput['status'],
             })
             if (!res.ok) {
-                toast.error(res.message || 'Cập nhật trạng thái đơn hàng thất bại')
+                toast.error(res.message || t('updateFailed'))
                 return
             }
-            toast.success(`Đã cập nhật trạng thái sang ${STATUS_BADGE_MAP[nextStatus]?.label || nextStatus}`)
+            toast.success(
+                t('updateSuccess', {
+                    code: order.id.slice(-8).toUpperCase(),
+                    status: getSellerOrderStatusLabel(nextStatus, t),
+                }),
+            )
             setOrder(res.data)
             if (onOrderUpdated) onOrderUpdated(res.data)
             router.refresh()
         } catch {
-            toast.error('Có lỗi xảy ra khi cập nhật đơn hàng')
+            toast.error(t('updateError'))
         } finally {
             setIsUpdating(false)
         }
     }
 
     const handleConfirmCancel = async () => {
-        const reason = selectedReason === 'Khác' ? customReason.trim() : selectedReason
-        if (selectedReason === 'Khác' && !reason) {
-            toast.error('Vui lòng nhập lý do huỷ đơn hàng')
+        const isOther = selectedReason === t('reasonOther') || selectedReason === 'Khác'
+        const reason = isOther ? customReason.trim() : selectedReason
+        if (isOther && !reason) {
+            toast.error(t('cancelReasonRequired'))
             return
         }
 
@@ -162,27 +163,27 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                 note: reason,
             })
             if (!res.ok) {
-                toast.error(res.message || 'Huỷ đơn hàng thất bại')
+                toast.error(res.message || t('cancelFailed'))
                 return
             }
-            toast.success('Đã huỷ đơn hàng thành công')
+            toast.success(t('cancelSuccess'))
             setOrder(res.data)
             if (onOrderUpdated) onOrderUpdated(res.data)
             setShowCancelModal(false)
             router.refresh()
         } catch {
-            toast.error('Có lỗi xảy ra khi huỷ đơn hàng')
+            toast.error(t('cancelError'))
         } finally {
             setIsSubmittingCancel(false)
         }
     }
 
-    const statusInfo = STATUS_BADGE_MAP[order.status] || {
-        label: order.status,
+    const statusConfig = STATUS_CONFIG_MAP[order.status] || {
         className: 'bg-muted text-foreground',
         icon: ClockIcon,
     }
-    const StatusIcon = statusInfo.icon
+    const StatusIcon = statusConfig.icon
+    const statusLabel = getSellerOrderStatusLabel(order.status, t)
 
     return (
         <div className="space-y-6">
@@ -195,7 +196,7 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                     className="gap-1.5 text-muted-foreground hover:text-foreground"
                 >
                     <ArrowLeftIcon className="size-4" />
-                    <span>Quay lại danh sách đơn hàng</span>
+                    <span>{t('backToList')}</span>
                 </Button>
 
                 <div className="flex flex-wrap items-center gap-2">
@@ -203,13 +204,13 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                            toast.info(`In phiếu đóng gói cho đơn #${order.id.slice(-8).toUpperCase()}`)
+                            toast.info(t('printPreparing', { code: order.id.slice(-8).toUpperCase() }))
                             window.print()
                         }}
                         className="gap-1.5"
                     >
                         <PrinterIcon className="size-4" />
-                        <span>In phiếu đóng gói</span>
+                        <span>{t('printSlip')}</span>
                     </Button>
 
                     {order.status === 'PENDING' && (
@@ -221,7 +222,7 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                                 className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
                             >
                                 <XCircleIcon className="size-4 mr-1 text-rose-500" />
-                                Huỷ đơn
+                                {t('cancelOrder')}
                             </Button>
                             <Button
                                 variant="default"
@@ -235,7 +236,7 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                                 ) : (
                                     <CheckIcon className="size-4" />
                                 )}
-                                Xác nhận đơn
+                                {t('confirmOrder')}
                             </Button>
                         </>
                     )}
@@ -253,7 +254,7 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                             ) : (
                                 <PackageIcon className="size-4" />
                             )}
-                            Chuyển sang Đang đóng gói
+                            {t('moveToProcessing')}
                         </Button>
                     )}
 
@@ -270,7 +271,7 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                             ) : (
                                 <TruckIcon className="size-4" />
                             )}
-                            Bàn giao cho Đơn vị vận chuyển
+                            {t('handoverToCarrier')}
                         </Button>
                     )}
 
@@ -287,7 +288,7 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                             ) : (
                                 <CheckCircle2Icon className="size-4" />
                             )}
-                            Xác nhận Giao thành công
+                            {t('confirmDelivered')}
                         </Button>
                     )}
                 </div>
@@ -299,20 +300,22 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="space-y-0.5">
                             <div className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground uppercase tracking-wider">Mã đơn:</span>
+                                <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                                    {t('orderCode')}
+                                </span>
                                 <span className="font-mono font-bold text-base text-foreground">#{order.id}</span>
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                Ngày đặt: {new Date(order.createdAt).toLocaleString('vi-VN')}
+                                {t('orderDate', { date: formatTimestamp(order.createdAt) })}
                             </p>
                         </div>
 
                         <div className="flex items-center gap-2">
                             <span
-                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${statusInfo.className}`}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${statusConfig.className}`}
                             >
                                 <StatusIcon className="size-3.5" />
-                                <span>{statusInfo.label}</span>
+                                <span>{statusLabel}</span>
                             </span>
                             <Badge
                                 variant="outline"
@@ -326,10 +329,10 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                             >
                                 {order.paymentMethod} &bull;{' '}
                                 {order.paymentStatus === 'PAID' || order.paymentStatus === 'COMPLETED'
-                                    ? 'Đã TT'
+                                    ? t('paymentPaidShort')
                                     : order.paymentStatus === 'FAILED'
-                                      ? 'TT thất bại'
-                                      : 'Chưa TT'}
+                                      ? t('paymentFailedShort')
+                                      : t('paymentUnpaidShort')}
                             </Badge>
                         </div>
                     </div>
@@ -340,7 +343,7 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                     <div className="rounded-xl border border-border/60 p-4 bg-muted/15 space-y-2.5">
                         <h4 className="text-xs font-semibold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
                             <MapPinIcon className="size-3.5 text-primary" />
-                            <span>Thông tin giao hàng</span>
+                            <span>{t('shippingInfoTitle')}</span>
                         </h4>
                         <div className="space-y-1 text-sm pt-1">
                             <div className="flex items-center gap-2 font-medium text-foreground">
@@ -358,7 +361,7 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
 
                         {order.customerNote && (
                             <div className="mt-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-400">
-                                <strong>Ghi chú từ người mua:</strong> &ldquo;{order.customerNote}&rdquo;
+                                <strong>{t('customerNoteTitle')}</strong> &ldquo;{order.customerNote}&rdquo;
                             </div>
                         )}
                     </div>
@@ -367,29 +370,31 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                     <div className="rounded-xl border border-border/60 p-4 bg-muted/15 space-y-2.5">
                         <h4 className="text-xs font-semibold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
                             <CreditCardIcon className="size-3.5 text-primary" />
-                            <span>Tóm tắt thanh toán</span>
+                            <span>{t('paymentSummaryTitle')}</span>
                         </h4>
                         <div className="space-y-2 text-sm pt-1">
                             <div className="flex justify-between text-muted-foreground text-xs">
-                                <span>Tổng tiền hàng:</span>
+                                <span>{t('subtotal')}</span>
                                 <span className="font-medium text-foreground">
                                     {formatCurrencyVND(order.items.reduce((sum, it) => sum + Number(it.lineTotal), 0))}
                                 </span>
                             </div>
                             <div className="flex justify-between text-muted-foreground text-xs">
-                                <span>Phí vận chuyển:</span>
+                                <span>{t('shippingFee')}</span>
                                 <span className="font-medium text-foreground">
-                                    {Number(order.shippingFee) > 0 ? formatCurrencyVND(order.shippingFee) : 'Miễn phí'}
+                                    {Number(order.shippingFee) > 0
+                                        ? formatCurrencyVND(order.shippingFee)
+                                        : t('freeShipping')}
                                 </span>
                             </div>
                             {order.voucherDiscount && Number(order.voucherDiscount) > 0 && (
                                 <div className="flex justify-between text-emerald-600 text-xs">
-                                    <span>Giảm giá voucher:</span>
+                                    <span>{t('voucherDiscount')}</span>
                                     <span>-{formatCurrencyVND(order.voucherDiscount)}</span>
                                 </div>
                             )}
                             <div className="pt-2 border-t border-border/50 flex justify-between items-baseline font-bold">
-                                <span className="text-sm text-foreground">Tổng thu:</span>
+                                <span className="text-sm text-foreground">{t('totalRevenue')}</span>
                                 <span className="text-base text-primary font-extrabold">
                                     {formatCurrencyVND(order.totalAmount)}
                                 </span>
@@ -404,7 +409,7 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                 <CardHeader className="bg-muted/30 border-b border-border/50 px-4 py-3 sm:px-6">
                     <CardTitle className="text-sm font-semibold flex items-center gap-2">
                         <ShoppingBagIcon className="size-4 text-primary" />
-                        <span>Danh sách sản phẩm ({order.items.length})</span>
+                        <span>{t('productListTitle', { count: order.items.length })}</span>
                     </CardTitle>
                 </CardHeader>
 
@@ -435,11 +440,12 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                                     </Link>
                                     {item.variantLabel && item.variantLabel !== 'Mặc định' && (
                                         <p className="text-xs text-muted-foreground mt-0.5">
-                                            Phân loại: <span className="font-medium">{item.variantLabel}</span>
+                                            {t('variantLabel')} <span className="font-medium">{item.variantLabel}</span>
                                         </p>
                                     )}
                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                        Đơn giá: {formatCurrencyVND(item.unitPrice)} &bull; Số lượng: {item.quantity}
+                                        {t('unitPrice')} {formatCurrencyVND(item.unitPrice)} &bull; {t('quantity')}{' '}
+                                        {item.quantity}
                                     </p>
                                 </div>
                             </div>
@@ -458,7 +464,7 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                     <CardHeader className="bg-muted/30 border-b border-border/50 px-4 py-3 sm:px-6">
                         <CardTitle className="text-sm font-semibold flex items-center gap-2">
                             <ClockIcon className="size-4 text-primary" />
-                            <span>Lịch sử trạng thái đơn hàng</span>
+                            <span>{t('statusHistoryTitle')}</span>
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6 space-y-3">
@@ -468,15 +474,18 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                                 <div className="flex-1">
                                     <div className="flex items-baseline justify-between gap-2">
                                         <span className="font-medium text-foreground">
-                                            {hist.reason || `Chuyển trạng thái sang ${hist.toStatus}`}
+                                            {hist.reason ||
+                                                t('statusChangeDefault', {
+                                                    status: getSellerOrderStatusLabel(hist.toStatus, t),
+                                                })}
                                         </span>
                                         <span className="text-[11px] text-muted-foreground shrink-0">
-                                            {new Date(hist.createdAt).toLocaleString('vi-VN')}
+                                            {formatTimestamp(hist.createdAt)}
                                         </span>
                                     </div>
                                     {hist.actorRole && (
                                         <span className="text-[11px] text-muted-foreground block mt-0.5">
-                                            Thực hiện bởi: {hist.actorRole}
+                                            {t('performedBy', { role: hist.actorRole })}
                                         </span>
                                     )}
                                 </div>
@@ -492,21 +501,21 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                     <DialogHeader>
                         <div className="flex items-center gap-2 text-rose-600">
                             <AlertTriangleIcon className="size-5" />
-                            <DialogTitle className="text-lg font-bold">Huỷ đơn hàng</DialogTitle>
+                            <DialogTitle className="text-lg font-bold">{t('cancelDialogTitle')}</DialogTitle>
                         </div>
                         <DialogDescription className="text-xs text-muted-foreground pt-1">
-                            Huỷ đơn #{order.id.slice(-8).toUpperCase()}. Tồn kho sẽ được tự động hoàn lại.
+                            {t('cancelDialogDesc', { code: order.id.slice(-8).toUpperCase() })}
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-2">
-                        <label className="text-xs font-semibold text-foreground block">Chọn lý do huỷ đơn hàng:</label>
+                        <label className="text-xs font-semibold text-foreground block">{t('cancelReasonPrompt')}</label>
                         <div className="space-y-2">
-                            {SELLER_CANCEL_REASONS.map((reason) => (
+                            {cancelReasons.map((reason) => (
                                 <label
-                                    key={reason}
+                                    key={reason.key}
                                     className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs cursor-pointer transition-colors ${
-                                        selectedReason === reason
+                                        selectedReason === reason.label
                                             ? 'border-primary bg-primary/5 font-medium text-foreground'
                                             : 'border-border/60 hover:bg-muted/40 text-muted-foreground'
                                     }`}
@@ -514,23 +523,25 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                                     <input
                                         type="radio"
                                         name="panel_cancel_reason"
-                                        value={reason}
-                                        checked={selectedReason === reason}
-                                        onChange={() => setSelectedReason(reason)}
+                                        value={reason.label}
+                                        checked={selectedReason === reason.label}
+                                        onChange={() => setSelectedReason(reason.label)}
                                         className="size-3.5 accent-primary"
                                     />
-                                    <span>{reason}</span>
+                                    <span>{reason.label}</span>
                                 </label>
                             ))}
                         </div>
 
-                        {selectedReason === 'Khác' && (
+                        {(selectedReason === t('reasonOther') || selectedReason === 'Khác') && (
                             <div className="pt-2">
-                                <label className="text-xs text-muted-foreground mb-1 block">Chi tiết lý do khác:</label>
+                                <label className="text-xs text-muted-foreground mb-1 block">
+                                    {t('cancelReasonOtherDetail')}
+                                </label>
                                 <Textarea
                                     value={customReason}
                                     onChange={(e) => setCustomReason(e.target.value)}
-                                    placeholder="Nhập lý do huỷ đơn..."
+                                    placeholder={t('cancelReasonOtherPlaceholder')}
                                     rows={3}
                                     className="text-xs"
                                 />
@@ -545,7 +556,7 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                             onClick={() => setShowCancelModal(false)}
                             disabled={isSubmittingCancel}
                         >
-                            Đóng
+                            {t('close')}
                         </Button>
                         <Button
                             variant="destructive"
@@ -558,7 +569,7 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                             ) : (
                                 <XCircleIcon className="size-4 mr-1.5" />
                             )}
-                            Xác nhận huỷ đơn
+                            {t('cancelConfirmBtn')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

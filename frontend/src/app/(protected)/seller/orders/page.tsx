@@ -29,13 +29,10 @@ export default async function SellerOrdersPage({ searchParams }: SellerOrdersPag
         }
     }
 
+    const tOrders = await getTranslations('sellerOrders')
     const res = await getSellerOrdersAction()
     const rows = res.ok ? res.data : []
-    const error = res.ok
-        ? undefined
-        : res.code === 'FORBIDDEN'
-          ? 'Bạn chưa có hồ sơ người bán hoặc chưa được duyệt.'
-          : 'Không thể tải danh sách đơn hàng.'
+    const error = res.ok ? undefined : res.code === 'FORBIDDEN' ? tOrders('errorForbidden') : tOrders('errorLoad')
 
     return (
         <PageContainer>

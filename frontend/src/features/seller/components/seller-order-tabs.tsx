@@ -5,6 +5,7 @@ import type { MouseEvent, ReactNode } from 'react'
 import { FileTextIcon, ScrollTextIcon, XIcon } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 
 import { Tabs, TabsList, TabsTrigger } from '@/components'
 import { SELLER_ORDER_TAB, SELLER_ORDER_TAB_ID_LABEL_LENGTH } from '@/constants'
@@ -61,6 +62,7 @@ function sameSellerOrderTabs(left: readonly SellerOrderTabItem[], right: readonl
 }
 
 export function SellerOrderTabs({ active, userId, activeLabel }: SellerOrderTabsProps) {
+    const t = useTranslations('sellerOrders')
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -105,15 +107,15 @@ export function SellerOrderTabs({ active, userId, activeLabel }: SellerOrderTabs
     }, [activeKey])
 
     const describeTab = (item: SellerOrderTabItem): { label: string; icon: ReactNode } => {
-        const displayLabel =
+        const displayCode =
             item.id === (active.tab !== SELLER_ORDER_TAB.LIST ? active.id : '') && activeLabel
-                ? `Đơn #${activeLabel}`
+                ? activeLabel
                 : item.label
-                  ? `Đơn #${item.label}`
-                  : `Đơn #${item.id.slice(-SELLER_ORDER_TAB_ID_LABEL_LENGTH).toUpperCase()}`
+                  ? item.label
+                  : item.id.slice(-SELLER_ORDER_TAB_ID_LABEL_LENGTH).toUpperCase()
 
         return {
-            label: displayLabel,
+            label: t('tabDetail', { code: displayCode }),
             icon: <FileTextIcon className="size-3.5" />,
         }
     }
@@ -131,7 +133,7 @@ export function SellerOrderTabs({ active, userId, activeLabel }: SellerOrderTabs
     const items: SellerTabStripItem[] = [
         {
             value: SELLER_ORDER_TAB.LIST,
-            label: 'Danh sách đơn hàng',
+            label: t('tabList'),
             icon: <ScrollTextIcon className="size-3.5" />,
             target: { tab: SELLER_ORDER_TAB.LIST },
             item: null,
@@ -158,7 +160,7 @@ export function SellerOrderTabs({ active, userId, activeLabel }: SellerOrderTabs
     return (
         <Tabs value={activeKey} className="w-full">
             <div className="overflow-x-auto pb-px scrollbar-none">
-                <TabsList variant="line" className={TABS_LIST_CLASS}>
+                <TabsList variant="line" className={TABS_LIST_CLASS} aria-label={t('openTabsRegion')}>
                     {items.map((tab) => {
                         const href = buildSellerOrderTabsHref(pathname, searchParams, tab.target)
                         const isCurrentActive = tab.value === activeKey
@@ -180,7 +182,7 @@ export function SellerOrderTabs({ active, userId, activeLabel }: SellerOrderTabs
                                             type="button"
                                             onClick={(e) => handleClose(e, tab.item!)}
                                             className="rounded-xs p-0.5 opacity-60 hover:opacity-100 hover:bg-muted/80 transition-opacity"
-                                            title="Đóng tab"
+                                            title={t('closeTab')}
                                         >
                                             <XIcon className="size-3" />
                                         </button>

@@ -1,7 +1,9 @@
 'use client'
 
 import React, { useCallback, useMemo, useState } from 'react'
+import { AlertTriangleIcon, Loader2Icon, XCircleIcon } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import type { OrderDetail, OrderStatusType, UpdateOrderStatusInput } from '@timmyhub/contracts'
 import {
@@ -20,8 +22,7 @@ import { SELLER_ORDER_STATUS_ALL, SELLER_ORDER_TAB, USER_TABLE_ROW_HEIGHT_PX } f
 import { useDebouncedValue } from '@/hooks'
 import { updateSellerOrderStatusAction } from '../actions'
 import { buildSellerOrderTabsHref, type SellerOrderTabState } from '../seller-order-tab-query'
-import { createSellerOrderColumns, ORDER_STATUS_LABEL_MAP } from './seller-order.columns'
-import { AlertTriangleIcon, Loader2Icon, XCircleIcon } from 'lucide-react'
+import { createSellerOrderColumns, getSellerOrderStatusLabel } from './seller-order.columns'
 
 interface SellerOrderTableProps {
     rows: OrderDetail[]
@@ -30,26 +31,8 @@ interface SellerOrderTableProps {
     error?: string
 }
 
-const STATUS_FILTER_OPTIONS = [
-    { value: SELLER_ORDER_STATUS_ALL, label: 'Tất cả trạng thái' },
-    { value: 'PENDING', label: 'Chờ xác nhận' },
-    { value: 'CONFIRMED', label: 'Đã xác nhận' },
-    { value: 'PROCESSING', label: 'Đang đóng gói' },
-    { value: 'SHIPPING', label: 'Đang giao hàng' },
-    { value: 'DELIVERED', label: 'Đã hoàn thành' },
-    { value: 'CANCELLED', label: 'Đã huỷ' },
-]
-
-const SELLER_CANCEL_REASONS = [
-    'Hết hàng trong kho',
-    'Khách hàng yêu cầu huỷ đơn',
-    'Không thể liên hệ với người mua để xác nhận',
-    'Sai sót về thông tin giá hoặc sản phẩm',
-    'Địa chỉ giao hàng nằm ngoài khu vực hỗ trợ',
-    'Khác',
-]
-
 export function SellerOrderTable({ rows, onRefresh, error }: SellerOrderTableProps) {
+    const t = useTranslations('sellerOrders')
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -58,9 +41,34 @@ export function SellerOrderTable({ rows, onRefresh, error }: SellerOrderTablePro
     const debouncedSearch = useDebouncedValue(searchInput, 300)
     const [statusFilter, setStatusFilter] = useState<string>(SELLER_ORDER_STATUS_ALL)
 
+    const cancelReasons = useMemo(
+        () => [
+            { key: 'reasonOutOfStock', label: t('reasonOutOfStock') },
+            { key: 'reasonBuyerRequest', label: t('reasonBuyerRequest') },
+            { key: 'reasonCannotContact', label: t('reasonCannotContact') },
+            { key: 'reasonWrongPrice', label: t('reasonWrongPrice') },
+            { key: 'reasonOutsideArea', label: t('reasonOutsideArea') },
+            { key: 'reasonOther', label: t('reasonOther') },
+        ],
+        [t],
+    )
+
+    const statusFilterOptions = useMemo(
+        () => [
+            { value: SELLER_ORDER_STATUS_ALL, label: t('allStatuses') },
+            { value: 'PENDING', label: t('statusPending') },
+            { value: 'CONFIRMED', label: t('statusConfirmed') },
+            { value: 'PROCESSING', label: t('statusProcessing') },
+            { value: 'SHIPPING', label: t('statusShipping') },
+            { value: 'DELIVERED', label: t('statusDelivered') },
+            { value: 'CANCELLED', label: t('statusCancelled') },
+        ],
+        [t],
+    )
+
     // Cancel Dialog State
     const [cancellingOrder, setCancellingOrder] = useState<OrderDetail | null>(null)
-    const [selectedReason, setSelectedReason] = useState<string>(SELLER_CANCEL_REASONS[0]!)
+    const [selectedReason, setSelectedReason] = useState<string>('')
     const [customReason, setCustomReason] = useState('')
     const [isSubmittingCancel, setIsSubmittingCancel] = useState(false)
 
@@ -89,26 +97,30 @@ export function SellerOrderTable({ rows, onRefresh, error }: SellerOrderTablePro
                     status: nextStatus as UpdateOrderStatusInput['status'],
                 })
                 if (!res.ok) {
-                    toast.error(res.message || 'Cập nhật trạng thái đơn hàng thất bại')
+                    toast.error(res.message || t('updateFailed'))
                     return
                 }
                 toast.success(
-                    `Đã cập nhật đơn #${order.id.slice(-8).toUpperCase()} sang ${ORDER_STATUS_LABEL_MAP[nextStatus] || nextStatus}`,
+                    t('updateSuccess', {
+                        code: order.id.slice(-8).toUpperCase(),
+                        status: getSellerOrderStatusLabel(nextStatus, t),
+                    }),
                 )
                 if (onRefresh) onRefresh()
                 router.refresh()
             } catch {
-                toast.error('Có lỗi xảy ra khi cập nhật đơn hàng')
+                toast.error(t('updateError'))
             }
         },
-        [onRefresh, router],
+        [onRefresh, router, t],
     )
 
     const handleConfirmCancel = async () => {
         if (!cancellingOrder) return
-        const reason = selectedReason === 'Khác' ? customReason.trim() : selectedReason
-        if (selectedReason === 'Khác' && !reason) {
-            toast.error('Vui lòng nhập lý do huỷ đơn hàng')
+        const isOther = selectedReason === t('reasonOther') || selectedReason === 'Khác'
+        const reason = isOther ? customReason.trim() : selectedReason
+        if (isOther && !reason) {
+            toast.error(t('cancelReasonRequired'))
             return
         }
 
@@ -119,39 +131,43 @@ export function SellerOrderTable({ rows, onRefresh, error }: SellerOrderTablePro
                 note: reason,
             })
             if (!res.ok) {
-                toast.error(res.message || 'Huỷ đơn hàng thất bại')
+                toast.error(res.message || t('cancelFailed'))
                 return
             }
-            toast.success('Đã huỷ đơn hàng thành công')
+            toast.success(t('cancelSuccess'))
             setCancellingOrder(null)
             if (onRefresh) onRefresh()
             router.refresh()
         } catch {
-            toast.error('Có lỗi xảy ra khi huỷ đơn hàng')
+            toast.error(t('cancelError'))
         } finally {
             setIsSubmittingCancel(false)
         }
     }
 
-    const handlePrint = useCallback((order: OrderDetail) => {
-        toast.info(`Chuẩn bị in phiếu đóng gói cho đơn #${order.id.slice(-8).toUpperCase()}`)
-        window.print()
-    }, [])
+    const handlePrint = useCallback(
+        (order: OrderDetail) => {
+            toast.info(t('printPreparing', { code: order.id.slice(-8).toUpperCase() }))
+            window.print()
+        },
+        [t],
+    )
 
     const columns = useMemo(() => {
         return createSellerOrderColumns({
+            t,
             actions: {
                 onDetail: handleDetail,
                 onUpdateStatus: handleUpdateStatus,
                 onCancel: (order) => {
                     setCancellingOrder(order)
-                    setSelectedReason(SELLER_CANCEL_REASONS[0]!)
+                    setSelectedReason(cancelReasons[0]?.label || '')
                     setCustomReason('')
                 },
                 onPrint: handlePrint,
             },
         })
-    }, [handleDetail, handleUpdateStatus, handlePrint])
+    }, [cancelReasons, handleDetail, handlePrint, handleUpdateStatus, t])
 
     // Filter rows based on search and status
     const filteredRows = useMemo(() => {
@@ -195,8 +211,8 @@ export function SellerOrderTable({ rows, onRefresh, error }: SellerOrderTablePro
                         setStatusFilter(SELLER_ORDER_STATUS_ALL)
                         return true
                     }}
-                    searchLabel="Tìm đơn hàng..."
-                    exportFileName="danh-sach-don-hang-timmyhub"
+                    searchLabel={t('searchPlaceholder')}
+                    exportFileName={t('exportFileName')}
                     pagination={true}
                     gridProps={{
                         rowHeight: USER_TABLE_ROW_HEIGHT_PX,
@@ -214,8 +230,8 @@ export function SellerOrderTable({ rows, onRefresh, error }: SellerOrderTablePro
                     }}
                     toolbarFilters={
                         <FloatCombobox
-                            label="Trạng thái"
-                            options={STATUS_FILTER_OPTIONS}
+                            label={t('statusFilterLabel')}
+                            options={statusFilterOptions}
                             value={statusFilter}
                             onValueChange={(val) => setStatusFilter(val || SELLER_ORDER_STATUS_ALL)}
                             size="sm"
@@ -231,21 +247,21 @@ export function SellerOrderTable({ rows, onRefresh, error }: SellerOrderTablePro
                     <DialogHeader>
                         <div className="flex items-center gap-2 text-rose-600">
                             <AlertTriangleIcon className="h-5 w-5" />
-                            <DialogTitle className="text-lg font-bold">Huỷ đơn hàng</DialogTitle>
+                            <DialogTitle className="text-lg font-bold">{t('cancelDialogTitle')}</DialogTitle>
                         </div>
                         <DialogDescription className="text-xs text-muted-foreground pt-1">
-                            Huỷ đơn #{cancellingOrder?.id.slice(-8).toUpperCase()}. Tồn kho sẽ được tự động hoàn lại.
+                            {t('cancelDialogDesc', { code: cancellingOrder?.id.slice(-8).toUpperCase() ?? '' })}
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-2">
-                        <label className="text-xs font-semibold text-foreground block">Chọn lý do huỷ đơn hàng:</label>
+                        <label className="text-xs font-semibold text-foreground block">{t('cancelReasonPrompt')}</label>
                         <div className="space-y-2">
-                            {SELLER_CANCEL_REASONS.map((reason) => (
+                            {cancelReasons.map((item) => (
                                 <label
-                                    key={reason}
+                                    key={item.key}
                                     className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs cursor-pointer transition-colors ${
-                                        selectedReason === reason
+                                        selectedReason === item.label
                                             ? 'border-primary bg-primary/5 font-medium text-foreground'
                                             : 'border-border/60 hover:bg-muted/40 text-muted-foreground'
                                     }`}
@@ -253,23 +269,25 @@ export function SellerOrderTable({ rows, onRefresh, error }: SellerOrderTablePro
                                     <input
                                         type="radio"
                                         name="seller_cancel_reason"
-                                        value={reason}
-                                        checked={selectedReason === reason}
-                                        onChange={() => setSelectedReason(reason)}
+                                        value={item.label}
+                                        checked={selectedReason === item.label}
+                                        onChange={() => setSelectedReason(item.label)}
                                         className="h-3.5 w-3.5 accent-primary"
                                     />
-                                    <span>{reason}</span>
+                                    <span>{item.label}</span>
                                 </label>
                             ))}
                         </div>
 
-                        {selectedReason === 'Khác' && (
+                        {(selectedReason === t('reasonOther') || selectedReason === 'Khác') && (
                             <div className="pt-2">
-                                <label className="text-xs text-muted-foreground mb-1 block">Chi tiết lý do khác:</label>
+                                <label className="text-xs text-muted-foreground mb-1 block">
+                                    {t('cancelReasonOtherDetail')}
+                                </label>
                                 <Textarea
                                     value={customReason}
                                     onChange={(e) => setCustomReason(e.target.value)}
-                                    placeholder="Nhập lý do huỷ đơn hàng..."
+                                    placeholder={t('cancelReasonOtherPlaceholder')}
                                     rows={3}
                                     className="text-xs"
                                 />
@@ -284,7 +302,7 @@ export function SellerOrderTable({ rows, onRefresh, error }: SellerOrderTablePro
                             onClick={() => setCancellingOrder(null)}
                             disabled={isSubmittingCancel}
                         >
-                            Đóng
+                            {t('close')}
                         </Button>
                         <Button
                             variant="destructive"
@@ -297,7 +315,7 @@ export function SellerOrderTable({ rows, onRefresh, error }: SellerOrderTablePro
                             ) : (
                                 <XCircleIcon className="h-4 w-4 mr-1.5" />
                             )}
-                            Xác nhận huỷ đơn
+                            {t('cancelConfirmBtn')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
