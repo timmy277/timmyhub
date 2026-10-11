@@ -799,6 +799,13 @@ export class OrderService {
                     })
                 }
 
+                // Hoàn lại voucher nếu có
+                await this.refundOrderVouchers(tx, {
+                    id: order.id,
+                    buyerId: order.buyerId,
+                    idempotencyKey: order.idempotencyKey,
+                })
+
                 // Cập nhật trạng thái đơn
                 const cancelled = await tx.order.update({
                     where: { id: orderId },
@@ -935,6 +942,13 @@ export class OrderService {
                             },
                         })
                     }
+
+                    // Hoàn lại voucher nếu người bán huỷ đơn
+                    await this.refundOrderVouchers(tx, {
+                        id: order.id,
+                        buyerId: order.buyerId,
+                        idempotencyKey: order.idempotencyKey,
+                    })
                 }
 
                 // Nếu đơn chuyển sang COMPLETED hoặc DELIVERED và đã thanh toán COD
@@ -1003,6 +1017,82 @@ export class OrderService {
             createdAt: a.createdAt.toISOString(),
             updatedAt: a.updatedAt.toISOString(),
         }
+    }
+
+    private async refundOrderVouchers(
+        tx: Prisma.TransactionClient,
+        order: { id: string; buyerId: string; idempotencyKey?: string | null },
+    ): Promise<void> {
+        const usageLogs = await tx.voucherUsageLog.findMany({
+            where: { orderId: order.id },
+        })
+
+        if (usageLogs.length === 0) {
+            return
+        }
+
+        // Tìm các đơn hàng cùng đợt checkout (nếu có) mà vẫn đang hoạt động
+        const batchPrefix =
+            order.idempotencyKey && order.idempotencyKey.includes('-')
+                ? order.idempotencyKey.substring(0, order.idempotencyKey.lastIndexOf('-'))
+                : null
+
+        const activeSiblingOrderIds: string[] = []
+        if (batchPrefix) {
+            const siblings = await tx.order.findMany({
+                where: {
+                    idempotencyKey: { startsWith: `${batchPrefix}-` },
+                    id: { not: order.id },
+                    status: { notIn: ['CANCELLED', 'RETURNED', 'REFUNDED'] },
+                },
+                select: { id: true },
+            })
+            activeSiblingOrderIds.push(...siblings.map((s) => s.id))
+        }
+
+        for (const log of usageLogs) {
+            // Kiểm tra xem có đơn hàng khác trong cùng đợt checkout đang còn dùng voucher này không
+            let isStillUsedBySibling = false
+            if (activeSiblingOrderIds.length > 0) {
+                const siblingLog = await tx.voucherUsageLog.findFirst({
+                    where: {
+                        voucherId: log.voucherId,
+                        orderId: { in: activeSiblingOrderIds },
+                    },
+                })
+                if (siblingLog) {
+                    isStillUsedBySibling = true
+                }
+            }
+
+            // Nếu không còn đơn nào khác trong đợt checkout đang dùng voucher này
+            if (!isStillUsedBySibling) {
+                // 1. Giảm usedCount của voucher (không để âm)
+                await tx.voucher.updateMany({
+                    where: { id: log.voucherId, usedCount: { gt: 0 } },
+                    data: {
+                        usedCount: { decrement: 1 },
+                    },
+                })
+
+                // 2. Chuyển UserVoucher từ 'USED' trở lại 'SAVED'
+                await tx.userVoucher.updateMany({
+                    where: {
+                        userId: order.buyerId,
+                        voucherId: log.voucherId,
+                        status: 'USED',
+                    },
+                    data: {
+                        status: 'SAVED',
+                    },
+                })
+            }
+        }
+
+        // 3. Xoá log sử dụng của đơn hàng này để giải phóng perUserLimit
+        await tx.voucherUsageLog.deleteMany({
+            where: { orderId: order.id },
+        })
     }
 
     private async attachVoucherDetailsToOrders(
