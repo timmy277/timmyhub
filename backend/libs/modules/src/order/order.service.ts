@@ -341,9 +341,9 @@ export class OrderService {
                 const shops = await tx.sellerProfile.findMany({
                     where: { id: { in: shopIds } },
                 })
-                const shopMap = new Map(shops.map((s) => [s.id, s.shopName]))
+                const shopMap = new Map(shops.map((s) => [s.id, { shopName: s.shopName, shopSlug: s.shopSlug }]))
 
-                const ordersList: Array<OrderWithRelations & { shopName: string }> = []
+                const ordersList: Array<OrderWithRelations & { shopName: string; shopSlug?: string }> = []
                 const baseIdempotency = key || `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
 
                 // Bước C.2: Xác thực & tính toán voucher đa tầng (Shopee-Style: Freeship + Sàn + Shop)
@@ -657,9 +657,11 @@ export class OrderService {
                         })
                     }
 
+                    const shopInfo = shopMap.get(shopId)
                     ordersList.push({
                         ...order,
-                        shopName: shopMap.get(shopId) || 'TimmyHub Mall',
+                        shopName: shopInfo?.shopName || 'TimmyHub Mall',
+                        shopSlug: shopInfo?.shopSlug,
                     })
                 }
 
@@ -727,8 +729,13 @@ export class OrderService {
                       where: { id: { in: sellerIds } },
                   })
                 : []
-        const shopMap = new Map(sellers.map((s) => [s.id, s.shopName]))
-        return this.attachVoucherDetailsToOrders(orders.map((o) => ({ ...o, shopName: shopMap.get(o.sellerId) })))
+        const shopMap = new Map(sellers.map((s) => [s.id, { shopName: s.shopName, shopSlug: s.shopSlug }]))
+        return this.attachVoucherDetailsToOrders(
+            orders.map((o) => {
+                const s = shopMap.get(o.sellerId)
+                return { ...o, shopName: s?.shopName, shopSlug: s?.shopSlug }
+            }),
+        )
     }
 
     async getOrderById(userId: string, orderId: string): Promise<OrderDetail> {
@@ -756,7 +763,9 @@ export class OrderService {
         const seller = await this.prisma.sellerProfile.findUnique({
             where: { id: order.sellerId },
         })
-        const [formatted] = await this.attachVoucherDetailsToOrders([{ ...order, shopName: seller?.shopName }])
+        const [formatted] = await this.attachVoucherDetailsToOrders([
+            { ...order, shopName: seller?.shopName, shopSlug: seller?.shopSlug },
+        ])
         return formatted!
     }
 
@@ -838,7 +847,9 @@ export class OrderService {
             where: { id: updatedOrder.sellerId },
         })
 
-        const [formatted] = await this.attachVoucherDetailsToOrders([{ ...updatedOrder, shopName: seller?.shopName }])
+        const [formatted] = await this.attachVoucherDetailsToOrders([
+            { ...updatedOrder, shopName: seller?.shopName, shopSlug: seller?.shopSlug },
+        ])
         return formatted!
     }
 
@@ -864,9 +875,12 @@ export class OrderService {
                               where: { id: { in: sellerIds } },
                           })
                         : []
-                const shopMap = new Map(sellers.map((s) => [s.id, s.shopName]))
+                const shopMap = new Map(sellers.map((s) => [s.id, { shopName: s.shopName, shopSlug: s.shopSlug }]))
                 return this.attachVoucherDetailsToOrders(
-                    orders.map((o) => ({ ...o, shopName: shopMap.get(o.sellerId) })),
+                    orders.map((o) => {
+                        const s = shopMap.get(o.sellerId)
+                        return { ...o, shopName: s?.shopName, shopSlug: s?.shopSlug }
+                    }),
                 )
             }
 
@@ -880,7 +894,9 @@ export class OrderService {
 
         const orderStatus = status && status in ORDER_STATUS ? (status as OrderStatus) : undefined
         const orders = await this.orderRepo.findOrdersBySellerId(seller.id, orderStatus)
-        return this.attachVoucherDetailsToOrders(orders.map((o) => ({ ...o, shopName: seller.shopName })))
+        return this.attachVoucherDetailsToOrders(
+            orders.map((o) => ({ ...o, shopName: seller.shopName, shopSlug: seller.shopSlug })),
+        )
     }
 
     async updateSellerOrderStatus(
@@ -992,7 +1008,9 @@ export class OrderService {
                   where: { id: updatedOrder.sellerId },
               })
 
-        const [formatted] = await this.attachVoucherDetailsToOrders([{ ...updatedOrder, shopName: shop?.shopName }])
+        const [formatted] = await this.attachVoucherDetailsToOrders([
+            { ...updatedOrder, shopName: shop?.shopName, shopSlug: shop?.shopSlug },
+        ])
         return formatted!
     }
 
@@ -1096,7 +1114,7 @@ export class OrderService {
     }
 
     private async attachVoucherDetailsToOrders(
-        orders: Array<OrderWithRelations & { shopName?: string | undefined }>,
+        orders: Array<OrderWithRelations & { shopName?: string | undefined; shopSlug?: string | undefined }>,
     ): Promise<OrderDetail[]> {
         if (orders.length === 0) return []
         const orderIds = orders.map((o) => o.id)
@@ -1129,7 +1147,7 @@ export class OrderService {
     }
 
     private formatOrder(
-        o: OrderWithRelations & { shopName?: string | undefined },
+        o: OrderWithRelations & { shopName?: string | undefined; shopSlug?: string | undefined },
         orderVouchers?: OrderVoucherDetail[],
         voucherCode?: string | null,
     ): OrderDetail {
@@ -1138,6 +1156,7 @@ export class OrderService {
             buyerId: o.buyerId,
             sellerId: o.sellerId,
             ...(o.shopName ? { shopName: o.shopName } : {}),
+            ...(o.shopSlug ? { shopSlug: o.shopSlug } : {}),
             status: o.status,
             totalAmount: o.totalAmount != null ? o.totalAmount.toString() : '0',
             currency: o.currency || 'VND',

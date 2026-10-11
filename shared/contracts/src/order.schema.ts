@@ -144,6 +144,7 @@ export interface OrderDetail {
     buyerId: string
     sellerId: string
     shopName?: string | undefined
+    shopSlug?: string | undefined
     status: OrderStatusType
     totalAmount: string
     currency: string
