@@ -57,7 +57,7 @@ export const QUERY_KEY = {
     },
     ORDER: {
         ALL: ['order'] as const,
-        MY_ORDERS: (status?: string) => ['order', 'my-orders', status] as const,
+        MY_ORDERS: (status?: string, search?: string) => ['order', 'my-orders', status, search] as const,
         DETAIL: (id: string) => ['order', 'detail', id] as const,
     },
     ADDRESS: {

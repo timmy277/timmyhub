@@ -6,10 +6,16 @@ import type {
     CancelOrderInput,
     CheckoutInput,
     CheckoutResult,
+    GetMyOrdersQuery,
     OrderDetail,
     UpdateOrderStatusInput,
 } from '@timmyhub/contracts'
-import { CancelOrderInputSchema, CheckoutInputSchema, UpdateOrderStatusInputSchema } from '@timmyhub/contracts'
+import {
+    CancelOrderInputSchema,
+    CheckoutInputSchema,
+    GetMyOrdersQuerySchema,
+    UpdateOrderStatusInputSchema,
+} from '@timmyhub/contracts'
 import type { AuthUser } from '@timmyhub/modules/platform/auth'
 import { AuthenticatedOnly, CurrentUser, Public } from '@timmyhub/modules/platform/auth'
 
@@ -41,8 +47,11 @@ export class OrderController {
     // Danh sách đơn hàng của người mua
     @AuthenticatedOnly()
     @Get()
-    getMyOrders(@Query('status') status: string | undefined, @CurrentUser() actor: AuthUser): Promise<OrderDetail[]> {
-        return this.orderService.getMyOrders(actor.id, status)
+    getMyOrders(
+        @Query(new ZodValidationPipe(GetMyOrdersQuerySchema)) query: GetMyOrdersQuery,
+        @CurrentUser() actor: AuthUser,
+    ): Promise<OrderDetail[]> {
+        return this.orderService.getMyOrders(actor.id, query.status, query.search)
     }
 
     // VNPay return callback (browser redirect sau khi khách thanh toán)

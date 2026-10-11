@@ -89,14 +89,36 @@ export class OrderRepository {
 
     async findOrdersByBuyerId(
         buyerId: string,
-        status?: OrderStatus,
+        status?: OrderStatus | OrderStatus[],
+        search?: string,
+        matchingSellerIds?: string[],
         tx?: Prisma.TransactionClient,
     ): Promise<OrderWithRelations[]> {
         const client = this.getClient(tx)
         return client.order.findMany({
             where: {
                 buyerId,
-                ...(status ? { status } : {}),
+                ...(status ? (Array.isArray(status) ? { status: { in: status } } : { status }) : {}),
+                ...(search
+                    ? {
+                          OR: [
+                              { id: { contains: search, mode: 'insensitive' } },
+                              {
+                                  orderItems: {
+                                      some: {
+                                          OR: [
+                                              { productName: { contains: search, mode: 'insensitive' } },
+                                              { sku: { contains: search, mode: 'insensitive' } },
+                                          ],
+                                      },
+                                  },
+                              },
+                              ...(matchingSellerIds && matchingSellerIds.length > 0
+                                  ? [{ sellerId: { in: matchingSellerIds } }]
+                                  : []),
+                          ],
+                      }
+                    : {}),
             },
             include: {
                 orderItems: true,

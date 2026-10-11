@@ -99,6 +99,26 @@ export interface OrderItemDetail {
     isReviewed: boolean
 }
 
+export const GetMyOrdersQuerySchema = z.object({
+    status: z
+        .enum([
+            'PENDING',
+            'CONFIRMED',
+            'PROCESSING',
+            'PACKED',
+            'SHIPPING',
+            'DELIVERED',
+            'COMPLETED',
+            'CANCELLED',
+            'RETURN_REQUESTED',
+            'RETURNED',
+            'REFUNDED',
+        ])
+        .optional(),
+    search: z.string().trim().max(100).optional(),
+})
+export type GetMyOrdersQuery = z.infer<typeof GetMyOrdersQuerySchema>
+
 export const CancelOrderInputSchema = z.object({
     reason: z.string().trim().max(300).optional(),
 })

@@ -728,9 +728,29 @@ export class OrderService {
         }
     }
 
-    async getMyOrders(userId: string, status?: string): Promise<OrderDetail[]> {
-        const orderStatus = status && status in ORDER_STATUS ? (status as OrderStatus) : undefined
-        const orders = await this.orderRepo.findOrdersByBuyerId(userId, orderStatus)
+    async getMyOrders(userId: string, status?: string, search?: string): Promise<OrderDetail[]> {
+        let orderStatus: OrderStatus | OrderStatus[] | undefined
+        if (status === 'DELIVERED') {
+            orderStatus = [ORDER_STATUS.DELIVERED, ORDER_STATUS.COMPLETED]
+        } else if (status && status in ORDER_STATUS) {
+            orderStatus = status as OrderStatus
+        }
+
+        const rawSearch = search?.trim() || undefined
+        const cleanSearch = rawSearch?.startsWith('#') ? rawSearch.slice(1).trim() : rawSearch
+
+        let matchingSellerIds: string[] | undefined
+        if (cleanSearch) {
+            const matchingSellers = await this.prisma.sellerProfile.findMany({
+                where: { shopName: { contains: cleanSearch, mode: 'insensitive' } },
+                select: { id: true },
+            })
+            if (matchingSellers.length > 0) {
+                matchingSellerIds = matchingSellers.map((s) => s.id)
+            }
+        }
+
+        const orders = await this.orderRepo.findOrdersByBuyerId(userId, orderStatus, cleanSearch, matchingSellerIds)
         const sellerIds = Array.from(new Set(orders.map((o) => o.sellerId)))
         const sellers =
             sellerIds.length > 0

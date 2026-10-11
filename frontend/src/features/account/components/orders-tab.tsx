@@ -34,9 +34,10 @@ import {
     Skeleton,
     Textarea,
 } from '@/components'
-import { QUERY_KEY, ROUTE } from '@/constants'
+import { QUERY_KEY, ROUTE, SEARCH_DEBOUNCE_MS } from '@/constants'
 import { cancelOrderAction, getMyOrdersAction, getOrderByIdAction } from '@/features/checkout'
 import { OrderCard, OrderDetailView } from '@/features/orders'
+import { useDebouncedValue } from '@/hooks'
 
 const CANCEL_REASONS = [
     'Muốn thay đổi địa chỉ giao hàng',
@@ -45,6 +46,15 @@ const CANCEL_REASONS = [
     'Tìm thấy sản phẩm giá tốt hơn ở nơi khác',
     'Đặt nhầm sản phẩm hoặc số lượng',
     'Khác',
+]
+
+const FILTER_TABS: Array<{ labelKey: string; status: OrderStatusType | 'ALL' }> = [
+    { labelKey: 'tabAll', status: 'ALL' },
+    { labelKey: 'tabPending', status: 'PENDING' },
+    { labelKey: 'tabConfirmed', status: 'CONFIRMED' },
+    { labelKey: 'tabShipping', status: 'SHIPPING' },
+    { labelKey: 'tabDelivered', status: 'DELIVERED' },
+    { labelKey: 'tabCancelled', status: 'CANCELLED' },
 ]
 
 interface OrdersTabProps {
@@ -58,12 +68,17 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
 
     const [activeTab, setActiveTab] = useState<OrderStatusType | 'ALL'>('ALL')
     const [searchQuery, setSearchQuery] = useState('')
+    const debouncedSearch = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS)
 
     // State cho Modal huỷ đơn
     const [cancellingOrder, setCancellingOrder] = useState<OrderDetail | null>(null)
     const [selectedReason, setSelectedReason] = useState<string>(CANCEL_REASONS[0]!)
     const [customReason, setCustomReason] = useState('')
     const [isSubmittingCancel, setIsSubmittingCancel] = useState(false)
+
+    // Khi tab là ALL thì không truyền status lên API (lấy tất cả)
+    const apiStatus = activeTab === 'ALL' ? undefined : activeTab
+    const apiSearch = debouncedSearch.trim() || undefined
 
     const {
         data: orders = [],
@@ -72,53 +87,14 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
         refetch,
         isFetching,
     } = useQuery({
-        queryKey: QUERY_KEY.ORDER.MY_ORDERS(),
+        queryKey: QUERY_KEY.ORDER.MY_ORDERS(apiStatus, apiSearch),
         queryFn: async () => {
-            const res = await getMyOrdersAction()
+            const res = await getMyOrdersAction(apiStatus, apiSearch)
             if (!res.ok) throw new Error(res.message || 'Lỗi khi tải đơn hàng')
             return res.data
         },
         staleTime: 30_000,
     })
-
-    const filterTabs: Array<{ label: string; status: OrderStatusType | 'ALL' }> = useMemo(
-        () => [
-            { label: t('tabAll'), status: 'ALL' },
-            { label: t('tabPending'), status: 'PENDING' },
-            { label: t('tabConfirmed'), status: 'CONFIRMED' },
-            { label: t('tabShipping'), status: 'SHIPPING' },
-            { label: t('tabDelivered'), status: 'DELIVERED' },
-            { label: t('tabCancelled'), status: 'CANCELLED' },
-        ],
-        [t],
-    )
-
-    // Lọc đơn hàng theo Tab và Query tìm kiếm
-    const filteredOrders = useMemo(() => {
-        return orders.filter((order) => {
-            if (activeTab !== 'ALL') {
-                if (activeTab === 'DELIVERED') {
-                    if (order.status !== 'DELIVERED' && order.status !== 'COMPLETED') return false
-                } else if (order.status !== activeTab) {
-                    return false
-                }
-            }
-
-            if (searchQuery.trim()) {
-                const query = searchQuery.toLowerCase().trim()
-                const matchesId = order.id.toLowerCase().includes(query)
-                const matchesItem = order.items.some(
-                    (it) =>
-                        it.productName.toLowerCase().includes(query) ||
-                        (it.sku && it.sku.toLowerCase().includes(query)),
-                )
-                const matchesShop = order.shopName?.toLowerCase().includes(query)
-                return matchesId || matchesItem || matchesShop
-            }
-
-            return true
-        })
-    }, [orders, activeTab, searchQuery])
 
     // Xử lý xác nhận huỷ đơn
     const handleConfirmCancel = async () => {
@@ -141,7 +117,8 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
             toast.success(t('cancelSuccess'))
             setCancellingOrder(null)
             setCustomReason('')
-            await queryClient.invalidateQueries({ queryKey: QUERY_KEY.ORDER.MY_ORDERS() })
+            // Invalidate toàn bộ cache đơn hàng (tất cả các combination status/search)
+            await queryClient.invalidateQueries({ queryKey: QUERY_KEY.ORDER.ALL })
         } catch {
             toast.error(tCommon('errorGeneric'))
         } finally {
@@ -262,15 +239,8 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
                 <CardContent className="space-y-4 pt-0">
                     {/* Filter Status Tabs */}
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none border-b border-border/60">
-                        {filterTabs.map((tab) => {
+                        {FILTER_TABS.map((tab) => {
                             const isActive = activeTab === tab.status
-                            const count =
-                                tab.status === 'ALL'
-                                    ? orders.length
-                                    : tab.status === 'DELIVERED'
-                                      ? orders.filter((o) => o.status === 'DELIVERED' || o.status === 'COMPLETED')
-                                            .length
-                                      : orders.filter((o) => o.status === tab.status).length
 
                             return (
                                 <button
@@ -283,18 +253,7 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
                                             : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                                     }`}
                                 >
-                                    <span>{tab.label}</span>
-                                    {count > 0 && (
-                                        <span
-                                            className={`px-1.5 py-0.2 rounded-full text-[10px] font-semibold ${
-                                                isActive
-                                                    ? 'bg-primary-foreground/20 text-primary-foreground'
-                                                    : 'bg-muted text-muted-foreground'
-                                            }`}
-                                        >
-                                            {count}
-                                        </span>
-                                    )}
+                                    <span>{t(tab.labelKey as Parameters<typeof t>[0])}</span>
                                 </button>
                             )
                         })}
@@ -302,14 +261,28 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
 
                     {/* Search Bar */}
                     <div className="relative">
-                        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        {isFetching && !isLoading ? (
+                            <Loader2Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground animate-spin" />
+                        ) : (
+                            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        )}
                         <Input
                             type="text"
                             placeholder={t('searchPlaceholder')}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-9 pr-4 h-9 text-xs w-full bg-muted/20"
+                            className="pl-9 pr-8 h-9 text-xs w-full bg-muted/20"
                         />
+                        {searchQuery && (
+                            <button
+                                type="button"
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded-full"
+                                aria-label={t('clearSearch')}
+                            >
+                                <XCircleIcon className="h-3.5 w-3.5" />
+                            </button>
+                        )}
                     </div>
 
                     {/* Orders List Container */}
@@ -327,23 +300,29 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
                                 {tCommon('retry')}
                             </Button>
                         </div>
-                    ) : filteredOrders.length === 0 ? (
+                    ) : orders.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-10 px-4 text-center border border-dashed border-border/80 rounded-xl bg-muted/5">
                             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary mb-3">
                                 <PackageOpenIcon className="h-6 w-6" />
                             </div>
-                            <h4 className="text-sm font-semibold text-foreground">{t('emptyTitle')}</h4>
-                            <p className="mt-1 text-xs text-muted-foreground max-w-sm">{t('emptyDescription')}</p>
-                            <Link href="/" onClick={onCloseDialog} className="mt-4">
-                                <Button size="sm" className="gap-1.5 text-xs">
-                                    <ShoppingBagIcon className="h-3.5 w-3.5" />
-                                    <span>{t('shopNow')}</span>
-                                </Button>
-                            </Link>
+                            <h4 className="text-sm font-semibold text-foreground">
+                                {apiSearch ? t('searchEmptyTitle') : t('emptyTitle')}
+                            </h4>
+                            <p className="mt-1 text-xs text-muted-foreground max-w-sm">
+                                {apiSearch ? t('searchEmptyDescription', { query: apiSearch }) : t('emptyDescription')}
+                            </p>
+                            {!apiSearch && (
+                                <Link href="/" onClick={onCloseDialog} className="mt-4">
+                                    <Button size="sm" className="gap-1.5 text-xs">
+                                        <ShoppingBagIcon className="h-3.5 w-3.5" />
+                                        <span>{t('shopNow')}</span>
+                                    </Button>
+                                </Link>
+                            )}
                         </div>
                     ) : (
                         <div className="space-y-4 pt-1">
-                            {filteredOrders.map((order) => (
+                            {orders.map((order) => (
                                 <OrderCard
                                     key={order.id}
                                     order={order}

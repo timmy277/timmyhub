@@ -570,7 +570,10 @@
       "keepOrder": "Keep Order",
       "cancelling": "Processing cancellation...",
       "cancelSuccess": "Order cancelled successfully",
-      "cancelFailed": "Failed to cancel order: {error}"
+      "cancelFailed": "Failed to cancel order: {error}",
+      "searchEmptyTitle": "No orders found",
+      "searchEmptyDescription": "No orders match \"{query}\"",
+      "clearSearch": "Clear search"
     }
   },
   "validation": {

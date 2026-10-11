@@ -178,12 +178,19 @@ export async function getOrderByIdAction(orderId: string): Promise<CheckoutActio
 }
 
 // 8. Lấy danh sách đơn hàng của tôi
-export async function getMyOrdersAction(status?: string): Promise<CheckoutActionResult<OrderDetail[]>> {
+export async function getMyOrdersAction(
+    status?: string,
+    search?: string,
+): Promise<CheckoutActionResult<OrderDetail[]>> {
     const actor = await getActor()
     if (!actor) return { ok: false, code: 'UNAUTHORIZED', message: 'Vui lòng đăng nhập' }
 
+    const query: Record<string, string> = {}
+    if (status) query.status = status
+    if (search?.trim()) query.search = search.trim()
+
     const result = await fetchBackend<OrderDetail[]>(API_ROUTE.ORDER.ROOT, {
-        query: status ? { status } : undefined,
+        query: Object.keys(query).length > 0 ? query : undefined,
         token: actor.accessToken,
     })
 

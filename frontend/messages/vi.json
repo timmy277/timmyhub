@@ -570,7 +570,10 @@
       "keepOrder": "Giữ đơn hàng",
       "cancelling": "Đang xử lý huỷ...",
       "cancelSuccess": "Đã huỷ đơn hàng thành công",
-      "cancelFailed": "Huỷ đơn hàng thất bại: {error}"
+      "cancelFailed": "Huỷ đơn hàng thất bại: {error}",
+      "searchEmptyTitle": "Không tìm thấy đơn hàng nào",
+      "searchEmptyDescription": "Không có đơn hàng nào khớp với \"{query}\"",
+      "clearSearch": "Xoá tìm kiếm"
     }
   },
   "validation": {
