@@ -193,7 +193,7 @@ export function CampaignDetailPanel({ campaign: initialCampaign, onCampaignUpdat
                 {/* Banner image if present */}
                 {campaign.banner && (
                     <div className="relative w-full h-44 sm:h-56 bg-muted/40 border-b border-border/50 overflow-hidden">
-                        <Image src={campaign.banner} alt={campaign.name} fill className="object-cover" />
+                        <Image src={campaign.banner} alt={campaign.name} fill sizes="100vw" className="object-cover" />
                     </div>
                 )}
 

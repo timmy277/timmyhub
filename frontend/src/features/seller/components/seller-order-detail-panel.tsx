@@ -474,6 +474,7 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                                         }
                                         alt={item.productName}
                                         fill
+                                        sizes="56px"
                                         className="object-cover"
                                     />
                                 </div>

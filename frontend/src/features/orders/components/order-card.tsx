@@ -104,6 +104,7 @@ export function OrderCard({ order, onCancelClick, onViewDetail }: OrderCardProps
                                 }
                                 alt={item.productName}
                                 fill
+                                sizes="(max-width: 640px) 64px, 80px"
                                 className="object-cover transition-transform duration-300 group-hover:scale-105"
                             />
                         </Link>
