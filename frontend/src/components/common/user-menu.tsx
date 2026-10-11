@@ -3,15 +3,7 @@
 import { useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
-import {
-    BadgeCheckIcon,
-    LayoutGridIcon,
-    LogOutIcon,
-    PackageIcon,
-    ShoppingBagIcon,
-    StoreIcon,
-    TicketIcon,
-} from 'lucide-react'
+import { BadgeCheckIcon, LayoutGridIcon, LogOutIcon, PackageIcon, TicketIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -27,7 +19,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui'
-import { DASHBOARD_PERMISSION, QUERY_KEY, ROUTE, SELLER_SHOP_PERMISSION } from '@/constants'
+import { DASHBOARD_PERMISSION, QUERY_KEY, ROUTE } from '@/constants'
 import { AccountDialog, type AccountTabKey } from '@/features/account'
 import { getCurrentUserProfileAction } from '@/features/users'
 import { useLogout, useMounted, usePermissions } from '@/hooks'
@@ -48,10 +40,6 @@ export function UserMenu() {
 
     const { hasPermission } = usePermissions()
     const canAccessDashboard = hasPermission(DASHBOARD_PERMISSION)
-    const isSeller =
-        !canAccessDashboard && (hasPermission(SELLER_SHOP_PERMISSION) || hasPermission('orders:orders:list:shop'))
-    const sellerRoute = isSeller ? ROUTE.SELLER_PORTAL : ROUTE.SELLER_REGISTER
-    const sellerLabel = isSeller ? t('sellerPortal') : t('becomeSeller')
 
     // Tự động tải profile thực tế từ backend; query key 'users' sẽ tự invalidate khi có mutation sửa user
     const { data: backendProfile } = useQuery({
@@ -84,24 +72,6 @@ export function UserMenu() {
     const searchParams = useSearchParams()
     const isAccountOpen = searchParams.get('modal') === 'account'
     const accountTab = (searchParams.get('tab') as AccountTabKey) || 'profile'
-
-    const handleOpenAccount = useCallback(
-        (tab: AccountTabKey = 'profile') => {
-            if (pathname === ROUTE.ACCOUNT) {
-                const params = new URLSearchParams(searchParams.toString())
-                params.set('tab', tab)
-                params.delete('orderId')
-                router.push(`${pathname}?${params.toString()}`, { scroll: false })
-                return
-            }
-            const params = new URLSearchParams(searchParams.toString())
-            params.set('modal', 'account')
-            params.set('tab', tab)
-            params.delete('orderId')
-            router.push(`${pathname}?${params.toString()}`, { scroll: false })
-        },
-        [pathname, router, searchParams],
-    )
 
     const handleAccountOpenChange = useCallback(
         (open: boolean) => {
@@ -151,22 +121,6 @@ export function UserMenu() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
-                        {!canAccessDashboard && (
-                            <DropdownMenuItem asChild>
-                                <Link href={sellerRoute}>
-                                    <StoreIcon aria-hidden />
-                                    {sellerLabel}
-                                </Link>
-                            </DropdownMenuItem>
-                        )}
-                        {!canAccessDashboard && isSeller && (
-                            <DropdownMenuItem asChild>
-                                <Link href={ROUTE.SELLER_ORDERS}>
-                                    <ShoppingBagIcon aria-hidden />
-                                    {t('sellerOrders')}
-                                </Link>
-                            </DropdownMenuItem>
-                        )}
                         {canAccessDashboard && (
                             <DropdownMenuItem asChild>
                                 <Link href={ROUTE.DASHBOARD}>
@@ -175,21 +129,23 @@ export function UserMenu() {
                                 </Link>
                             </DropdownMenuItem>
                         )}
-                        {!canAccessDashboard && (
-                            <DropdownMenuItem onSelect={() => handleOpenAccount('orders')}>
+                        <DropdownMenuItem asChild>
+                            <Link href={`${ROUTE.ACCOUNT}?tab=orders`}>
                                 <PackageIcon aria-hidden />
-                                {isSeller ? t('buyerOrders') : t('myOrders')}
-                            </DropdownMenuItem>
-                        )}
-                        {!canAccessDashboard && (
-                            <DropdownMenuItem onSelect={() => handleOpenAccount('vouchers')}>
+                                {t('myOrders')}
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <Link href={`${ROUTE.ACCOUNT}?tab=vouchers`}>
                                 <TicketIcon aria-hidden />
                                 {t('myVouchers') || 'Kho Voucher'}
-                            </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onSelect={() => handleOpenAccount('profile')}>
-                            <BadgeCheckIcon aria-hidden />
-                            {t('account')}
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <Link href={`${ROUTE.ACCOUNT}?tab=profile`}>
+                                <BadgeCheckIcon aria-hidden />
+                                {t('account')}
+                            </Link>
                         </DropdownMenuItem>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />

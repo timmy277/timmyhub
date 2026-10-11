@@ -422,7 +422,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                         <div className="space-y-2">
                             <div className="flex flex-wrap items-center gap-2">
                                 <Link
-                                    href={ROUTE.HOME}
+                                    href={ROUTE.SHOP_DETAIL(product.shopSlug || product.shopId)}
                                     className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-emerald-800 dark:text-emerald-300 transition-colors hover:bg-primary/20"
                                 >
                                     <StoreIcon className="size-3.5 text-emerald-800 dark:text-emerald-300" />
@@ -711,9 +711,14 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                         </div>
                         <div className="space-y-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                                <h3 className="font-heading text-base sm:text-lg font-bold text-foreground truncate">
-                                    {product.shopName || 'Gian hàng chính hãng'}
-                                </h3>
+                                <Link
+                                    href={ROUTE.SHOP_DETAIL(product.shopSlug || product.shopId)}
+                                    className="hover:underline hover:text-primary transition-colors inline-block"
+                                >
+                                    <h3 className="font-heading text-base sm:text-lg font-bold text-foreground truncate">
+                                        {product.shopName || 'Gian hàng chính hãng'}
+                                    </h3>
+                                </Link>
                                 <Badge className="bg-primary/15 text-primary border-primary/30 font-semibold gap-1 text-[10px] py-0">
                                     <CheckCircle2Icon className="size-3 text-primary" />
                                     Chính hãng

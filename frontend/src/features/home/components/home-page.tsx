@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
     ArrowRightIcon,
     BadgePercentIcon,
@@ -475,6 +476,8 @@ interface HomeProductItem {
     slug: string
     category: string
     shop: string
+    shopSlug?: string
+    shopId?: string
     verified: boolean
     price: string
     originalPrice?: string | null
@@ -496,6 +499,7 @@ interface Product3DCardProps {
 
 /* Product Card with Interactive 3D Tilt, Dynamic Glare, and Depth Stacking */
 const Product3DCard = memo(function Product3DCard({ product: p, isLiked, onToggleWishlist }: Product3DCardProps) {
+    const router = useRouter()
     const [tilt, setTilt] = useState({ x: 0, y: 0 })
     const [glare, setGlare] = useState<{ x: number; y: number; opacity: number }>({ x: 50, y: 50, opacity: 0 })
     const cardRef = useRef<HTMLDivElement>(null)
@@ -619,15 +623,37 @@ const Product3DCard = memo(function Product3DCard({ product: p, isLiked, onToggl
 
                             {/* Seller Footer */}
                             <div className="pt-2.5 border-t border-border/60 flex items-center justify-between gap-1.5 text-xs">
-                                <div className="flex items-center gap-1.5 min-w-0">
-                                    <div className="flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
+                                <div
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={(e) => {
+                                        const target = p.shopSlug || p.shopId
+                                        if (target) {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            router.push(ROUTE.SHOP_DETAIL(target))
+                                        }
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            const target = p.shopSlug || p.shopId
+                                            if (target) {
+                                                e.preventDefault()
+                                                e.stopPropagation()
+                                                router.push(ROUTE.SHOP_DETAIL(target))
+                                            }
+                                        }
+                                    }}
+                                    className="flex items-center gap-1.5 min-w-0 hover:underline cursor-pointer group/vendor z-30"
+                                >
+                                    <div className="flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-transform duration-300 group-hover/vendor:scale-110 group-hover/vendor:bg-primary group-hover/vendor:text-primary-foreground">
                                         <StoreIcon className="size-3" />
                                     </div>
-                                    <span className="truncate text-[11px] font-semibold text-foreground group-hover:text-primary transition-colors">
+                                    <span className="truncate text-[11px] font-semibold text-foreground group-hover/vendor:text-primary transition-colors">
                                         {p.shop}
                                     </span>
                                     {p.verified && (
-                                        <CheckCircle2Icon className="size-3.5 text-primary shrink-0 transition-transform duration-300 group-hover:scale-125" />
+                                        <CheckCircle2Icon className="size-3.5 text-primary shrink-0 transition-transform duration-300 group-hover/vendor:scale-125" />
                                     )}
                                 </div>
                             </div>
@@ -643,6 +669,7 @@ const Product3DCard = memo(function Product3DCard({ product: p, isLiked, onToggl
  * MAIN HOMEPAGE COMPONENT
  * ───────────────────────────────────────────────────────────────────────────── */
 export function HomePage() {
+    const router = useRouter()
     const tNav = useTranslations('nav')
     const { hasPermission } = usePermissions()
     const isSellerByPermission = hasPermission(SELLER_SHOP_PERMISSION) || hasPermission(SELLER_SHOP_ANY_PERMISSION)
@@ -833,6 +860,8 @@ export function HomePage() {
                 slug: p.slug || p.id,
                 category: p.categoryName || 'Sản phẩm',
                 shop: p.shopName || 'TimmyHub Mall',
+                shopSlug: p.shopSlug || p.shopId || '',
+                shopId: p.shopId || '',
                 verified: true,
                 price: new Intl.NumberFormat('vi-VN').format(currPrice),
                 originalPrice: maxP > currPrice ? new Intl.NumberFormat('vi-VN').format(maxP) : null,
@@ -1579,15 +1608,37 @@ export function HomePage() {
                                                     {formatCurrencyVND(p.originalPrice)}
                                                 </p>
                                             </div>
-                                            <div className="flex items-center gap-2 rounded-xl bg-muted/60 px-3 py-1.5 border border-border/60 transition-colors group-hover:border-primary/40">
-                                                <div className="flex size-5 items-center justify-center rounded-md bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
+                                            <div
+                                                role="button"
+                                                tabIndex={0}
+                                                onClick={(e) => {
+                                                    const target = p.shopSlug || p.shopId
+                                                    if (target) {
+                                                        e.preventDefault()
+                                                        e.stopPropagation()
+                                                        router.push(ROUTE.SHOP_DETAIL(target))
+                                                    }
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        const target = p.shopSlug || p.shopId
+                                                        if (target) {
+                                                            e.preventDefault()
+                                                            e.stopPropagation()
+                                                            router.push(ROUTE.SHOP_DETAIL(target))
+                                                        }
+                                                    }
+                                                }}
+                                                className="flex items-center gap-2 rounded-xl bg-muted/60 px-3 py-1.5 border border-border/60 transition-colors hover:border-primary/40 cursor-pointer z-30"
+                                            >
+                                                <div className="flex size-5 items-center justify-center rounded-md bg-primary/10 text-primary transition-transform duration-300 hover:scale-110 hover:bg-primary hover:text-primary-foreground">
                                                     <StoreIcon className="size-3" />
                                                 </div>
-                                                <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                                                <span className="text-xs font-semibold text-foreground hover:text-primary transition-colors">
                                                     {p.shop}
                                                 </span>
                                                 {p.verified && (
-                                                    <CheckCircle2Icon className="size-3.5 text-primary transition-transform duration-300 group-hover:scale-125" />
+                                                    <CheckCircle2Icon className="size-3.5 text-primary shrink-0 transition-transform duration-300 hover:scale-125" />
                                                 )}
                                             </div>
                                         </div>
