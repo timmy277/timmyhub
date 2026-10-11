@@ -52,6 +52,7 @@ interface OrderDetailViewProps {
     initialOrder: OrderDetail
     onBack?: () => void
     isModalOrTab?: boolean
+    onClose?: () => void
 }
 
 const CANCEL_REASONS = [
@@ -63,7 +64,7 @@ const CANCEL_REASONS = [
     'Khác',
 ]
 
-export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false }: OrderDetailViewProps) {
+export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false, onClose }: OrderDetailViewProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const [cancelledOrder, setCancelledOrder] = useState<OrderDetail | null>(null)
@@ -286,13 +287,39 @@ export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false }: 
                         {/* Items Card */}
                         <Card className="border border-border/80 shadow-xs">
                             <CardHeader className="px-4 py-3 sm:px-6 border-b border-border/50 bg-muted/20">
-                                <div className="flex items-center gap-2">
-                                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                        <StoreIcon className="h-4 w-4" />
-                                    </div>
-                                    <CardTitle className="text-base font-semibold">
-                                        {order.shopName || 'TimmyHub Mall'}
-                                    </CardTitle>
+                                <div className="flex items-center justify-between gap-3">
+                                    <Link
+                                        href={ROUTE.SHOP_DETAIL(
+                                            (order as { shopSlug?: string }).shopSlug || order.sellerId,
+                                        )}
+                                        onClick={() => onClose?.()}
+                                        className="flex items-center gap-2 group transition-colors hover:text-primary min-w-0"
+                                    >
+                                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
+                                            <StoreIcon className="h-4 w-4" />
+                                        </div>
+                                        <CardTitle className="text-base font-semibold group-hover:text-primary transition-colors cursor-pointer flex items-center gap-1.5 truncate">
+                                            <span>{order.shopName || 'TimmyHub Mall'}</span>
+                                            <ChevronRightIcon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-transform group-hover:translate-x-0.5 shrink-0" />
+                                        </CardTitle>
+                                    </Link>
+
+                                    <Link
+                                        href={ROUTE.SHOP_DETAIL(
+                                            (order as { shopSlug?: string }).shopSlug || order.sellerId,
+                                        )}
+                                        onClick={() => onClose?.()}
+                                        className="shrink-0"
+                                    >
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10 transition-colors shadow-2xs"
+                                        >
+                                            <StoreIcon className="h-3.5 w-3.5" />
+                                            <span>Xem gian hàng</span>
+                                        </Button>
+                                    </Link>
                                 </div>
                             </CardHeader>
 
@@ -305,6 +332,7 @@ export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false }: 
                                         <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 flex-1">
                                             <Link
                                                 href={item.productId ? ROUTE.PRODUCT_DETAIL(item.productId) : '#'}
+                                                onClick={() => onClose?.()}
                                                 className="group relative h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                             >
                                                 <Image
@@ -324,6 +352,7 @@ export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false }: 
                                                     {item.productId ? (
                                                         <Link
                                                             href={ROUTE.PRODUCT_DETAIL(item.productId)}
+                                                            onClick={() => onClose?.()}
                                                             className="transition-colors hover:text-primary hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
                                                         >
                                                             {item.productName}

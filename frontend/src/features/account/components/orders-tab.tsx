@@ -219,7 +219,14 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
         }
 
         if (currentOrder) {
-            return <OrderDetailView initialOrder={currentOrder} onBack={handleBackToList} isModalOrTab />
+            return (
+                <OrderDetailView
+                    initialOrder={currentOrder}
+                    onBack={handleBackToList}
+                    isModalOrTab
+                    onClose={onCloseDialog}
+                />
+            )
         }
     }
 
@@ -342,6 +349,7 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
                                     order={order}
                                     onCancelClick={(o) => setCancellingOrder(o)}
                                     onViewDetail={handleViewDetail}
+                                    onCloseDialog={onCloseDialog}
                                 />
                             ))}
                         </div>

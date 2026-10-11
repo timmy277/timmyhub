@@ -26,9 +26,10 @@ interface OrderCardProps {
     order: OrderDetail
     onCancelClick?: (order: OrderDetail) => void
     onViewDetail?: (order: OrderDetail) => void
+    onCloseDialog?: () => void
 }
 
-export function OrderCard({ order, onCancelClick, onViewDetail }: OrderCardProps) {
+export function OrderCard({ order, onCancelClick, onViewDetail, onCloseDialog }: OrderCardProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const [isReordering, setIsReordering] = useState(false)
@@ -52,6 +53,7 @@ export function OrderCard({ order, onCancelClick, onViewDetail }: OrderCardProps
             if (successCount > 0) {
                 await queryClient.invalidateQueries({ queryKey: QUERY_KEY.CART.ALL })
                 toast.success(`Đã thêm ${successCount} sản phẩm vào giỏ hàng`)
+                onCloseDialog?.()
                 router.push(ROUTE.CART)
             } else {
                 toast.error('Không thể thêm sản phẩm vào giỏ (sản phẩm có thể đã hết hàng hoặc bị ẩn)')
@@ -69,12 +71,19 @@ export function OrderCard({ order, onCancelClick, onViewDetail }: OrderCardProps
             <CardHeader className="bg-muted/30 border-b border-border/50 px-4 py-3 sm:px-6">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <StoreIcon className="h-4 w-4" />
-                        </div>
-                        <span className="font-semibold text-sm sm:text-base text-foreground">
-                            {order.shopName || 'TimmyHub Mall'}
-                        </span>
+                        <Link
+                            href={ROUTE.SHOP_DETAIL((order as { shopSlug?: string }).shopSlug || order.sellerId)}
+                            onClick={() => onCloseDialog?.()}
+                            className="flex items-center gap-2 group transition-colors hover:text-primary"
+                        >
+                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                <StoreIcon className="h-4 w-4" />
+                            </div>
+                            <span className="font-semibold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors flex items-center gap-1">
+                                {order.shopName || 'TimmyHub Mall'}
+                                <ChevronRightIcon className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-transform group-hover:translate-x-0.5" />
+                            </span>
+                        </Link>
                         <span className="text-xs text-muted-foreground hidden sm:inline">&bull;</span>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground hidden sm:flex">
                             <CalendarIcon className="h-3 w-3" />
@@ -95,6 +104,7 @@ export function OrderCard({ order, onCancelClick, onViewDetail }: OrderCardProps
                     <div key={item.id} className="py-3 first:pt-0 last:pb-0 flex items-center gap-3 sm:gap-4">
                         <Link
                             href={item.productId ? ROUTE.PRODUCT_DETAIL(item.productId) : '#'}
+                            onClick={() => onCloseDialog?.()}
                             className="group relative h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-lg border border-border/60 bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                             <Image
@@ -114,6 +124,7 @@ export function OrderCard({ order, onCancelClick, onViewDetail }: OrderCardProps
                                 {item.productId ? (
                                     <Link
                                         href={ROUTE.PRODUCT_DETAIL(item.productId)}
+                                        onClick={() => onCloseDialog?.()}
                                         className="transition-colors hover:text-primary hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
                                     >
                                         {item.productName}
