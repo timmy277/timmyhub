@@ -144,71 +144,62 @@ export function OrderCard({ order, onCancelClick, onViewDetail }: OrderCardProps
                 ))}
             </CardContent>
 
-            {/* Card Footer: Mã đơn ở trên, Thành tiền & Action buttons ngang hàng ở dưới */}
-            <CardFooter className="bg-muted/10 border-t border-border/50 p-4 sm:px-6 flex flex-col items-start gap-3 sm:gap-3.5">
-                {/* Hàng 1: Mã đơn */}
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
-                    <span className="whitespace-nowrap font-medium text-muted-foreground">Mã đơn:</span>
-                    <span className="font-mono font-medium text-foreground select-all break-all">{order.id}</span>
+            {/* Card Footer: Thành tiền & Action buttons */}
+            <CardFooter className="bg-muted/10 border-t border-border/50 p-4 sm:px-6 flex flex-wrap items-center justify-end gap-3 sm:gap-4">
+                <div className="flex items-baseline gap-1.5 mr-1 shrink-0">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">Thành tiền:</span>
+                    <span className="text-base sm:text-lg font-bold text-primary whitespace-nowrap">
+                        {formatCurrencyVND(order.totalAmount)}
+                    </span>
                 </div>
 
-                {/* Hàng 2: Thành tiền và các action buttons ngang hàng */}
-                <div className="flex flex-wrap items-center justify-end gap-2.5 sm:gap-3 w-full">
-                    <div className="flex items-baseline gap-1.5 mr-1 shrink-0">
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">Thành tiền:</span>
-                        <span className="text-base sm:text-lg font-bold text-primary whitespace-nowrap">
-                            {formatCurrencyVND(order.totalAmount)}
-                        </span>
-                    </div>
-
-                    {canCancel && onCancelClick && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onCancelClick(order)}
-                            className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-xs sm:text-sm"
-                        >
-                            <XCircleIcon className="h-3.5 w-3.5 mr-1 text-rose-500" />
-                            Huỷ đơn
-                        </Button>
-                    )}
-
+                {canCancel && onCancelClick && (
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={handleReorder}
-                        disabled={isReordering}
-                        className="text-xs sm:text-sm border-primary/30 text-primary hover:bg-primary/10 hover:text-primary transition-colors"
+                        onClick={() => onCancelClick(order)}
+                        className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-xs sm:text-sm"
                     >
-                        {isReordering ? (
-                            <Loader2Icon className="h-3.5 w-3.5 mr-1 animate-spin" />
-                        ) : (
-                            <RotateCcwIcon className="h-3.5 w-3.5 mr-1" />
-                        )}
-                        Mua lại
+                        <XCircleIcon className="h-3.5 w-3.5 mr-1 text-rose-500" />
+                        Huỷ đơn
                     </Button>
+                )}
 
-                    {onViewDetail ? (
-                        <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() => onViewDetail(order)}
-                            className="text-xs sm:text-sm shadow-sm"
-                        >
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReorder}
+                    disabled={isReordering}
+                    className="text-xs sm:text-sm border-primary/30 text-primary hover:bg-primary/10 hover:text-primary transition-colors"
+                >
+                    {isReordering ? (
+                        <Loader2Icon className="h-3.5 w-3.5 mr-1 animate-spin" />
+                    ) : (
+                        <RotateCcwIcon className="h-3.5 w-3.5 mr-1" />
+                    )}
+                    Mua lại
+                </Button>
+
+                {onViewDetail ? (
+                    <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => onViewDetail(order)}
+                        className="text-xs sm:text-sm shadow-sm"
+                    >
+                        <EyeIcon className="h-3.5 w-3.5 mr-1" />
+                        Chi tiết
+                        <ChevronRightIcon className="h-3.5 w-3.5 ml-0.5" />
+                    </Button>
+                ) : (
+                    <Link href={ROUTE.ORDER_DETAIL(order.id)}>
+                        <Button variant="default" size="sm" className="text-xs sm:text-sm shadow-sm">
                             <EyeIcon className="h-3.5 w-3.5 mr-1" />
                             Chi tiết
                             <ChevronRightIcon className="h-3.5 w-3.5 ml-0.5" />
                         </Button>
-                    ) : (
-                        <Link href={ROUTE.ORDER_DETAIL(order.id)}>
-                            <Button variant="default" size="sm" className="text-xs sm:text-sm shadow-sm">
-                                <EyeIcon className="h-3.5 w-3.5 mr-1" />
-                                Chi tiết
-                                <ChevronRightIcon className="h-3.5 w-3.5 ml-0.5" />
-                            </Button>
-                        </Link>
-                    )}
-                </div>
+                    </Link>
+                )}
             </CardFooter>
         </Card>
     )
