@@ -349,12 +349,19 @@ export class OrderService {
                 // Bước C.2: Xác thực & tính toán voucher đa tầng (Shopee-Style: Freeship + Sàn + Shop)
                 const rawCodes: string[] = []
                 if (Array.isArray(input.voucherCodes)) {
-                    rawCodes.push(...input.voucherCodes)
+                    for (const c of input.voucherCodes) {
+                        if (typeof c === 'string' && c.trim()) {
+                            rawCodes.push(c.trim())
+                        }
+                    }
                 }
-                if (input.voucherCode && !rawCodes.includes(input.voucherCode)) {
-                    rawCodes.push(input.voucherCode)
+                if (typeof input.voucherCode === 'string') {
+                    const singleCode = input.voucherCode.trim()
+                    if (singleCode && !rawCodes.includes(singleCode)) {
+                        rawCodes.push(singleCode)
+                    }
                 }
-                const voucherCodes = Array.from(new Set(rawCodes.map((c) => c.trim().toUpperCase()))).filter(Boolean)
+                const voucherCodes = Array.from(new Set(rawCodes.map((c) => c.toUpperCase()))).filter(Boolean)
 
                 const appliedVouchers: Array<{
                     id: string
