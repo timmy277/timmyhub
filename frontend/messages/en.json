@@ -1301,7 +1301,9 @@
       "updateQtySuccess": "Updated quantity",
       "removeItemSuccess": "Removed item from cart",
       "clearCartSuccess": "Cleared shopping cart successfully",
-      "freeShippingBanner": "Your order qualifies for 0đ Nationwide Free Shipping!"
+      "freeShippingBanner": "Your order qualifies for 0đ Nationwide Free Shipping!",
+      "qtyMinWarning": "Quantity must be at least 1",
+      "qtyMaxWarning": "Quantity exceeds available stock ({max})"
     }
   },
   "productDetail": {
@@ -1346,7 +1348,9 @@
     "origin": "Origin:",
     "vietnam": "Vietnam",
     "relatedProducts": "Related products you may like",
-    "noDescription": "No detailed description provided for this product."
+    "noDescription": "No detailed description provided for this product.",
+    "qtyMinWarning": "Quantity must be at least 1",
+    "qtyMaxWarning": "Quantity exceeds available stock ({max})"
   },
   "checkout": {
     "title": "Order Checkout",

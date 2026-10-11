@@ -1301,7 +1301,9 @@
       "updateQtySuccess": "Đã cập nhật số lượng",
       "removeItemSuccess": "Đã xóa sản phẩm khỏi giỏ hàng",
       "clearCartSuccess": "Đã làm trống giỏ hàng thành công",
-      "freeShippingBanner": "Đơn hàng của bạn đủ điều kiện nhận Freeship 0Đ toàn quốc!"
+      "freeShippingBanner": "Đơn hàng của bạn đủ điều kiện nhận Freeship 0Đ toàn quốc!",
+      "qtyMinWarning": "Số lượng phải lớn hơn hoặc bằng 1",
+      "qtyMaxWarning": "Số lượng vượt quá tồn kho khả dụng ({max})"
     }
   },
   "productDetail": {
@@ -1346,7 +1348,9 @@
     "origin": "Xuất xứ:",
     "vietnam": "Việt Nam",
     "relatedProducts": "Sản phẩm tương tự bạn có thể thích",
-    "noDescription": "Chưa có mô tả chi tiết cho sản phẩm này."
+    "noDescription": "Chưa có mô tả chi tiết cho sản phẩm này.",
+    "qtyMinWarning": "Số lượng phải lớn hơn hoặc bằng 1",
+    "qtyMaxWarning": "Số lượng vượt quá tồn kho khả dụng ({max})"
   },
   "checkout": {
     "title": "Thanh toán đơn hàng",

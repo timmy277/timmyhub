@@ -20,7 +20,7 @@ import {
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
-import type { CartDetail } from '@timmyhub/contracts'
+import type { CartDetail, CartItemDetail } from '@timmyhub/contracts'
 
 import {
     AlertDialog,
@@ -53,6 +53,7 @@ export function CartView({ initialData }: CartViewProps) {
     const clearCartMutation = useClearCart()
 
     const [updatingItemId, setUpdatingItemId] = useState<string | null>(null)
+    const [editingQuantities, setEditingQuantities] = useState<Record<string, string>>({})
     const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(() => {
         // Mặc định chọn tất cả item hợp lệ khi mở giỏ hàng
         const initialSet = new Set<string>()
@@ -139,6 +140,12 @@ export function CartView({ initialData }: CartViewProps) {
     const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
         if (newQuantity < 1) return
         setUpdatingItemId(itemId)
+        setEditingQuantities((prev) => {
+            if (!(itemId in prev)) return prev
+            const next = { ...prev }
+            delete next[itemId]
+            return next
+        })
         try {
             await updateItemMutation.mutateAsync({
                 itemId,
@@ -151,6 +158,60 @@ export function CartView({ initialData }: CartViewProps) {
         } finally {
             setUpdatingItemId(null)
         }
+    }
+
+    const handleQuantityInputChange = (itemId: string, value: string) => {
+        const clean = value.replace(/\D/g, '')
+        setEditingQuantities((prev) => ({
+            ...prev,
+            [itemId]: clean,
+        }))
+    }
+
+    const handleCommitItemQuantity = (item: CartItemDetail) => {
+        const valStr = editingQuantities[item.id]
+        if (valStr === undefined) return
+
+        // Xoá state nhập tạm thời để nếu rollback thì tự động quay về item.quantity
+        setEditingQuantities((prev) => {
+            const next = { ...prev }
+            delete next[item.id]
+            return next
+        })
+
+        const parsed = parseInt(valStr, 10)
+        if (isNaN(parsed) || parsed < 1) {
+            toast.warning(t('page.qtyMinWarning'))
+            return
+        }
+
+        if (item.stock > 0 && parsed > item.stock) {
+            toast.warning(t('page.qtyMaxWarning', { max: item.stock }))
+            return
+        }
+
+        if (parsed === item.quantity) {
+            return
+        }
+
+        handleUpdateQuantity(item.id, parsed)
+    }
+
+    const handleStepItemQuantity = (item: CartItemDetail, delta: number) => {
+        if (editingQuantities[item.id] !== undefined) {
+            setEditingQuantities((prev) => {
+                const next = { ...prev }
+                delete next[item.id]
+                return next
+            })
+        }
+        const nextQty = item.quantity + delta
+        if (nextQty < 1) return
+        if (item.stock > 0 && nextQty > item.stock) {
+            toast.warning(t('page.qtyMaxWarning', { max: item.stock }))
+            return
+        }
+        handleUpdateQuantity(item.id, nextQty)
     }
 
     // Handlers xoá item
@@ -462,28 +523,48 @@ export function CartView({ initialData }: CartViewProps) {
                                                             <div className="flex items-center rounded-xl border border-border/80 bg-background p-0.5 shadow-2xs">
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() =>
-                                                                        handleUpdateQuantity(item.id, item.quantity - 1)
-                                                                    }
+                                                                    onClick={() => handleStepItemQuantity(item, -1)}
                                                                     disabled={item.quantity <= 1 || isUpdating}
                                                                     aria-label="Giảm số lượng"
                                                                     className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
                                                                 >
                                                                     <MinusIcon className="size-3" />
                                                                 </button>
-                                                                <span
-                                                                    className={`w-9 text-center font-mono text-xs font-bold text-foreground transition-opacity ${
+                                                                <input
+                                                                    type="text"
+                                                                    inputMode="numeric"
+                                                                    pattern="[0-9]*"
+                                                                    value={
+                                                                        editingQuantities[item.id] !== undefined
+                                                                            ? editingQuantities[item.id]
+                                                                            : item.quantity
+                                                                    }
+                                                                    onChange={(e) =>
+                                                                        handleQuantityInputChange(
+                                                                            item.id,
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    onBlur={() => handleCommitItemQuantity(item)}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter') {
+                                                                            e.currentTarget.blur()
+                                                                        }
+                                                                    }}
+                                                                    disabled={isUpdating || !item.isValid}
+                                                                    aria-label={`Số lượng ${item.productName}`}
+                                                                    className={`w-9 text-center font-mono text-xs font-bold text-foreground bg-transparent border-0 focus:outline-none focus:ring-0 p-0 transition-opacity ${
                                                                         isUpdating ? 'opacity-50' : ''
                                                                     }`}
-                                                                >
-                                                                    {item.quantity}
-                                                                </span>
+                                                                />
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() =>
-                                                                        handleUpdateQuantity(item.id, item.quantity + 1)
+                                                                    onClick={() => handleStepItemQuantity(item, 1)}
+                                                                    disabled={
+                                                                        isUpdating ||
+                                                                        !item.isValid ||
+                                                                        (item.stock > 0 && item.quantity >= item.stock)
                                                                     }
-                                                                    disabled={isUpdating}
                                                                     aria-label="Tăng số lượng"
                                                                     className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
                                                                 >

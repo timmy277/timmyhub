@@ -60,6 +60,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
     const [selectedImageIndex, setSelectedImageIndex] = useState(0)
     const [isWishlist, setIsWishlist] = useState(false)
     const [quantity, setQuantity] = useState(1)
+    const [quantityInput, setQuantityInput] = useState('1')
     const addToCartMutation = useAddToCart()
 
     // ===== Voucher / Promotion State =====
@@ -154,6 +155,56 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
         })
     }
 
+    // Rollback hoặc xác nhận số lượng nhập
+    const commitQuantity = () => {
+        const parsed = parseInt(quantityInput, 10)
+        if (isNaN(parsed) || parsed < 1) {
+            toast.warning(t('qtyMinWarning'))
+            setQuantityInput(String(quantity))
+            return quantity
+        }
+        if (stockAvailable > 0 && parsed > stockAvailable) {
+            toast.warning(t('qtyMaxWarning', { max: stockAvailable }))
+            setQuantityInput(String(quantity))
+            return quantity
+        }
+        if (stockAvailable <= 0) {
+            toast.warning(t('outOfStock'))
+            setQuantityInput(String(quantity))
+            return quantity
+        }
+        setQuantity(parsed)
+        setQuantityInput(String(parsed))
+        return parsed
+    }
+
+    const handleQuantityChange = (valStr: string) => {
+        const clean = valStr.replace(/\D/g, '')
+        setQuantityInput(clean)
+    }
+
+    const handleStepQuantity = (delta: number) => {
+        const current = commitQuantity()
+        const next = current + delta
+        if (next < 1) return
+        if (stockAvailable > 0 && next > stockAvailable) {
+            toast.warning(t('qtyMaxWarning', { max: stockAvailable }))
+            return
+        }
+        setQuantity(next)
+        setQuantityInput(String(next))
+    }
+
+    // Tự động điều chỉnh nếu tồn kho thay đổi nhỏ hơn số lượng đang chọn
+    const [prevStockAvailable, setPrevStockAvailable] = useState(stockAvailable)
+    if (stockAvailable !== prevStockAvailable) {
+        setPrevStockAvailable(stockAvailable)
+        if (stockAvailable > 0 && quantity > stockAvailable) {
+            setQuantity(stockAvailable)
+            setQuantityInput(String(stockAvailable))
+        }
+    }
+
     const handleAddToCart = async () => {
         if (!activeVariant) {
             toast.error(t('selectVariant'))
@@ -165,13 +216,15 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
             return
         }
 
+        const effectiveQty = commitQuantity()
+
         try {
             await addToCartMutation.mutateAsync({
                 variantId: activeVariant.id,
-                quantity,
+                quantity: effectiveQty,
             })
-            toast.success(t('addCartSuccess', { quantity }), {
-                description: `${product.name} (SL: ${quantity})`,
+            toast.success(t('addCartSuccess', { quantity: effectiveQty }), {
+                description: `${product.name} (SL: ${effectiveQty})`,
                 icon: <ShoppingCartIcon className="size-4 text-primary" />,
             })
         } catch (error) {
@@ -189,8 +242,9 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
             toast.error(t('outOfStock'))
             return
         }
+        const effectiveQty = commitQuantity()
         router.push(
-            `${ROUTE.CHECKOUT}?productId=${encodeURIComponent(product.id)}&variantId=${encodeURIComponent(activeVariant.id)}&qty=${quantity}`,
+            `${ROUTE.CHECKOUT}?productId=${encodeURIComponent(product.id)}&variantId=${encodeURIComponent(activeVariant.id)}&qty=${effectiveQty}`,
         )
     }
 
@@ -518,20 +572,33 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                             <div className="flex items-center rounded-xl border border-border/80 bg-card p-1">
                                 <button
                                     type="button"
-                                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                                    disabled={quantity <= 1}
+                                    onClick={() => handleStepQuantity(-1)}
+                                    disabled={quantity <= 1 || stockAvailable <= 0}
                                     aria-label="Giảm số lượng"
                                     className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
                                 >
                                     <MinusIcon className="size-3.5" />
                                 </button>
-                                <span className="w-12 text-center text-sm font-bold text-foreground font-mono">
-                                    {quantity}
-                                </span>
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    value={quantityInput}
+                                    onChange={(e) => handleQuantityChange(e.target.value)}
+                                    onBlur={commitQuantity}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.currentTarget.blur()
+                                        }
+                                    }}
+                                    disabled={stockAvailable <= 0}
+                                    aria-label="Số lượng sản phẩm"
+                                    className="w-12 text-center text-sm font-bold text-foreground font-mono bg-transparent border-0 focus:outline-none focus:ring-0 p-0"
+                                />
                                 <button
                                     type="button"
-                                    onClick={() => setQuantity((q) => Math.min(stockAvailable || 99, q + 1))}
-                                    disabled={quantity >= stockAvailable}
+                                    onClick={() => handleStepQuantity(1)}
+                                    disabled={quantity >= stockAvailable || stockAvailable <= 0}
                                     aria-label="Tăng số lượng"
                                     className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
                                 >
