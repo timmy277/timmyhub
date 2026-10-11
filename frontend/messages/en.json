@@ -33,13 +33,20 @@
     "errorGeneric": "An error occurred. Please try again."
   },
   "role": {
-    "superAdmin": "Super admin",
+    "superAdmin": "Super Admin",
     "admin": "Admin",
     "moderator": "Moderator",
     "seller": "Seller",
     "brand": "Brand",
     "user": "User",
-    "shipper": "Shipper"
+    "shipper": "Shipper",
+    "SUPER_ADMIN": "Super Admin",
+    "ADMIN": "Admin",
+    "MODERATOR": "Moderator",
+    "SELLER": "Seller",
+    "BRAND": "Brand",
+    "USER": "User",
+    "SHIPPER": "Shipper"
   },
   "agGridTable": {
     "search": "Search",

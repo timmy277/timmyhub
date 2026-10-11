@@ -11,15 +11,15 @@ import {
     ShieldCheckIcon,
     UserIcon,
 } from 'lucide-react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 
-import type { UserDetail } from '@timmyhub/contracts'
+import type { UserDetail, UserRole } from '@timmyhub/contracts'
 
 import { UserAvatar } from '@/components/common'
 import { Badge, Button, Card, Skeleton } from '@/components/ui'
-import { QUERY_KEY } from '@/constants'
+import { QUERY_KEY, ROLE_LABEL_KEY } from '@/constants'
 import { getCurrentUserDetailAction } from '@/features/users'
 import { useUserProfileStore } from '@/stores'
 
@@ -56,6 +56,8 @@ export interface AccountShellProps {
 export function AccountShell({ initialUser }: AccountShellProps = {}) {
     const t = useTranslations('account')
     const tCommon = useTranslations('common')
+    const tRole = useTranslations('role')
+    const locale = useLocale()
     const { data: session } = useSession()
     const router = useRouter()
     const pathname = usePathname()
@@ -121,7 +123,7 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
     const currentAvatar =
         profileOverride?.avatar !== undefined ? profileOverride.avatar : (user.profile?.avatar ?? null)
     const formattedCreatedAt = user.createdAt
-        ? new Date(user.createdAt).toLocaleDateString('vi-VN', {
+        ? new Date(user.createdAt).toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-US', {
               month: 'long',
               year: 'numeric',
           })
@@ -168,15 +170,24 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
                                     </div>
                                 )}
                                 <div className="flex items-center gap-1.5">
-                                    {(user.roles ?? []).map((role: string) => (
-                                        <Badge
-                                            key={role}
-                                            variant="secondary"
-                                            className="text-[10px] font-semibold uppercase tracking-wider py-0 px-2"
-                                        >
-                                            {role}
-                                        </Badge>
-                                    ))}
+                                    {(user.roles ?? []).map((role: string) => {
+                                        const roleKey = ROLE_LABEL_KEY[role as UserRole]
+                                        const label =
+                                            roleKey && tRole.has(roleKey)
+                                                ? tRole(roleKey)
+                                                : tRole.has(role)
+                                                  ? tRole(role)
+                                                  : role
+                                        return (
+                                            <Badge
+                                                key={role}
+                                                variant="secondary"
+                                                className="text-[10px] font-semibold tracking-wider py-0 px-2"
+                                            >
+                                                {label}
+                                            </Badge>
+                                        )
+                                    })}
                                 </div>
                             </div>
                         </div>

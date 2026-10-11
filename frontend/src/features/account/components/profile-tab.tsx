@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl'
 import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 
-import type { UserDetail } from '@timmyhub/contracts'
+import type { UserDetail, UserRole } from '@timmyhub/contracts'
 import { FloatInput, ON_CARD_LABEL_CLASS, UploadSection } from '@/components'
 import {
     Badge,
@@ -21,7 +21,7 @@ import {
     CardTitle,
     Label,
 } from '@/components/ui'
-import { QUERY_KEY } from '@/constants'
+import { QUERY_KEY, ROLE_LABEL_KEY } from '@/constants'
 import { updateUserAction } from '@/features/users'
 import { ProfileFormSchema, type ProfileFormValues } from '@/schemas'
 import { useUserProfileStore } from '@/stores'
@@ -34,6 +34,7 @@ interface ProfileTabProps {
 export function ProfileTab({ user, onProfileUpdated }: ProfileTabProps) {
     const t = useTranslations('account.profile')
     const tAccount = useTranslations('account')
+    const tRole = useTranslations('role')
     const queryClient = useQueryClient()
     const setOverride = useUserProfileStore((state) => state.setOverride)
     const [isPending, startTransition] = useTransition()
@@ -209,11 +210,20 @@ export function ProfileTab({ user, onProfileUpdated }: ProfileTabProps) {
                     <div className="space-y-2">
                         <Label className="text-xs font-medium text-muted-foreground">{t('roles')}</Label>
                         <div className="flex flex-wrap gap-2 pt-1">
-                            {(user.roles ?? []).map((role) => (
-                                <Badge key={role} variant="secondary" className="px-2.5 py-1 text-xs font-medium">
-                                    {role}
-                                </Badge>
-                            ))}
+                            {(user.roles ?? []).map((role) => {
+                                const roleKey = ROLE_LABEL_KEY[role as UserRole]
+                                const label =
+                                    roleKey && tRole.has(roleKey)
+                                        ? tRole(roleKey)
+                                        : tRole.has(role)
+                                          ? tRole(role)
+                                          : role
+                                return (
+                                    <Badge key={role} variant="secondary" className="px-2.5 py-1 text-xs font-medium">
+                                        {label}
+                                    </Badge>
+                                )
+                            })}
                         </div>
                     </div>
                 </CardContent>

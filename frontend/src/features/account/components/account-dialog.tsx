@@ -2,21 +2,12 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { BellIcon, CalendarIcon, LockIcon, MapPinIcon, PackageIcon, ShieldCheckIcon, UserIcon } from 'lucide-react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 
 import { UserAvatar } from '@/components/common'
-import {
-    Badge,
-    Button,
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    Skeleton,
-} from '@/components/ui'
+import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Skeleton } from '@/components/ui'
 import { QUERY_KEY } from '@/constants'
 import { getCurrentUserDetailAction } from '@/features/users'
 import { useUserProfileStore } from '@/stores'
@@ -96,8 +87,9 @@ export function AccountDialog({ open, onOpenChange, defaultTab = 'profile' }: Ac
         profileOverride?.avatar !== undefined
             ? profileOverride.avatar
             : (user?.profile?.avatar ?? session?.user?.image ?? null)
+    const locale = useLocale()
     const formattedCreatedAt = user?.createdAt
-        ? new Date(user.createdAt).toLocaleDateString('vi-VN', {
+        ? new Date(user.createdAt).toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-US', {
               month: 'long',
               year: 'numeric',
           })
@@ -173,25 +165,12 @@ export function AccountDialog({ open, onOpenChange, defaultTab = 'profile' }: Ac
                             </div>
 
                             {/* Account Status Meta */}
-                            <div className="hidden md:flex flex-col gap-1.5 mt-auto pt-4 border-t border-border/60 text-[11px] text-muted-foreground">
-                                {formattedCreatedAt && (
-                                    <div className="flex items-center gap-1.5">
-                                        <CalendarIcon className="h-3 w-3" />
-                                        <span>{t('memberSince', { date: formattedCreatedAt })}</span>
-                                    </div>
-                                )}
-                                <div className="flex flex-wrap gap-1 pt-0.5">
-                                    {(user.roles ?? []).map((role) => (
-                                        <Badge
-                                            key={role}
-                                            variant="secondary"
-                                            className="text-[9px] font-semibold uppercase tracking-wider py-0 px-1.5"
-                                        >
-                                            {role}
-                                        </Badge>
-                                    ))}
+                            {formattedCreatedAt && (
+                                <div className="hidden md:flex items-center gap-1.5 mt-auto pt-4 border-t border-border/60 text-[11px] text-muted-foreground">
+                                    <CalendarIcon className="h-3 w-3" />
+                                    <span>{t('memberSince', { date: formattedCreatedAt })}</span>
                                 </div>
-                            </div>
+                            )}
                         </div>
 
                         {/* Content Right */}

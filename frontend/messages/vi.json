@@ -33,13 +33,20 @@
     "errorGeneric": "Đã có lỗi xảy ra. Vui lòng thử lại."
   },
   "role": {
-    "superAdmin": "Quản trị cấp cao",
+    "superAdmin": "Quản trị viên cấp cao",
     "admin": "Quản trị viên",
     "moderator": "Kiểm duyệt viên",
     "seller": "Người bán",
     "brand": "Thương hiệu",
     "user": "Người dùng",
-    "shipper": "Người giao hàng"
+    "shipper": "Người giao hàng",
+    "SUPER_ADMIN": "Quản trị viên cấp cao",
+    "ADMIN": "Quản trị viên",
+    "MODERATOR": "Kiểm duyệt viên",
+    "SELLER": "Người bán",
+    "BRAND": "Thương hiệu",
+    "USER": "Người dùng",
+    "SHIPPER": "Người giao hàng"
   },
   "agGridTable": {
     "search": "Tìm kiếm",
@@ -450,7 +457,7 @@
       "addresses": "Sổ địa chỉ",
       "notifications": "Cài đặt thông báo"
     },
-    "memberSince": "Tham gia {date}",
+    "memberSince": "Thành viên từ {date}",
     "errorLoadTitle": "Không thể tải thông tin tài khoản",
     "errorLoadDescription": "Phiên đăng nhập có thể đã hết hạn hoặc máy chủ backend đang gián đoạn.",
     "profile": {
