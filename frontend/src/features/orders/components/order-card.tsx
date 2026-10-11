@@ -144,16 +144,16 @@ export function OrderCard({ order, onCancelClick, onViewDetail }: OrderCardProps
                 ))}
             </CardContent>
 
-            {/* Card Footer: Summary & Actions (2 blocks: Order code & Total + Actions) */}
-            <CardFooter className="bg-muted/10 border-t border-border/50 p-4 sm:px-6 flex flex-col @[800px]:flex-row xl:flex-row @[800px]:items-center xl:items-center justify-between gap-3 sm:gap-4">
-                {/* Block 1: Mã đơn */}
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm shrink-0">
+            {/* Card Footer: Mã đơn ở trên, Thành tiền & Action buttons ngang hàng ở dưới */}
+            <CardFooter className="bg-muted/10 border-t border-border/50 p-4 sm:px-6 flex flex-col items-start gap-3 sm:gap-3.5">
+                {/* Hàng 1: Mã đơn */}
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
                     <span className="whitespace-nowrap font-medium text-muted-foreground">Mã đơn:</span>
                     <span className="font-mono font-medium text-foreground select-all break-all">{order.id}</span>
                 </div>
 
-                {/* Block 2: (Thành tiền + Action buttons) */}
-                <div className="flex flex-wrap items-center justify-end gap-3 w-full @[800px]:w-auto xl:w-auto">
+                {/* Hàng 2: Thành tiền và các action buttons ngang hàng */}
+                <div className="flex flex-wrap items-center justify-end gap-2.5 sm:gap-3 w-full">
                     <div className="flex items-baseline gap-1.5 mr-1 shrink-0">
                         <span className="text-xs text-muted-foreground whitespace-nowrap">Thành tiền:</span>
                         <span className="text-base sm:text-lg font-bold text-primary whitespace-nowrap">
