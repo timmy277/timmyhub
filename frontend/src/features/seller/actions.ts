@@ -6,6 +6,7 @@ import type {
     ApiErrorCode,
     CreateSellerApplicationInput,
     OrderDetail,
+    PublicShopDetail,
     ReviewSellerApplicationInput,
     SellerApplicationDetail,
     SellerApplicationListResult,
@@ -74,6 +75,13 @@ export async function getMyShopAction(): Promise<SellerActionResult<SellerProfil
         token: actor.accessToken,
     })
 
+    if (!result.ok) return { ok: false, code: result.code }
+    return { ok: true, data: result.data }
+}
+
+// Lấy thông tin shop công khai theo slug hoặc ID (REQ-SEL-011)
+export async function getPublicShopAction(slugOrId: string): Promise<SellerActionResult<PublicShopDetail>> {
+    const result = await fetchBackend<PublicShopDetail>(API_ROUTE.SELLER.PUBLIC_SHOP(slugOrId))
     if (!result.ok) return { ok: false, code: result.code }
     return { ok: true, data: result.data }
 }

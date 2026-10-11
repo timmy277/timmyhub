@@ -146,7 +146,11 @@ export function SellerPortalView({ initialShop }: SellerPortalViewProps = {}) {
                             size="sm"
                             className="rounded-xl font-semibold gap-1.5 bg-primary text-white shadow-md hover:bg-primary/90"
                         >
-                            <Link href={`#`}>
+                            <Link
+                                href={ROUTE.SHOP_DETAIL(shop.shopSlug || shop.id)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
                                 <span>{t('viewPublicShop')}</span>
                                 <ExternalLink className="size-3.5" />
                             </Link>

@@ -29,4 +29,5 @@ export const ROUTE = {
     ORDER_DETAIL: (id: string) => `/orders/${encodeURIComponent(id)}`,
     MY_VOUCHERS: '/account?tab=vouchers',
     ACCOUNT_VOUCHERS: '/account?tab=vouchers',
+    SHOP_DETAIL: (slug: string) => `/shops/${encodeURIComponent(slug)}`,
 } as const

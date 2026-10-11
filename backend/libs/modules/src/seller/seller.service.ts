@@ -42,8 +42,11 @@ export class SellerService {
     }
 
     // Lấy thông tin shop công khai cho khách (REQ-SEL-011, REQ-SEL-012)
-    async getPublicShopBySlug(slug: string): Promise<PublicShopDetail> {
-        const profile = await this.repository.findProfileBySlug(slug)
+    async getPublicShopBySlug(slugOrId: string): Promise<PublicShopDetail> {
+        let profile = await this.repository.findProfileBySlug(slugOrId)
+        if (!profile) {
+            profile = await this.repository.findProfileById(slugOrId)
+        }
         // Nếu không tồn tại, chưa APPROVED hoặc đang bị tạm ngưng -> trả 404 (luật cứng #8)
         if (!profile || profile.status !== ResourceStatus.APPROVED || profile.isSuspended) {
             throw new ApiError('NOT_FOUND', {

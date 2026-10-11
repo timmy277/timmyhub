@@ -698,9 +698,58 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                 </div>
 
                 {/* ════════════════════════════════════════════════════════════════
+                 * SELLER / SHOP BANNER STRIP
+                 * ════════════════════════════════════════════════════════════════ */}
+                <div className="mt-8 rounded-3xl border border-border/80 bg-card/90 backdrop-blur-md p-4 sm:p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">
+                    <div className="flex items-center gap-4">
+                        <div className="relative size-14 sm:size-16 rounded-2xl bg-gradient-to-tr from-primary to-emerald-600 text-white font-black text-2xl flex items-center justify-center shadow-md shrink-0 overflow-hidden ring-1 ring-border">
+                            {product.shopName ? (
+                                product.shopName.charAt(0).toUpperCase()
+                            ) : (
+                                <StoreIcon className="size-7" />
+                            )}
+                        </div>
+                        <div className="space-y-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-heading text-base sm:text-lg font-bold text-foreground truncate">
+                                    {product.shopName || 'Gian hàng chính hãng'}
+                                </h3>
+                                <Badge className="bg-primary/15 text-primary border-primary/30 font-semibold gap-1 text-[10px] py-0">
+                                    <CheckCircle2Icon className="size-3 text-primary" />
+                                    Chính hãng
+                                </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground flex items-center gap-3 flex-wrap">
+                                <span>
+                                    Đánh giá: <strong className="text-foreground">4.9 / 5.0</strong> ★
+                                </span>
+                                <span>&bull;</span>
+                                <span>
+                                    Phản hồi chat: <strong className="text-foreground">99%</strong>
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                        <Button
+                            asChild
+                            variant="outline"
+                            size="sm"
+                            className="rounded-xl font-bold gap-1.5 shadow-sm text-xs hover:border-primary/50"
+                        >
+                            <Link href={ROUTE.SHOP_DETAIL(product.shopSlug || product.shopId)}>
+                                <StoreIcon className="size-3.5 text-primary" />
+                                <span>Xem Shop</span>
+                            </Link>
+                        </Button>
+                    </div>
+                </div>
+
+                {/* ════════════════════════════════════════════════════════════════
                  * BOTTOM SECTION: DETAILED SPECIFICATIONS & PRODUCT DESCRIPTION
                  * ════════════════════════════════════════════════════════════════ */}
-                <div className="mt-12 rounded-3xl border border-border/80 bg-card/85 backdrop-blur-md p-6 sm:p-8 shadow-sm">
+                <div className="mt-8 rounded-3xl border border-border/80 bg-card/85 backdrop-blur-md p-6 sm:p-8 shadow-sm">
                     <Tabs defaultValue="description" className="space-y-6">
                         <TabsList className="rounded-xl bg-muted/60 p-1 border border-border/60">
                             <TabsTrigger value="description" className="rounded-lg text-xs font-bold px-4">
