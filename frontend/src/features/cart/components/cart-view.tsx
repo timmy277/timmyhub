@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -78,6 +78,22 @@ export function CartView({ initialData }: CartViewProps) {
     const validItems = useMemo(() => {
         return allItems.filter((item) => item.isValid)
     }, [allItems])
+
+    const allItemsRef = useRef(allItems)
+    const debounceTimersRef = useRef<Record<string, NodeJS.Timeout>>({})
+
+    useEffect(() => {
+        allItemsRef.current = allItems
+    }, [allItems])
+
+    useEffect(() => {
+        const timers = debounceTimersRef.current
+        return () => {
+            for (const timer of Object.values(timers)) {
+                clearTimeout(timer)
+            }
+        }
+    }, [])
 
     // Kiểm tra đã chọn tất cả chưa
     const isAllSelected = validItems.length > 0 && validItems.every((item) => selectedItemIds.has(item.id))
@@ -160,22 +176,23 @@ export function CartView({ initialData }: CartViewProps) {
         }
     }
 
-    const handleQuantityInputChange = (itemId: string, value: string) => {
-        const clean = value.replace(/\D/g, '')
-        setEditingQuantities((prev) => ({
-            ...prev,
-            [itemId]: clean,
-        }))
-    }
+    const handleCommitItemQuantity = (itemId: string, explicitVal?: string) => {
+        if (debounceTimersRef.current[itemId]) {
+            clearTimeout(debounceTimersRef.current[itemId])
+            delete debounceTimersRef.current[itemId]
+        }
 
-    const handleCommitItemQuantity = (item: CartItemDetail) => {
-        const valStr = editingQuantities[item.id]
+        const item = allItemsRef.current.find((i) => i.id === itemId)
+        if (!item) return
+
+        const valStr = explicitVal !== undefined ? explicitVal : editingQuantities[itemId]
         if (valStr === undefined) return
 
         // Xoá state nhập tạm thời để nếu rollback thì tự động quay về item.quantity
         setEditingQuantities((prev) => {
+            if (!(itemId in prev)) return prev
             const next = { ...prev }
-            delete next[item.id]
+            delete next[itemId]
             return next
         })
 
@@ -197,7 +214,27 @@ export function CartView({ initialData }: CartViewProps) {
         handleUpdateQuantity(item.id, parsed)
     }
 
+    const handleQuantityInputChange = (itemId: string, value: string) => {
+        const clean = value.replace(/\D/g, '')
+        setEditingQuantities((prev) => ({
+            ...prev,
+            [itemId]: clean,
+        }))
+
+        if (debounceTimersRef.current[itemId]) {
+            clearTimeout(debounceTimersRef.current[itemId])
+        }
+
+        debounceTimersRef.current[itemId] = setTimeout(() => {
+            handleCommitItemQuantity(itemId, clean)
+        }, 600)
+    }
+
     const handleStepItemQuantity = (item: CartItemDetail, delta: number) => {
+        if (debounceTimersRef.current[item.id]) {
+            clearTimeout(debounceTimersRef.current[item.id])
+            delete debounceTimersRef.current[item.id]
+        }
         if (editingQuantities[item.id] !== undefined) {
             setEditingQuantities((prev) => {
                 const next = { ...prev }
@@ -545,7 +582,7 @@ export function CartView({ initialData }: CartViewProps) {
                                                                             e.target.value,
                                                                         )
                                                                     }
-                                                                    onBlur={() => handleCommitItemQuantity(item)}
+                                                                    onBlur={() => handleCommitItemQuantity(item.id)}
                                                                     onKeyDown={(e) => {
                                                                         if (e.key === 'Enter') {
                                                                             e.currentTarget.blur()

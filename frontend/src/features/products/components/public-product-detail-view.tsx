@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -155,25 +155,57 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
         })
     }
 
+    const quantityRef = useRef(quantity)
+    const stockAvailableRef = useRef(stockAvailable)
+    const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+    useEffect(() => {
+        quantityRef.current = quantity
+    }, [quantity])
+
+    useEffect(() => {
+        stockAvailableRef.current = stockAvailable
+    }, [stockAvailable])
+
+    useEffect(() => {
+        const timer = debounceTimerRef.current
+        return () => {
+            if (timer) {
+                clearTimeout(timer)
+            }
+        }
+    }, [])
+
     // Rollback hoặc xác nhận số lượng nhập
-    const commitQuantity = () => {
-        const parsed = parseInt(quantityInput, 10)
+    const commitQuantity = (explicitVal?: string) => {
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current)
+            debounceTimerRef.current = null
+        }
+
+        const valToParse = explicitVal !== undefined ? explicitVal : quantityInput
+        const parsed = parseInt(valToParse, 10)
+        const lastValid = quantityRef.current
+        const available = stockAvailableRef.current
+
         if (isNaN(parsed) || parsed < 1) {
             toast.warning(t('qtyMinWarning'))
-            setQuantityInput(String(quantity))
-            return quantity
+            setQuantityInput(String(lastValid))
+            return lastValid
         }
-        if (stockAvailable > 0 && parsed > stockAvailable) {
-            toast.warning(t('qtyMaxWarning', { max: stockAvailable }))
-            setQuantityInput(String(quantity))
-            return quantity
+        if (available > 0 && parsed > available) {
+            toast.warning(t('qtyMaxWarning', { max: available }))
+            setQuantityInput(String(lastValid))
+            return lastValid
         }
-        if (stockAvailable <= 0) {
+        if (available <= 0) {
             toast.warning(t('outOfStock'))
-            setQuantityInput(String(quantity))
-            return quantity
+            setQuantityInput(String(lastValid))
+            return lastValid
         }
+
         setQuantity(parsed)
+        quantityRef.current = parsed
         setQuantityInput(String(parsed))
         return parsed
     }
@@ -181,6 +213,14 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
     const handleQuantityChange = (valStr: string) => {
         const clean = valStr.replace(/\D/g, '')
         setQuantityInput(clean)
+
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current)
+        }
+
+        debounceTimerRef.current = setTimeout(() => {
+            commitQuantity(clean)
+        }, 600)
     }
 
     const handleStepQuantity = (delta: number) => {
@@ -585,7 +625,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                     pattern="[0-9]*"
                                     value={quantityInput}
                                     onChange={(e) => handleQuantityChange(e.target.value)}
-                                    onBlur={commitQuantity}
+                                    onBlur={() => commitQuantity()}
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
                                             e.currentTarget.blur()
