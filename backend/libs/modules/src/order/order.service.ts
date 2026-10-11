@@ -691,13 +691,19 @@ export class OrderService {
                 }
 
                 // Nếu đơn chuyển sang COMPLETED hoặc DELIVERED và đã thanh toán COD
-                const isPaid = order.paymentStatus === 'PAID' || toStatus === 'DELIVERED' || toStatus === 'COMPLETED'
+                const isPaid =
+                    order.paymentStatus === 'PAID' ||
+                    order.paymentStatus === 'COMPLETED' ||
+                    toStatus === 'DELIVERED' ||
+                    toStatus === 'COMPLETED'
 
                 return tx.order.update({
                     where: { id: orderId },
                     data: {
                         status: toStatus,
-                        ...(isPaid && order.paymentStatus !== 'PAID' ? { paymentStatus: 'PAID' } : {}),
+                        ...(isPaid && order.paymentStatus !== 'PAID' && order.paymentStatus !== 'COMPLETED'
+                            ? { paymentStatus: 'COMPLETED' }
+                            : {}),
                         cancelReason: toStatus === 'CANCELLED' ? (note ?? 'Người bán huỷ đơn') : order.cancelReason,
                         statusHistory: {
                             create: {

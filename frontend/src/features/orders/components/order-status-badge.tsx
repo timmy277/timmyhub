@@ -111,7 +111,7 @@ interface PaymentStatusBadgeProps {
 }
 
 export function PaymentStatusBadge({ status, method, className }: PaymentStatusBadgeProps) {
-    const isCompleted = status === 'COMPLETED'
+    const isCompleted = status === 'COMPLETED' || status === 'PAID'
     const isPending = status === 'PENDING'
     const isFailed = status === 'FAILED'
 

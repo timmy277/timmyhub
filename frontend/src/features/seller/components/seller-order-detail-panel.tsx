@@ -314,8 +314,22 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                                 <StatusIcon className="size-3.5" />
                                 <span>{statusInfo.label}</span>
                             </span>
-                            <Badge variant="outline" className="text-xs">
-                                {order.paymentMethod} &bull; {order.paymentStatus === 'PAID' ? 'Đã TT' : 'Chưa TT'}
+                            <Badge
+                                variant="outline"
+                                className={`text-xs ${
+                                    order.paymentStatus === 'PAID' || order.paymentStatus === 'COMPLETED'
+                                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium'
+                                        : order.paymentStatus === 'FAILED'
+                                          ? 'border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-medium'
+                                          : 'border-border/60 text-muted-foreground'
+                                }`}
+                            >
+                                {order.paymentMethod} &bull;{' '}
+                                {order.paymentStatus === 'PAID' || order.paymentStatus === 'COMPLETED'
+                                    ? 'Đã TT'
+                                    : order.paymentStatus === 'FAILED'
+                                      ? 'TT thất bại'
+                                      : 'Chưa TT'}
                             </Badge>
                         </div>
                     </div>

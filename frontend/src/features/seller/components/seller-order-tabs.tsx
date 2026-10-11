@@ -158,7 +158,7 @@ export function SellerOrderTabs({ active, userId, activeLabel }: SellerOrderTabs
     return (
         <Tabs value={activeKey} className="w-full">
             <div className="overflow-x-auto pb-px scrollbar-none">
-                <TabsList className={TABS_LIST_CLASS}>
+                <TabsList variant="line" className={TABS_LIST_CLASS}>
                     {items.map((tab) => {
                         const href = buildSellerOrderTabsHref(pathname, searchParams, tab.target)
                         const isCurrentActive = tab.value === activeKey

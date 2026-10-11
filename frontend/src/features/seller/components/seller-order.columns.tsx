@@ -1,5 +1,14 @@
 import type { ColDef, ICellRendererParams } from 'ag-grid-community'
-import { CheckCircle2Icon, EyeIcon, PackageIcon, PrinterIcon, TruckIcon, UserIcon, XCircleIcon } from 'lucide-react'
+import {
+    CheckCircle2Icon,
+    EyeIcon,
+    PackageIcon,
+    PhoneIcon,
+    PrinterIcon,
+    TruckIcon,
+    UserIcon,
+    XCircleIcon,
+} from 'lucide-react'
 
 import type { OrderDetail, OrderStatusType } from '@timmyhub/contracts'
 import { RowActions, StatusBadge, type RowAction } from '@/components'
@@ -138,19 +147,30 @@ export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOp
         {
             headerName: 'Khách hàng',
             field: 'shippingFullName',
-            flex: 1.2,
-            minWidth: 180,
+            width: 160,
+            flex: 1,
             cellRenderer: (params: ICellRendererParams<OrderDetail>) => {
                 if (!params.data) return null
-                const order = params.data
                 return (
-                    <div className="flex flex-col justify-center py-1 min-w-0">
-                        <span className="text-xs font-semibold text-foreground truncate flex items-center gap-1.5">
-                            <UserIcon className="size-3 text-muted-foreground shrink-0" />
-                            {order.shippingFullName}
-                        </span>
-                        <span className="text-[11px] text-muted-foreground truncate">{order.shippingPhone}</span>
-                    </div>
+                    <span className="text-xs font-semibold text-foreground truncate flex items-center gap-1.5 py-2">
+                        <UserIcon className="size-3 text-muted-foreground shrink-0" />
+                        {params.data.shippingFullName}
+                    </span>
+                )
+            },
+        },
+        {
+            headerName: 'Số điện thoại',
+            field: 'shippingPhone',
+            width: 130,
+            flex: 0,
+            cellRenderer: (params: ICellRendererParams<OrderDetail>) => {
+                if (!params.data) return null
+                return (
+                    <span className="text-xs font-mono text-muted-foreground flex items-center gap-1.5 py-2">
+                        <PhoneIcon className="size-3 text-muted-foreground/70 shrink-0" />
+                        {params.data.shippingPhone}
+                    </span>
                 )
             },
         },
@@ -213,17 +233,17 @@ export function createSellerOrderColumns({ actions }: CreateSellerOrderColumnsOp
         {
             headerName: 'Trạng thái TT',
             field: 'paymentStatus',
-            width: 130,
+            width: 140,
             flex: 0,
             cellRenderer: (params: ICellRendererParams<OrderDetail>) => {
                 if (!params.data) return null
-                const isPaid = params.data.paymentStatus === 'PAID'
+                const isPaid = params.data.paymentStatus === 'PAID' || params.data.paymentStatus === 'COMPLETED'
+                const isFailed = params.data.paymentStatus === 'FAILED'
+                const tone = isPaid ? StatusTone.SUCCESS : isFailed ? StatusTone.DANGER : StatusTone.NEUTRAL
+                const label = isPaid ? 'Đã thanh toán' : isFailed ? 'Thanh toán lỗi' : 'Chưa thanh toán'
                 return (
                     <div className="flex items-center py-2">
-                        <StatusBadge
-                            tone={isPaid ? StatusTone.SUCCESS : StatusTone.NEUTRAL}
-                            label={isPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}
-                        />
+                        <StatusBadge tone={tone} label={label} />
                     </div>
                 )
             },
