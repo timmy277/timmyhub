@@ -19,9 +19,14 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
     const params = await searchParams
     const actor = await getActor()
 
+    // Nếu là Admin / Super Admin (có quyền Dashboard), không sử dụng trang đơn hàng cá nhân mà chuyển về Dashboard
+    if (actor && actor.permissions.has(DASHBOARD_PERMISSION)) {
+        redirect(ROUTE.DASHBOARD)
+    }
+
     // Nếu người dùng là người bán và không chỉ định xem đơn mua cá nhân (?view=buyer / ?role=buyer),
     // tự động điều hướng sang trang Quản lý đơn hàng Kênh Người Bán.
-    if (actor && !actor.permissions.has(DASHBOARD_PERMISSION) && params?.view !== 'buyer' && params?.role !== 'buyer') {
+    if (actor && params?.view !== 'buyer' && params?.role !== 'buyer') {
         const isSellerByPermission =
             actor.permissions.has(SELLER_SHOP_PERMISSION) || actor.permissions.has('orders:orders:list:shop')
         let isSeller = isSellerByPermission

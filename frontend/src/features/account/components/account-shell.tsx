@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
     BellIcon,
@@ -19,8 +20,9 @@ import type { UserDetail, UserRole } from '@timmyhub/contracts'
 
 import { UserAvatar } from '@/components/common'
 import { Badge, Button, Card, Skeleton } from '@/components/ui'
-import { QUERY_KEY, ROLE_LABEL_KEY } from '@/constants'
+import { DASHBOARD_PERMISSION, QUERY_KEY, ROLE_LABEL_KEY } from '@/constants'
 import { getCurrentUserDetailAction } from '@/features/users'
+import { usePermissions } from '@/hooks'
 import { useUserProfileStore } from '@/stores'
 
 import { AddressesTab } from './addresses-tab'
@@ -63,17 +65,7 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
     const pathname = usePathname()
     const searchParams = useSearchParams()
     const profileOverride = useUserProfileStore((state) => state.override)
-
-    const queryTab = searchParams.get('tab')
-    const activeTab: TabKey = isValidAccountTab(queryTab) ? queryTab : 'profile'
-
-    const handleTabChange = (key: TabKey) => {
-        const params = new URLSearchParams(searchParams.toString())
-        params.set('tab', key)
-        params.delete('orderId')
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-    }
-
+    const { hasPermission } = usePermissions()
     const {
         data: user,
         isLoading,
@@ -86,6 +78,27 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
         staleTime: 30_000,
         enabled: Boolean(session?.user?.id),
     })
+
+    const isAdmin =
+        hasPermission(DASHBOARD_PERMISSION) || (user?.roles ?? []).some((r) => r === 'SUPER_ADMIN' || r === 'ADMIN')
+
+    const navItems = useMemo(() => {
+        if (isAdmin) {
+            return NAV_ITEMS.filter((item) => item.key !== 'orders' && item.key !== 'addresses')
+        }
+        return NAV_ITEMS
+    }, [isAdmin])
+
+    const queryTab = searchParams.get('tab')
+    const rawTab: TabKey = isValidAccountTab(queryTab) ? queryTab : 'profile'
+    const activeTab: TabKey = isAdmin && (rawTab === 'orders' || rawTab === 'addresses') ? 'profile' : rawTab
+
+    const handleTabChange = (key: TabKey) => {
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('tab', key)
+        params.delete('orderId')
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    }
 
     if (isLoading) {
         return (
@@ -201,7 +214,7 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
                 <div className="lg:col-span-1">
                     {/* Mobile Horizontal Tabs */}
                     <div className="flex overflow-x-auto gap-1 pb-2 sm:hidden border-b border-border/60">
-                        {NAV_ITEMS.map((item) => {
+                        {navItems.map((item) => {
                             const Icon = item.icon
                             const isActive = activeTab === item.key
                             return (
@@ -224,7 +237,7 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
 
                     {/* Desktop Vertical Menu */}
                     <div className="hidden sm:block space-y-1 rounded-xl border border-border/80 bg-card p-2 shadow-xs">
-                        {NAV_ITEMS.map((item) => {
+                        {navItems.map((item) => {
                             const Icon = item.icon
                             const isActive = activeTab === item.key
                             return (
@@ -249,9 +262,9 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
                 {/* Content Area */}
                 <div className="lg:col-span-3">
                     {activeTab === 'profile' && <ProfileTab user={user} onProfileUpdated={() => refetch()} />}
-                    {activeTab === 'orders' && <OrdersTab />}
+                    {!isAdmin && activeTab === 'orders' && <OrdersTab />}
                     {activeTab === 'security' && <SecurityTab user={user} />}
-                    {activeTab === 'addresses' && <AddressesTab />}
+                    {!isAdmin && activeTab === 'addresses' && <AddressesTab />}
                     {activeTab === 'notifications' && <NotificationsTab />}
                 </div>
             </div>

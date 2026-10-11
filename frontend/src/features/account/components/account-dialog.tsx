@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { BellIcon, CalendarIcon, LockIcon, MapPinIcon, PackageIcon, ShieldCheckIcon, UserIcon } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
@@ -8,8 +9,9 @@ import { useSession } from 'next-auth/react'
 
 import { UserAvatar } from '@/components/common'
 import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Skeleton } from '@/components/ui'
-import { QUERY_KEY } from '@/constants'
+import { DASHBOARD_PERMISSION, QUERY_KEY } from '@/constants'
 import { getCurrentUserDetailAction } from '@/features/users'
+import { usePermissions } from '@/hooks'
 import { useUserProfileStore } from '@/stores'
 
 import { AddressesTab } from './addresses-tab'
@@ -53,17 +55,7 @@ export function AccountDialog({ open, onOpenChange, defaultTab = 'profile' }: Ac
     const searchParams = useSearchParams()
     const profileOverride = useUserProfileStore((state) => state.override)
 
-    const queryTab = searchParams.get('tab')
-    const activeTab: AccountTabKey = isValidAccountTab(queryTab) ? queryTab : defaultTab
-
-    const handleTabChange = (key: AccountTabKey) => {
-        const params = new URLSearchParams(searchParams.toString())
-        params.set('modal', 'account')
-        params.set('tab', key)
-        params.delete('orderId')
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-    }
-
+    const { hasPermission } = usePermissions()
     const {
         data: user,
         isLoading,
@@ -75,6 +67,28 @@ export function AccountDialog({ open, onOpenChange, defaultTab = 'profile' }: Ac
         staleTime: 30_000,
         enabled: Boolean(session?.user?.id) && open,
     })
+
+    const isAdmin =
+        hasPermission(DASHBOARD_PERMISSION) || (user?.roles ?? []).some((r) => r === 'SUPER_ADMIN' || r === 'ADMIN')
+
+    const navItems = useMemo(() => {
+        if (isAdmin) {
+            return NAV_ITEMS.filter((item) => item.key !== 'orders' && item.key !== 'addresses')
+        }
+        return NAV_ITEMS
+    }, [isAdmin])
+
+    const queryTab = searchParams.get('tab')
+    const rawTab: AccountTabKey = isValidAccountTab(queryTab) ? queryTab : defaultTab
+    const activeTab: AccountTabKey = isAdmin && (rawTab === 'orders' || rawTab === 'addresses') ? 'profile' : rawTab
+
+    const handleTabChange = (key: AccountTabKey) => {
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('modal', 'account')
+        params.set('tab', key)
+        params.delete('orderId')
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    }
 
     const currentDisplayName =
         profileOverride?.displayName ||
@@ -143,7 +157,7 @@ export function AccountDialog({ open, onOpenChange, defaultTab = 'profile' }: Ac
 
                             {/* Navigation List */}
                             <div className="flex md:flex-col overflow-x-auto gap-1">
-                                {NAV_ITEMS.map((item) => {
+                                {navItems.map((item) => {
                                     const Icon = item.icon
                                     const isActive = activeTab === item.key
                                     return (
@@ -176,9 +190,11 @@ export function AccountDialog({ open, onOpenChange, defaultTab = 'profile' }: Ac
                         {/* Content Right */}
                         <div className="flex-1 overflow-y-auto p-6">
                             {activeTab === 'profile' && <ProfileTab user={user} onProfileUpdated={() => refetch()} />}
-                            {activeTab === 'orders' && <OrdersTab onCloseDialog={() => onOpenChange(false)} />}
+                            {!isAdmin && activeTab === 'orders' && (
+                                <OrdersTab onCloseDialog={() => onOpenChange(false)} />
+                            )}
                             {activeTab === 'security' && <SecurityTab user={user} />}
-                            {activeTab === 'addresses' && <AddressesTab />}
+                            {!isAdmin && activeTab === 'addresses' && <AddressesTab />}
                             {activeTab === 'notifications' && <NotificationsTab />}
                         </div>
                     </div>

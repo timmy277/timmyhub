@@ -167,10 +167,12 @@ export function UserMenu() {
                                 </Link>
                             </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem onSelect={() => handleOpenAccount('orders')}>
-                            <PackageIcon aria-hidden />
-                            {isSeller ? t('buyerOrders') : t('myOrders')}
-                        </DropdownMenuItem>
+                        {!canAccessDashboard && (
+                            <DropdownMenuItem onSelect={() => handleOpenAccount('orders')}>
+                                <PackageIcon aria-hidden />
+                                {isSeller ? t('buyerOrders') : t('myOrders')}
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onSelect={() => handleOpenAccount('profile')}>
                             <BadgeCheckIcon aria-hidden />
                             {t('account')}
