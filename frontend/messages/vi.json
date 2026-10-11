@@ -1391,7 +1391,21 @@
     "addressLabel": "Nhãn địa chỉ (Nhà riêng, Văn phòng...)",
     "setDefault": "Đặt làm địa chỉ mặc định",
     "cancel": "Hủy",
-    "save": "Lưu địa chỉ"
+    "save": "Lưu địa chỉ",
+    "voucherTitle": "Mã giảm giá",
+    "voucherSelectOrEnter": "Chọn hoặc nhập mã",
+    "voucherPlaceholder": "Nhập mã voucher...",
+    "voucherApply": "Áp dụng",
+    "voucherApplying": "Đang kiểm tra...",
+    "voucherApplied": "Đã áp dụng",
+    "voucherRemove": "Bỏ chọn",
+    "voucherModalTitle": "Chọn TimmyHub Voucher",
+    "voucherModalDesc": "Chọn mã giảm giá phù hợp với đơn hàng của bạn",
+    "voucherAvailableList": "Mã giảm giá khả dụng",
+    "voucherMinOrder": "Đơn tối thiểu {min}",
+    "voucherExpiry": "HSD: {date}",
+    "voucherConditionNotMet": "Chưa đủ điều kiện",
+    "noVouchersAvailable": "Hiện không có voucher nào phù hợp"
   },
   "sellerOrders": {
     "tabList": "Danh sách đơn hàng",

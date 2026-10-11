@@ -79,6 +79,7 @@ export const CheckoutInputSchema = z.object({
     cartItemIds: z.array(z.string().trim()).optional(),
     directItem: CheckoutItemInputSchema.optional(),
     customerNote: z.string().trim().max(500).optional(),
+    voucherCode: z.string().trim().optional(),
     idempotencyKey: z.string().trim().optional(),
 })
 export type CheckoutInput = z.infer<typeof CheckoutInputSchema>

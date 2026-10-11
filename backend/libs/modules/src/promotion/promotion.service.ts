@@ -11,6 +11,8 @@ import type {
     PromotionCampaignListQuery,
     UpdatePromotionCampaignInput,
     UpdateVoucherInput,
+    ValidateVoucherInput,
+    ValidateVoucherResult,
     VoucherDetail,
     VoucherItem,
     VoucherListQuery,
@@ -689,6 +691,118 @@ export class PromotionService {
             soldQuantity: updated.soldQuantity,
             approvalStatus: updated.approvalStatus as CampaignProductApprovalValue,
         }
+    }
+
+    // ==========================================
+    // SHOPPER CHECKOUT & VALIDATION
+    // ==========================================
+
+    async validateVoucherForCheckout(input: ValidateVoucherInput, userId?: string): Promise<ValidateVoucherResult> {
+        const code = input.code.trim().toUpperCase()
+        const voucher = await this.prisma.voucher.findUnique({
+            where: { code },
+            include: { campaign: { select: { name: true } } },
+        })
+
+        if (!voucher) {
+            throw new BadRequestException('Mã voucher không tồn tại')
+        }
+
+        if (!voucher.isActive) {
+            throw new BadRequestException('Mã voucher hiện đang bị tạm khóa')
+        }
+
+        const now = new Date()
+        if (voucher.startDate > now) {
+            throw new BadRequestException('Mã voucher chưa đến thời gian áp dụng')
+        }
+        if (voucher.endDate < now) {
+            throw new BadRequestException('Mã voucher đã hết hạn sử dụng')
+        }
+
+        if (voucher.usageLimit != null && voucher.usedCount >= voucher.usageLimit) {
+            throw new BadRequestException('Mã voucher đã hết lượt sử dụng')
+        }
+
+        if (userId && voucher.perUserLimit) {
+            const userUsedCount = await this.prisma.voucherUsageLog.count({
+                where: { voucherId: voucher.id, userId },
+            })
+            if (userUsedCount >= voucher.perUserLimit) {
+                throw new BadRequestException(`Bạn đã sử dụng tối đa (${voucher.perUserLimit} lần) mã voucher này`)
+            }
+        }
+
+        if (voucher.minOrderValue != null && input.subtotal < Number(voucher.minOrderValue)) {
+            throw new BadRequestException(
+                `Đơn hàng chưa đạt giá trị tối thiểu ${new Intl.NumberFormat('vi-VN').format(Number(voucher.minOrderValue))} ₫`,
+            )
+        }
+
+        if (voucher.sellerId && input.shopIds && input.shopIds.length > 0) {
+            if (!input.shopIds.includes(voucher.sellerId)) {
+                throw new BadRequestException('Mã voucher này không áp dụng cho gian hàng bạn đang mua')
+            }
+        }
+
+        if (voucher.paymentMethods && voucher.paymentMethods.length > 0 && input.paymentMethod) {
+            if (!voucher.paymentMethods.includes(input.paymentMethod)) {
+                throw new BadRequestException('Mã voucher không áp dụng cho phương thức thanh toán đã chọn')
+            }
+        }
+
+        // Tính số tiền giảm giá
+        let discountAmount = 0
+        const subtotal = input.subtotal
+        if (voucher.type === 'PERCENTAGE') {
+            const rawDiscount = subtotal * (Number(voucher.value) / 100)
+            discountAmount =
+                voucher.maxDiscount != null ? Math.min(rawDiscount, Number(voucher.maxDiscount)) : rawDiscount
+        } else if (voucher.type === 'FIXED_AMOUNT') {
+            discountAmount = Math.min(Number(voucher.value), subtotal)
+        } else if (voucher.type === 'FREE_SHIPPING') {
+            discountAmount = Math.min(Number(voucher.value), 30000)
+        }
+
+        discountAmount = Math.round(discountAmount)
+        const finalTotal = Math.max(0, subtotal - discountAmount)
+
+        return {
+            valid: true,
+            voucher: {
+                id: voucher.id,
+                code: voucher.code,
+                type: voucher.type,
+                value: Number(voucher.value),
+                minOrderValue: voucher.minOrderValue != null ? Number(voucher.minOrderValue) : null,
+                maxDiscount: voucher.maxDiscount != null ? Number(voucher.maxDiscount) : null,
+                description: voucher.description ?? null,
+                campaignName: voucher.campaign?.name ?? null,
+            },
+            discountAmount,
+            finalTotal,
+        }
+    }
+
+    async getAvailableVouchersForCheckout(_subtotal?: number, _userId?: string): Promise<VoucherItem[]> {
+        const now = new Date()
+        const vouchers = await this.prisma.voucher.findMany({
+            where: {
+                isActive: true,
+                startDate: { lte: now },
+                endDate: { gte: now },
+            },
+            orderBy: [{ value: 'desc' }, { createdAt: 'desc' }],
+            take: 30,
+            include: { campaign: { select: { name: true } } },
+        })
+
+        const available = vouchers.filter((v) => {
+            if (v.usageLimit != null && v.usedCount >= v.usageLimit) return false
+            return true
+        })
+
+        return available.map((v) => this.mapVoucherRecord(v as unknown as VoucherDbPayload))
     }
 
     // ==========================================

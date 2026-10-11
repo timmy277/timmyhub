@@ -18,12 +18,14 @@ import {
     PlusIcon,
     ShieldCheckIcon,
     StoreIcon,
+    TagIcon,
+    TicketIcon,
     TruckIcon,
     WalletIcon,
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
-import type { AddressDetail, CartDetail, CheckoutInput } from '@timmyhub/contracts'
+import type { AddressDetail, CartDetail, CheckoutInput, ValidateVoucherResult } from '@timmyhub/contracts'
 
 import { FloatInput } from '@/components'
 import {
@@ -42,7 +44,14 @@ import {
     Skeleton,
 } from '@/components/ui'
 import { ROUTE } from '@/constants'
-import { useAddresses, useCart, useCheckout, usePublicProductDetail } from '@/hooks'
+import {
+    useAddresses,
+    useAvailableVouchers,
+    useCart,
+    useCheckout,
+    usePublicProductDetail,
+    useValidateVoucher,
+} from '@/hooks'
 import { formatCurrencyVND } from '@/utils'
 import { AddressFormDialog } from './address-form-dialog'
 
@@ -215,7 +224,7 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
         return groups
     }, [directVariantId, directProduct, directQty, cart, initialCart, selectedCartItemIds])
 
-    // Tính tổng tiền thanh toán
+    // Tính tổng tiền hàng
     const subtotal = useMemo(() => {
         return checkoutItems.reduce((acc, shop) => {
             const shopTotal = shop.items.reduce((s, it) => s + (Number(it.lineTotal) || 0), 0)
@@ -224,9 +233,75 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
     }, [checkoutItems])
 
     const shippingFee = 0 // Miễn phí vận chuyển
-    const totalAmount = subtotal + shippingFee
 
-    // 5. Đặt hàng Mutation
+    // 5. Trạng thái Voucher / Mã giảm giá
+    const [voucherCodeInput, setVoucherCodeInput] = useState('')
+    const [appliedVoucher, setAppliedVoucher] = useState<ValidateVoucherResult['voucher'] | null>(null)
+    const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false)
+    const [voucherModalInput, setVoucherModalInput] = useState('')
+
+    const validateVoucherMutation = useValidateVoucher()
+    const { data: availableVouchers = [], isLoading: isLoadingVouchers } = useAvailableVouchers(subtotal)
+
+    // Tính toán số tiền được giảm từ voucher
+    const voucherDiscount = useMemo(() => {
+        if (!appliedVoucher) return 0
+        if (appliedVoucher.minOrderValue && subtotal < appliedVoucher.minOrderValue) return 0
+
+        let disc = 0
+        if (appliedVoucher.type === 'PERCENTAGE') {
+            disc = Math.floor((subtotal * appliedVoucher.value) / 100)
+            if (appliedVoucher.maxDiscount && disc > appliedVoucher.maxDiscount) {
+                disc = appliedVoucher.maxDiscount
+            }
+        } else if (appliedVoucher.type === 'FIXED_AMOUNT') {
+            disc = Math.min(subtotal, appliedVoucher.value)
+        } else if (appliedVoucher.type === 'FREE_SHIPPING') {
+            disc = shippingFee
+        }
+        return Math.max(0, disc)
+    }, [appliedVoucher, subtotal, shippingFee])
+
+    const totalAmount = Math.max(0, subtotal + shippingFee - voucherDiscount)
+
+    // Áp dụng voucher
+    const handleApplyVoucher = async (codeToApply?: string) => {
+        const code = (codeToApply || voucherCodeInput).trim().toUpperCase()
+        if (!code) {
+            toast.error(t('voucherPlaceholder') || 'Vui lòng nhập mã giảm giá')
+            return
+        }
+
+        try {
+            const result = await validateVoucherMutation.mutateAsync({
+                code,
+                subtotal,
+            })
+
+            if (result.valid && result.voucher) {
+                setAppliedVoucher(result.voucher)
+                setVoucherCodeInput(result.voucher.code)
+                setVoucherModalInput(result.voucher.code)
+                setIsVoucherModalOpen(false)
+                toast.success('Áp dụng mã giảm giá thành công!')
+            } else {
+                toast.error('Mã giảm giá không hợp lệ')
+            }
+        } catch (err: unknown) {
+            const errMsg = err instanceof Error ? err.message : 'Không thể áp dụng mã giảm giá'
+            toast.error(errMsg)
+        }
+    }
+
+    // Gỡ voucher đã áp dụng
+    const handleRemoveVoucher = () => {
+        setAppliedVoucher(null)
+        setVoucherCodeInput('')
+        setVoucherModalInput('')
+        toast.info('Đã hủy áp dụng mã giảm giá')
+    }
+
+    // 6. Đặt hàng Mutation
     const checkoutMutation = useCheckout()
 
     const handlePlaceOrder = async () => {
@@ -245,6 +320,7 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
             addressId: activeAddress.id,
             paymentMethod,
             customerNote: customerNote.trim() || undefined,
+            voucherCode: appliedVoucher ? appliedVoucher.code : undefined,
             idempotencyKey: `chk_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
         }
 
@@ -636,7 +712,98 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                     </div>
 
                     {/* Cột phải: Sticky Tóm tắt đơn hàng (4 cols) */}
-                    <div className="lg:col-span-4 sticky top-20 space-y-5">
+                    <div className="lg:col-span-4 sticky top-20 space-y-4">
+                        {/* Thẻ áp dụng Voucher */}
+                        <Card className="rounded-2xl border border-border/80 shadow-sm overflow-hidden bg-card">
+                            <CardHeader className="bg-muted/30 py-3.5 px-5 border-b border-border/60">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <TicketIcon className="size-4 text-primary" />
+                                        <CardTitle className="text-sm font-extrabold text-foreground">
+                                            {t('voucherTitle')}
+                                        </CardTitle>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setVoucherModalInput(voucherCodeInput)
+                                            setIsVoucherModalOpen(true)
+                                        }}
+                                        className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                                    >
+                                        {t('voucherSelectOrEnter')}
+                                    </button>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="p-4 sm:p-5 space-y-3">
+                                {appliedVoucher ? (
+                                    <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                            <div className="size-8 rounded-lg bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                                <TagIcon className="size-4" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="font-mono font-black text-xs text-foreground uppercase tracking-wider truncate">
+                                                        {appliedVoucher.code}
+                                                    </span>
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="text-[10px] bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-0 py-0 px-1.5 font-bold"
+                                                    >
+                                                        -{formatCurrencyVND(voucherDiscount)}
+                                                    </Badge>
+                                                </div>
+                                                <p className="text-[11px] text-muted-foreground truncate">
+                                                    {appliedVoucher.description ||
+                                                        appliedVoucher.campaignName ||
+                                                        'Voucher TimmyHub'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={handleRemoveVoucher}
+                                            className="h-7 px-2 text-xs font-semibold text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 rounded-lg shrink-0"
+                                        >
+                                            {t('voucherRemove')}
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder={t('voucherPlaceholder')}
+                                            value={voucherCodeInput}
+                                            onChange={(e) => setVoucherCodeInput(e.target.value.toUpperCase())}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault()
+                                                    handleApplyVoucher()
+                                                }
+                                            }}
+                                            className="flex-1 h-9 px-3 rounded-lg border border-border/80 bg-background text-xs font-mono placeholder:font-sans placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary uppercase"
+                                        />
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            onClick={() => handleApplyVoucher()}
+                                            disabled={validateVoucherMutation.isPending || !voucherCodeInput.trim()}
+                                            className="h-9 px-3.5 text-xs font-bold rounded-lg shrink-0 gap-1"
+                                        >
+                                            {validateVoucherMutation.isPending && (
+                                                <Loader2Icon className="size-3 animate-spin" />
+                                            )}
+                                            {t('voucherApply')}
+                                        </Button>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Thẻ tóm tắt đơn hàng */}
                         <Card className="rounded-2xl border border-border/80 shadow-md overflow-hidden bg-card">
                             <CardHeader className="bg-muted/30 pb-4 border-b border-border/60">
                                 <CardTitle className="text-base font-extrabold text-foreground flex items-center justify-between">
@@ -660,7 +827,15 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                     </div>
                                     <div className="flex justify-between text-muted-foreground">
                                         <span>{t('voucherDiscount')}</span>
-                                        <span className="font-semibold text-muted-foreground">-0₫</span>
+                                        <span
+                                            className={
+                                                voucherDiscount > 0
+                                                    ? 'font-bold text-emerald-700 dark:text-emerald-400'
+                                                    : 'font-semibold text-muted-foreground'
+                                            }
+                                        >
+                                            {voucherDiscount > 0 ? `-${formatCurrencyVND(voucherDiscount)}` : '-0₫'}
+                                        </span>
                                     </div>
                                 </div>
 
@@ -820,6 +995,164 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                     setIsAddressModalOpen(false)
                 }}
             />
+
+            {/* ─────────────────────────────────────────────────────────────
+             * DIALOG CHỌN HOẶC NHẬP MÃ GIẢM GIÁ (VOUCHER)
+             * ───────────────────────────────────────────────────────────── */}
+            <Dialog open={isVoucherModalOpen} onOpenChange={setIsVoucherModalOpen}>
+                <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col rounded-2xl p-0 overflow-hidden">
+                    <DialogHeader className="p-5 pb-3 border-b border-border/60">
+                        <DialogTitle className="text-base font-extrabold flex items-center gap-2">
+                            <TicketIcon className="size-5 text-primary" />
+                            <span>{t('voucherModalTitle')}</span>
+                        </DialogTitle>
+                        <p className="text-xs text-muted-foreground">{t('voucherModalDesc')}</p>
+                    </DialogHeader>
+
+                    {/* Thanh nhập voucher trực tiếp trong popup */}
+                    <div className="p-4 bg-muted/20 border-b border-border/60 flex gap-2">
+                        <input
+                            type="text"
+                            placeholder={t('voucherPlaceholder')}
+                            value={voucherModalInput}
+                            onChange={(e) => setVoucherModalInput(e.target.value.toUpperCase())}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    handleApplyVoucher(voucherModalInput)
+                                }
+                            }}
+                            className="flex-1 h-9 px-3 rounded-lg border border-border/80 bg-background text-xs font-mono uppercase focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                        />
+                        <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleApplyVoucher(voucherModalInput)}
+                            disabled={validateVoucherMutation.isPending || !voucherModalInput.trim()}
+                            className="h-9 px-4 text-xs font-bold rounded-lg shrink-0 gap-1"
+                        >
+                            {validateVoucherMutation.isPending && <Loader2Icon className="size-3 animate-spin" />}
+                            {t('voucherApply')}
+                        </Button>
+                    </div>
+
+                    {/* Danh sách voucher khả dụng */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                            {t('voucherAvailableList')}
+                        </div>
+
+                        {isLoadingVouchers ? (
+                            <div className="space-y-2.5 py-2">
+                                <Skeleton className="h-20 w-full rounded-xl" />
+                                <Skeleton className="h-20 w-full rounded-xl" />
+                            </div>
+                        ) : availableVouchers.length === 0 ? (
+                            <div className="text-center py-10 text-xs text-muted-foreground space-y-2">
+                                <TicketIcon className="size-8 mx-auto text-muted-foreground/40" />
+                                <p>{t('noVouchersAvailable')}</p>
+                            </div>
+                        ) : (
+                            availableVouchers.map((v) => {
+                                const isCurrent = appliedVoucher?.id === v.id
+                                const minOrder = Number(v.minOrderValue) || 0
+                                const isEligible = subtotal >= minOrder
+
+                                let discountBadge = ''
+                                if (v.type === 'PERCENTAGE') {
+                                    discountBadge = `Giảm ${v.value}%${v.maxDiscount ? ` (Tối đa ${formatCurrencyVND(v.maxDiscount)})` : ''}`
+                                } else if (v.type === 'FIXED_AMOUNT') {
+                                    discountBadge = `Giảm ${formatCurrencyVND(v.value)}`
+                                } else if (v.type === 'FREE_SHIPPING') {
+                                    discountBadge = `Miễn phí vận chuyển`
+                                }
+
+                                return (
+                                    <div
+                                        key={v.id}
+                                        className={`p-3.5 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                                            isCurrent
+                                                ? 'border-emerald-500 bg-emerald-500/5 shadow-sm ring-1 ring-emerald-500/30'
+                                                : isEligible
+                                                  ? 'border-border/70 hover:border-primary/50 hover:bg-muted/20 bg-card'
+                                                  : 'border-border/40 bg-muted/10 opacity-60'
+                                        }`}
+                                    >
+                                        <div className="flex items-start gap-3 min-w-0">
+                                            <div
+                                                className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${
+                                                    isEligible
+                                                        ? 'bg-primary/10 text-primary'
+                                                        : 'bg-muted text-muted-foreground'
+                                                }`}
+                                            >
+                                                <TagIcon className="size-5" />
+                                            </div>
+                                            <div className="space-y-1 min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="font-mono font-black text-xs text-foreground uppercase tracking-wider">
+                                                        {v.code}
+                                                    </span>
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="text-[10px] font-bold bg-primary/15 text-primary border-0 py-0 px-1.5"
+                                                    >
+                                                        {discountBadge}
+                                                    </Badge>
+                                                </div>
+                                                <p className="text-xs font-semibold text-foreground/90 truncate">
+                                                    {v.description || v.campaignName || v.code}
+                                                </p>
+                                                <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
+                                                    <span>
+                                                        {t('voucherMinOrder', {
+                                                            min: formatCurrencyVND(minOrder),
+                                                        })}
+                                                    </span>
+                                                    {v.endDate && (
+                                                        <span>
+                                                            {t('voucherExpiry', {
+                                                                date: new Date(v.endDate).toLocaleDateString('vi-VN'),
+                                                            })}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {!isEligible && (
+                                                    <p className="text-[10px] font-medium text-rose-500">
+                                                        {t('voucherConditionNotMet')} (cần thêm{' '}
+                                                        {formatCurrencyVND(minOrder - subtotal)})
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="shrink-0 pl-2">
+                                            {isCurrent ? (
+                                                <Badge
+                                                    variant="secondary"
+                                                    className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-bold text-xs py-1 px-2.5"
+                                                >
+                                                    {t('voucherApplied')}
+                                                </Badge>
+                                            ) : (
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    disabled={!isEligible || validateVoucherMutation.isPending}
+                                                    onClick={() => handleApplyVoucher(v.code)}
+                                                    className="h-8 px-3 text-xs font-bold rounded-lg"
+                                                >
+                                                    {t('voucherApply')}
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                )
+                            })
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

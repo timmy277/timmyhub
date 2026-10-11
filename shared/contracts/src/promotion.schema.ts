@@ -315,3 +315,27 @@ export interface PromotionCampaignDetail extends PromotionCampaignItem {
     campaignProducts: CampaignProductItem[]
     vouchers: VoucherItem[]
 }
+
+export const ValidateVoucherInputSchema = z.object({
+    code: z.string().trim().min(1),
+    subtotal: z.number().nonnegative(),
+    shopIds: z.array(z.string().trim()).optional(),
+    paymentMethod: z.string().trim().optional(),
+})
+export type ValidateVoucherInput = z.infer<typeof ValidateVoucherInputSchema>
+
+export interface ValidateVoucherResult {
+    valid: boolean
+    voucher: {
+        id: string
+        code: string
+        type: VoucherTypeValue
+        value: number
+        minOrderValue?: number | null
+        maxDiscount?: number | null
+        description?: string | null
+        campaignName?: string | null
+    }
+    discountAmount: number
+    finalTotal: number
+}

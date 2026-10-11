@@ -7,6 +7,8 @@ import type {
     CreateAddressInput,
     OrderDetail,
     UpdateAddressInput,
+    ValidateVoucherInput,
+    VoucherItem,
 } from '@timmyhub/contracts'
 import { toast } from 'sonner'
 
@@ -16,10 +18,12 @@ import {
     createAddressAction,
     deleteAddressAction,
     getAddressesAction,
+    getAvailableVouchersAction,
     getMyOrdersAction,
     getOrderByIdAction,
     setDefaultAddressAction,
     updateAddressAction,
+    validateVoucherAction,
 } from '@/features/checkout'
 
 // 1. Hook lấy sổ địa chỉ
@@ -174,6 +178,35 @@ export function useMyOrders(status?: string) {
             const res = await getMyOrdersAction(status)
             if (!res.ok) {
                 throw new Error(res.message || 'Không thể tải danh sách đơn hàng')
+            }
+            return res.data
+        },
+    })
+}
+
+// 9. Hook lấy danh sách voucher khả dụng khi thanh toán
+export function useAvailableVouchers(subtotal?: number, options?: { enabled?: boolean }) {
+    return useQuery<VoucherItem[]>({
+        queryKey: QUERY_KEY.PROMOTION.AVAILABLE_VOUCHERS(subtotal),
+        queryFn: async () => {
+            const res = await getAvailableVouchersAction(subtotal)
+            if (!res.ok) {
+                return []
+            }
+            return res.data
+        },
+        enabled: options?.enabled ?? true,
+        staleTime: 30_000,
+    })
+}
+
+// 10. Hook kiểm tra & áp dụng voucher
+export function useValidateVoucher() {
+    return useMutation({
+        mutationFn: async (input: ValidateVoucherInput) => {
+            const res = await validateVoucherAction(input)
+            if (!res.ok) {
+                throw new Error(res.message || 'Voucher không hợp lệ')
             }
             return res.data
         },

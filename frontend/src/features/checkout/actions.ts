@@ -7,6 +7,9 @@ import type {
     CreateAddressInput,
     OrderDetail,
     UpdateAddressInput,
+    ValidateVoucherInput,
+    ValidateVoucherResult,
+    VoucherItem,
 } from '@timmyhub/contracts'
 import { CheckoutInputSchema, CreateAddressInputSchema, UpdateAddressInputSchema } from '@timmyhub/contracts'
 import { API_ROUTE } from '@/constants'
@@ -15,7 +18,8 @@ import { fetchBackend } from '@/lib/api-server'
 
 export type CheckoutActionResult<T> = { ok: true; data: T } | { ok: false; code: string; message?: string }
 
-function formatCheckoutError(code: string, status: number): string {
+function formatCheckoutError(code: string, status: number, backendMsg?: string): string {
+    if (backendMsg) return backendMsg
     if (code === 'UNAUTHORIZED' || status === 401) {
         return 'Vui lòng đăng nhập để thực hiện thanh toán'
     }
@@ -145,7 +149,11 @@ export async function checkoutAction(input: CheckoutInput): Promise<CheckoutActi
     })
 
     if (!result.ok) {
-        return { ok: false, code: result.code, message: formatCheckoutError(result.code, result.status) }
+        return {
+            ok: false,
+            code: result.code,
+            message: formatCheckoutError(result.code, result.status, result.message),
+        }
     }
     return { ok: true, data: result.data }
 }
@@ -160,7 +168,11 @@ export async function getOrderByIdAction(orderId: string): Promise<CheckoutActio
     })
 
     if (!result.ok) {
-        return { ok: false, code: result.code, message: formatCheckoutError(result.code, result.status) }
+        return {
+            ok: false,
+            code: result.code,
+            message: formatCheckoutError(result.code, result.status, result.message),
+        }
     }
     return { ok: true, data: result.data }
 }
@@ -176,7 +188,11 @@ export async function getMyOrdersAction(status?: string): Promise<CheckoutAction
     })
 
     if (!result.ok) {
-        return { ok: false, code: result.code, message: formatCheckoutError(result.code, result.status) }
+        return {
+            ok: false,
+            code: result.code,
+            message: formatCheckoutError(result.code, result.status, result.message),
+        }
     }
     return { ok: true, data: result.data }
 }
@@ -193,7 +209,50 @@ export async function cancelOrderAction(orderId: string, reason?: string): Promi
     })
 
     if (!result.ok) {
-        return { ok: false, code: result.code, message: formatCheckoutError(result.code, result.status) }
+        return {
+            ok: false,
+            code: result.code,
+            message: formatCheckoutError(result.code, result.status, result.message),
+        }
+    }
+    return { ok: true, data: result.data }
+}
+
+// 10. Xác thực & tính toán voucher cho checkout
+export async function validateVoucherAction(
+    input: ValidateVoucherInput,
+): Promise<CheckoutActionResult<ValidateVoucherResult>> {
+    const actor = await getActor()
+    const result = await fetchBackend<ValidateVoucherResult>(API_ROUTE.PROMOTION.VALIDATE_VOUCHER, {
+        method: 'POST',
+        body: input,
+        token: actor?.accessToken,
+    })
+
+    if (!result.ok) {
+        return {
+            ok: false,
+            code: result.code,
+            message: formatCheckoutError(result.code, result.status, result.message),
+        }
+    }
+    return { ok: true, data: result.data }
+}
+
+// 11. Lấy danh sách voucher khả dụng
+export async function getAvailableVouchersAction(subtotal?: number): Promise<CheckoutActionResult<VoucherItem[]>> {
+    const actor = await getActor()
+    const result = await fetchBackend<VoucherItem[]>(API_ROUTE.PROMOTION.AVAILABLE_VOUCHERS, {
+        query: subtotal !== undefined ? { subtotal } : undefined,
+        token: actor?.accessToken,
+    })
+
+    if (!result.ok) {
+        return {
+            ok: false,
+            code: result.code,
+            message: formatCheckoutError(result.code, result.status, result.message),
+        }
     }
     return { ok: true, data: result.data }
 }

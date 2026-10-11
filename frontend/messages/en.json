@@ -1391,7 +1391,21 @@
     "addressLabel": "Address Label (Home, Office...)",
     "setDefault": "Set as default address",
     "cancel": "Cancel",
-    "save": "Save Address"
+    "save": "Save Address",
+    "voucherTitle": "Voucher Discount",
+    "voucherSelectOrEnter": "Select or enter code",
+    "voucherPlaceholder": "Enter voucher code...",
+    "voucherApply": "Apply",
+    "voucherApplying": "Checking...",
+    "voucherApplied": "Applied",
+    "voucherRemove": "Remove",
+    "voucherModalTitle": "Select TimmyHub Voucher",
+    "voucherModalDesc": "Choose a voucher suitable for your order",
+    "voucherAvailableList": "Available Vouchers",
+    "voucherMinOrder": "Min order {min}",
+    "voucherExpiry": "Exp: {date}",
+    "voucherConditionNotMet": "Conditions not met",
+    "noVouchersAvailable": "No vouchers currently available"
   },
   "sellerOrders": {
     "tabList": "Order List",

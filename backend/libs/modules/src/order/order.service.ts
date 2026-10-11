@@ -345,13 +345,116 @@ export class OrderService {
                 const ordersList: Array<OrderWithRelations & { shopName: string }> = []
                 const baseIdempotency = key || `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
 
+                // Bước C.2: Xác thực & tính toán voucher (nếu có)
+                let appliedVoucher: {
+                    id: string
+                    code: string
+                    type: string
+                    value: Prisma.Decimal
+                    maxDiscount: Prisma.Decimal | null
+                    sellerId: string | null
+                    paymentMethods: string[]
+                } | null = null
+                let totalVoucherDiscount = new Prisma.Decimal(0)
+
+                if (input.voucherCode) {
+                    const vCode = input.voucherCode.trim().toUpperCase()
+                    const voucher = await tx.voucher.findUnique({
+                        where: { code: vCode },
+                    })
+
+                    if (!voucher) {
+                        throw new BadRequestException('Mã voucher không tồn tại')
+                    }
+
+                    if (!voucher.isActive) {
+                        throw new BadRequestException('Mã voucher hiện đang bị khóa')
+                    }
+
+                    const now = new Date()
+                    if (voucher.startDate > now) {
+                        throw new BadRequestException('Mã voucher chưa đến thời gian áp dụng')
+                    }
+                    if (voucher.endDate < now) {
+                        throw new BadRequestException('Mã voucher đã hết hạn sử dụng')
+                    }
+
+                    if (voucher.usageLimit != null && voucher.usedCount >= voucher.usageLimit) {
+                        throw new BadRequestException('Mã voucher đã hết lượt sử dụng')
+                    }
+
+                    if (voucher.perUserLimit) {
+                        const userUsedCount = await tx.voucherUsageLog.count({
+                            where: { voucherId: voucher.id, userId },
+                        })
+                        if (userUsedCount >= voucher.perUserLimit) {
+                            throw new BadRequestException(
+                                `Bạn đã sử dụng tối đa (${voucher.perUserLimit} lần) mã voucher này`,
+                            )
+                        }
+                    }
+
+                    const overallSubtotal = Array.from(shopGroups.values()).reduce(
+                        (sum, items) =>
+                            sum.add(items.reduce((acc, it) => acc.add(it.lineTotal), new Prisma.Decimal(0))),
+                        new Prisma.Decimal(0),
+                    )
+
+                    if (voucher.minOrderValue != null && overallSubtotal.lessThan(voucher.minOrderValue)) {
+                        throw new BadRequestException('Đơn hàng chưa đạt giá trị tối thiểu để áp dụng voucher')
+                    }
+
+                    if (voucher.sellerId) {
+                        const hasShop = shopGroups.has(voucher.sellerId)
+                        if (!hasShop) {
+                            throw new BadRequestException('Mã voucher không áp dụng cho các gian hàng trong đơn này')
+                        }
+                    }
+
+                    if (voucher.paymentMethods.length > 0 && !voucher.paymentMethods.includes(input.paymentMethod)) {
+                        throw new BadRequestException('Mã voucher không áp dụng cho phương thức thanh toán đã chọn')
+                    }
+
+                    // Tính mức giảm
+                    if (voucher.type === 'PERCENTAGE') {
+                        const rawDiscount = overallSubtotal.mul(voucher.value).div(100)
+                        totalVoucherDiscount =
+                            voucher.maxDiscount != null
+                                ? rawDiscount.greaterThan(voucher.maxDiscount)
+                                    ? voucher.maxDiscount
+                                    : rawDiscount
+                                : rawDiscount
+                    } else if (voucher.type === 'FIXED_AMOUNT') {
+                        totalVoucherDiscount = overallSubtotal.greaterThan(voucher.value)
+                            ? voucher.value
+                            : overallSubtotal
+                    } else if (voucher.type === 'FREE_SHIPPING') {
+                        totalVoucherDiscount = new Prisma.Decimal(30000).greaterThan(voucher.value)
+                            ? voucher.value
+                            : new Prisma.Decimal(30000)
+                    }
+
+                    appliedVoucher = voucher
+                }
+
                 // Bước D: Tạo từng Order cho từng Shop và giữ tồn kho
+                let remainingDiscount = totalVoucherDiscount
                 let shopIndex = 0
                 for (const [shopId, items] of shopGroups.entries()) {
                     shopIndex++
                     const subtotal = items.reduce((acc, it) => acc.add(it.lineTotal), new Prisma.Decimal(0))
                     const shippingFee = new Prisma.Decimal(0) // Miễn phí vận chuyển
-                    const totalAmount = subtotal.add(shippingFee)
+
+                    let orderDiscount = new Prisma.Decimal(0)
+                    if (appliedVoucher) {
+                        if (!appliedVoucher.sellerId || appliedVoucher.sellerId === shopId) {
+                            orderDiscount = remainingDiscount.greaterThan(subtotal) ? subtotal : remainingDiscount
+                            remainingDiscount = remainingDiscount.sub(orderDiscount)
+                        }
+                    }
+
+                    const rawTotal = subtotal.add(shippingFee).sub(orderDiscount)
+                    const totalAmount = rawTotal.greaterThan(0) ? rawTotal : new Prisma.Decimal(0)
                     const orderKey = `${baseIdempotency}-${shopIndex}`
 
                     const fullAddressString = [
@@ -371,6 +474,8 @@ export class OrderService {
                             status: 'PENDING',
                             totalAmount,
                             currency: 'VND',
+                            voucherId: orderDiscount.greaterThan(0) && appliedVoucher ? appliedVoucher.id : null,
+                            voucherDiscount: orderDiscount.greaterThan(0) ? orderDiscount : null,
                             shippingFee,
                             paymentStatus: 'PENDING',
                             paymentMethod: input.paymentMethod,
@@ -410,6 +515,17 @@ export class OrderService {
                         },
                     })
 
+                    if (orderDiscount.greaterThan(0) && appliedVoucher) {
+                        await tx.voucherUsageLog.create({
+                            data: {
+                                voucherId: appliedVoucher.id,
+                                userId,
+                                orderId: order.id,
+                                discount: orderDiscount,
+                            },
+                        })
+                    }
+
                     // Trừ tồn kho & tăng số lượng bán
                     for (const it of items) {
                         if (it.variant.inventory) {
@@ -433,6 +549,15 @@ export class OrderService {
                     ordersList.push({
                         ...order,
                         shopName: shopMap.get(shopId) || 'TimmyHub Mall',
+                    })
+                }
+
+                if (appliedVoucher && totalVoucherDiscount.greaterThan(0)) {
+                    await tx.voucher.update({
+                        where: { id: appliedVoucher.id },
+                        data: {
+                            usedCount: { increment: 1 },
+                        },
                     })
                 }
 

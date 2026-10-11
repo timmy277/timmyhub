@@ -64,4 +64,8 @@ export const QUERY_KEY = {
         ALL: ['address'] as const,
         LIST: ['address', 'list'] as const,
     },
+    PROMOTION: {
+        ALL: ['promotion'] as const,
+        AVAILABLE_VOUCHERS: (subtotal?: number) => ['promotion', 'available-vouchers', subtotal] as const,
+    },
 } as const

@@ -13,6 +13,7 @@ export type BackendFailure = {
     // 0 = không kết nối được; còn lại là mã HTTP backend trả.
     status: number
     code: ApiErrorCode | 'BACKEND_UNAVAILABLE'
+    message?: string
 }
 
 export type BackendResult<T> = { ok: true; data: T } | BackendFailure
@@ -54,8 +55,13 @@ export async function fetchBackend<T>(path: string, options: FetchBackendOptions
     }
 
     if (!response.ok) {
-        const code = await readErrorCode(response)
-        return { ok: false, status: response.status, code: code ?? BACKEND_UNAVAILABLE_CODE }
+        const errorInfo = await readErrorInfo(response)
+        return {
+            ok: false,
+            status: response.status,
+            code: errorInfo.code ?? BACKEND_UNAVAILABLE_CODE,
+            message: errorInfo.message ?? undefined,
+        }
     }
 
     // 204/205: thành công không có body (theo chuẩn HTTP).
@@ -75,18 +81,31 @@ export async function fetchBackend<T>(path: string, options: FetchBackendOptions
 }
 
 // Khung lỗi của `ApiExceptionFilter`: `{ success: false, error: { code, message, … } }`.
-async function readErrorCode(response: Response): Promise<ApiErrorCode | null> {
+async function readErrorInfo(response: Response): Promise<{ code: ApiErrorCode | null; message: string | null }> {
     try {
         const body: unknown = await response.json()
-        if (typeof body === 'object' && body !== null && 'error' in body) {
-            const error: unknown = Reflect.get(body, 'error')
-            if (typeof error === 'object' && error !== null && 'code' in error) {
-                const code: unknown = Reflect.get(error, 'code')
-                if (typeof code === 'string') return code as ApiErrorCode
+        if (typeof body === 'object' && body !== null) {
+            if ('error' in body) {
+                const error: unknown = Reflect.get(body, 'error')
+                if (typeof error === 'object' && error !== null) {
+                    const code = 'code' in error && typeof error.code === 'string' ? (error.code as ApiErrorCode) : null
+                    const message = 'message' in error && typeof error.message === 'string' ? error.message : null
+                    return { code, message }
+                }
+            }
+            if ('message' in body) {
+                const message =
+                    typeof body.message === 'string'
+                        ? body.message
+                        : Array.isArray(body.message) && typeof body.message[0] === 'string'
+                          ? body.message[0]
+                          : null
+                const code = 'error' in body && typeof body.error === 'string' ? (body.error as ApiErrorCode) : null
+                return { code, message }
             }
         }
     } catch {
         // Body không phải JSON — rơi về mã mặc định ở nơi gọi.
     }
-    return null
+    return { code: null, message: null }
 }

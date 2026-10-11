@@ -112,5 +112,7 @@ export const API_ROUTE = {
         ADMIN_CAMPAIGN_STATUS: (id: string) => `v1/admin/campaigns/${encodeURIComponent(id)}/status`,
         ADMIN_CAMPAIGN_PRODUCT_REVIEW: (campaignId: string, productId: string) =>
             `v1/admin/campaigns/${encodeURIComponent(campaignId)}/products/${encodeURIComponent(productId)}/review`,
+        VALIDATE_VOUCHER: 'v1/promotions/validate-voucher',
+        AVAILABLE_VOUCHERS: 'v1/promotions/available-vouchers',
     },
 } as const
