@@ -73,6 +73,24 @@ export function UserMenu() {
     const isAccountOpen = searchParams.get('modal') === 'account'
     const accountTab = (searchParams.get('tab') as AccountTabKey) || 'profile'
 
+    const handleOpenAccount = useCallback(
+        (tab: AccountTabKey = 'profile') => {
+            if (pathname === ROUTE.ACCOUNT) {
+                const params = new URLSearchParams(searchParams.toString())
+                params.set('tab', tab)
+                params.delete('orderId')
+                router.push(`${pathname}?${params.toString()}`, { scroll: false })
+                return
+            }
+            const params = new URLSearchParams(searchParams.toString())
+            params.set('modal', 'account')
+            params.set('tab', tab)
+            params.delete('orderId')
+            router.push(`${pathname}?${params.toString()}`, { scroll: false })
+        },
+        [pathname, router, searchParams],
+    )
+
     const handleAccountOpenChange = useCallback(
         (open: boolean) => {
             const params = new URLSearchParams(searchParams.toString())
@@ -129,23 +147,17 @@ export function UserMenu() {
                                 </Link>
                             </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem asChild>
-                            <Link href={`${ROUTE.ACCOUNT}?tab=orders`}>
-                                <PackageIcon aria-hidden />
-                                {t('myOrders')}
-                            </Link>
+                        <DropdownMenuItem onSelect={() => handleOpenAccount('orders')}>
+                            <PackageIcon aria-hidden />
+                            {t('myOrders')}
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                            <Link href={`${ROUTE.ACCOUNT}?tab=vouchers`}>
-                                <TicketIcon aria-hidden />
-                                {t('myVouchers') || 'Kho Voucher'}
-                            </Link>
+                        <DropdownMenuItem onSelect={() => handleOpenAccount('vouchers')}>
+                            <TicketIcon aria-hidden />
+                            {t('myVouchers') || 'Kho Voucher'}
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                            <Link href={`${ROUTE.ACCOUNT}?tab=profile`}>
-                                <BadgeCheckIcon aria-hidden />
-                                {t('account')}
-                            </Link>
+                        <DropdownMenuItem onSelect={() => handleOpenAccount('profile')}>
+                            <BadgeCheckIcon aria-hidden />
+                            {t('account')}
                         </DropdownMenuItem>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
