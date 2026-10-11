@@ -103,4 +103,14 @@ export const API_ROUTE = {
         DETAIL: (id: string) => `v1/addresses/${encodeURIComponent(id)}`,
         DEFAULT: (id: string) => `v1/addresses/${encodeURIComponent(id)}/default`,
     },
+    PROMOTION: {
+        ADMIN_VOUCHERS: 'v1/admin/vouchers',
+        ADMIN_VOUCHER_DETAIL: (id: string) => `v1/admin/vouchers/${encodeURIComponent(id)}`,
+        ADMIN_VOUCHER_STATUS: (id: string) => `v1/admin/vouchers/${encodeURIComponent(id)}/status`,
+        ADMIN_CAMPAIGNS: 'v1/admin/campaigns',
+        ADMIN_CAMPAIGN_DETAIL: (id: string) => `v1/admin/campaigns/${encodeURIComponent(id)}`,
+        ADMIN_CAMPAIGN_STATUS: (id: string) => `v1/admin/campaigns/${encodeURIComponent(id)}/status`,
+        ADMIN_CAMPAIGN_PRODUCT_REVIEW: (campaignId: string, productId: string) =>
+            `v1/admin/campaigns/${encodeURIComponent(campaignId)}/products/${encodeURIComponent(productId)}/review`,
+    },
 } as const

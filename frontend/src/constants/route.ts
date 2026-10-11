@@ -18,6 +18,8 @@ export const ROUTE = {
     PRODUCTS: '/products',
     ADMIN_PRODUCTS: '/products',
     ADMIN_CATEGORIES: '/categories',
+    ADMIN_VOUCHERS: '/vouchers',
+    ADMIN_CAMPAIGNS: '/campaigns',
     CART: '/cart',
     CHECKOUT: '/checkout',
     CHECKOUT_SUCCESS: (id: string) => `/checkout/success?orderId=${encodeURIComponent(id)}`,

@@ -162,5 +162,18 @@ export const API_MESSAGES_EN: ApiMessageCatalog = {
         filenameRequired: 'Filename is required.',
         filenameMax: 'Filename must not exceed 255 characters.',
         fileSizeExceeded: 'File size exceeds the allowed limit.',
+        // Voucher & Promotion validation
+        voucherCodeMin: 'Voucher code must be at least 3 characters.',
+        voucherCodeMax: 'Voucher code must not exceed 30 characters.',
+        voucherCodePattern: 'Voucher code must only contain uppercase letters, numbers, hyphens, and underscores.',
+        voucherValuePositive: 'Discount value must be greater than 0.',
+        voucherStartDateRequired: 'Please select a start date and time.',
+        voucherEndDateRequired: 'Please select an end date and time.',
+        voucherEndDateAfterStart: 'End date and time must be after start date and time.',
+        campaignNameMin: 'Campaign name must be at least 3 characters.',
+        campaignNameMax: 'Campaign name must not exceed 150 characters.',
+        campaignStartDateRequired: 'Please select a start date and time.',
+        campaignEndDateRequired: 'Please select an end date and time.',
+        campaignEndDateAfterStart: 'End date and time must be after start date and time.',
     },
 }

@@ -1,4 +1,5 @@
 import {
+    FlameIcon,
     FolderTreeIcon,
     HistoryIcon,
     KeyRoundIcon,
@@ -8,6 +9,7 @@ import {
     ShieldCheckIcon,
     ShoppingBagIcon,
     StoreIcon,
+    TicketIcon,
     UsersIcon,
 } from 'lucide-react'
 
@@ -16,6 +18,7 @@ import type { BreadcrumbEntry, NavGroup } from '@/types'
 import { AUDIT_PERMISSION } from './audit'
 import {
     ADMIN_CATEGORY_PERMISSION,
+    ADMIN_PROMOTION_PERMISSION,
     CATALOG_PRODUCTS_ADMIN_PERMISSION,
     DASHBOARD_PERMISSION,
     RBAC_PERMISSION,
@@ -75,6 +78,18 @@ export const NAV_GROUPS: readonly NavGroup[] = [
                 url: ROUTE.ADMIN_SELLER_APPLICATIONS,
                 icon: StoreIcon,
                 requirePermission: SELLER_APPLICATIONS_PERMISSION,
+            },
+            {
+                titleKey: 'vouchers',
+                url: ROUTE.ADMIN_VOUCHERS,
+                icon: TicketIcon,
+                requirePermission: ADMIN_PROMOTION_PERMISSION.VOUCHERS_LIST,
+            },
+            {
+                titleKey: 'campaigns',
+                url: ROUTE.ADMIN_CAMPAIGNS,
+                icon: FlameIcon,
+                requirePermission: ADMIN_PROMOTION_PERMISSION.CAMPAIGNS_LIST,
             },
             {
                 titleKey: 'audit',
@@ -146,6 +161,14 @@ export const BREADCRUMB_ROUTES: Readonly<Record<string, readonly BreadcrumbEntry
     [ROUTE.ADMIN_CATEGORIES]: [
         { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
         { titleKey: 'categories', url: ROUTE.ADMIN_CATEGORIES },
+    ],
+    [ROUTE.ADMIN_VOUCHERS]: [
+        { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
+        { titleKey: 'vouchers', url: ROUTE.ADMIN_VOUCHERS },
+    ],
+    [ROUTE.ADMIN_CAMPAIGNS]: [
+        { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
+        { titleKey: 'campaigns', url: ROUTE.ADMIN_CAMPAIGNS },
     ],
     [ROUTE.PRODUCTS]: [{ titleKey: 'products', url: ROUTE.PRODUCTS }],
     [ROUTE.AUDIT]: [

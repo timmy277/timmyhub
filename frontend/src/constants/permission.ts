@@ -150,3 +150,33 @@ export function toAdminCategoryPermissionFlags(permissions: ReadonlySet<string>)
         DELETE: permissions.has(ADMIN_CATEGORY_PERMISSION.DELETE),
     }
 }
+
+// Quyền quản lý khuyến mãi (Vouchers & Campaigns) phía Quản trị viên
+export const ADMIN_PROMOTION_PERMISSION = {
+    VOUCHERS_LIST: 'promotion:vouchers:list:any',
+    VOUCHERS_CREATE: 'promotion:vouchers:create:any',
+    VOUCHERS_UPDATE: 'promotion:vouchers:update:any',
+    VOUCHERS_DELETE: 'promotion:vouchers:delete:any',
+    CAMPAIGNS_LIST: 'promotion:campaigns:create',
+    CAMPAIGNS_CREATE: 'promotion:campaigns:create',
+    CAMPAIGNS_UPDATE: 'promotion:campaigns:update',
+    CAMPAIGNS_DELETE: 'promotion:campaigns:delete',
+    CAMPAIGNS_APPROVE: 'promotion:campaigns:approve',
+} as const satisfies Record<string, PermissionName>
+
+export type AdminPromotionPermissionKey = keyof typeof ADMIN_PROMOTION_PERMISSION
+export type AdminPromotionPermissionFlags = Record<AdminPromotionPermissionKey, boolean>
+
+export function toAdminPromotionPermissionFlags(permissions: ReadonlySet<string>): AdminPromotionPermissionFlags {
+    return {
+        VOUCHERS_LIST: permissions.has(ADMIN_PROMOTION_PERMISSION.VOUCHERS_LIST),
+        VOUCHERS_CREATE: permissions.has(ADMIN_PROMOTION_PERMISSION.VOUCHERS_CREATE),
+        VOUCHERS_UPDATE: permissions.has(ADMIN_PROMOTION_PERMISSION.VOUCHERS_UPDATE),
+        VOUCHERS_DELETE: permissions.has(ADMIN_PROMOTION_PERMISSION.VOUCHERS_DELETE),
+        CAMPAIGNS_LIST: permissions.has(ADMIN_PROMOTION_PERMISSION.CAMPAIGNS_LIST),
+        CAMPAIGNS_CREATE: permissions.has(ADMIN_PROMOTION_PERMISSION.CAMPAIGNS_CREATE),
+        CAMPAIGNS_UPDATE: permissions.has(ADMIN_PROMOTION_PERMISSION.CAMPAIGNS_UPDATE),
+        CAMPAIGNS_DELETE: permissions.has(ADMIN_PROMOTION_PERMISSION.CAMPAIGNS_DELETE),
+        CAMPAIGNS_APPROVE: permissions.has(ADMIN_PROMOTION_PERMISSION.CAMPAIGNS_APPROVE),
+    }
+}

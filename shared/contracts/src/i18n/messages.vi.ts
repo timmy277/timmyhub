@@ -165,5 +165,18 @@ export const API_MESSAGES_VI = {
         filenameRequired: 'Tên file không được để trống.',
         filenameMax: 'Tên file không vượt quá 255 ký tự.',
         fileSizeExceeded: 'Kích thước file vượt quá giới hạn cho phép.',
+        // Voucher & Promotion validation
+        voucherCodeMin: 'Mã voucher phải có ít nhất 3 ký tự.',
+        voucherCodeMax: 'Mã voucher không vượt quá 30 ký tự.',
+        voucherCodePattern: 'Mã voucher chỉ được chứa chữ in hoa, số, dấu gạch nối và gạch dưới.',
+        voucherValuePositive: 'Giá trị giảm giá phải lớn hơn 0.',
+        voucherStartDateRequired: 'Vui lòng chọn thời gian bắt đầu.',
+        voucherEndDateRequired: 'Vui lòng chọn thời gian kết thúc.',
+        voucherEndDateAfterStart: 'Thời gian kết thúc phải sau thời gian bắt đầu.',
+        campaignNameMin: 'Tên chiến dịch phải có ít nhất 3 ký tự.',
+        campaignNameMax: 'Tên chiến dịch không vượt quá 150 ký tự.',
+        campaignStartDateRequired: 'Vui lòng chọn thời gian bắt đầu.',
+        campaignEndDateRequired: 'Vui lòng chọn thời gian kết thúc.',
+        campaignEndDateAfterStart: 'Thời gian kết thúc phải sau thời gian bắt đầu.',
     },
 } as const

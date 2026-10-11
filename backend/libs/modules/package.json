@@ -41,6 +41,10 @@
     "./order": {
       "types": "./dist/order/index.d.ts",
       "default": "./dist/order/index.js"
+    },
+    "./promotion": {
+      "types": "./dist/promotion/index.d.ts",
+      "default": "./dist/promotion/index.js"
     }
   },
   "scripts": {

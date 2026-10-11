@@ -33,6 +33,10 @@ export function formatTimestamp(value: string | Date | null | undefined): string
     return isValid(date) ? formatDisplayDateTime(date) : ''
 }
 
+export function formatDisplayDateTimeShort(date: Date | null | undefined): string {
+    return date ? format(date, 'dd/MM/yyyy HH:mm') : ''
+}
+
 export function formatSubmitDate(date: Date | null | undefined): string {
     return date ? format(date, DATE_SUBMIT_FORMAT) : ''
 }
@@ -41,6 +45,137 @@ export function parseDisplayDate(text: string): Date | null {
     if (!TYPED_DATE_PATTERN.test(text)) return null
     const parsed = parse(text, DATE_PARSE_FORMAT, new Date())
     return isValid(parsed) ? parsed : null
+}
+
+export function parseDisplayDateTime(text: string): Date | null {
+    const cleaned = text.trim().replace(/:+$/, '')
+    const match = cleaned.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2})(?::(\d{1,2}))?(?::(\d{1,2}))?)?$/)
+    if (!match) return null
+    const day = parseInt(match[1]!, 10)
+    const month = parseInt(match[2]!, 10) - 1
+    const year = parseInt(match[3]!, 10)
+    const hours = match[4] ? parseInt(match[4], 10) : 0
+    const minutes = match[5] ? parseInt(match[5], 10) : 0
+    const seconds = match[6] ? parseInt(match[6], 10) : 0
+
+    if (month < 0 || month > 11 || day < 1 || day > 31 || hours > 23 || minutes > 59 || seconds > 59) {
+        return null
+    }
+
+    const d = new Date(year, month, day, hours, minutes, seconds)
+    return isValid(d) && d.getFullYear() === year && d.getMonth() === month && d.getDate() === day ? d : null
+}
+
+// Tự động gài mặt nạ nhập liệu (Input Masking) theo chuẩn UX các thư viện chuyên nghiệp:
+// - Ngày: tự chèn `/` sau 2 số ngày và 2 số tháng (dd/MM/yyyy).
+// - Giờ: nếu `showTime=true`, tự động gõ cả giây (dd/MM/yyyy HH:mm:ss).
+// - Khi xóa: nếu xóa hết text thì lùi về `0/` chứ không để trống trơn; nếu xóa phần giờ thì reset về `00:00:00`.
+export function applyDateInputMask(raw: string, prev: string, showTime = false): string {
+    // 1. Nếu xóa hết sạch hoặc chỉ còn ký tự đặc biệt -> giữ cấu trúc bắt đầu '0/'
+    if (raw.trim() === '' || raw === '/' || raw === '0') {
+        return '0/'
+    }
+
+    // 2. Nếu người dùng đang xoá lùi (Backspace / Delete)
+    if (raw.length < prev.length) {
+        // Nếu xóa phần giờ về sau mốc ngày: reset giờ về 00:00:00 chứ không xóa mất giờ
+        if (showTime) {
+            const datePartMatch = raw.match(/^(\d{2}\/\d{2}\/\d{4})\s*$/)
+            if (datePartMatch) {
+                return `${datePartMatch[1]} 00:00:00`
+            }
+        }
+
+        // Nếu xóa ngày lùi về chỉ còn 0 hoặc rỗng trước dấu '/'
+        if (raw === '0/' || raw === '/') {
+            return '0/'
+        }
+
+        return raw
+    }
+
+    // 3. Nếu đang ở trạng thái '0/' và người dùng gõ số tiếp theo
+    if (prev === '0/' && /^\d$/.test(raw.replace(/[0/]/g, ''))) {
+        const typedDigit = raw.replace(/[0/]/g, '')
+        return `${typedDigit}/`
+    }
+
+    // 4. Nếu người dùng gõ phím '/' thủ công sau 1 chữ số ngày/tháng (ví dụ "5/" -> "05/")
+    if (raw.endsWith('/') && !prev.endsWith('/')) {
+        const parts = raw.split('/')
+        const lastPart = parts[parts.length - 2]
+        if (lastPart && lastPart.length === 1 && /^\d$/.test(lastPart)) {
+            parts[parts.length - 2] = `0${lastPart}`
+            return parts.join('/')
+        }
+    }
+
+    // 5. Nếu người dùng gõ phím ':' thủ công sau 1 chữ số giờ (ví dụ " 8:" -> " 08:")
+    if (showTime && raw.endsWith(':') && !prev.endsWith(':')) {
+        const timePart = raw.slice(raw.lastIndexOf(' ') + 1)
+        const hourPart = timePart.slice(0, -1)
+        if (hourPart.length === 1 && /^\d$/.test(hourPart)) {
+            return `${raw.slice(0, raw.lastIndexOf(' ') + 1)}0${hourPart}:`
+        }
+    }
+
+    const maxDigits = showTime ? 14 : 8
+    const digits = raw.replace(/\D/g, '').slice(0, maxDigits)
+
+    if (digits.length === 0) return '0/'
+
+    // 1-2 chữ số: ngày
+    if (digits.length < 2) {
+        return digits
+    }
+    if (digits.length === 2) {
+        return `${digits}/`
+    }
+
+    // 3-4 chữ số: tháng
+    const day = digits.slice(0, 2)
+    if (digits.length < 4) {
+        return `${day}/${digits.slice(2)}`
+    }
+    if (digits.length === 4) {
+        return `${day}/${digits.slice(2, 4)}/`
+    }
+
+    // 5-8 chữ số: năm
+    const month = digits.slice(2, 4)
+    if (digits.length < 8) {
+        return `${day}/${month}/${digits.slice(4)}`
+    }
+    const year = digits.slice(4, 8)
+    if (digits.length === 8) {
+        return showTime ? `${day}/${month}/${year} ` : `${day}/${month}/${year}`
+    }
+
+    if (!showTime) {
+        return `${day}/${month}/${year}`
+    }
+
+    // 9-10 chữ số: giờ
+    if (digits.length < 10) {
+        return `${day}/${month}/${year} ${digits.slice(8)}`
+    }
+    const hours = digits.slice(8, 10)
+    if (digits.length === 10) {
+        return `${day}/${month}/${year} ${hours}:`
+    }
+
+    // 11-12 chữ số: phút
+    if (digits.length < 12) {
+        return `${day}/${month}/${year} ${hours}:${digits.slice(10)}`
+    }
+    const minutes = digits.slice(10, 12)
+    if (digits.length === 12) {
+        return `${day}/${month}/${year} ${hours}:${minutes}:`
+    }
+
+    // 13-14 chữ số: giây
+    const seconds = digits.slice(12, 14)
+    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`
 }
 
 export function formatDisplayRange(range: DateRange | null | undefined): string {
