@@ -217,7 +217,7 @@ export function MyVouchersView({ initialItems, compact = false }: MyVouchersView
                     ).map((tab) => {
                         const isActive = statusTab === tab.key
                         return (
-                            <button
+                            <Button
                                 key={tab.key}
                                 type="button"
                                 onClick={() => setStatusTab(tab.key)}
@@ -226,6 +226,7 @@ export function MyVouchersView({ initialItems, compact = false }: MyVouchersView
                                         ? 'bg-primary/10 text-primary border border-primary/25 shadow-xs'
                                         : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
                                 }`}
+                                variant="ghost"
                             >
                                 <span>{tab.label}</span>
                                 <span
@@ -237,7 +238,7 @@ export function MyVouchersView({ initialItems, compact = false }: MyVouchersView
                                 >
                                     {tab.count}
                                 </span>
-                            </button>
+                            </Button>
                         )
                     })}
                 </div>
@@ -268,7 +269,7 @@ export function MyVouchersView({ initialItems, compact = false }: MyVouchersView
                         { key: 'SELLER', label: 'Voucher từ Shop' },
                     ] as const
                 ).map((f) => (
-                    <button
+                    <Button
                         key={f.key}
                         type="button"
                         onClick={() => setTypeFilter(f.key)}
@@ -277,9 +278,10 @@ export function MyVouchersView({ initialItems, compact = false }: MyVouchersView
                                 ? 'bg-foreground text-background font-bold shadow-xs'
                                 : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
                         }`}
+                        variant="ghost"
                     >
                         {f.label}
-                    </button>
+                    </Button>
                 ))}
             </div>
 
@@ -382,14 +384,15 @@ export function MyVouchersView({ initialItems, compact = false }: MyVouchersView
                                         </div>
 
                                         {/* Nút xóa / gỡ voucher khỏi ví */}
-                                        <button
+                                        <Button
                                             type="button"
                                             onClick={() => handleRemove(v.id, v.code)}
                                             title="Gỡ khỏi kho voucher"
                                             className="text-muted-foreground/60 hover:text-destructive p-1 rounded-md transition-colors"
+                                            variant="ghost"
                                         >
                                             <Trash2Icon className="size-3.5" />
-                                        </button>
+                                        </Button>
                                     </div>
 
                                     {/* Hàng 2: Giá trị ưu đãi & Mô tả */}
@@ -427,10 +430,11 @@ export function MyVouchersView({ initialItems, compact = false }: MyVouchersView
 
                                 {/* Chân vé Voucher: Mã Code + Nút Dùng Ngay */}
                                 <div className="bg-muted/40 px-4 py-2.5 border-t border-border/60 flex items-center justify-between gap-2">
-                                    <button
+                                    <Button
                                         type="button"
                                         onClick={() => handleCopy(v.code)}
                                         className="group flex items-center gap-1.5 font-mono text-xs font-bold text-foreground bg-background border border-border/70 rounded-lg px-2 py-1 hover:border-primary transition-colors cursor-pointer"
+                                        variant="ghost"
                                     >
                                         <span>{v.code}</span>
                                         {copiedCode === v.code ? (
@@ -438,7 +442,7 @@ export function MyVouchersView({ initialItems, compact = false }: MyVouchersView
                                         ) : (
                                             <CopyIcon className="size-3 text-muted-foreground group-hover:text-primary" />
                                         )}
-                                    </button>
+                                    </Button>
 
                                     <div>
                                         {isAvailable ? (

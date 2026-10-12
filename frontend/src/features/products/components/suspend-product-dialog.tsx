@@ -157,14 +157,15 @@ export function SuspendProductDialog({
                                 <p className="text-[11px] font-medium text-muted-foreground">{t('quickReasons')}</p>
                                 <div className="flex flex-wrap gap-1.5">
                                     {SUSPEND_REASON_PRESETS.map((preset) => (
-                                        <button
+                                        <Button
                                             key={preset}
                                             type="button"
                                             onClick={() => setValue('reason', preset, { shouldValidate: true })}
                                             className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-left"
+                                            variant="ghost"
                                         >
                                             {preset}
-                                        </button>
+                                        </Button>
                                     ))}
                                 </div>
                             </div>

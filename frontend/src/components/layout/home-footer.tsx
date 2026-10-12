@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
 import {
     ChevronRightIcon,
     HeadphonesIcon,
@@ -17,8 +18,8 @@ import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 
 import { IconPath } from '@/components/icons'
-import { Badge } from '@/components'
-import { Button, Input } from '@/components/ui'
+import { Badge, Button, FloatInput } from '@/components'
+import { NewsletterSubscriptionSchema, type NewsletterSubscriptionValues } from '@/schemas'
 import { QUERY_KEY, ROUTE, SELLER_SHOP_ANY_PERMISSION, SELLER_SHOP_PERMISSION } from '@/constants'
 import { getMyShopAction } from '@/features/seller'
 import { usePermissions } from '@/hooks'
@@ -59,8 +60,11 @@ const FOOTER_LINKS = {
 }
 
 export function HomeFooter() {
-    const [email, setEmail] = useState('')
     const t = useTranslations('home.footer')
+    const form = useForm<NewsletterSubscriptionValues>({
+        resolver: zodResolver(NewsletterSubscriptionSchema),
+        defaultValues: { email: '' },
+    })
     const { hasPermission } = usePermissions()
     const isSellerByPermission = hasPermission(SELLER_SHOP_PERMISSION) || hasPermission(SELLER_SHOP_ANY_PERMISSION)
     const { data: myShop } = useQuery({
@@ -76,16 +80,11 @@ export function HomeFooter() {
     const sellerHref = isSeller ? ROUTE.SELLER_PORTAL : ROUTE.SELLER_REGISTER
     const sellerText = isSeller ? 'Kênh người bán (Seller)' : 'Trở thành Người Bán'
 
-    const handleSubscribe = (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!email.trim() || !email.includes('@')) {
-            toast.error(t('newsletterInvalid'))
-            return
-        }
+    const handleSubscribe = () => {
         toast.success(t('newsletterSuccess'), {
             description: t('newsletterSuccessDesc'),
         })
-        setEmail('')
+        form.reset({ email: '' })
     }
 
     return (
@@ -128,28 +127,31 @@ export function HomeFooter() {
                                     Bản tin ưu đãi VIP 2026
                                 </div>
                                 <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                                    Đăng ký nhận voucher giảm đến 50%
+                                    {t('newsletterTitle')}
                                     <IconPath
                                         name="gemini-star"
                                         className="size-5 text-amber-400 shrink-0 transition-transform duration-300 hover:scale-125 hover:rotate-12 hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.95)] cursor-pointer"
                                     />
                                 </h3>
-                                <p className="text-sm text-muted-foreground max-w-xl">
-                                    Đừng bỏ lỡ các đợt flash sale siêu chớp, deal công nghệ độc quyền và xu hướng mua
-                                    sắm mới nhất được gửi trực tiếp mỗi tuần.
-                                </p>
+                                <p className="text-sm text-muted-foreground max-w-xl">{t('newsletterDescription')}</p>
                             </div>
 
                             <div className="lg:col-span-5">
-                                <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2">
+                                <form
+                                    onSubmit={form.handleSubmit(handleSubscribe, () =>
+                                        toast.error(t('newsletterInvalid')),
+                                    )}
+                                    className="flex flex-col sm:flex-row gap-2"
+                                >
                                     <div className="relative flex-1">
                                         <MailIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground z-10 pointer-events-none" />
-                                        <Input
+                                        <FloatInput
                                             type="email"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            aria-label={t('newsletterLabel')}
+                                            label={t('newsletterLabel')}
+                                            error={form.formState.errors.email ? t('newsletterInvalid') : undefined}
                                             placeholder={t('newsletterPlaceholder')}
+                                            autoComplete="email"
+                                            {...form.register('email')}
                                             className="h-11 pl-10 rounded-xl bg-background/80 border-border/80 focus-visible:ring-primary text-sm shadow-none"
                                         />
                                     </div>
@@ -158,7 +160,7 @@ export function HomeFooter() {
                                         size="lg"
                                         className="h-11 rounded-xl font-semibold gap-2 shadow-sm text-primary-foreground shrink-0"
                                     >
-                                        <span>Đăng ký</span>
+                                        <span>{t('newsletterSubmit')}</span>
                                         <ChevronRightIcon className="size-4" />
                                     </Button>
                                 </form>

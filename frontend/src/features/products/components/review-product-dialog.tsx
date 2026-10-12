@@ -183,14 +183,15 @@ export function ReviewProductDialog({ product, mode, open, onOpenChange, onSucce
                                     </p>
                                     <div className="flex flex-wrap gap-1.5">
                                         {REJECT_REASONS.map((preset) => (
-                                            <button
+                                            <Button
                                                 key={preset}
                                                 type="button"
                                                 onClick={() => setValue('reviewNote', preset, { shouldValidate: true })}
                                                 className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-left"
+                                                variant="ghost"
                                             >
                                                 {preset}
-                                            </button>
+                                            </Button>
                                         ))}
                                     </div>
                                 </div>

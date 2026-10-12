@@ -233,7 +233,7 @@ export function OrderListView({ initialOrders }: OrderListViewProps) {
                                       : orders.filter((o) => o.status === tab.status).length
 
                             return (
-                                <button
+                                <Button
                                     key={tab.status}
                                     type="button"
                                     onClick={() => setActiveTab(tab.status)}
@@ -242,6 +242,7 @@ export function OrderListView({ initialOrders }: OrderListViewProps) {
                                             ? 'bg-primary text-primary-foreground shadow-sm'
                                             : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                                     }`}
+                                    variant="ghost"
                                 >
                                     <span>{t(tab.labelKey)}</span>
                                     {count > 0 && (
@@ -255,7 +256,7 @@ export function OrderListView({ initialOrders }: OrderListViewProps) {
                                             {count}
                                         </span>
                                     )}
-                                </button>
+                                </Button>
                             )
                         })}
                     </div>

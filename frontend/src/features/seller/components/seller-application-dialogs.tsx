@@ -153,14 +153,15 @@ export function RejectDialog({ app, open, onOpenChange, onSucceeded }: RejectDia
                     </label>
                     <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-0.5">
                         {REJECT_REASON_PRESETS.map((preset) => (
-                            <button
+                            <Button
                                 key={preset}
                                 type="button"
                                 onClick={() => setReason(preset)}
                                 className="text-left text-xs px-2.5 py-1.5 rounded-lg border bg-muted/30 hover:bg-muted text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                                variant="ghost"
                             >
                                 {preset}
-                            </button>
+                            </Button>
                         ))}
                     </div>
 

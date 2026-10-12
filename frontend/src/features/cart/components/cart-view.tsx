@@ -23,6 +23,7 @@ import { toast } from 'sonner'
 import type { CartDetail, CartItemDetail } from '@timmyhub/contracts'
 
 import {
+    Input,
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -558,16 +559,17 @@ export function CartView({ initialData }: CartViewProps) {
                                                         {/* Quantity Controls */}
                                                         <div className="sm:col-span-2 flex items-center sm:justify-center gap-1">
                                                             <div className="flex items-center rounded-xl border border-border/80 bg-background p-0.5 shadow-2xs">
-                                                                <button
+                                                                <Button
                                                                     type="button"
                                                                     onClick={() => handleStepItemQuantity(item, -1)}
                                                                     disabled={item.quantity <= 1 || isUpdating}
                                                                     aria-label="Giảm số lượng"
                                                                     className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+                                                                    variant="ghost"
                                                                 >
                                                                     <MinusIcon className="size-3" />
-                                                                </button>
-                                                                <input
+                                                                </Button>
+                                                                <Input
                                                                     type="text"
                                                                     inputMode="numeric"
                                                                     pattern="[0-9]*"
@@ -594,7 +596,7 @@ export function CartView({ initialData }: CartViewProps) {
                                                                         isUpdating ? 'opacity-50' : ''
                                                                     }`}
                                                                 />
-                                                                <button
+                                                                <Button
                                                                     type="button"
                                                                     onClick={() => handleStepItemQuantity(item, 1)}
                                                                     disabled={
@@ -604,9 +606,10 @@ export function CartView({ initialData }: CartViewProps) {
                                                                     }
                                                                     aria-label="Tăng số lượng"
                                                                     className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+                                                                    variant="ghost"
                                                                 >
                                                                     <PlusIcon className="size-3" />
-                                                                </button>
+                                                                </Button>
                                                             </div>
                                                         </div>
 
@@ -620,14 +623,15 @@ export function CartView({ initialData }: CartViewProps) {
                                                                     {formatCurrencyVND(lineTotal)}
                                                                 </span>
                                                             </div>
-                                                            <button
+                                                            <Button
                                                                 type="button"
                                                                 onClick={() => handleRemoveItem(item.id)}
                                                                 aria-label={`Xoá ${item.productName}`}
                                                                 className="flex size-7 items-center justify-center rounded-lg text-muted-foreground/70 transition-colors hover:bg-destructive/10 hover:text-destructive active:scale-95"
+                                                                variant="ghost"
                                                             >
                                                                 <Trash2Icon className="size-3.5" />
-                                                            </button>
+                                                            </Button>
                                                         </div>
                                                     </div>
                                                 </div>

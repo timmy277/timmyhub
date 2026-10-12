@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 
-import { Tabs, TabsList, TabsTrigger } from '@/components'
+import { Button, Tabs, TabsList, TabsTrigger } from '@/components'
 import { VOUCHER_TAB } from '@/constants'
 
 import {
@@ -176,14 +176,15 @@ export function VoucherTabs({ active, userId, activeLabel }: VoucherTabsProps) {
                                 {tab.icon}
                                 <span className="max-w-[200px] truncate">{tab.label}</span>
                                 {tab.item && (
-                                    <button
+                                    <Button
                                         type="button"
                                         aria-label={t('closeTab')}
                                         onClick={(e) => handleCloseTab(e, tab.item!)}
                                         className="ml-1 rounded-sm p-0.5 opacity-60 hover:opacity-100 hover:bg-muted"
+                                        variant="ghost"
                                     >
                                         <XIcon className="size-3.5" />
-                                    </button>
+                                    </Button>
                                 )}
                             </Link>
                         </TabsTrigger>

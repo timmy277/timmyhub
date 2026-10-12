@@ -153,14 +153,15 @@ export function SellerApplicationDetailPanel({ id, initialData }: SellerApplicat
                                 <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[11px] font-semibold text-foreground">
                                     {application.id}
                                 </code>
-                                <button
+                                <Button
                                     type="button"
                                     onClick={() => handleCopy(application.id, t('applicationCode'))}
                                     className="text-muted-foreground hover:text-foreground transition-colors p-0.5"
                                     title={t('copyCodeSuccess')}
+                                    variant="ghost"
                                 >
                                     <Copy className="size-3" />
-                                </button>
+                                </Button>
                             </span>
                             <span className="text-muted-foreground/40">•</span>
                             <span className="inline-flex items-center gap-1">

@@ -12,7 +12,7 @@ import {
 import type { useTranslations } from 'next-intl'
 
 import type { OrderDetail, OrderStatusType } from '@timmyhub/contracts'
-import { RowActions, StatusBadge, type RowAction } from '@/components'
+import { Button, RowActions, StatusBadge, type RowAction } from '@/components'
 import { AG_GRID_NO_EXPORT, StatusTone } from '@/constants'
 import { formatCurrencyVND, formatTimestamp, rowActionsColumnWidth } from '@/utils'
 
@@ -154,14 +154,15 @@ export function createSellerOrderColumns({ t, actions }: CreateSellerOrderColumn
                 const order = params.data
                 const shortId = order.id.slice(-8).toUpperCase()
                 return (
-                    <button
+                    <Button
                         type="button"
                         onClick={() => actions.onDetail(order)}
                         className="font-mono font-bold text-xs text-primary hover:underline block text-left truncate cursor-pointer py-2"
                         title={order.id}
+                        variant="ghost"
                     >
                         #{shortId}
-                    </button>
+                    </Button>
                 )
             },
         },

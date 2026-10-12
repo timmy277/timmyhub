@@ -25,7 +25,9 @@ import {
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import type { OrderDetail, OrderStatusType, UpdateOrderStatusInput } from '@timmyhub/contracts'
+import { getSellerOrderStatusLabel } from '@/config'
 import {
+    Input,
     Badge,
     Button,
     Card,
@@ -44,7 +46,6 @@ import { ROUTE, SELLER_ORDER_TAB } from '@/constants'
 import { formatCurrencyVND, formatTimestamp } from '@/utils'
 import { updateSellerOrderStatusAction } from '../actions'
 import { buildSellerOrderTabsHref } from '../seller-order-tab-query'
-import { getSellerOrderStatusLabel } from './seller-order.columns'
 
 interface SellerOrderDetailPanelProps {
     order: OrderDetail
@@ -567,7 +568,7 @@ export function SellerOrderDetailPanel({ order: initialOrder, onOrderUpdated }: 
                                             : 'border-border/60 hover:bg-muted/40 text-muted-foreground'
                                     }`}
                                 >
-                                    <input
+                                    <Input
                                         type="radio"
                                         name="panel_cancel_reason"
                                         value={reason.label}

@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 
-import { Tabs, TabsList, TabsTrigger } from '@/components'
+import { Button, Tabs, TabsList, TabsTrigger } from '@/components'
 import { SELLER_ORDER_TAB, SELLER_ORDER_TAB_ID_LABEL_LENGTH } from '@/constants'
 
 import {
@@ -178,14 +178,15 @@ export function SellerOrderTabs({ active, userId, activeLabel }: SellerOrderTabs
                                     </span>
 
                                     {tab.item && (
-                                        <button
+                                        <Button
                                             type="button"
                                             onClick={(e) => handleClose(e, tab.item!)}
                                             className="rounded-xs p-0.5 opacity-60 hover:opacity-100 hover:bg-muted/80 transition-opacity"
                                             title={t('closeTab')}
+                                            variant="ghost"
                                         >
                                             <XIcon className="size-3" />
-                                        </button>
+                                        </Button>
                                     )}
                                 </Link>
                             </TabsTrigger>

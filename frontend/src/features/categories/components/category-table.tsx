@@ -38,6 +38,7 @@ export function CategoryTable({
     error,
 }: CategoryTableProps) {
     const t = useTranslations('categories')
+    const tCommon = useTranslations('common')
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -78,10 +79,10 @@ export function CategoryTable({
                 toast.success(t('messages.deleteSuccess'))
                 router.refresh()
             } else {
-                toast.error(res.message || 'Error')
+                toast.error(res.message || tCommon('errorGeneric'))
             }
         } catch {
-            toast.error('Error')
+            toast.error(tCommon('errorGeneric'))
         } finally {
             setIsDeleting(false)
             setPendingDelete(null)

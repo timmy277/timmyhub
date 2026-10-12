@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -412,7 +413,7 @@ export function SellerRegistrationForm({
                                                 <span className="font-semibold text-foreground">{t('idDocLabel')}</span>
                                                 <div className="flex items-center gap-1.5">
                                                     <span className="text-muted-foreground text-[10px]">Mẫu thử:</span>
-                                                    <button
+                                                    <Button
                                                         type="button"
                                                         onClick={() => handleSelectDocPreset('cccd')}
                                                         className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
@@ -420,10 +421,11 @@ export function SellerRegistrationForm({
                                                                 ? 'bg-primary text-white'
                                                                 : 'bg-muted text-muted-foreground hover:bg-muted/80'
                                                         }`}
+                                                        variant="ghost"
                                                     >
                                                         CCCD
-                                                    </button>
-                                                    <button
+                                                    </Button>
+                                                    <Button
                                                         type="button"
                                                         onClick={() => handleSelectDocPreset('gpkd')}
                                                         className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
@@ -431,9 +433,10 @@ export function SellerRegistrationForm({
                                                                 ? 'bg-primary text-white'
                                                                 : 'bg-muted text-muted-foreground hover:bg-muted/80'
                                                         }`}
+                                                        variant="ghost"
                                                     >
                                                         GPKD
-                                                    </button>
+                                                    </Button>
                                                 </div>
                                             </div>
 
@@ -563,8 +566,7 @@ export function SellerRegistrationForm({
                                             <span>Giấy tờ định danh đã đính kèm:</span>
                                         </p>
                                         <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl border border-border/60 bg-muted">
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img
+                                            <Image
                                                 src={watchedIdDocUrl}
                                                 alt="Preview giấy tờ"
                                                 className="h-full w-full object-cover"
@@ -572,6 +574,10 @@ export function SellerRegistrationForm({
                                                     // fallback if url fails
                                                     e.currentTarget.style.display = 'none'
                                                 }}
+                                                width={1200}
+                                                height={800}
+                                                sizes="100vw"
+                                                unoptimized
                                             />
                                         </div>
                                     </div>

@@ -30,6 +30,7 @@ import {
 import { toast } from 'sonner'
 import type { OrderDetail } from '@timmyhub/contracts'
 import {
+    Input,
     Badge,
     Button,
     Card,
@@ -189,14 +190,15 @@ export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false, on
                 {/* Top Navigation Bar */}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     {onBack ? (
-                        <button
+                        <Button
                             type="button"
                             onClick={onBack}
                             className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group cursor-pointer"
+                            variant="ghost"
                         >
                             <ArrowLeftIcon className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
                             <span>Quay lại danh sách đơn hàng</span>
-                        </button>
+                        </Button>
                     ) : (
                         <Link
                             href={ROUTE.ORDERS}
@@ -283,18 +285,19 @@ export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false, on
                                     <span className="font-mono font-bold text-base sm:text-lg text-foreground">
                                         {order.id}
                                     </span>
-                                    <button
+                                    <Button
                                         type="button"
                                         onClick={handleCopyId}
                                         className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                                         title="Sao chép mã đơn"
+                                        variant="ghost"
                                     >
                                         {copied ? (
                                             <CheckIcon className="h-4 w-4 text-emerald-600" />
                                         ) : (
                                             <CopyIcon className="h-4 w-4" />
                                         )}
-                                    </button>
+                                    </Button>
                                 </div>
                                 <p className="text-xs text-muted-foreground">
                                     Ngày đặt hàng: {new Date(order.createdAt).toLocaleString('vi-VN')}
@@ -653,7 +656,7 @@ export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false, on
                                     key={reason}
                                     className="flex items-center gap-2.5 text-sm cursor-pointer p-2 rounded-lg border border-border/60 hover:bg-muted/40 transition-colors"
                                 >
-                                    <input
+                                    <Input
                                         type="radio"
                                         name="cancelReason"
                                         value={reason}

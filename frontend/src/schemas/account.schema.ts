@@ -73,3 +73,9 @@ export const NotificationPreferencesSchema = z.object({
 })
 
 export type NotificationPreferencesValues = z.infer<typeof NotificationPreferencesSchema>
+
+export const NewsletterSubscriptionSchema = z.object({
+    email: z.string().trim().email('validation.emailInvalid'),
+})
+
+export type NewsletterSubscriptionValues = z.infer<typeof NewsletterSubscriptionSchema>

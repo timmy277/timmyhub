@@ -248,7 +248,7 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
                             const isActive = activeTab === tab.status
 
                             return (
-                                <button
+                                <Button
                                     key={tab.status}
                                     type="button"
                                     onClick={() => setActiveTab(tab.status)}
@@ -257,9 +257,10 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
                                             ? 'bg-primary text-primary-foreground shadow-2xs font-semibold'
                                             : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                                     }`}
+                                    variant="ghost"
                                 >
                                     <span>{t(tab.labelKey as Parameters<typeof t>[0])}</span>
-                                </button>
+                                </Button>
                             )
                         })}
                     </div>
@@ -279,14 +280,15 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
                             className="pl-9 pr-8 h-9 text-xs w-full bg-muted/20"
                         />
                         {searchQuery && (
-                            <button
+                            <Button
                                 type="button"
                                 onClick={() => setSearchQuery('')}
                                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded-full"
                                 aria-label={t('clearSearch')}
+                                variant="ghost"
                             >
                                 <XCircleIcon className="h-3.5 w-3.5" />
-                            </button>
+                            </Button>
                         )}
                     </div>
 
@@ -376,7 +378,7 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
                                             key={reason}
                                             className="flex items-center gap-2 p-2 rounded-lg border border-border/50 hover:bg-muted/40 cursor-pointer text-xs transition-colors"
                                         >
-                                            <input
+                                            <Input
                                                 type="radio"
                                                 name="cancelReason"
                                                 value={reason}

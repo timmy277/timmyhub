@@ -4,6 +4,8 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm, useWatch } from 'react-hook-form'
 import {
     Star,
     ThumbsUp,
@@ -21,9 +23,29 @@ import {
     ZoomIn,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import type { ReviewItem, ReviewQuery, ReviewCommentItem, ReviewListResult } from '@timmyhub/contracts'
+import type {
+    CreateReviewCommentInput,
+    ReviewItem,
+    ReviewQuery,
+    ReviewCommentItem,
+    ReviewListResult,
+} from '@timmyhub/contracts'
+import { CreateReviewCommentInputSchema } from '@timmyhub/contracts'
 
-import { Badge, Button, Card, CardContent, Input, Separator, Skeleton } from '@/components/ui'
+import {
+    Badge,
+    Button,
+    Card,
+    CardContent,
+    FloatInput,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+    Separator,
+    Skeleton,
+} from '@/components'
 import { ErrorState, UserAvatar } from '@/components/common'
 import { MediaLightbox, type MediaLightboxItem } from '@/features/media'
 import { QUERY_KEY } from '@/constants'
@@ -218,18 +240,22 @@ export function ProductReviewsSection({ productId, className }: ProductReviewsSe
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <ArrowUpDown className="h-3 w-3" /> {t('sort.label')}:
                         </span>
-                        <select
+                        <Select
                             value={sort}
-                            onChange={(e) => {
-                                setSort(e.target.value as 'newest' | 'helpful' | 'rating_desc')
+                            onValueChange={(value) => {
+                                if (value === 'newest' || value === 'helpful' || value === 'rating_desc') setSort(value)
                                 setPage(1)
                             }}
-                            className="text-xs rounded-lg border border-border bg-background px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
                         >
-                            <option value="newest">{t('sort.newest')}</option>
-                            <option value="helpful">{t('sort.helpful')}</option>
-                            <option value="rating_desc">{t('sort.ratingDesc')}</option>
-                        </select>
+                            <SelectTrigger className="h-8 w-[150px] text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="newest">{t('sort.newest')}</SelectItem>
+                                <SelectItem value="helpful">{t('sort.helpful')}</SelectItem>
+                                <SelectItem value="rating_desc">{t('sort.ratingDesc')}</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
             </div>
@@ -331,10 +357,15 @@ interface ReviewCardItemProps {
 
 function ReviewCardItem({ review, productId, onOpenLightbox }: ReviewCardItemProps) {
     const t = useTranslations('reviews')
+    const tValidation = useTranslations('validation')
     const queryClient = useQueryClient()
     const [isReplying, setIsReplying] = useState(false)
-    const [replyContent, setReplyContent] = useState('')
     const [isSubmittingReply, setIsSubmittingReply] = useState(false)
+    const replyForm = useForm<CreateReviewCommentInput>({
+        resolver: zodResolver(CreateReviewCommentInputSchema),
+        defaultValues: { reviewId: review.id, content: '', parentId: null },
+    })
+    const replyContent = useWatch({ control: replyForm.control, name: 'content' })
 
     const [optimisticLiked, setOptimisticLiked] = useState<boolean | null>(null)
     const [optimisticCount, setOptimisticCount] = useState<number | null>(null)
@@ -428,16 +459,10 @@ function ReviewCardItem({ review, productId, onOpenLightbox }: ReviewCardItemPro
     })
 
     // Xử lý gửi phản hồi cho review
-    const handleSendReply = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!replyContent.trim()) return
-
+    const handleSendReply = async (values: CreateReviewCommentInput) => {
         setIsSubmittingReply(true)
         try {
-            const res = await createCommentAction(review.id, {
-                reviewId: review.id,
-                content: replyContent.trim(),
-            })
+            const res = await createCommentAction(review.id, values)
 
             if (!res.ok) {
                 toast.error(res.message || t('errors.replyFailed'))
@@ -445,7 +470,7 @@ function ReviewCardItem({ review, productId, onOpenLightbox }: ReviewCardItemPro
             }
 
             toast.success(t('messages.replySuccess'))
-            setReplyContent('')
+            replyForm.reset({ reviewId: review.id, content: '', parentId: null })
             setIsReplying(false)
             void queryClient.invalidateQueries({
                 queryKey: ['engagement', 'reviews', productId],
@@ -574,40 +599,55 @@ function ReviewCardItem({ review, productId, onOpenLightbox }: ReviewCardItemPro
 
                 {/* Nút Hữu ích & Nút Phản hồi */}
                 <div className="flex items-center gap-3 pt-1 text-xs">
-                    <button
+                    <Button
                         type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={() => helpfulMutation.mutate()}
                         disabled={helpfulMutation.isPending}
                         className={cn(
-                            'flex items-center gap-1.5 py-1.5 px-3 rounded-full border transition-all duration-200 select-none active:scale-95 shadow-2xs',
+                            'rounded-full transition-all duration-200 select-none active:scale-95 shadow-2xs cursor-pointer gap-1.5 h-7.5 px-3 border',
                             isLiked
-                                ? 'bg-primary text-primary-foreground border-primary font-bold shadow-xs hover:bg-primary/90'
-                                : 'border-border/70 text-muted-foreground hover:bg-muted/60 hover:text-foreground font-medium',
+                                ? 'border-primary dark:border-primary bg-primary/10 hover:bg-primary/15 dark:bg-primary/15 dark:hover:bg-primary/20 text-primary dark:text-primary hover:text-primary dark:hover:text-primary font-semibold shadow-xs'
+                                : 'border-border/70 dark:border-border/70 bg-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground font-medium',
                         )}
                     >
                         <ThumbsUp
                             className={cn(
-                                'h-3.5 w-3.5 transition-transform duration-200',
-                                isLiked ? 'fill-current scale-105' : 'fill-transparent',
+                                'size-3.5 transition-transform duration-200',
+                                isLiked
+                                    ? 'text-primary fill-primary scale-105'
+                                    : 'text-muted-foreground fill-transparent',
                             )}
                         />
-                        <span className={cn(isLiked && 'font-bold')}>{t('buttons.helpful')}</span>
+                        <span
+                            className={cn(isLiked ? 'text-primary font-semibold' : 'text-muted-foreground font-medium')}
+                        >
+                            {t('buttons.helpful')}
+                        </span>
                         {helpfulCount > 0 && (
-                            <span className={cn('tabular-nums', isLiked ? 'font-bold' : 'font-normal')}>
+                            <span
+                                className={cn(
+                                    'tabular-nums text-xs',
+                                    isLiked ? 'text-primary font-semibold' : 'text-muted-foreground font-normal',
+                                )}
+                            >
                                 ({helpfulCount})
                             </span>
                         )}
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={() => setIsReplying(!isReplying)}
-                        className="flex items-center gap-1.5 py-1.5 px-3 rounded-full border border-border/70 text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors font-medium select-none"
+                        className="rounded-full border-border/70 bg-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors font-medium select-none gap-1.5 h-7.5 px-3"
                     >
-                        <MessageSquare className="h-3.5 w-3.5" />
+                        <MessageSquare className="size-3.5" />
                         <span>{t('buttons.reply')}</span>
                         {review.comments.length > 0 && <span>({review.comments.length})</span>}
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Danh sách phản hồi (Comments & Replies) */}
@@ -627,16 +667,22 @@ function ReviewCardItem({ review, productId, onOpenLightbox }: ReviewCardItemPro
                 {/* Khung nhập phản hồi cho review (Reply Box) */}
                 {isReplying && (
                     <form
-                        onSubmit={handleSendReply}
+                        onSubmit={replyForm.handleSubmit(handleSendReply)}
                         className="flex items-center gap-2 pt-2 animate-in fade-in duration-200"
                     >
-                        <Input
-                            placeholder={t('form.replyPlaceholder')}
-                            value={replyContent}
-                            onChange={(e) => setReplyContent(e.target.value)}
+                        <FloatInput
+                            label={t('form.replyPlaceholder')}
+                            error={
+                                replyForm.formState.errors.content?.type === 'too_small'
+                                    ? tValidation('commentContentRequired')
+                                    : replyForm.formState.errors.content?.type === 'too_big'
+                                      ? tValidation('commentContentMax')
+                                      : undefined
+                            }
                             className="text-xs h-9 bg-background"
                             disabled={isSubmittingReply}
                             autoFocus
+                            {...replyForm.register('content')}
                         />
                         <Button
                             type="button"
@@ -645,7 +691,7 @@ function ReviewCardItem({ review, productId, onOpenLightbox }: ReviewCardItemPro
                             className="h-9 px-2 text-xs"
                             onClick={() => {
                                 setIsReplying(false)
-                                setReplyContent('')
+                                replyForm.reset({ reviewId: review.id, content: '', parentId: null })
                             }}
                         >
                             {t('buttons.cancel')}
@@ -677,23 +723,21 @@ interface CommentItemCardProps {
 
 function CommentItemCard({ comment, reviewId, productId, depth = 0 }: CommentItemCardProps) {
     const t = useTranslations('reviews')
+    const tValidation = useTranslations('validation')
     const queryClient = useQueryClient()
     const [isReplying, setIsReplying] = useState(false)
-    const [replyContent, setReplyContent] = useState('')
     const [isSubmittingReply, setIsSubmittingReply] = useState(false)
+    const replyForm = useForm<CreateReviewCommentInput>({
+        resolver: zodResolver(CreateReviewCommentInputSchema),
+        defaultValues: { reviewId, content: '', parentId: comment.id },
+    })
+    const replyContent = useWatch({ control: replyForm.control, name: 'content' })
 
     // Xử lý gửi phản hồi cho comment này
-    const handleSendReply = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!replyContent.trim()) return
-
+    const handleSendReply = async (values: CreateReviewCommentInput) => {
         setIsSubmittingReply(true)
         try {
-            const res = await createCommentAction(reviewId, {
-                reviewId,
-                content: replyContent.trim(),
-                parentId: comment.id,
-            })
+            const res = await createCommentAction(reviewId, values)
 
             if (!res.ok) {
                 toast.error(res.message || t('errors.replyFailed'))
@@ -701,7 +745,7 @@ function CommentItemCard({ comment, reviewId, productId, depth = 0 }: CommentIte
             }
 
             toast.success(t('messages.replySuccess'))
-            setReplyContent('')
+            replyForm.reset({ reviewId, content: '', parentId: comment.id })
             setIsReplying(false)
             void queryClient.invalidateQueries({
                 queryKey: ['engagement', 'reviews', productId],
@@ -750,29 +794,36 @@ function CommentItemCard({ comment, reviewId, productId, depth = 0 }: CommentIte
 
                 {/* Nút hành động Trả lời */}
                 <div className="pl-8 pt-0.5 flex items-center gap-3">
-                    <button
+                    <Button
                         type="button"
                         onClick={() => setIsReplying(!isReplying)}
                         className="text-[11px] text-muted-foreground hover:text-foreground font-medium flex items-center gap-1 transition-colors"
+                        variant="ghost"
                     >
                         <CornerDownRight className="h-3 w-3" />
                         <span>{t('buttons.reply')}</span>
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Form nhập phản hồi cho bình luận này */}
                 {isReplying && (
                     <form
-                        onSubmit={handleSendReply}
+                        onSubmit={replyForm.handleSubmit(handleSendReply)}
                         className="flex items-center gap-2 pt-2 pl-8 animate-in fade-in duration-200"
                     >
-                        <Input
-                            placeholder={t('form.replyTo', { name: comment.userName })}
-                            value={replyContent}
-                            onChange={(e) => setReplyContent(e.target.value)}
+                        <FloatInput
+                            label={t('form.replyTo', { name: comment.userName })}
+                            error={
+                                replyForm.formState.errors.content?.type === 'too_small'
+                                    ? tValidation('commentContentRequired')
+                                    : replyForm.formState.errors.content?.type === 'too_big'
+                                      ? tValidation('commentContentMax')
+                                      : undefined
+                            }
                             className="text-xs h-8 bg-background"
                             disabled={isSubmittingReply}
                             autoFocus
+                            {...replyForm.register('content')}
                         />
                         <Button
                             type="button"
@@ -781,7 +832,7 @@ function CommentItemCard({ comment, reviewId, productId, depth = 0 }: CommentIte
                             className="h-8 px-2 text-xs"
                             onClick={() => {
                                 setIsReplying(false)
-                                setReplyContent('')
+                                replyForm.reset({ reviewId, content: '', parentId: comment.id })
                             }}
                         >
                             {t('buttons.cancel')}

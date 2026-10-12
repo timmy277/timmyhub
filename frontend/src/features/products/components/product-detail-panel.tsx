@@ -239,7 +239,7 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                         {product.images && product.images.length > 1 && (
                             <div className="p-3 border-t border-border/60 flex items-center gap-2 overflow-x-auto">
                                 {product.images.map((img, idx) => (
-                                    <button
+                                    <Button
                                         key={idx}
                                         type="button"
                                         onClick={() => setSelectedImage(img)}
@@ -248,9 +248,10 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                                                 ? 'border-primary shadow-sm'
                                                 : 'border-transparent opacity-60 hover:opacity-100'
                                         }`}
+                                        variant="ghost"
                                     >
                                         <Image src={img} alt="" fill sizes="56px" className="object-cover" />
-                                    </button>
+                                    </Button>
                                 ))}
                             </div>
                         )}

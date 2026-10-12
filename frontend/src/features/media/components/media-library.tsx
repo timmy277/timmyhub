@@ -17,12 +17,14 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
-import type { MediaOwnerType, MediaType } from '@timmyhub/contracts'
+import { MEDIA_OWNER_TYPE, MediaOwnerTypeEnum, type MediaOwnerType, type MediaType } from '@timmyhub/contracts'
 
 import { useDeleteMedia, useMediaList, useDebouncedValue } from '@/hooks'
 import { SEARCH_DEBOUNCE_MS } from '@/constants'
 import { formatBytes, formatTimestamp, resolveMediaUrl } from '@/utils'
 import {
+    Input,
+    Button,
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -32,6 +34,11 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
     ErrorState,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@/components'
 
 import { MediaLightbox, type MediaLightboxItem } from './media-lightbox'
@@ -112,17 +119,18 @@ export function MediaLibrary() {
                 </div>
 
                 <div className="flex items-center gap-2.5">
-                    <button
+                    <Button
                         type="button"
                         onClick={() => void refetch()}
                         disabled={isFetching}
                         className="p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 transition-colors"
                         title="Làm mới danh sách"
+                        variant="ghost"
                     >
                         <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin text-sky-500' : ''}`} />
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button
                         type="button"
                         onClick={() => setShowUploader(!showUploader)}
                         className={`px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-md active:scale-95 ${
@@ -130,10 +138,11 @@ export function MediaLibrary() {
                                 ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200'
                                 : 'bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white shadow-sky-500/20'
                         }`}
+                        variant="ghost"
                     >
                         <UploadCloud className="w-4 h-4" />
                         {showUploader ? 'Đóng khu vực tải lên' : 'Tải lên Media mới'}
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -160,18 +169,18 @@ export function MediaLibrary() {
                     {/* Search Input */}
                     <div className="relative min-w-[220px] flex-1 max-w-xs">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                        <input
+                        <Input
                             type="text"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Tìm kiếm tập tin hoặc URL..."
+                            placeholder={t('searchPlaceholder')}
                             className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
                         />
                     </div>
 
                     {/* Type Filter Buttons */}
                     <div className="flex items-center rounded-lg bg-neutral-200/80 dark:bg-neutral-800 p-0.5 text-xs font-medium">
-                        <button
+                        <Button
                             type="button"
                             onClick={() => setSelectedType('')}
                             className={`px-3 py-1 rounded-md transition-colors ${
@@ -179,10 +188,11 @@ export function MediaLibrary() {
                                     ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 shadow-sm font-semibold'
                                     : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
                             }`}
+                            variant="ghost"
                         >
-                            Tất cả
-                        </button>
-                        <button
+                            {t('allTypes')}
+                        </Button>
+                        <Button
                             type="button"
                             onClick={() => setSelectedType('IMAGE')}
                             className={`px-3 py-1 rounded-md transition-colors flex items-center gap-1 ${
@@ -190,10 +200,11 @@ export function MediaLibrary() {
                                     ? 'bg-white dark:bg-neutral-700 text-sky-600 dark:text-sky-400 shadow-sm font-semibold'
                                     : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
                             }`}
+                            variant="ghost"
                         >
-                            <ImageIcon className="w-3.5 h-3.5" /> Ảnh
-                        </button>
-                        <button
+                            <ImageIcon className="w-3.5 h-3.5" /> {t('images')}
+                        </Button>
+                        <Button
                             type="button"
                             onClick={() => setSelectedType('VIDEO')}
                             className={`px-3 py-1 rounded-md transition-colors flex items-center gap-1 ${
@@ -201,30 +212,47 @@ export function MediaLibrary() {
                                     ? 'bg-white dark:bg-neutral-700 text-amber-600 dark:text-amber-400 shadow-sm font-semibold'
                                     : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
                             }`}
+                            variant="ghost"
                         >
-                            <Film className="w-3.5 h-3.5" /> Video
-                        </button>
+                            <Film className="w-3.5 h-3.5" /> {t('videos')}
+                        </Button>
                     </div>
 
                     {/* Owner Type Select Filter */}
-                    <select
-                        value={selectedOwnerType}
-                        onChange={(e) => setSelectedOwnerType(e.target.value as MediaOwnerType | '')}
-                        className="py-1.5 px-3 text-xs rounded-lg bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
+                    <Select
+                        value={selectedOwnerType || 'all'}
+                        onValueChange={(value) => {
+                            if (value === 'all') {
+                                setSelectedOwnerType('')
+                                return
+                            }
+
+                            const ownerType = MediaOwnerTypeEnum.safeParse(value)
+                            if (ownerType.success) setSelectedOwnerType(ownerType.data)
+                        }}
                     >
-                        <option value="">Phân loại (Tất cả)</option>
-                        <option value="PRODUCT">Sản phẩm (PRODUCT)</option>
-                        <option value="AVATAR">Ảnh đại diện (AVATAR)</option>
-                        <option value="POST">Bài viết (POST)</option>
-                        <option value="REVIEW">Đánh giá (REVIEW)</option>
-                        <option value="AD_CREATIVE">Quảng cáo (AD_CREATIVE)</option>
-                        <option value="GENERAL">Chung (GENERAL)</option>
-                    </select>
+                        <SelectTrigger className="h-8 w-[190px] text-xs bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">{t('allOwners')}</SelectItem>
+                            <SelectItem value={MEDIA_OWNER_TYPE.PRODUCT}>{t('ownerProduct')}</SelectItem>
+                            <SelectItem value={MEDIA_OWNER_TYPE.AVATAR}>{t('ownerAvatar')}</SelectItem>
+                            <SelectItem value={MEDIA_OWNER_TYPE.POST}>{t('ownerPost')}</SelectItem>
+                            <SelectItem value={MEDIA_OWNER_TYPE.REVIEW}>{t('ownerReview')}</SelectItem>
+                            <SelectItem value={MEDIA_OWNER_TYPE.AD_CREATIVE}>{t('ownerAdCreative')}</SelectItem>
+                            <SelectItem value={MEDIA_OWNER_TYPE.PRODUCT_VARIANT}>{t('ownerProductVariant')}</SelectItem>
+                            <SelectItem value={MEDIA_OWNER_TYPE.SELLER_VERIFICATION}>
+                                {t('ownerSellerVerification')}
+                            </SelectItem>
+                            <SelectItem value={MEDIA_OWNER_TYPE.GENERAL}>{t('ownerGeneral')}</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
 
                 {/* View Mode Toggle */}
                 <div className="flex items-center gap-1">
-                    <button
+                    <Button
                         type="button"
                         onClick={() => setViewMode('grid')}
                         className={`p-1.5 rounded-lg transition-colors ${
@@ -233,10 +261,11 @@ export function MediaLibrary() {
                                 : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
                         }`}
                         title="Chế độ lưới"
+                        variant="ghost"
                     >
                         <Grid className="w-4 h-4" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         type="button"
                         onClick={() => setViewMode('list')}
                         className={`p-1.5 rounded-lg transition-colors ${
@@ -245,9 +274,10 @@ export function MediaLibrary() {
                                 : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
                         }`}
                         title="Chế độ danh sách"
+                        variant="ghost"
                     >
                         <List className="w-4 h-4" />
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -274,13 +304,14 @@ export function MediaLibrary() {
                     <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mt-1 mb-4">
                         Nhấn nút Tải lên để bắt đầu thêm hình ảnh hoặc video vào hệ thống.
                     </p>
-                    <button
+                    <Button
                         type="button"
                         onClick={() => setShowUploader(true)}
                         className="px-4 py-2 rounded-xl text-xs font-semibold bg-sky-500 hover:bg-sky-600 text-white transition-colors"
+                        variant="ghost"
                     >
                         Tải lên ngay
-                    </button>
+                    </Button>
                 </div>
             ) : viewMode === 'grid' ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -328,19 +359,20 @@ export function MediaLibrary() {
                                 {/* Hover overlay action buttons */}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
                                     <div className="flex justify-end gap-1">
-                                        <button
+                                        <Button
                                             type="button"
                                             onClick={(e) => handleCopyUrl(asset.originalUrl, asset.id, e)}
                                             className="p-1.5 rounded-lg bg-black/60 text-white hover:bg-neutral-800 transition-colors"
                                             title="Sao chép URL"
+                                            variant="ghost"
                                         >
                                             {copiedId === asset.id ? (
                                                 <Check className="w-3.5 h-3.5 text-emerald-400" />
                                             ) : (
                                                 <Copy className="w-3.5 h-3.5" />
                                             )}
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
                                             type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation()
@@ -348,9 +380,10 @@ export function MediaLibrary() {
                                             }}
                                             className="p-1.5 rounded-lg bg-rose-950/80 text-rose-300 hover:bg-rose-900 transition-colors"
                                             title="Xoá tập tin"
+                                            variant="ghost"
                                         >
                                             <Trash2 className="w-3.5 h-3.5" />
-                                        </button>
+                                        </Button>
                                     </div>
 
                                     <div className="text-[10px] text-neutral-300 flex items-center justify-between font-mono">
@@ -451,26 +484,28 @@ export function MediaLibrary() {
                                     <td className="p-3 text-neutral-500">{formatTimestamp(asset.createdAt)}</td>
                                     <td className="p-3 text-right">
                                         <div className="flex items-center justify-end gap-1.5">
-                                            <button
+                                            <Button
                                                 type="button"
                                                 onClick={(e) => handleCopyUrl(asset.originalUrl, asset.id, e)}
                                                 className="p-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 transition-colors"
                                                 title="Sao chép URL"
+                                                variant="ghost"
                                             >
                                                 {copiedId === asset.id ? (
                                                     <Check className="w-4 h-4 text-emerald-400" />
                                                 ) : (
                                                     <Copy className="w-4 h-4" />
                                                 )}
-                                            </button>
-                                            <button
+                                            </Button>
+                                            <Button
                                                 type="button"
                                                 onClick={() => setPendingDeleteId(asset.id)}
                                                 className="p-1.5 rounded-md hover:bg-rose-500/10 text-rose-500 transition-colors"
                                                 title="Xoá tập tin"
+                                                variant="ghost"
                                             >
                                                 <Trash2 className="w-4 h-4" />
-                                            </button>
+                                            </Button>
                                         </div>
                                     </td>
                                 </tr>

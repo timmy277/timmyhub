@@ -645,14 +645,15 @@ export function UploadSection<TValue = string | string[] | MediaAsset | MediaAss
                                         <ImageIcon className="size-3.5 text-muted-foreground" />
                                     )}
                                     <span className="max-w-[140px] truncate">{url.split('/').pop()}</span>
-                                    <button
+                                    <Button
                                         type="button"
                                         className="text-muted-foreground hover:text-destructive"
                                         onClick={() => handleRemoveExisting(idx)}
                                         disabled={disabled}
+                                        variant="ghost"
                                     >
                                         <X className="size-3.5" />
-                                    </button>
+                                    </Button>
                                 </div>
                             )
                         })}
@@ -787,7 +788,7 @@ export function UploadSection<TValue = string | string[] | MediaAsset | MediaAss
                                         </span>
 
                                         {/* Top right: Always accessible delete button */}
-                                        <button
+                                        <Button
                                             type="button"
                                             className="absolute top-1.5 right-1.5 z-20 size-6 sm:size-7 rounded-full bg-black/60 hover:bg-rose-600 text-white backdrop-blur-md flex items-center justify-center shadow-md transition-all hover:scale-110 active:scale-95"
                                             onClick={(e) => {
@@ -797,9 +798,10 @@ export function UploadSection<TValue = string | string[] | MediaAsset | MediaAss
                                             disabled={disabled}
                                             title="Xoá file này"
                                             aria-label="Xoá file"
+                                            variant="ghost"
                                         >
                                             <X className="size-3.5" />
-                                        </button>
+                                        </Button>
 
                                         {/* Center Hover Action Hint */}
                                         <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-[1px] pointer-events-none">
@@ -862,13 +864,14 @@ export function UploadSection<TValue = string | string[] | MediaAsset | MediaAss
                                             {item.status === 'error' && (
                                                 <div className="flex items-center justify-between pt-0.5 text-[10px] text-rose-300">
                                                     <span>Lỗi tải lên</span>
-                                                    <button
+                                                    <Button
                                                         type="button"
                                                         className="text-white hover:underline font-medium"
                                                         onClick={() => handleRemoveQueueItem(item.id)}
+                                                        variant="ghost"
                                                     >
                                                         Bỏ qua
-                                                    </button>
+                                                    </Button>
                                                 </div>
                                             )}
                                         </div>

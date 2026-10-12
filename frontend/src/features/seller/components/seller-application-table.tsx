@@ -9,13 +9,14 @@ import type { SellerApplicationDetail, SellerApplicationQuery } from '@timmyhub/
 import { ResourceStatus } from '@timmyhub/contracts'
 
 import { AgGridTable, FloatCombobox, ServerPagination } from '@/components'
+import { createSellerApplicationColumns } from '@/config'
 import { SELLER_APPLICATION_STATUS_ALL, SELLER_APPLICATION_TAB, USER_TABLE_ROW_HEIGHT_PX } from '@/constants'
 import { useDebouncedValue } from '@/hooks'
 
 import { useSellerApplicationListQuery } from '../hooks/use-seller-application-list-query'
 import { buildSellerTabsHref, type SellerTabState } from '../seller-tab-query'
-import { createSellerApplicationColumns } from './seller-application.columns'
 import { ApproveDialog, RejectDialog } from './seller-application-dialogs'
+import { DocumentPreview } from './document-preview'
 
 interface SellerApplicationTableProps {
     rows: SellerApplicationDetail[]
@@ -65,6 +66,9 @@ export function SellerApplicationTable({ rows, totalItems, query, error }: Selle
         () =>
             createSellerApplicationColumns({
                 t,
+                renderDocument: (application) => (
+                    <DocumentPreview url={application.idDocumentUrl} shopName={application.shopName} thumbnailOnly />
+                ),
                 actions: {
                     onDetail: (app) =>
                         router.push(hrefFor({ tab: SELLER_APPLICATION_TAB.DETAIL, id: app.id, label: app.shopName })),

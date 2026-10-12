@@ -63,7 +63,7 @@ function TimeColumn({ label, max, value, onChange, disabled }: TimeColumnProps) 
                     {items.map((num) => {
                         const isSelected = num === value
                         return (
-                            <button
+                            <Button
                                 key={num}
                                 ref={isSelected ? activeRef : undefined}
                                 type="button"
@@ -75,9 +75,10 @@ function TimeColumn({ label, max, value, onChange, disabled }: TimeColumnProps) 
                                         ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
                                         : 'hover:bg-accent hover:text-accent-foreground text-muted-foreground hover:text-foreground',
                                 )}
+                                variant="ghost"
                             >
                                 {String(num).padStart(2, '0')}
-                            </button>
+                            </Button>
                         )
                     })}
                 </div>

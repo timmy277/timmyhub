@@ -16,7 +16,7 @@ import {
 import type { ProductSummary } from '@timmyhub/contracts'
 import { ProductStatus } from '@timmyhub/contracts'
 
-import { Badge, RowActions, StatusBadge, type RowAction } from '@/components'
+import { Button, Badge, RowActions, StatusBadge, type RowAction } from '@/components'
 import { AG_GRID_NO_EXPORT, StatusTone } from '@/constants'
 import { formatCurrencyVND, rowActionsColumnWidth } from '@/utils'
 
@@ -168,14 +168,15 @@ export function createProductColumns({
 
                 return (
                     <div className="flex flex-col justify-center size-full py-1">
-                        <button
+                        <Button
                             type="button"
                             onClick={() => actions.onDetail(prod)}
                             className="text-left font-semibold text-foreground hover:text-primary hover:underline truncate text-xs"
                             title={prod.name}
+                            variant="ghost"
                         >
                             {prod.name}
-                        </button>
+                        </Button>
                     </div>
                 )
             },

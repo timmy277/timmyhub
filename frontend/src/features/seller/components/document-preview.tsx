@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 
 import React, { useState } from 'react'
 import { ExternalLink, FileCheck, FileText, ImageOff, Maximize2, Shield } from 'lucide-react'
@@ -41,7 +42,7 @@ export function DocumentPreview({ url, shopName, title, className, thumbnailOnly
 
         return (
             <>
-                <button
+                <Button
                     type="button"
                     onClick={(e) => {
                         e.stopPropagation()
@@ -52,14 +53,18 @@ export function DocumentPreview({ url, shopName, title, className, thumbnailOnly
                         className,
                     )}
                     title={t('clickToZoom')}
+                    variant="ghost"
                 >
                     <div className="relative size-8 rounded overflow-hidden bg-muted shrink-0 border">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                        <Image
                             src={resolvedUrl}
                             alt="Document"
                             className="size-full object-cover group-hover:scale-105 transition-transform"
                             onError={() => setHasError(true)}
+                            width={1200}
+                            height={800}
+                            sizes="100vw"
+                            unoptimized
                         />
                     </div>
                     <div className="flex flex-col min-w-0">
@@ -68,7 +73,7 @@ export function DocumentPreview({ url, shopName, title, className, thumbnailOnly
                             {t('viewImage')} <Maximize2 className="size-2.5" />
                         </span>
                     </div>
-                </button>
+                </Button>
 
                 <Dialog open={isZoomOpen} onOpenChange={setIsZoomOpen}>
                     <DialogContent className="sm:max-w-3xl p-3 rounded-2xl bg-card border-border shadow-2xl overflow-hidden">
@@ -92,12 +97,15 @@ export function DocumentPreview({ url, shopName, title, className, thumbnailOnly
                             </div>
                         </DialogHeader>
                         <div className="relative aspect-video max-h-[70vh] w-full flex items-center justify-center p-3 bg-muted/20 rounded-xl overflow-hidden mt-2">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
+                            <Image
                                 src={resolvedUrl}
                                 alt={displayTitle}
                                 className="max-h-[65vh] w-full object-contain rounded-lg shadow-sm"
                                 onError={() => setHasError(true)}
+                                width={1200}
+                                height={800}
+                                sizes="100vw"
+                                unoptimized
                             />
                         </div>
                     </DialogContent>
@@ -120,12 +128,15 @@ export function DocumentPreview({ url, shopName, title, className, thumbnailOnly
                         className="group relative aspect-video w-full overflow-hidden bg-muted/40 cursor-pointer"
                         onClick={() => setIsZoomOpen(true)}
                     >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                        <Image
                             src={resolvedUrl}
                             alt={displayTitle}
                             className="size-full object-contain p-2 transition-transform duration-300 group-hover:scale-[1.02]"
                             onError={() => setHasError(true)}
+                            width={1200}
+                            height={800}
+                            sizes="100vw"
+                            unoptimized
                         />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                             <Button size="sm" variant="secondary" className="gap-1.5 shadow-md">
@@ -216,12 +227,15 @@ export function DocumentPreview({ url, shopName, title, className, thumbnailOnly
                     </DialogHeader>
                     <div className="relative aspect-video max-h-[75vh] w-full flex items-center justify-center p-3 bg-muted/20 rounded-xl overflow-hidden mt-2">
                         {resolvedUrl && !hasError ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
+                            <Image
                                 src={resolvedUrl}
                                 alt={displayTitle}
                                 className="max-h-[70vh] w-full object-contain rounded-lg shadow-sm"
                                 onError={() => setHasError(true)}
+                                width={1200}
+                                height={800}
+                                sizes="100vw"
+                                unoptimized
                             />
                         ) : (
                             <div className="flex flex-col items-center justify-center p-8 text-center">

@@ -468,13 +468,14 @@ export function PublicShopView({ shop, initialProducts, categories = [] }: Publi
                                         className="pl-10 pr-9 rounded-xl bg-background border-border text-sm"
                                     />
                                     {searchKeyword && (
-                                        <button
+                                        <Button
                                             type="button"
                                             onClick={() => setSearchKeyword('')}
                                             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                            variant="ghost"
                                         >
                                             <X className="size-4" />
-                                        </button>
+                                        </Button>
                                     )}
                                 </div>
 
@@ -530,7 +531,7 @@ export function PublicShopView({ shop, initialProducts, categories = [] }: Publi
                             {/* Category Filter Pills (if any) */}
                             {shopCategories.length > 0 && (
                                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-                                    <button
+                                    <Button
                                         type="button"
                                         onClick={() => setSelectedCategoryId('ALL')}
                                         className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
@@ -538,11 +539,12 @@ export function PublicShopView({ shop, initialProducts, categories = [] }: Publi
                                                 ? 'bg-primary text-white shadow-sm'
                                                 : 'bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground'
                                         }`}
+                                        variant="ghost"
                                     >
                                         {t('allCategories')}
-                                    </button>
+                                    </Button>
                                     {shopCategories.map((c) => (
-                                        <button
+                                        <Button
                                             key={c.id}
                                             type="button"
                                             onClick={() => setSelectedCategoryId(c.id)}
@@ -551,9 +553,10 @@ export function PublicShopView({ shop, initialProducts, categories = [] }: Publi
                                                     ? 'bg-primary text-white shadow-sm'
                                                     : 'bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground'
                                             }`}
+                                            variant="ghost"
                                         >
                                             {c.name}
-                                        </button>
+                                        </Button>
                                     ))}
                                 </div>
                             )}

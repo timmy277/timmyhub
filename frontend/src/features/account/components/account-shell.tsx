@@ -232,7 +232,7 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
                             const Icon = item.icon
                             const isActive = activeTab === item.key
                             return (
-                                <button
+                                <Button
                                     key={item.key}
                                     type="button"
                                     onClick={() => handleTabChange(item.key)}
@@ -241,10 +241,11 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
                                             ? 'bg-primary text-primary-foreground shadow-xs'
                                             : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                                     }`}
+                                    variant="ghost"
                                 >
                                     <Icon className="h-3.5 w-3.5" />
                                     <span>{t(item.labelKey)}</span>
-                                </button>
+                                </Button>
                             )
                         })}
                     </div>
@@ -255,7 +256,7 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
                             const Icon = item.icon
                             const isActive = activeTab === item.key
                             return (
-                                <button
+                                <Button
                                     key={item.key}
                                     type="button"
                                     onClick={() => handleTabChange(item.key)}
@@ -264,10 +265,11 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
                                             ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
                                             : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                                     }`}
+                                    variant="ghost"
                                 >
                                     <Icon className="h-4 w-4" />
                                     <span>{t(item.labelKey)}</span>
-                                </button>
+                                </Button>
                             )
                         })}
                     </div>

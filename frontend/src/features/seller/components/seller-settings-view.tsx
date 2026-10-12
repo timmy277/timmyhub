@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 
 import { useEffect } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -106,11 +107,9 @@ export function SellerSettingsView({ initialShop }: SellerSettingsViewProps = {}
                 <div>
                     <h1 className="font-heading text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight flex items-center gap-2.5">
                         <Settings className="size-7 text-primary" />
-                        <span>Cài đặt gian hàng</span>
+                        <span>{t('settingsTitle')}</span>
                     </h1>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        Cập nhật nhận diện thương hiệu, địa chỉ kho lấy hàng và cam kết dịch vụ cho người mua.
-                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">{t('settingsDescription')}</p>
                 </div>
             </div>
 
@@ -121,8 +120,15 @@ export function SellerSettingsView({ initialShop }: SellerSettingsViewProps = {}
                 {/* Banner background if provided */}
                 {watchedBanner && (
                     <div className="absolute inset-0 z-0 opacity-15 overflow-hidden">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={watchedBanner} alt="Shop Banner" className="size-full object-cover" />
+                        <Image
+                            src={watchedBanner}
+                            alt={t('shopBannerAlt')}
+                            className="size-full object-cover"
+                            width={1200}
+                            height={800}
+                            sizes="100vw"
+                            unoptimized
+                        />
                     </div>
                 )}
 
@@ -130,14 +136,17 @@ export function SellerSettingsView({ initialShop }: SellerSettingsViewProps = {}
                     {/* Logo */}
                     <div className="relative size-16 sm:size-20 rounded-2xl bg-gradient-to-tr from-primary to-primary/70 text-white font-black text-3xl flex items-center justify-center shadow-lg border-2 border-white/20 shrink-0 overflow-hidden">
                         {watchedLogo ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
+                            <Image
                                 src={watchedLogo}
-                                alt="Shop Logo"
+                                alt={t('shopLogoAlt')}
                                 className="size-full object-cover"
                                 onError={(e) => {
                                     e.currentTarget.style.display = 'none'
                                 }}
+                                width={1200}
+                                height={800}
+                                sizes="100vw"
+                                unoptimized
                             />
                         ) : (
                             (watchedShopName || 'S').charAt(0).toUpperCase()
@@ -150,14 +159,14 @@ export function SellerSettingsView({ initialShop }: SellerSettingsViewProps = {}
                     <div className="space-y-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                             <h2 className="font-heading text-xl sm:text-2xl font-extrabold text-foreground tracking-tight truncate">
-                                {watchedShopName || 'Tên gian hàng chưa đặt'}
+                                {watchedShopName || t('previewShopNameEmpty')}
                             </h2>
                             <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary border border-primary/20">
-                                Xem trước nhận diện Shop
+                                {t('previewBranding')}
                             </span>
                         </div>
                         <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
-                            {watchedDescription || 'Chưa có lời giới thiệu gian hàng.'}
+                            {watchedDescription || t('previewDescriptionEmpty')}
                         </p>
                     </div>
                 </div>
@@ -172,21 +181,19 @@ export function SellerSettingsView({ initialShop }: SellerSettingsViewProps = {}
                     <CardHeader className="p-6 border-b border-border/60">
                         <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
                             <Building2 className="size-4 text-primary" />
-                            <span>Thông tin cơ bản</span>
+                            <span>{t('basicInfoTitle')}</span>
                         </CardTitle>
-                        <CardDescription className="text-xs">
-                            Tên hiển thị và giới thiệu ngắn về gian hàng của bạn trên sàn TimmyHub.
-                        </CardDescription>
+                        <CardDescription className="text-xs">{t('basicInfoDescription')}</CardDescription>
                     </CardHeader>
                     <CardContent className="p-6 space-y-5">
                         <FloatInput
-                            label="Tên cửa hàng *"
+                            label={t('shopNameLabel')}
                             error={form.formState.errors.shopName?.message}
                             {...form.register('shopName')}
                         />
 
                         <FloatTextarea
-                            label="Mô tả gian hàng"
+                            label={t('shopDescriptionLabel')}
                             rows={3}
                             error={form.formState.errors.description?.message}
                             {...form.register('description')}
@@ -199,22 +206,20 @@ export function SellerSettingsView({ initialShop }: SellerSettingsViewProps = {}
                     <CardHeader className="p-6 border-b border-border/60">
                         <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
                             <ImageIcon className="size-4 text-primary" />
-                            <span>Hình ảnh nhận diện</span>
+                            <span>{t('brandingTitle')}</span>
                         </CardTitle>
-                        <CardDescription className="text-xs">
-                            Đường dẫn URL trực tiếp hình ảnh Logo và Banner đại diện gian hàng.
-                        </CardDescription>
+                        <CardDescription className="text-xs">{t('brandingDescription')}</CardDescription>
                     </CardHeader>
                     <CardContent className="p-6 space-y-5">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                             <FloatInput
-                                label="URL Logo cửa hàng (khuyên dùng tỉ lệ 1:1)"
+                                label={t('shopLogoLabel')}
                                 error={form.formState.errors.shopLogo?.message}
                                 {...form.register('shopLogo')}
                             />
 
                             <FloatInput
-                                label="URL Ảnh bìa gian hàng (khuyên dùng tỉ lệ 16:9)"
+                                label={t('shopBannerLabel')}
                                 error={form.formState.errors.shopBanner?.message}
                                 {...form.register('shopBanner')}
                             />
@@ -227,15 +232,13 @@ export function SellerSettingsView({ initialShop }: SellerSettingsViewProps = {}
                     <CardHeader className="p-6 border-b border-border/60">
                         <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
                             <MapPin className="size-4 text-primary" />
-                            <span>Địa chỉ kho &amp; Vận hành</span>
+                            <span>{t('logisticsTitle')}</span>
                         </CardTitle>
-                        <CardDescription className="text-xs">
-                            Địa điểm shipper đến lấy hàng và các cam kết về thời gian chuẩn bị hàng hóa.
-                        </CardDescription>
+                        <CardDescription className="text-xs">{t('logisticsDescription')}</CardDescription>
                     </CardHeader>
                     <CardContent className="p-6 space-y-5">
                         <FloatInput
-                            label="Địa chỉ kho hàng lấy hàng (Đầy đủ số nhà, đường, phường, quận/huyện, tỉnh/thành)"
+                            label={t('warehouseAddressLabel')}
                             error={form.formState.errors.warehouseAddressLine?.message}
                             {...form.register('warehouseAddressLine')}
                         />
@@ -244,26 +247,26 @@ export function SellerSettingsView({ initialShop }: SellerSettingsViewProps = {}
                             <div className="space-y-1">
                                 <FloatInput
                                     type="number"
-                                    label="Chính sách đổi trả (ngày)"
+                                    label={t('returnPolicyLabel')}
                                     error={form.formState.errors.returnPolicyDays?.message}
                                     {...form.register('returnPolicyDays', { valueAsNumber: true })}
                                 />
                                 <p className="text-[11px] text-muted-foreground pl-1 flex items-center gap-1">
                                     <RotateCcw className="size-3 text-muted-foreground" />
-                                    <span>Thời gian cho phép người mua yêu cầu đổi trả sau khi nhận hàng.</span>
+                                    <span>{t('returnPolicyHelp')}</span>
                                 </p>
                             </div>
 
                             <div className="space-y-1">
                                 <FloatInput
                                     type="number"
-                                    label="Thời gian chuẩn bị hàng (giờ)"
+                                    label={t('prepTimeLabel')}
                                     error={form.formState.errors.prepTimeHours?.message}
                                     {...form.register('prepTimeHours', { valueAsNumber: true })}
                                 />
                                 <p className="text-[11px] text-muted-foreground pl-1 flex items-center gap-1">
                                     <Clock className="size-3 text-muted-foreground" />
-                                    <span>Thời gian dự kiến kể từ khi đơn phát sinh tới khi đóng gói xong.</span>
+                                    <span>{t('prepTimeHelp')}</span>
                                 </p>
                             </div>
                         </div>

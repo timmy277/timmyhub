@@ -2,6 +2,7 @@
 
 import { CheckIcon } from 'lucide-react'
 
+import { Button } from '@/components'
 import { cn } from '@/utils'
 
 interface ColorSwatchButtonProps {
@@ -15,13 +16,10 @@ interface ColorSwatchButtonProps {
 // Nút swatch tròn dùng chung cho Base Color / Theme / Chart Color. Vùng bấm 24x24px (luật 11),
 // hover/select chỉ animate transform/opacity (luật 10), tick hiển thị khi đang chọn.
 //
-// Cố ý dùng `<button>` trần thay cho `Button` của shadcn: swatch là ô màu tròn 24px tô bằng màu dữ liệu (inline
-// `backgroundColor`), không có chữ/padding — mọi variant của `Button` đều áp nền, padding, bo góc và
-// `active:translate-y-px` phải ghi đè hết, không còn gì để tái sử dụng. Vẫn giữ `type`, `aria-pressed`,
-// `aria-label` và focus ring như Button.
+// Swatch dùng variant ghost để giữ nền màu động và vùng bấm 24x24px theo thiết kế.
 export function ColorSwatchButton({ color, label, selected, onSelect, disabled }: ColorSwatchButtonProps) {
     return (
-        <button
+        <Button
             type="button"
             aria-pressed={selected}
             aria-label={label}
@@ -36,9 +34,11 @@ export function ColorSwatchButton({ color, label, selected, onSelect, disabled }
                 'motion-reduce:transition-none motion-reduce:hover:scale-100',
             )}
             style={{ backgroundColor: color }}
+            variant="ghost"
+            size="icon-xs"
         >
             {/* Nền là màu tuỳ ý của swatch, không phải token — tick trắng + bóng đổ đọc được trên mọi màu. */}
             {selected ? <CheckIcon className="size-3.5 text-white drop-shadow" aria-hidden /> : null}
-        </button>
+        </Button>
     )
 }

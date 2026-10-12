@@ -577,7 +577,7 @@ const Product3DCard = memo(function Product3DCard({ product: p, isLiked, onToggl
                                 -{p.discount}%
                             </span>
                         )}
-                        <button
+                        <Button
                             type="button"
                             onClick={(e) => {
                                 e.preventDefault()
@@ -586,11 +586,12 @@ const Product3DCard = memo(function Product3DCard({ product: p, isLiked, onToggl
                             }}
                             aria-label="Thêm vào yêu thích"
                             className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-background/80 text-foreground/80 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-125 active:scale-90 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40 z-30"
+                            variant="ghost"
                         >
                             <HeartIcon
                                 className={`size-3.5 transition-colors duration-200 ${isLiked ? 'fill-rose-500 text-rose-500' : ''}`}
                             />
-                        </button>
+                        </Button>
                     </div>
 
                     {/* Product Details with 3D Depth */}
@@ -956,7 +957,7 @@ export function HomePage() {
                                                 {slide.desc}
                                             </p>
                                             <div className="pt-2 flex flex-wrap items-center gap-3">
-                                                <a href={slide.href}>
+                                                <Link href={slide.href}>
                                                     <Button
                                                         size="lg"
                                                         className="rounded-xl font-semibold gap-2 shadow-lg hover:shadow-primary/25 bg-primary text-primary-foreground hover:bg-primary/90"
@@ -965,7 +966,7 @@ export function HomePage() {
                                                         {slide.action}
                                                         <ArrowRightIcon className="size-4 text-primary-foreground" />
                                                     </Button>
-                                                </a>
+                                                </Link>
                                                 <Link href={ROUTE.SELLER_PORTAL}>
                                                     <Button
                                                         size="lg"
@@ -1023,11 +1024,12 @@ export function HomePage() {
                                     <div className="relative z-10 flex items-center justify-between pt-4">
                                         <div className="flex items-center gap-1">
                                             {HERO_SLIDES.map((_, dotIndex) => (
-                                                <button
+                                                <Button
                                                     key={dotIndex}
                                                     onClick={() => setCurrentSlide(dotIndex)}
                                                     aria-label={`Chuyển tới slide ${dotIndex + 1}`}
                                                     className="group flex min-h-6 min-w-6 items-center justify-center p-1 focus:outline-none"
+                                                    variant="ghost"
                                                 >
                                                     <span
                                                         className={`h-2 rounded-full transition-all duration-300 ${
@@ -1036,11 +1038,11 @@ export function HomePage() {
                                                                 : 'w-2 bg-white/40 group-hover:bg-white/70'
                                                         }`}
                                                     />
-                                                </button>
+                                                </Button>
                                             ))}
                                         </div>
                                         <div className="flex items-center gap-1.5">
-                                            <button
+                                            <Button
                                                 onClick={() =>
                                                     setCurrentSlide(
                                                         (prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length,
@@ -1048,18 +1050,20 @@ export function HomePage() {
                                                 }
                                                 aria-label="Slide trước"
                                                 className="flex size-8 items-center justify-center rounded-full bg-black/40 text-white/80 hover:bg-black/60 hover:text-white transition-colors backdrop-blur-md border border-white/10"
+                                                variant="ghost"
                                             >
                                                 <ChevronLeftIcon className="size-4" />
-                                            </button>
-                                            <button
+                                            </Button>
+                                            <Button
                                                 onClick={() =>
                                                     setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length)
                                                 }
                                                 aria-label="Slide tiếp theo"
                                                 className="flex size-8 items-center justify-center rounded-full bg-black/40 text-white/80 hover:bg-black/60 hover:text-white transition-colors backdrop-blur-md border border-white/10"
+                                                variant="ghost"
                                             >
                                                 <ChevronRightIcon className="size-4" />
-                                            </button>
+                                            </Button>
                                         </div>
                                     </div>
                                 </div>
@@ -1105,21 +1109,23 @@ export function HomePage() {
                                 <IconPath name="gemini-star" className="size-4 text-primary/70 animate-pulse" />
                             </h2>
                         </div>
-                        <button
+                        <Button
                             onClick={() => toast.info('Xem tất cả danh mục hàng hoá')}
                             className="group flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline"
+                            variant="ghost"
                         >
                             Xem tất cả
                             <ChevronRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-                        </button>
+                        </Button>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-3">
                         {CATEGORIES.map((cat) => (
-                            <button
+                            <Button
                                 key={cat.name}
                                 onClick={() => setProductTab('all')}
                                 className="group flex flex-col items-center gap-2 rounded-2xl border border-border/70 bg-card p-3 text-center transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:shadow-md active:scale-95"
+                                variant="ghost"
                             >
                                 <div
                                     className={`flex size-12 items-center justify-center rounded-xl ${cat.color} transition-transform group-hover:scale-110`}
@@ -1132,7 +1138,7 @@ export function HomePage() {
                                     </p>
                                     <p className="text-[10px] text-muted-foreground mt-0.5">{cat.count}</p>
                                 </div>
-                            </button>
+                            </Button>
                         ))}
                     </div>
                 </section>
@@ -1263,13 +1269,13 @@ export function HomePage() {
                             </div>
                         </div>
 
-                        <a
+                        <Link
                             href="#products-section"
                             className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
                         >
                             Xem tất cả deal sốc
                             <ChevronRightIcon className="size-3.5" />
-                        </a>
+                        </Link>
                     </div>
 
                     {/* Flash Sale Deals Grid */}
@@ -1369,13 +1375,14 @@ export function HomePage() {
                                 </h2>
                             </div>
                         </div>
-                        <button
+                        <Button
                             onClick={() => toast.info('Xem thêm video cộng đồng')}
                             className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                            variant="ghost"
                         >
                             Xem tất cả
                             <ChevronRightIcon className="size-3.5" />
-                        </button>
+                        </Button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -1485,41 +1492,44 @@ export function HomePage() {
                         <div className="flex items-center gap-3">
                             {/* Tab Pills */}
                             <div className="flex rounded-xl bg-muted p-1 border border-border/60 text-xs font-semibold">
-                                <button
+                                <Button
                                     onClick={() => setProductTab('all')}
                                     className={`rounded-lg px-3 py-1.5 transition-colors ${
                                         productTab === 'all'
                                             ? 'bg-primary text-primary-foreground shadow-sm'
                                             : 'text-foreground/80 hover:text-foreground'
                                     }`}
+                                    variant="ghost"
                                 >
                                     Tất cả
-                                </button>
-                                <button
+                                </Button>
+                                <Button
                                     onClick={() => setProductTab('new')}
                                     className={`rounded-lg px-3 py-1.5 transition-colors ${
                                         productTab === 'new'
                                             ? 'bg-primary text-primary-foreground shadow-sm'
                                             : 'text-foreground/80 hover:text-foreground'
                                     }`}
+                                    variant="ghost"
                                 >
                                     Mới nhất
-                                </button>
-                                <button
+                                </Button>
+                                <Button
                                     onClick={() => setProductTab('best')}
                                     className={`rounded-lg px-3 py-1.5 transition-colors ${
                                         productTab === 'best'
                                             ? 'bg-primary text-primary-foreground shadow-sm'
                                             : 'text-foreground/80 hover:text-foreground'
                                     }`}
+                                    variant="ghost"
                                 >
                                     Bán chạy
-                                </button>
+                                </Button>
                             </div>
 
                             {/* View Mode Toggle */}
                             <div className="flex rounded-xl border border-border/60 bg-muted/40 p-1">
-                                <button
+                                <Button
                                     onClick={() => setViewMode('grid')}
                                     aria-label="Xem dạng lưới"
                                     className={`flex size-7 items-center justify-center rounded-lg transition-colors ${
@@ -1527,10 +1537,11 @@ export function HomePage() {
                                             ? 'bg-background text-foreground shadow-sm'
                                             : 'text-muted-foreground hover:text-foreground'
                                     }`}
+                                    variant="ghost"
                                 >
                                     <LayoutGridIcon className="size-3.5" />
-                                </button>
-                                <button
+                                </Button>
+                                <Button
                                     onClick={() => setViewMode('list')}
                                     aria-label="Xem dạng danh sách"
                                     className={`flex size-7 items-center justify-center rounded-lg transition-colors ${
@@ -1538,9 +1549,10 @@ export function HomePage() {
                                             ? 'bg-background text-foreground shadow-sm'
                                             : 'text-muted-foreground hover:text-foreground'
                                     }`}
+                                    variant="ghost"
                                 >
                                     <ListIcon className="size-3.5" />
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     </div>

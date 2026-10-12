@@ -592,7 +592,7 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                 </div>
 
                 {/* Hidden file input */}
-                <input
+                <Input
                     ref={fileInputRef}
                     type="file"
                     multiple
@@ -708,13 +708,14 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                                             {t('coverBadge')}
                                         </span>
                                     )}
-                                    <button
+                                    <Button
                                         type="button"
                                         onClick={() => handleRemoveImage(idx)}
                                         className="absolute top-1.5 right-1.5 size-6 rounded-md bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-600"
+                                        variant="ghost"
                                     >
                                         <Trash2 className="size-3" />
-                                    </button>
+                                    </Button>
                                 </div>
                             ))}
                         </div>
@@ -742,13 +743,14 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                                     <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-emerald-600 text-white text-[10px] font-bold shadow-sm pointer-events-none">
                                         {t('videoBadge', { index: idx + 1 })}
                                     </span>
-                                    <button
+                                    <Button
                                         type="button"
                                         onClick={() => handleRemoveVideo(idx)}
                                         className="absolute top-1.5 right-1.5 size-6 rounded-md bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-600 z-10"
+                                        variant="ghost"
                                     >
                                         <Trash2 className="size-3" />
-                                    </button>
+                                    </Button>
                                 </div>
                             ))}
                         </div>
@@ -865,13 +867,14 @@ export function CreateProductModal({ open, onOpenChange, onSucceeded, inline = f
                                             className="rounded-lg text-xs gap-1.5 py-1 px-2.5 font-normal bg-card border border-border/80"
                                         >
                                             <span>{val}</span>
-                                            <button
+                                            <Button
                                                 type="button"
                                                 onClick={() => handleRemoveOptionValue(gIdx, vIdx)}
                                                 className="hover:text-rose-500"
+                                                variant="ghost"
                                             >
                                                 <X className="size-3" />
-                                            </button>
+                                            </Button>
                                         </Badge>
                                     ))}
                                     <div className="flex items-center gap-1.5">

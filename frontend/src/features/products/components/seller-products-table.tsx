@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 
 import React, { useState } from 'react'
 import { CheckCircle2, Clock, Film, Package, Plus, RefreshCw, Search, ShieldAlert, XCircle } from 'lucide-react'
@@ -280,11 +281,14 @@ export function SellerProductsTable({ permissions }: SellerProductsTableProps = 
                                             <td className="px-6 py-3.5">
                                                 <div className="flex items-center gap-3">
                                                     {p.images && p.images[0] ? (
-                                                        // eslint-disable-next-line @next/next/no-img-element
-                                                        <img
+                                                        <Image
                                                             src={p.images[0]}
                                                             alt={p.name}
                                                             className="size-11 rounded-xl object-cover border border-border/80 bg-muted/30 shrink-0"
+                                                            width={1200}
+                                                            height={800}
+                                                            sizes="100vw"
+                                                            unoptimized
                                                         />
                                                     ) : (
                                                         <div className="size-11 rounded-xl bg-muted flex items-center justify-center text-xs text-muted-foreground shrink-0">

@@ -27,6 +27,7 @@ import { useTranslations } from 'next-intl'
 import type { ProductDetail, ProductSummary } from '@timmyhub/contracts'
 
 import {
+    Input,
     Badge,
     Button,
     Dialog,
@@ -371,24 +372,26 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                 className="absolute top-5 right-5 flex items-center gap-2 z-10"
                                 onClick={(e) => e.stopPropagation()}
                             >
-                                <button
+                                <Button
                                     onClick={handleShare}
                                     aria-label="Chia sẻ sản phẩm"
                                     className="flex size-9 items-center justify-center rounded-full bg-background/80 text-foreground shadow-md backdrop-blur-md transition-all hover:bg-background hover:scale-110 active:scale-95"
+                                    variant="ghost"
                                 >
                                     <Share2Icon className="size-4" />
-                                </button>
-                                <button
+                                </Button>
+                                <Button
                                     onClick={handleToggleWishlist}
                                     aria-label="Yêu thích sản phẩm"
                                     className="flex size-9 items-center justify-center rounded-full bg-background/80 text-foreground shadow-md backdrop-blur-md transition-all hover:bg-background hover:scale-110 active:scale-95"
+                                    variant="ghost"
                                 >
                                     <HeartIcon
                                         className={`size-4 transition-colors ${
                                             isWishlist ? 'fill-rose-500 text-rose-500' : 'text-foreground'
                                         }`}
                                     />
-                                </button>
+                                </Button>
                             </div>
 
                             {/* Bottom Zoom & Count Indicators */}
@@ -412,7 +415,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                 {allImages.map((imgUrl, idx) => {
                                     const isSelected = idx === selectedImageIndex
                                     return (
-                                        <button
+                                        <Button
                                             key={`${imgUrl}-${idx}`}
                                             onClick={() => setSelectedImageIndex(idx)}
                                             className={`relative size-20 sm:size-24 shrink-0 rounded-2xl border-2 p-1 bg-card transition-all duration-200 focus-visible:outline-none ${
@@ -420,6 +423,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                                     ? 'border-primary ring-2 ring-primary/40 ring-offset-2 ring-offset-background scale-105 shadow-md'
                                                     : 'border-border/70 opacity-75 hover:opacity-100 hover:border-foreground/40'
                                             }`}
+                                            variant="ghost"
                                         >
                                             <div className="relative size-full overflow-hidden rounded-xl bg-muted/20">
                                                 <Image
@@ -431,7 +435,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                                     className="object-cover"
                                                 />
                                             </div>
-                                        </button>
+                                        </Button>
                                     )
                                 })}
                             </div>
@@ -464,7 +468,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
 
                             {/* Ratings & Social Counts */}
                             <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground pt-1">
-                                <button
+                                <Button
                                     type="button"
                                     onClick={() => {
                                         document
@@ -472,6 +476,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                             ?.scrollIntoView({ behavior: 'smooth' })
                                     }}
                                     className="flex items-center gap-1.5 text-foreground font-semibold hover:opacity-80 transition-opacity cursor-pointer group"
+                                    variant="ghost"
                                 >
                                     <span className="text-amber-500 font-bold underline-offset-4 group-hover:underline">
                                         {product.ratingAvg.toFixed(1)}
@@ -484,7 +489,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                     <span className="text-muted-foreground font-normal">
                                         ({t('tabReviews', { count: product.ratingCount || 0 })})
                                     </span>
-                                </button>
+                                </Button>
                                 <span className="text-border">•</span>
                                 <div>
                                     Đã bán: <strong className="text-foreground">{product.soldCount || 342}</strong>
@@ -535,14 +540,15 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                             Voucher & Khuyến mãi ({applicableVouchers.length})
                                         </span>
                                     </div>
-                                    <button
+                                    <Button
                                         type="button"
                                         onClick={() => setIsVoucherModalOpen(true)}
                                         className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                                        variant="ghost"
                                     >
                                         <span>Xem tất cả</span>
                                         <ChevronRightIcon className="size-3.5" />
-                                    </button>
+                                    </Button>
                                 </div>
 
                                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -580,7 +586,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                                         {label}
                                                     </span>
                                                 </div>
-                                                <button
+                                                <Button
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation()
@@ -592,9 +598,10 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                                             ? 'text-muted-foreground bg-muted/40 cursor-default'
                                                             : 'text-primary hover:text-primary/80 hover:bg-primary/15'
                                                     }`}
+                                                    variant="ghost"
                                                 >
                                                     {isSaved ? 'Đã lưu' : 'Lưu'}
-                                                </button>
+                                                </Button>
                                             </div>
                                         )
                                     })}
@@ -620,7 +627,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                             {option.values.map((val) => {
                                                 const isSelected = selectedOptionValues[option.id] === val.id
                                                 return (
-                                                    <button
+                                                    <Button
                                                         key={val.id}
                                                         type="button"
                                                         onClick={() => handleSelectOptionValue(option.id, val.id)}
@@ -629,9 +636,10 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                                                 ? 'border-primary bg-primary text-primary-foreground shadow-sm scale-105'
                                                                 : 'border-border/80 bg-background text-foreground/80 hover:border-foreground/40 hover:text-foreground'
                                                         }`}
+                                                        variant="ghost"
                                                     >
                                                         {val.value}
-                                                    </button>
+                                                    </Button>
                                                 )
                                             })}
                                         </div>
@@ -644,16 +652,17 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                         <div className="flex flex-wrap items-center gap-4 pt-1">
                             <span className="text-xs font-bold text-foreground">{t('quantity')}</span>
                             <div className="flex items-center rounded-xl border border-border/80 bg-card p-1">
-                                <button
+                                <Button
                                     type="button"
                                     onClick={() => handleStepQuantity(-1)}
                                     disabled={quantity <= 1 || stockAvailable <= 0}
                                     aria-label="Giảm số lượng"
                                     className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+                                    variant="ghost"
                                 >
                                     <MinusIcon className="size-3.5" />
-                                </button>
-                                <input
+                                </Button>
+                                <Input
                                     type="text"
                                     inputMode="numeric"
                                     pattern="[0-9]*"
@@ -669,15 +678,16 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                     aria-label="Số lượng sản phẩm"
                                     className="w-12 text-center text-sm font-bold text-foreground font-mono bg-transparent border-0 focus:outline-none focus:ring-0 p-0"
                                 />
-                                <button
+                                <Button
                                     type="button"
                                     onClick={() => handleStepQuantity(1)}
                                     disabled={quantity >= stockAvailable || stockAvailable <= 0}
                                     aria-label="Tăng số lượng"
                                     className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+                                    variant="ghost"
                                 >
                                     <PlusIcon className="size-3.5" />
-                                </button>
+                                </Button>
                             </div>
                             <span className="text-xs text-muted-foreground">
                                 {t('stockLeft')} <strong className="text-foreground">{stockAvailable}</strong>{' '}

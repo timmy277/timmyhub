@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
+import { Button } from '@/components'
 
 export interface MediaLightboxItem {
     url: string
@@ -155,58 +156,63 @@ export function MediaLightbox({ item, items, initialIndex = 0, onClose }: MediaL
                 <div className="flex items-center gap-1 sm:gap-1.5 p-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/10 shadow-xl text-white">
                     {currentItem.type === 'IMAGE' && (
                         <>
-                            <button
+                            <Button
                                 type="button"
                                 onClick={handleZoomIn}
                                 disabled={zoom >= 3}
                                 className="p-2 rounded-full text-neutral-300 hover:text-white hover:bg-white/15 transition-all disabled:opacity-40"
                                 title="Phóng to (+)"
                                 aria-label="Phóng to"
+                                variant="ghost"
                             >
                                 <ZoomIn className="w-4 h-4" />
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 type="button"
                                 onClick={handleZoomOut}
                                 disabled={zoom <= 0.5}
                                 className="p-2 rounded-full text-neutral-300 hover:text-white hover:bg-white/15 transition-all disabled:opacity-40"
                                 title="Thu nhỏ (-)"
                                 aria-label="Thu nhỏ"
+                                variant="ghost"
                             >
                                 <ZoomOut className="w-4 h-4" />
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 type="button"
                                 onClick={handleRotate}
                                 className="p-2 rounded-full text-neutral-300 hover:text-white hover:bg-white/15 transition-all"
                                 title="Xoay 90°"
                                 aria-label="Xoay ảnh"
+                                variant="ghost"
                             >
                                 <RotateCw className="w-4 h-4" />
-                            </button>
+                            </Button>
                             {zoom !== 1 && (
-                                <button
+                                <Button
                                     type="button"
                                     onClick={handleResetZoom}
                                     className="px-2 py-1 rounded-full text-[11px] font-mono text-neutral-300 hover:text-white hover:bg-white/15 transition-all"
                                     title="Đặt lại kích thước"
+                                    variant="ghost"
                                 >
                                     100%
-                                </button>
+                                </Button>
                             )}
                             <div className="h-4 w-px bg-white/20 mx-0.5" />
                         </>
                     )}
 
-                    <button
+                    <Button
                         type="button"
                         onClick={handleCopy}
                         className="p-2 rounded-full text-neutral-300 hover:text-white hover:bg-white/15 transition-all"
                         title="Sao chép URL"
                         aria-label="Sao chép URL"
+                        variant="ghost"
                     >
                         {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                    </button>
+                    </Button>
 
                     <a
                         href={currentItem.url}
@@ -231,15 +237,16 @@ export function MediaLightbox({ item, items, initialIndex = 0, onClose }: MediaL
 
                     <div className="h-4 w-px bg-white/20 mx-0.5" />
 
-                    <button
+                    <Button
                         type="button"
                         onClick={onClose}
                         className="p-2 rounded-full bg-rose-500/20 text-rose-300 hover:bg-rose-500 hover:text-white transition-all shadow-md"
                         title="Đóng (Esc)"
                         aria-label="Đóng"
+                        variant="ghost"
                     >
                         <X className="w-4 h-4" />
-                    </button>
+                    </Button>
                 </div>
             </header>
 
@@ -250,15 +257,16 @@ export function MediaLightbox({ item, items, initialIndex = 0, onClose }: MediaL
             >
                 {/* Previous Button */}
                 {hasMultiple && (
-                    <button
+                    <Button
                         type="button"
                         onClick={handlePrev}
                         className="absolute left-2 sm:left-6 z-30 flex size-11 sm:size-13 items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white backdrop-blur-xl border border-white/15 shadow-2xl transition-all duration-200 hover:scale-110 active:scale-95"
                         aria-label="Xem ảnh trước"
                         title="Ảnh trước (←)"
+                        variant="ghost"
                     >
                         <ChevronLeft className="size-6 sm:size-7" />
-                    </button>
+                    </Button>
                 )}
 
                 {/* Media Content */}
@@ -281,12 +289,15 @@ export function MediaLightbox({ item, items, initialIndex = 0, onClose }: MediaL
                             }}
                             onDoubleClick={() => setZoom((z) => (z === 1 ? 2 : 1))}
                         >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
+                            <Image
                                 src={currentItem.url}
                                 alt={currentItem.title || 'Xem ảnh'}
                                 className="max-h-[72vh] max-w-[92vw] sm:max-w-[85vw] object-contain rounded-2xl shadow-2xl border border-white/10 select-none transition-shadow"
                                 draggable={false}
+                                width={1200}
+                                height={800}
+                                sizes="100vw"
+                                unoptimized
                             />
                         </div>
                     )}
@@ -294,15 +305,16 @@ export function MediaLightbox({ item, items, initialIndex = 0, onClose }: MediaL
 
                 {/* Next Button */}
                 {hasMultiple && (
-                    <button
+                    <Button
                         type="button"
                         onClick={handleNext}
                         className="absolute right-2 sm:right-6 z-30 flex size-11 sm:size-13 items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white backdrop-blur-xl border border-white/15 shadow-2xl transition-all duration-200 hover:scale-110 active:scale-95"
                         aria-label="Xem ảnh tiếp theo"
                         title="Ảnh tiếp theo (→)"
+                        variant="ghost"
                     >
                         <ChevronRight className="size-6 sm:size-7" />
-                    </button>
+                    </Button>
                 )}
             </div>
 
@@ -317,7 +329,7 @@ export function MediaLightbox({ item, items, initialIndex = 0, onClose }: MediaL
                         const isVideo = mediaItem.type === 'VIDEO'
 
                         return (
-                            <button
+                            <Button
                                 key={`${mediaItem.url}-${idx}`}
                                 type="button"
                                 onClick={() => {
@@ -330,6 +342,7 @@ export function MediaLightbox({ item, items, initialIndex = 0, onClose }: MediaL
                                         ? 'border-primary ring-2 ring-primary/40 ring-offset-2 ring-offset-black scale-110 shadow-lg opacity-100'
                                         : 'border-white/20 opacity-50 hover:opacity-90 hover:border-white/50'
                                 }`}
+                                variant="ghost"
                             >
                                 {isVideo ? (
                                     <div className="size-full bg-neutral-900 flex items-center justify-center text-white">
@@ -338,7 +351,7 @@ export function MediaLightbox({ item, items, initialIndex = 0, onClose }: MediaL
                                 ) : (
                                     <Image src={mediaItem.url} alt="" fill sizes="56px" className="object-cover" />
                                 )}
-                            </button>
+                            </Button>
                         )
                     })}
                 </footer>

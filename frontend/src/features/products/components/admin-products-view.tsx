@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 
 import React, { useState } from 'react'
 import { CheckCircle2, Clock, Eye, Film, Package, RefreshCw, Search, ShieldAlert, Store, XCircle } from 'lucide-react'
@@ -278,11 +279,14 @@ export function AdminProductsView({ permissions }: AdminProductsViewProps = {}) 
                                                 <td className="px-6 py-3.5">
                                                     <div className="flex items-center gap-3">
                                                         {p.images && p.images[0] ? (
-                                                            // eslint-disable-next-line @next/next/no-img-element
-                                                            <img
+                                                            <Image
                                                                 src={p.images[0]}
                                                                 alt={p.name}
                                                                 className="size-11 rounded-xl object-cover border border-border/80 bg-muted/30 shrink-0"
+                                                                width={1200}
+                                                                height={800}
+                                                                sizes="100vw"
+                                                                unoptimized
                                                             />
                                                         ) : (
                                                             <div className="size-11 rounded-xl bg-muted flex items-center justify-center text-xs text-muted-foreground shrink-0">
@@ -487,11 +491,14 @@ export function AdminProductsView({ permissions }: AdminProductsViewProps = {}) 
                         <div className="space-y-4 py-2 text-xs">
                             <div className="flex gap-3">
                                 {detailTarget.images && detailTarget.images[0] && (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img
+                                    <Image
                                         src={detailTarget.images[0]}
                                         alt={detailTarget.name}
                                         className="size-20 rounded-xl object-cover border border-border shrink-0"
+                                        width={1200}
+                                        height={800}
+                                        sizes="100vw"
+                                        unoptimized
                                     />
                                 )}
                                 <div className="space-y-1">
@@ -522,12 +529,15 @@ export function AdminProductsView({ permissions }: AdminProductsViewProps = {}) 
                                     </p>
                                     <div className="flex gap-2 overflow-x-auto pb-1">
                                         {detailTarget.images.map((img, i) => (
-                                            // eslint-disable-next-line @next/next/no-img-element
-                                            <img
+                                            <Image
                                                 key={i}
                                                 src={img}
                                                 alt={`Img ${i}`}
                                                 className="size-14 rounded-lg object-cover border border-border shrink-0"
+                                                width={1200}
+                                                height={800}
+                                                sizes="100vw"
+                                                unoptimized
                                             />
                                         ))}
                                     </div>

@@ -19,6 +19,7 @@ import { usePresignedUpload, useUploadMedia } from '@/hooks'
 import { generateUploadId } from '@/utils'
 import { MediaLightbox, type MediaLightboxItem } from './media-lightbox'
 import { MediaPreviewCard, type UploadQueueItem } from './media-preview-card'
+import { Input, Button } from '@/components'
 
 export interface MediaUploaderProps {
     acceptType?: 'all' | 'image' | 'video'
@@ -276,7 +277,7 @@ export function MediaUploader({
                         : 'border-neutral-300 dark:border-neutral-700/80 bg-neutral-50/50 dark:bg-neutral-900/40 hover:border-sky-400 dark:hover:border-sky-500 hover:bg-neutral-100/60 dark:hover:bg-neutral-900/80'
                 }`}
             >
-                <input
+                <Input
                     ref={fileInputRef}
                     type="file"
                     multiple
@@ -340,27 +341,30 @@ export function MediaUploader({
 
                     <div className="flex items-center gap-2">
                         {successCount > 0 && (
-                            <button
+                            <Button
                                 type="button"
                                 onClick={handleClearCompleted}
                                 className="px-3 py-1.5 rounded-lg text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors flex items-center gap-1.5"
+                                variant="ghost"
                             >
                                 <Trash2 className="w-3.5 h-3.5" /> Xoá đã xong
-                            </button>
+                            </Button>
                         )}
-                        <button
+                        <Button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
                             className="px-3 py-1.5 rounded-lg text-xs font-medium text-neutral-700 dark:text-neutral-200 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors flex items-center gap-1.5 shadow-sm"
+                            variant="ghost"
                         >
                             <Plus className="w-3.5 h-3.5" /> Thêm tập tin
-                        </button>
+                        </Button>
                         {pendingCount > 0 && (
-                            <button
+                            <Button
                                 type="button"
                                 onClick={handleUploadAll}
                                 disabled={isUploading}
                                 className="px-4 py-1.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 disabled:opacity-50 transition-all flex items-center gap-1.5 shadow-md shadow-sky-500/20 active:scale-95"
+                                variant="ghost"
                             >
                                 {isUploading ? (
                                     <>
@@ -371,7 +375,7 @@ export function MediaUploader({
                                         <UploadCloud className="w-3.5 h-3.5" /> Tải lên tất cả ({pendingCount})
                                     </>
                                 )}
-                            </button>
+                            </Button>
                         )}
                     </div>
                 </div>

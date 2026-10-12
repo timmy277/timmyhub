@@ -1,15 +1,14 @@
 import type { ColDef, ICellRendererParams } from 'ag-grid-community'
+import type { ReactNode } from 'react'
 import { CheckCircle2Icon, EyeIcon, StoreIcon, XCircleIcon } from 'lucide-react'
 import type { useTranslations } from 'next-intl'
 
 import type { SellerApplicationDetail } from '@timmyhub/contracts'
 import { ResourceStatus } from '@timmyhub/contracts'
 
-import { RowActions, StatusBadge, UserAvatar, type RowAction } from '@/components'
+import { Button, RowActions, StatusBadge, UserAvatar, type RowAction } from '@/components'
 import { AG_GRID_NO_EXPORT, SELLER_APPLICATION_STATUS_TONE, StatusTone } from '@/constants'
 import { formatTimestamp, rowActionsColumnWidth } from '@/utils'
-
-import { DocumentPreview } from './document-preview'
 
 export interface SellerApplicationColumnActions {
     onDetail: (app: SellerApplicationDetail) => void
@@ -22,11 +21,13 @@ type SellerTranslator = ReturnType<typeof useTranslations<'sellerApplications'>>
 interface CreateSellerApplicationColumnsOptions {
     t: SellerTranslator
     actions: SellerApplicationColumnActions
+    renderDocument: (application: SellerApplicationDetail) => ReactNode
 }
 
 export function createSellerApplicationColumns({
     t,
     actions,
+    renderDocument,
 }: CreateSellerApplicationColumnsOptions): ColDef<SellerApplicationDetail>[] {
     const buildRowActions = (app: SellerApplicationDetail): RowAction[] => {
         const rowActions: RowAction[] = [
@@ -83,13 +84,14 @@ export function createSellerApplicationColumns({
                         <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-primary">
                             <StoreIcon className="size-4" />
                         </div>
-                        <button
+                        <Button
                             type="button"
                             onClick={() => actions.onDetail(app)}
                             className="text-left font-semibold text-foreground hover:text-primary hover:underline truncate"
+                            variant="ghost"
                         >
                             {app.shopName}
-                        </button>
+                        </Button>
                     </div>
                 )
             },
@@ -141,7 +143,7 @@ export function createSellerApplicationColumns({
             flex: 0,
             cellRenderer: (params: ICellRendererParams<SellerApplicationDetail>) => {
                 if (!params.data) return null
-                return <DocumentPreview url={params.data.idDocumentUrl} shopName={params.data.shopName} thumbnailOnly />
+                return renderDocument(params.data)
             },
         },
         {

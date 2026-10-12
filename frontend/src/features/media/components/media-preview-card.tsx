@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 
 import { formatBytes } from '@/utils'
+import { Button } from '@/components'
 
 export interface UploadQueueItem {
     id: string
@@ -85,24 +86,26 @@ export function MediaPreviewCard({ item, onRemove, onRetry, onOpenLightbox }: Me
                         />
                         {/* Video Controls Overlay */}
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/video:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                            <button
+                            <Button
                                 type="button"
                                 onClick={togglePlay}
                                 className="p-2.5 rounded-full bg-white/20 hover:bg-white/40 text-white backdrop-blur-md transition-transform active:scale-95"
                                 title={isPlaying ? 'Tạm dừng' : 'Phát thử'}
                                 aria-label={isPlaying ? 'Tạm dừng' : 'Phát thử'}
+                                variant="ghost"
                             >
                                 {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 type="button"
                                 onClick={toggleMute}
                                 className="p-2 rounded-full bg-white/20 hover:bg-white/40 text-white backdrop-blur-md transition-transform active:scale-95"
                                 title={isMuted ? 'Bật âm thanh' : 'Tắt âm'}
                                 aria-label={isMuted ? 'Bật âm thanh' : 'Tắt âm'}
+                                variant="ghost"
                             >
                                 {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                            </button>
+                            </Button>
                         </div>
                         <span className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-black/70 text-amber-300 backdrop-blur-sm flex items-center gap-1">
                             <Film className="w-3 h-3" /> Video
@@ -136,26 +139,28 @@ export function MediaPreviewCard({ item, onRemove, onRetry, onOpenLightbox }: Me
                 {/* Top-Right Quick Overlay Buttons */}
                 <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     {onOpenLightbox && (item.publicUrl || item.previewUrl) && (
-                        <button
+                        <Button
                             type="button"
                             onClick={() => onOpenLightbox(item.publicUrl || item.previewUrl, item.type, item.file.name)}
                             className="p-1.5 rounded-lg bg-neutral-900/80 text-white hover:bg-neutral-800 transition-colors backdrop-blur-md shadow"
                             title="Phóng to"
                             aria-label="Phóng to"
+                            variant="ghost"
                         >
                             <Maximize2 className="w-3.5 h-3.5" />
-                        </button>
+                        </Button>
                     )}
                     {onRemove && item.status !== 'uploading' && (
-                        <button
+                        <Button
                             type="button"
                             onClick={() => onRemove(item.id)}
                             className="p-1.5 rounded-lg bg-rose-950/80 text-rose-300 hover:bg-rose-900 transition-colors backdrop-blur-md shadow"
                             title="Xoá bỏ"
                             aria-label="Xoá bỏ"
+                            variant="ghost"
                         >
                             <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        </Button>
                     )}
                 </div>
 
@@ -208,15 +213,16 @@ export function MediaPreviewCard({ item, onRemove, onRetry, onOpenLightbox }: Me
 
                     {/* Retry Button on Error */}
                     {item.status === 'error' && onRetry && (
-                        <button
+                        <Button
                             type="button"
                             onClick={() => onRetry(item.id)}
                             className="p-1 rounded-md text-neutral-500 hover:text-sky-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                             title="Thử lại"
                             aria-label="Thử lại"
+                            variant="ghost"
                         >
                             <RotateCw className="w-4 h-4" />
-                        </button>
+                        </Button>
                     )}
                 </div>
 

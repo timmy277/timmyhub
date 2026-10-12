@@ -13,6 +13,7 @@ import type { CategoryItem, CreateCategoryInput } from '@timmyhub/contracts'
 import { CreateCategoryInputSchema } from '@timmyhub/contracts'
 
 import {
+    Input,
     Button,
     Card,
     CardContent,
@@ -223,14 +224,15 @@ export function CategoryForm({
                                             sizes="64px"
                                             className="object-cover"
                                         />
-                                        <button
+                                        <Button
                                             type="button"
                                             onClick={() => form.setValue('image', '')}
                                             className="absolute top-1 right-1 size-4 rounded-full bg-background/80 text-foreground flex items-center justify-center hover:bg-destructive hover:text-white"
                                             title={t('form.deleteImage')}
+                                            variant="ghost"
                                         >
                                             <XIcon className="size-3" />
-                                        </button>
+                                        </Button>
                                     </>
                                 ) : (
                                     <ImageIcon className="size-6 text-muted-foreground/50" />
@@ -260,7 +262,7 @@ export function CategoryForm({
                                         )}
                                         <span>{t('form.uploadImage')}</span>
                                     </Button>
-                                    <input
+                                    <Input
                                         type="file"
                                         ref={fileInputRef}
                                         onChange={handleFileUpload}

@@ -31,6 +31,7 @@ import type { AddressDetail, CartDetail, CheckoutInput, UserVoucherItem, Voucher
 
 import { FloatInput } from '@/components'
 import {
+    Input,
     Badge,
     Button,
     Card,
@@ -917,7 +918,7 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                             {t('voucherTitle')}
                                         </CardTitle>
                                     </div>
-                                    <button
+                                    <Button
                                         type="button"
                                         onClick={() => {
                                             setVoucherModalInput(voucherCodeInput)
@@ -935,9 +936,10 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                             setIsVoucherModalOpen(true)
                                         }}
                                         className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                                        variant="ghost"
                                     >
                                         {t('voucherSelectOrEnter')}
-                                    </button>
+                                    </Button>
                                 </div>
                             </CardHeader>
                             <CardContent className="p-4 sm:p-5 space-y-3">
@@ -1056,7 +1058,7 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                     </div>
                                 ) : (
                                     <div className="flex gap-2">
-                                        <input
+                                        <Input
                                             type="text"
                                             placeholder={t('voucherPlaceholder')}
                                             value={voucherCodeInput}
@@ -1249,7 +1251,7 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                                 : 'border-border/70 hover:border-border hover:bg-muted/30'
                                         }`}
                                     >
-                                        <input
+                                        <Input
                                             type="radio"
                                             name="select-addr"
                                             checked={isSelected}
@@ -1331,7 +1333,7 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
 
                     {/* Thanh nhập voucher trực tiếp (Shopee-Style Claim/Apply Bar) */}
                     <div className="p-4 bg-muted/20 border-b border-border/60 flex gap-2">
-                        <input
+                        <Input
                             type="text"
                             placeholder={t('voucherPlaceholder') || 'Nhập mã voucher tại đây...'}
                             value={voucherModalInput}
@@ -1380,7 +1382,7 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                         ).map((tab) => {
                             const isActive = voucherCategoryTab === tab.key
                             return (
-                                <button
+                                <Button
                                     key={tab.key}
                                     type="button"
                                     onClick={() => setVoucherCategoryTab(tab.key)}
@@ -1389,6 +1391,7 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                             ? 'bg-primary text-primary-foreground shadow-xs'
                                             : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
                                     }`}
+                                    variant="ghost"
                                 >
                                     <span>{tab.label}</span>
                                     <span
@@ -1400,7 +1403,7 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                     >
                                         {tab.count}
                                     </span>
-                                </button>
+                                </Button>
                             )
                         })}
                     </div>
@@ -1683,7 +1686,7 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                             </Badge>
                                         ))}
                                     </div>
-                                    <button
+                                    <Button
                                         type="button"
                                         onClick={() => {
                                             setSelectedModalShippingCode(null)
@@ -1691,9 +1694,10 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                             setSelectedModalShopCodes({})
                                         }}
                                         className="text-[11px] text-destructive hover:underline cursor-pointer block"
+                                        variant="ghost"
                                     >
                                         {t('voucherDeselect') || 'Bỏ chọn tất cả'}
-                                    </button>
+                                    </Button>
                                 </div>
                             ) : (
                                 <span className="text-muted-foreground">

@@ -36,6 +36,29 @@ const eslintConfig = defineConfig([
                     ],
                 },
             ],
+            'no-restricted-syntax': [
+                'error',
+                {
+                    selector: "JSXOpeningElement[name.name='button']",
+                    message: 'Dùng Button của shadcn từ `@/components` thay cho thẻ <button>.',
+                },
+                {
+                    selector: "JSXOpeningElement[name.name='input']",
+                    message: 'Dùng Float* cho field trong form hoặc Input của shadcn từ `@/components`.',
+                },
+                {
+                    selector: "JSXOpeningElement[name.name='select']",
+                    message: 'Dùng Select của shadcn từ `@/components` thay cho thẻ <select>.',
+                },
+                {
+                    selector: "JSXOpeningElement[name.name='textarea']",
+                    message: 'Dùng FloatTextarea trong form hoặc Textarea của shadcn.',
+                },
+                {
+                    selector: "JSXOpeningElement[name.name='img']",
+                    message: 'Dùng Image từ `next/image` với thuộc tính `sizes`.',
+                },
+            ],
         },
     },
     // Script chạy thẳng bằng `node` (không qua bundler) nên phải là CommonJS — `package.json` không đặt
@@ -44,6 +67,26 @@ const eslintConfig = defineConfig([
         files: ['scripts/**/*.cjs'],
         rules: {
             '@typescript-eslint/no-require-imports': 'off',
+        },
+    },
+    {
+        files: ['src/components/common/**/*.{ts,tsx}'],
+        rules: {
+            'no-restricted-syntax': [
+                'error',
+                {
+                    selector: "JSXOpeningElement[name.name='button']",
+                    message: 'Dùng Button của shadcn từ `@/components` thay cho thẻ <button>.',
+                },
+                {
+                    selector: "JSXOpeningElement[name.name='select']",
+                    message: 'Dùng Select của shadcn từ `@/components` thay cho thẻ <select>.',
+                },
+                {
+                    selector: "JSXOpeningElement[name.name='img']",
+                    message: 'Dùng Image từ `next/image` với thuộc tính `sizes`.',
+                },
+            ],
         },
     },
     // Override default ignores of eslint-config-next.

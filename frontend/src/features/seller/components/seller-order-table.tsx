@@ -6,7 +6,9 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import type { OrderDetail, OrderStatusType, UpdateOrderStatusInput } from '@timmyhub/contracts'
+import { createSellerOrderColumns, getSellerOrderStatusLabel } from '@/config'
 import {
+    Input,
     AgGridTable,
     Button,
     Dialog,
@@ -22,7 +24,6 @@ import { SELLER_ORDER_STATUS_ALL, SELLER_ORDER_TAB, USER_TABLE_ROW_HEIGHT_PX } f
 import { useDebouncedValue } from '@/hooks'
 import { updateSellerOrderStatusAction } from '../actions'
 import { buildSellerOrderTabsHref, type SellerOrderTabState } from '../seller-order-tab-query'
-import { createSellerOrderColumns, getSellerOrderStatusLabel } from './seller-order.columns'
 
 interface SellerOrderTableProps {
     rows: OrderDetail[]
@@ -266,7 +267,7 @@ export function SellerOrderTable({ rows, onRefresh, error }: SellerOrderTablePro
                                             : 'border-border/60 hover:bg-muted/40 text-muted-foreground'
                                     }`}
                                 >
-                                    <input
+                                    <Input
                                         type="radio"
                                         name="seller_cancel_reason"
                                         value={item.label}
