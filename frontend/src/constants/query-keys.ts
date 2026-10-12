@@ -57,6 +57,7 @@ export const QUERY_KEY = {
     },
     ORDER: {
         ALL: ['order'] as const,
+        MY_ORDERS_ALL: ['order', 'my-orders'] as const,
         MY_ORDERS: (status?: string, search?: string) => ['order', 'my-orders', status, search] as const,
         DETAIL: (id: string) => ['order', 'detail', id] as const,
     },
@@ -73,6 +74,7 @@ export const QUERY_KEY = {
     },
     ENGAGEMENT: {
         ALL: ['engagement'] as const,
+        REVIEW_LISTS: (productId: string) => ['engagement', 'reviews', productId] as const,
         REVIEWS: (productId: string, params?: Record<string, unknown>) =>
             ['engagement', 'reviews', productId, params] as const,
         SUMMARY: (productId: string) => ['engagement', 'summary', productId] as const,

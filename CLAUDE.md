@@ -89,8 +89,11 @@ Mục lục đầy đủ và lối đọc theo vai trò: `docs/README.md`.
     file component.
 23. Tập giá trị hữu hạn dùng **const object + type suy ra** (`UserRole.SUPER_ADMIN`), không chuỗi trần, không
     `enum` TypeScript. Type dùng chung FE/BE nằm ở `@timmyhub/contracts`, cả hai phía import từ đó.
-24. Ưu tiên shadcn/component dự án hơn thẻ HTML tương tác trần. Ô tìm kiếm qua `useDebouncedValue`. Thao tác ghi có
-    toast; hành động nhạy cảm có `AlertDialog`. Skeleton dùng `Skeleton` của shadcn. Responsive từ 360 px.
+24. Control tương tác phải dùng component shadcn/component dự án: `Button`, `Input`/`FloatInput`, `Select`/`FloatSelect`,
+    `Textarea`/`FloatTextarea`; ảnh dùng `Image` từ `next/image`. Không viết thẻ native tương tác trực tiếp trong feature
+    UI. Thẻ cấu trúc/ngữ nghĩa như `div`, `p`, `section`, `main`, `table` vẫn dùng khi phù hợp; không thay chúng bằng
+    component không cùng ngữ nghĩa hoặc làm đổi giao diện. Ô tìm kiếm qua `useDebouncedValue`. Thao tác ghi có toast;
+    hành động nhạy cảm có `AlertDialog`. Skeleton dùng `Skeleton` của shadcn. Responsive từ 360 px.
 25. Zustand luôn đọc qua selector (`useStore((s) => s.x)` hoặc `useShallow`), không lấy cả store.
 
 ## 4. Quy ước tài liệu

@@ -3,7 +3,7 @@ const path = require('node:path')
 
 const root = path.resolve(__dirname, '..')
 const messageFiles = ['vi.json', 'en.json'].map((file) => path.join(root, 'messages', file))
-const sourceRoot = path.join(root, 'src')
+const sourceRoots = [path.join(root, 'src'), path.resolve(root, '../shared/contracts/src')]
 
 function readJson(file) {
     return JSON.parse(fs.readFileSync(file, 'utf8'))
@@ -44,14 +44,19 @@ for (const key of new Set([...vi.keys(), ...en.keys()])) {
     }
 }
 
-const sources = sourceFiles(sourceRoot)
+const sources = sourceRoots
+    .flatMap(sourceFiles)
     .map((file) => fs.readFileSync(file, 'utf8'))
     .join('\n')
 for (const messages of locales) {
     for (const key of messages.keys()) {
-        const leaf = key.split('.').at(-1)
-        const escaped = leaf.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        if (!new RegExp(`(['"\`])${escaped}\\1`).test(sources)) {
+        const parts = key.split('.')
+        const referenceSuffixes = parts.map((_, index) => parts.slice(index).join('.'))
+        const isReferenced = referenceSuffixes.some((suffix) => {
+            const escaped = suffix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            return new RegExp(`(['"\`])${escaped}\\1`).test(sources)
+        })
+        if (!isReferenced) {
             console.error(`Unused locale key: ${key}`)
             errors++
         }

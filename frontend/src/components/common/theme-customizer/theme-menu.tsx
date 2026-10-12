@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import { PaletteIcon } from 'lucide-react'
 
@@ -16,7 +17,9 @@ import {
     TooltipTrigger,
 } from '@/components/ui'
 
-import { ThemeCustomizer } from './theme-customizer'
+const ThemeCustomizer = dynamic(() => import('./theme-customizer').then((module) => module.ThemeCustomizer), {
+    loading: () => null,
+})
 
 // Icon trên header, mở panel tuỳ chỉnh giao diện thả xuống ngay bên dưới. Dùng Popover chứ không phải
 // DropdownMenu: panel chứa Select và nút bấm tự do, không phải danh sách menu item.

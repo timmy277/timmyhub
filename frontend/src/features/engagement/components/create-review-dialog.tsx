@@ -81,7 +81,7 @@ export function CreateReviewDialog({ open, onOpenChange, product, orderItemId, o
 
             toast.success(t('messages.createSuccess'))
             void queryClient.invalidateQueries({
-                queryKey: ['engagement', 'reviews', product.id],
+                queryKey: QUERY_KEY.ENGAGEMENT.REVIEW_LISTS(product.id),
             })
             void queryClient.invalidateQueries({
                 queryKey: QUERY_KEY.ENGAGEMENT.SUMMARY(product.id),
@@ -90,7 +90,7 @@ export function CreateReviewDialog({ open, onOpenChange, product, orderItemId, o
                 queryKey: QUERY_KEY.ENGAGEMENT.PENDING,
             })
             void queryClient.invalidateQueries({
-                queryKey: ['order', 'my-orders'],
+                queryKey: QUERY_KEY.ORDER.MY_ORDERS_ALL,
             })
 
             onOpenChange(false)

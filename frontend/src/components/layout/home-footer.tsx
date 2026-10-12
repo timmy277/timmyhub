@@ -148,6 +148,7 @@ export function HomeFooter() {
                                         <FloatInput
                                             type="email"
                                             label={t('newsletterLabel')}
+                                            labelClassName="start-10"
                                             error={form.formState.errors.email ? t('newsletterInvalid') : undefined}
                                             placeholder={t('newsletterPlaceholder')}
                                             autoComplete="email"

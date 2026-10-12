@@ -390,7 +390,7 @@ function ReviewCardItem({ review, productId, onOpenLightbox }: ReviewCardItemPro
         mutationFn: () => toggleHelpfulAction(review.id),
         onMutate: async () => {
             await queryClient.cancelQueries({
-                queryKey: ['engagement', 'reviews', productId],
+                queryKey: QUERY_KEY.ENGAGEMENT.REVIEW_LISTS(productId),
             })
 
             const nextLiked = !isLiked
@@ -399,21 +399,24 @@ function ReviewCardItem({ review, productId, onOpenLightbox }: ReviewCardItemPro
             setOptimisticCount(nextCount)
 
             // Cập nhật ngay trong cache của React Query
-            queryClient.setQueriesData<ReviewListResult>({ queryKey: ['engagement', 'reviews', productId] }, (old) => {
-                if (!old) return old
-                return {
-                    ...old,
-                    items: old.items.map((it) =>
-                        it.id === review.id
-                            ? {
-                                  ...it,
-                                  isHelpfulVotedByMe: nextLiked,
-                                  helpfulCount: nextCount,
-                              }
-                            : it,
-                    ),
-                }
-            })
+            queryClient.setQueriesData<ReviewListResult>(
+                { queryKey: QUERY_KEY.ENGAGEMENT.REVIEW_LISTS(productId) },
+                (old) => {
+                    if (!old) return old
+                    return {
+                        ...old,
+                        items: old.items.map((it) =>
+                            it.id === review.id
+                                ? {
+                                      ...it,
+                                      isHelpfulVotedByMe: nextLiked,
+                                      helpfulCount: nextCount,
+                                  }
+                                : it,
+                        ),
+                    }
+                },
+            )
         },
         onSuccess: (res) => {
             if (!res.ok) {
@@ -421,7 +424,7 @@ function ReviewCardItem({ review, productId, onOpenLightbox }: ReviewCardItemPro
                 setOptimisticCount(null)
                 toast.error(res.message || t('errors.voteFailed'))
                 void queryClient.invalidateQueries({
-                    queryKey: ['engagement', 'reviews', productId],
+                    queryKey: QUERY_KEY.ENGAGEMENT.REVIEW_LISTS(productId),
                 })
                 return
             }
@@ -432,28 +435,31 @@ function ReviewCardItem({ review, productId, onOpenLightbox }: ReviewCardItemPro
             setPrevVoted(voted)
             setPrevCount(count)
 
-            queryClient.setQueriesData<ReviewListResult>({ queryKey: ['engagement', 'reviews', productId] }, (old) => {
-                if (!old) return old
-                return {
-                    ...old,
-                    items: old.items.map((it) =>
-                        it.id === review.id
-                            ? {
-                                  ...it,
-                                  isHelpfulVotedByMe: voted,
-                                  helpfulCount: count,
-                              }
-                            : it,
-                    ),
-                }
-            })
+            queryClient.setQueriesData<ReviewListResult>(
+                { queryKey: QUERY_KEY.ENGAGEMENT.REVIEW_LISTS(productId) },
+                (old) => {
+                    if (!old) return old
+                    return {
+                        ...old,
+                        items: old.items.map((it) =>
+                            it.id === review.id
+                                ? {
+                                      ...it,
+                                      isHelpfulVotedByMe: voted,
+                                      helpfulCount: count,
+                                  }
+                                : it,
+                        ),
+                    }
+                },
+            )
         },
         onError: () => {
             setOptimisticLiked(null)
             setOptimisticCount(null)
             toast.error(t('errors.voteFailed'))
             void queryClient.invalidateQueries({
-                queryKey: ['engagement', 'reviews', productId],
+                queryKey: QUERY_KEY.ENGAGEMENT.REVIEW_LISTS(productId),
             })
         },
     })
@@ -473,7 +479,7 @@ function ReviewCardItem({ review, productId, onOpenLightbox }: ReviewCardItemPro
             replyForm.reset({ reviewId: review.id, content: '', parentId: null })
             setIsReplying(false)
             void queryClient.invalidateQueries({
-                queryKey: ['engagement', 'reviews', productId],
+                queryKey: QUERY_KEY.ENGAGEMENT.REVIEW_LISTS(productId),
             })
         } catch {
             toast.error(t('errors.replyFailed'))
@@ -748,7 +754,7 @@ function CommentItemCard({ comment, reviewId, productId, depth = 0 }: CommentIte
             replyForm.reset({ reviewId, content: '', parentId: comment.id })
             setIsReplying(false)
             void queryClient.invalidateQueries({
-                queryKey: ['engagement', 'reviews', productId],
+                queryKey: QUERY_KEY.ENGAGEMENT.REVIEW_LISTS(productId),
             })
         } catch {
             toast.error(t('errors.replyFailed'))

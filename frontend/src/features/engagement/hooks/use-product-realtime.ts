@@ -29,7 +29,7 @@ export function useProductRealtime(productId: string | undefined): void {
         socket.on(PRODUCT_REALTIME_EVENT.REVIEW_CREATED, (payload: { productId: string }) => {
             if (payload.productId === productId) {
                 void queryClient.invalidateQueries({
-                    queryKey: ['engagement', 'reviews', productId],
+                    queryKey: QUERY_KEY.ENGAGEMENT.REVIEW_LISTS(productId),
                 })
                 void queryClient.invalidateQueries({
                     queryKey: QUERY_KEY.ENGAGEMENT.SUMMARY(productId),
@@ -42,7 +42,7 @@ export function useProductRealtime(productId: string | undefined): void {
 
         socket.on(PRODUCT_REALTIME_EVENT.COMMENT_CREATED, () => {
             void queryClient.invalidateQueries({
-                queryKey: ['engagement', 'reviews', productId],
+                queryKey: QUERY_KEY.ENGAGEMENT.REVIEW_LISTS(productId),
             })
         })
 

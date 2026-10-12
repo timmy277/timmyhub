@@ -66,35 +66,26 @@ function formatNumber(num: number): string {
 const HERO_SLIDES = [
     {
         id: 1,
-        tag: 'Ưu đãi hôm nay',
+        copyKey: 'slide1',
         badgeColor: 'bg-amber-500/30 text-white border-amber-400/40',
-        title: 'Siêu Sale Đón Hè\nGiảm Đến 50%',
-        desc: 'Hàng ngàn sản phẩm thời trang, phụ kiện công nghệ và đồ gia dụng chính hãng với ưu đãi độc quyền.',
-        action: 'Khám phá ngay',
         href: '#products-section',
-        stats: { sold: '15.4K+', rating: '4.9★', label: 'Bán chạy nhất' },
+        stats: { sold: '15.4K+', rating: '4.9★' },
         image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1600&q=80',
     },
     {
         id: 2,
-        tag: 'Công nghệ mới 2026',
+        copyKey: 'slide2',
         badgeColor: 'bg-sky-500/30 text-white border-sky-400/40',
-        title: 'Tech Fest 2026\nCông Nghệ Đỉnh Cao',
-        desc: 'Nâng cấp phong cách sống hiện đại với laptop AI, smartphone thế hệ mới và tai nghe chống ồn cao cấp.',
-        action: 'Xem bộ sưu tập',
         href: '#products-section',
-        stats: { sold: '8.9K+', rating: '5.0★', label: 'Hàng mới về' },
+        stats: { sold: '8.9K+', rating: '5.0★' },
         image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1600&q=80',
     },
     {
         id: 3,
-        tag: 'Không gian sống',
+        copyKey: 'slide3',
         badgeColor: 'bg-rose-500/30 text-white border-rose-400/40',
-        title: 'Nội Thất & Gia Dụng\nGiá Tốt Nhất Năm',
-        desc: 'Trang hoàng tổ ấm tiện nghi với thiết bị gia dụng thông minh và nội thất hiện đại bảo hành 2 năm.',
-        action: 'Mua sắm ngay',
         href: '#products-section',
-        stats: { sold: '12.1K+', rating: '4.8★', label: 'Deal hot tuần' },
+        stats: { sold: '12.1K+', rating: '4.8★' },
         image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1600&q=80',
     },
 ]
@@ -103,38 +94,34 @@ const HERO_SLIDES = [
 const FEATURES = [
     {
         icon: TruckIcon,
-        title: 'Giao hàng miễn phí',
-        desc: 'Freeship đơn từ 500k toàn quốc',
+        copyKey: 'freeShipping',
     },
     {
         icon: ShieldCheckIcon,
-        title: '100% Chính hãng',
-        desc: 'Bảo hành 1 đổi 1 trong 7 ngày',
+        copyKey: 'authenticProducts',
     },
     {
         icon: HeadphonesIcon,
-        title: 'Hỗ trợ 24/7',
-        desc: 'Tư vấn tận tâm mọi lúc mọi nơi',
+        copyKey: 'support',
     },
     {
         icon: ZapIcon,
-        title: 'Giao hàng siêu tốc',
-        desc: 'Nhận hàng 2 - 4h tại nội thành',
+        copyKey: 'expressDelivery',
     },
-]
+] as const
 
 /* 3. Danh mục sản phẩm (10 categories) */
 const CATEGORIES = [
-    { name: 'Laptop & PC', icon: LaptopIcon, count: '1.2k+ SP', color: 'text-blue-500 bg-blue-500/10' },
-    { name: 'Điện thoại', icon: SmartphoneIcon, count: '3.4k+ SP', color: 'text-emerald-500 bg-emerald-500/10' },
-    { name: 'Âm thanh', icon: HeadphonesIcon, count: '890 SP', color: 'text-rose-500 bg-rose-500/10' },
-    { name: 'Đồng hồ', icon: WatchIcon, count: '650 SP', color: 'text-amber-500 bg-amber-500/10' },
-    { name: 'Camera', icon: CameraIcon, count: '430 SP', color: 'text-purple-500 bg-purple-500/10' },
-    { name: 'Gaming', icon: Gamepad2Icon, count: '920 SP', color: 'text-indigo-500 bg-indigo-500/10' },
-    { name: 'Nhà cửa', icon: HomeIcon, count: '2.1k+ SP', color: 'text-teal-500 bg-teal-500/10' },
-    { name: 'Làm đẹp', icon: SparklesIcon, count: '1.8k+ SP', color: 'text-pink-500 bg-pink-500/10' },
-    { name: 'Sách & VPP', icon: BookOpenIcon, count: '760 SP', color: 'text-orange-500 bg-orange-500/10' },
-    { name: 'Thể thao', icon: TrophyIcon, count: '1.1k+ SP', color: 'text-emerald-600 bg-emerald-600/10' },
+    { copyKey: 'laptop', icon: LaptopIcon, color: 'text-blue-500 bg-blue-500/10' },
+    { copyKey: 'phones', icon: SmartphoneIcon, color: 'text-emerald-500 bg-emerald-500/10' },
+    { copyKey: 'audio', icon: HeadphonesIcon, color: 'text-rose-500 bg-rose-500/10' },
+    { copyKey: 'watches', icon: WatchIcon, color: 'text-amber-500 bg-amber-500/10' },
+    { copyKey: 'cameras', icon: CameraIcon, color: 'text-purple-500 bg-purple-500/10' },
+    { copyKey: 'gaming', icon: Gamepad2Icon, color: 'text-indigo-500 bg-indigo-500/10' },
+    { copyKey: 'home', icon: HomeIcon, color: 'text-teal-500 bg-teal-500/10' },
+    { copyKey: 'beauty', icon: SparklesIcon, color: 'text-pink-500 bg-pink-500/10' },
+    { copyKey: 'books', icon: BookOpenIcon, color: 'text-orange-500 bg-orange-500/10' },
+    { copyKey: 'sports', icon: TrophyIcon, color: 'text-emerald-600 bg-emerald-600/10' },
 ]
 
 /* 4. Voucher ưu đãi */
@@ -672,6 +659,60 @@ const Product3DCard = memo(function Product3DCard({ product: p, isLiked, onToggl
 export function HomePage() {
     const router = useRouter()
     const tNav = useTranslations('nav')
+    const tHome = useTranslations('home')
+    const heroCopy = [
+        {
+            tag: tHome('storefront.hero.slide1Tag'),
+            title: tHome('storefront.hero.slide1Title'),
+            desc: tHome('storefront.hero.slide1Description'),
+            action: tHome('storefront.hero.slide1Action'),
+            label: tHome('storefront.hero.slide1Label'),
+        },
+        {
+            tag: tHome('storefront.hero.slide2Tag'),
+            title: tHome('storefront.hero.slide2Title'),
+            desc: tHome('storefront.hero.slide2Description'),
+            action: tHome('storefront.hero.slide2Action'),
+            label: tHome('storefront.hero.slide2Label'),
+        },
+        {
+            tag: tHome('storefront.hero.slide3Tag'),
+            title: tHome('storefront.hero.slide3Title'),
+            desc: tHome('storefront.hero.slide3Description'),
+            action: tHome('storefront.hero.slide3Action'),
+            label: tHome('storefront.hero.slide3Label'),
+        },
+    ]
+    const featureCopy = {
+        freeShipping: {
+            title: tHome('storefront.features.freeShipping.title'),
+            description: tHome('storefront.features.freeShipping.description'),
+        },
+        authenticProducts: {
+            title: tHome('storefront.features.authenticProducts.title'),
+            description: tHome('storefront.features.authenticProducts.description'),
+        },
+        support: {
+            title: tHome('storefront.features.support.title'),
+            description: tHome('storefront.features.support.description'),
+        },
+        expressDelivery: {
+            title: tHome('storefront.features.expressDelivery.title'),
+            description: tHome('storefront.features.expressDelivery.description'),
+        },
+    }
+    const categoryCopy = [
+        { name: tHome('storefront.categories.laptop.name'), count: tHome('storefront.categories.laptop.count') },
+        { name: tHome('storefront.categories.phones.name'), count: tHome('storefront.categories.phones.count') },
+        { name: tHome('storefront.categories.audio.name'), count: tHome('storefront.categories.audio.count') },
+        { name: tHome('storefront.categories.watches.name'), count: tHome('storefront.categories.watches.count') },
+        { name: tHome('storefront.categories.cameras.name'), count: tHome('storefront.categories.cameras.count') },
+        { name: tHome('storefront.categories.gaming.name'), count: tHome('storefront.categories.gaming.count') },
+        { name: tHome('storefront.categories.home.name'), count: tHome('storefront.categories.home.count') },
+        { name: tHome('storefront.categories.beauty.name'), count: tHome('storefront.categories.beauty.count') },
+        { name: tHome('storefront.categories.books.name'), count: tHome('storefront.categories.books.count') },
+        { name: tHome('storefront.categories.sports.name'), count: tHome('storefront.categories.sports.count') },
+    ]
     const { hasPermission } = usePermissions()
     const isSellerByPermission = hasPermission(SELLER_SHOP_PERMISSION) || hasPermission(SELLER_SHOP_ANY_PERMISSION)
     const { data: myShop } = useMyShop({ enabled: !isSellerByPermission })
@@ -912,7 +953,7 @@ export function HomePage() {
                                     <div className="absolute inset-0 overflow-hidden pointer-events-none">
                                         <Image
                                             src={slide.image}
-                                            alt={slide.title.replace('\n', ' ')}
+                                            alt={heroCopy[index]!.title.replace('\n', ' ')}
                                             fill
                                             priority={index === 0}
                                             loading={index === 0 ? 'eager' : 'lazy'}
@@ -939,11 +980,11 @@ export function HomePage() {
                                             className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur-md ${slide.badgeColor}`}
                                         >
                                             <IconPath name="gemini-star" className="size-3 text-white animate-pulse" />
-                                            {slide.tag}
+                                            {heroCopy[index]!.tag}
                                         </span>
                                         <div className="hidden sm:flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-md border border-white/10">
                                             <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-                                            {slide.stats.label}: {slide.stats.sold} đơn
+                                            {heroCopy[index]!.label}: {slide.stats.sold} {tHome('storefront.orders')}
                                         </div>
                                     </div>
 
@@ -951,10 +992,10 @@ export function HomePage() {
                                     <div className="relative z-10 my-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-4">
                                         <div className="lg:col-span-7 space-y-4 max-w-xl text-white">
                                             <h1 className="font-heading text-3xl sm:text-5xl font-extrabold tracking-tight leading-[1.15] whitespace-pre-line drop-shadow-sm">
-                                                {slide.title}
+                                                {heroCopy[index]!.title}
                                             </h1>
                                             <p className="text-sm sm:text-base text-white/80 leading-relaxed max-w-lg">
-                                                {slide.desc}
+                                                {heroCopy[index]!.desc}
                                             </p>
                                             <div className="pt-2 flex flex-wrap items-center gap-3">
                                                 <Link href={slide.href}>
@@ -963,7 +1004,7 @@ export function HomePage() {
                                                         className="rounded-xl font-semibold gap-2 shadow-lg hover:shadow-primary/25 bg-primary text-primary-foreground hover:bg-primary/90"
                                                     >
                                                         <ShoppingBagIcon className="size-4 text-primary-foreground" />
-                                                        {slide.action}
+                                                        {heroCopy[index]!.action}
                                                         <ArrowRightIcon className="size-4 text-primary-foreground" />
                                                     </Button>
                                                 </Link>
@@ -974,7 +1015,7 @@ export function HomePage() {
                                                         className="rounded-xl font-semibold gap-2 border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white backdrop-blur-sm"
                                                     >
                                                         <StoreIcon className="size-4 text-white" />
-                                                        Kênh người bán
+                                                        {tHome('storefront.sellerChannel')}
                                                     </Button>
                                                 </Link>
                                             </div>
@@ -1075,18 +1116,25 @@ export function HomePage() {
                 {/* ═══════════════════════════════════════════════════════════════════
                  * 2. FEATURE SECTION: CAM KẾT DỊCH VỤ SÀN (4 CAM KẾT)
                  * ═══════════════════════════════════════════════════════════════════ */}
-                <section aria-label="Cam kết dịch vụ" className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <section
+                    aria-label={tHome('storefront.serviceGuarantees')}
+                    className="grid grid-cols-2 md:grid-cols-4 gap-4"
+                >
                     {FEATURES.map((f) => (
                         <div
-                            key={f.title}
+                            key={f.copyKey}
                             className="group flex flex-col sm:flex-row items-start sm:items-center gap-3.5 rounded-2xl border border-border/70 bg-card p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-md hover:border-primary/40"
                         >
                             <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                                 <f.icon className="size-6 transition-transform group-hover:scale-110" aria-hidden />
                             </div>
                             <div className="min-w-0">
-                                <h2 className="text-sm font-bold text-foreground leading-tight">{f.title}</h2>
-                                <p className="mt-0.5 text-xs text-muted-foreground leading-snug">{f.desc}</p>
+                                <h2 className="text-sm font-bold text-foreground leading-tight">
+                                    {featureCopy[f.copyKey].title}
+                                </h2>
+                                <p className="mt-0.5 text-xs text-muted-foreground leading-snug">
+                                    {featureCopy[f.copyKey].description}
+                                </p>
                             </div>
                         </div>
                     ))}
@@ -1105,26 +1153,26 @@ export function HomePage() {
                                 id="categories-heading"
                                 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2"
                             >
-                                <span>Danh mục sản phẩm</span>
+                                <span>{tHome('storefront.categoriesTitle')}</span>
                                 <IconPath name="gemini-star" className="size-4 text-primary/70 animate-pulse" />
                             </h2>
                         </div>
                         <Button
-                            onClick={() => toast.info('Xem tất cả danh mục hàng hoá')}
+                            onClick={() => toast.info(tHome('storefront.viewAllCategories'))}
                             className="group flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline"
                             variant="ghost"
                         >
-                            Xem tất cả
+                            {tHome('storefront.viewAll')}
                             <ChevronRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5" />
                         </Button>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-3">
-                        {CATEGORIES.map((cat) => (
+                        {CATEGORIES.map((cat, index) => (
                             <Button
-                                key={cat.name}
+                                key={cat.copyKey}
                                 onClick={() => setProductTab('all')}
-                                className="group flex flex-col items-center gap-2 rounded-2xl border border-border/70 bg-card p-3 text-center transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:shadow-md active:scale-95"
+                                className="group h-auto w-full flex-col items-center gap-2 whitespace-normal rounded-2xl border border-border/70 bg-card p-3 text-center transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:shadow-md active:scale-95"
                                 variant="ghost"
                             >
                                 <div
@@ -1134,9 +1182,11 @@ export function HomePage() {
                                 </div>
                                 <div>
                                     <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors leading-tight">
-                                        {cat.name}
+                                        {categoryCopy[index]!.name}
                                     </p>
-                                    <p className="text-[10px] text-muted-foreground mt-0.5">{cat.count}</p>
+                                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                                        {categoryCopy[index]!.count}
+                                    </p>
                                 </div>
                             </Button>
                         ))}
@@ -1157,15 +1207,15 @@ export function HomePage() {
                                     id="vouchers-heading"
                                     className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2"
                                 >
-                                    <span>Mã giảm giá cho bạn</span>
+                                    <span>{tHome('storefront.vouchersTitle')}</span>
                                     <IconPath name="gemini-star" className="size-4 text-amber-400 animate-pulse" />
                                 </h2>
                             </div>
                             <Badge className="ml-2 hidden sm:inline-flex text-[10px] bg-primary text-primary-foreground border-transparent">
-                                Tiết kiệm tối đa
+                                {tHome('storefront.maximumSavings')}
                             </Badge>
                         </div>
-                        <span className="text-xs text-muted-foreground">Được tài trợ bởi TimmyHub</span>
+                        <span className="text-xs text-muted-foreground">{tHome('storefront.sponsoredBy')}</span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1195,11 +1245,11 @@ export function HomePage() {
                                         </div>
                                         <p className="text-base font-extrabold text-foreground truncate">{v.title}</p>
                                         <p className="text-xs text-muted-foreground">
-                                            Đơn tối thiểu{' '}
+                                            {tHome('storefront.minimumOrder')}{' '}
                                             <span className="font-semibold text-foreground">{v.minSpend}</span>
                                         </p>
                                         <div className="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground pt-0.5">
-                                            <span>Mã:</span>
+                                            <span>{tHome('storefront.code')}:</span>
                                             <span className="rounded bg-muted px-1.5 py-0.5 font-bold text-foreground">
                                                 {v.code}
                                             </span>
@@ -1225,12 +1275,12 @@ export function HomePage() {
                                             {isSaved ? (
                                                 <>
                                                     <CheckIcon className="size-3.5 mr-1 text-emerald-700 dark:text-emerald-400" />
-                                                    Đã lưu
+                                                    {tHome('storefront.saved')}
                                                 </>
                                             ) : isPending ? (
-                                                'Đang lưu...'
+                                                tHome('storefront.saving')
                                             ) : (
-                                                'Lưu mã'
+                                                tHome('storefront.saveVoucher')
                                             )}
                                         </Button>
                                     </div>
