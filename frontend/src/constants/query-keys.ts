@@ -66,6 +66,7 @@ export const QUERY_KEY = {
     },
     PROMOTION: {
         ALL: ['promotion'] as const,
+        CAMPAIGNS: ['promotion', 'campaigns'] as const,
         AVAILABLE_VOUCHERS: (subtotal?: number) => ['promotion', 'available-vouchers', subtotal] as const,
         MY_SAVED_VOUCHERS: ['promotion', 'my-saved-vouchers'] as const,
         MY_VOUCHERS_LIST: (status?: string) => ['promotion', 'my-vouchers-list', status] as const,

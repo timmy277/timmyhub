@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
+import { useQuery } from '@tanstack/react-query'
 import {
     AlertCircle,
     Ban,
@@ -22,7 +23,7 @@ import type { ProductDetail } from '@timmyhub/contracts'
 import { ProductStatus } from '@timmyhub/contracts'
 
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, StatusBadge } from '@/components'
-import { StatusTone } from '@/constants'
+import { QUERY_KEY, StatusTone } from '@/constants'
 import { formatCurrencyVND } from '@/utils'
 
 import { getProductDetailAction } from '../actions'
@@ -39,34 +40,37 @@ const formatVnd = formatCurrencyVND
 
 export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: ProductDetailPanelProps) {
     const t = useTranslations('products')
-    const [product, setProduct] = useState<ProductDetail | null>(initialDetail ?? null)
-    const [loading, setLoading] = useState(!initialDetail)
+    const [updatedProduct, setUpdatedProduct] = useState<ProductDetail | null>(null)
     const [selectedImage, setSelectedImage] = useState<string | null>(null)
+
+    const detailQuery = useQuery({
+        queryKey: QUERY_KEY.PRODUCTS.DETAIL(id),
+        queryFn: async () => {
+            const result = await getProductDetailAction(id)
+            if (!result.ok || !result.data) throw new Error('Product detail could not be loaded')
+            return result.data
+        },
+        enabled: !initialDetail,
+        initialData: initialDetail ?? undefined,
+        retry: false,
+    })
+    const product = updatedProduct ?? initialDetail ?? detailQuery.data ?? null
+    const loading = !initialDetail && detailQuery.isPending
 
     // Dialog state
     const [reviewMode, setReviewMode] = useState<'APPROVE' | 'REJECT' | null>(null)
     const [suspendOpen, setSuspendOpen] = useState(false)
 
+    const refreshProduct = async () => {
+        const result = await getProductDetailAction(id)
+        if (!result.ok || !result.data) return
+        setUpdatedProduct(result.data)
+        setSelectedImage(result.data.images?.[0] ?? null)
+    }
+
     useEffect(() => {
-        let mounted = true
-        async function load() {
-            setLoading(true)
-            const res = await getProductDetailAction(id)
-            if (mounted) {
-                if (res.ok && res.data) {
-                    setProduct(res.data)
-                    if (res.data.images?.[0]) setSelectedImage(res.data.images[0])
-                } else {
-                    toast.error(t('notFoundTitle'))
-                }
-                setLoading(false)
-            }
-        }
-        void load()
-        return () => {
-            mounted = false
-        }
-    }, [id, t])
+        if (detailQuery.isError) toast.error(t('notFoundTitle'))
+    }, [detailQuery.isError, t])
 
     if (loading) {
         return (
@@ -386,7 +390,7 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                 onOpenChange={(open) => !open && setReviewMode(null)}
                 onSucceeded={() => {
                     setReviewMode(null)
-                    void getProductDetailAction(id).then((r) => r.ok && r.data && setProduct(r.data))
+                    void refreshProduct()
                 }}
             />
 
@@ -398,7 +402,7 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                 onOpenChange={setSuspendOpen}
                 onSucceeded={() => {
                     setSuspendOpen(false)
-                    void getProductDetailAction(id).then((r) => r.ok && r.data && setProduct(r.data))
+                    void refreshProduct()
                 }}
             />
         </div>

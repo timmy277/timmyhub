@@ -72,7 +72,7 @@ export async function ProductManagementPage({ tabs }: ProductManagementPageProps
         const detailRes = await getProductDetailAction(active.id)
         const productDetail = detailRes.ok ? detailRes.data : null
         activeLabel = productDetail?.name
-        panel = <ProductDetailPanel id={active.id} isAdmin={isAdmin} initialDetail={productDetail} />
+        panel = <ProductDetailPanel key={active.id} id={active.id} isAdmin={isAdmin} initialDetail={productDetail} />
     } else {
         const result = isAdmin
             ? await listAdminProductsAction({ pageSize: 100 })

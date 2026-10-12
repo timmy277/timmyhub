@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import type { Resolver } from 'react-hook-form'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -36,7 +37,7 @@ import {
     SelectItem,
     Switch,
 } from '@/components'
-import { VOUCHER_TAB } from '@/constants'
+import { QUERY_KEY, VOUCHER_TAB } from '@/constants'
 import {
     formatCurrencyVND,
     formatDisplayDate,
@@ -126,20 +127,15 @@ export function VoucherFormPanel({ initialData, campaignOptions, onSuccess, isSe
         [initialData, searchParams],
     )
 
-    const [dynamicCampaigns, setDynamicCampaigns] = useState<{ value: string; label: string }[]>([])
-
-    useEffect(() => {
-        if (isSeller || (campaignOptions && campaignOptions.length > 0)) return
-        let isMounted = true
-        void listAdminCampaignsAction({ page: 1, pageSize: 100 }).then((res) => {
-            if (isMounted && res.ok) {
-                setDynamicCampaigns(res.data.items.map((c) => ({ value: c.id, label: c.name })))
-            }
-        })
-        return () => {
-            isMounted = false
-        }
-    }, [campaignOptions, isSeller])
+    const { data: dynamicCampaigns = [] } = useQuery({
+        queryKey: QUERY_KEY.PROMOTION.CAMPAIGNS,
+        queryFn: async () => {
+            const result = await listAdminCampaignsAction({ page: 1, pageSize: 100 })
+            return result.ok ? result.data.items.map((campaign) => ({ value: campaign.id, label: campaign.name })) : []
+        },
+        enabled: !isSeller && !campaignOptions?.length,
+        staleTime: 5 * 60 * 1000,
+    })
 
     const campaignList = campaignOptions && campaignOptions.length > 0 ? campaignOptions : dynamicCampaigns
 
