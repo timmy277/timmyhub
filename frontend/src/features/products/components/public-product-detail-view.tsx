@@ -20,6 +20,7 @@ import {
     TicketIcon,
     TruckIcon,
     ZapIcon,
+    ZoomInIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
@@ -38,6 +39,8 @@ import {
     TabsTrigger,
 } from '@/components/ui'
 import { ROUTE } from '@/constants'
+import { ProductReviewsSection } from '@/features/engagement'
+import { MediaLightbox, type MediaLightboxItem } from '@/features/media'
 import { useAddToCart, useMySavedVoucherIds, usePublicAvailableVouchers, useSaveUserVoucher } from '@/hooks'
 import { formatCurrencyVND } from '@/utils'
 
@@ -58,16 +61,26 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
     }, [product.images])
 
     const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+    const [isLightboxOpen, setIsLightboxOpen] = useState(false)
     const [isWishlist, setIsWishlist] = useState(false)
     const [quantity, setQuantity] = useState(1)
     const [quantityInput, setQuantityInput] = useState('1')
     const addToCartMutation = useAddToCart()
+
+    const productLightboxItems = useMemo<MediaLightboxItem[]>(() => {
+        return allImages.map((imgUrl, i) => ({
+            url: imgUrl,
+            type: 'IMAGE',
+            title: `${product.name} (Ảnh ${i + 1}/${allImages.length})`,
+        }))
+    }, [allImages, product.name])
 
     // ===== Voucher / Promotion State =====
     const { data: availableVouchers = [] } = usePublicAvailableVouchers()
     const { data: savedVoucherIds = [] } = useMySavedVoucherIds()
     const saveVoucherMutation = useSaveUserVoucher()
     const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false)
+    const [activeDetailTab, setActiveDetailTab] = useState('description')
 
     // Lọc voucher áp dụng cho sản phẩm này: Freeship, Sàn TimmyHub, hoặc Shop tương ứng
     const applicableVouchers = useMemo(() => {
@@ -325,7 +338,10 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                      * ════════════════════════════════════════════════════════════════ */}
                     <div className="lg:col-span-6 space-y-4">
                         {/* Main Stage Image with Padded Card Frame */}
-                        <div className="group relative aspect-square w-full rounded-3xl border border-border/80 bg-card/85 backdrop-blur-md p-3 sm:p-4 shadow-md flex items-center justify-center">
+                        <div
+                            className="group relative aspect-square w-full rounded-3xl border border-border/80 bg-card/85 backdrop-blur-md p-3 sm:p-4 shadow-md flex items-center justify-center cursor-zoom-in"
+                            onClick={() => setIsLightboxOpen(true)}
+                        >
                             <div className="relative size-full overflow-hidden rounded-2xl bg-muted/20">
                                 <Image
                                     src={allImages[selectedImageIndex] || allImages[0]!}
@@ -339,7 +355,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                             </div>
 
                             {/* Floating Badges */}
-                            <div className="absolute top-5 left-5 flex flex-col gap-2 z-10">
+                            <div className="absolute top-5 left-5 flex flex-col gap-2 z-10 pointer-events-none">
                                 {discountPercent > 0 && (
                                     <Badge className="bg-destructive text-white font-extrabold text-xs px-2.5 py-1 shadow-md">
                                         {t('discount', { percent: discountPercent })}
@@ -351,7 +367,10 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                             </div>
 
                             {/* Actions Top Right */}
-                            <div className="absolute top-5 right-5 flex items-center gap-2 z-10">
+                            <div
+                                className="absolute top-5 right-5 flex items-center gap-2 z-10"
+                                onClick={(e) => e.stopPropagation()}
+                            >
                                 <button
                                     onClick={handleShare}
                                     aria-label="Chia sẻ sản phẩm"
@@ -372,7 +391,12 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                 </button>
                             </div>
 
-                            {/* Current Image Indicator */}
+                            {/* Bottom Zoom & Count Indicators */}
+                            <div className="absolute bottom-5 left-5 rounded-full bg-black/60 px-3 py-1 font-medium text-xs text-white backdrop-blur-md z-10 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <ZoomInIcon className="size-3.5" />
+                                <span>Phóng to</span>
+                            </div>
+
                             <div className="absolute bottom-5 right-5 rounded-full bg-black/60 px-3 py-1 font-mono text-xs font-semibold text-white backdrop-blur-md z-10">
                                 {t('photosCount', { current: selectedImageIndex + 1, total: allImages.length })}
                             </div>
@@ -440,17 +464,27 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
 
                             {/* Ratings & Social Counts */}
                             <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground pt-1">
-                                <div className="flex items-center gap-1 text-foreground font-semibold">
-                                    <span className="text-amber-500 font-bold">{product.ratingAvg.toFixed(1)}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        document
+                                            .getElementById('product-reviews')
+                                            ?.scrollIntoView({ behavior: 'smooth' })
+                                    }}
+                                    className="flex items-center gap-1.5 text-foreground font-semibold hover:opacity-80 transition-opacity cursor-pointer group"
+                                >
+                                    <span className="text-amber-500 font-bold underline-offset-4 group-hover:underline">
+                                        {product.ratingAvg.toFixed(1)}
+                                    </span>
                                     <div className="flex items-center text-amber-400">
                                         {[...Array(5)].map((_, i) => (
                                             <StarIcon key={i} className="size-3.5 fill-current" />
                                         ))}
                                     </div>
                                     <span className="text-muted-foreground font-normal">
-                                        ({product.ratingCount || 128} đánh giá)
+                                        ({t('tabReviews', { count: product.ratingCount || 0 })})
                                     </span>
-                                </div>
+                                </button>
                                 <span className="text-border">•</span>
                                 <div>
                                     Đã bán: <strong className="text-foreground">{product.soldCount || 342}</strong>
@@ -755,7 +789,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                  * BOTTOM SECTION: DETAILED SPECIFICATIONS & PRODUCT DESCRIPTION
                  * ════════════════════════════════════════════════════════════════ */}
                 <div className="mt-8 rounded-3xl border border-border/80 bg-card/85 backdrop-blur-md p-6 sm:p-8 shadow-sm">
-                    <Tabs defaultValue="description" className="space-y-6">
+                    <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab} className="space-y-6">
                         <TabsList className="rounded-xl bg-muted/60 p-1 border border-border/60">
                             <TabsTrigger value="description" className="rounded-lg text-xs font-bold px-4">
                                 {t('tabOverview')}
@@ -780,7 +814,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
 
                         <TabsContent value="specs" className="space-y-4">
                             <h3 className="font-heading text-lg font-bold text-foreground">Bảng thông số sản phẩm</h3>
-                            <div className="divide-y divide-border/60 rounded-2xl border border-border/60 overflow-hidden text-xs">
+                            <div className="divide-y border-border/60 rounded-2xl border border-border/60 overflow-hidden text-xs">
                                 <div className="grid grid-cols-3 p-3 bg-muted/30">
                                     <span className="font-semibold text-muted-foreground">Tên sản phẩm</span>
                                     <span className="col-span-2 font-bold text-foreground">{product.name}</span>
@@ -832,6 +866,16 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                             </div>
                         </TabsContent>
                     </Tabs>
+                </div>
+
+                {/* ════════════════════════════════════════════════════════════════
+                 * REVIEWS & RATINGS SECTION
+                 * ════════════════════════════════════════════════════════════════ */}
+                <div
+                    id="product-reviews"
+                    className="mt-8 rounded-3xl border border-border/80 bg-card/85 backdrop-blur-md p-6 sm:p-8 shadow-sm"
+                >
+                    <ProductReviewsSection productId={product.id} productName={product.name} />
                 </div>
 
                 {/* ════════════════════════════════════════════════════════════════
@@ -990,6 +1034,15 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Gallery Fullscreen Lightbox */}
+            {isLightboxOpen && (
+                <MediaLightbox
+                    items={productLightboxItems}
+                    initialIndex={selectedImageIndex}
+                    onClose={() => setIsLightboxOpen(false)}
+                />
+            )}
         </div>
     )
 }

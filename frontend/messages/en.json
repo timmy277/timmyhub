@@ -573,7 +573,20 @@
       "cancelFailed": "Failed to cancel order: {error}",
       "searchEmptyTitle": "No orders found",
       "searchEmptyDescription": "No orders match \"{query}\"",
-      "clearSearch": "Clear search"
+      "clearSearch": "Clear search",
+      "continueShopping": "Continue Shopping",
+      "sellerManagement": "Go to Seller Orders",
+      "breadcrumbHome": "Home",
+      "breadcrumbOrders": "My Orders",
+      "close": "Close",
+      "reasons": {
+        "changeAddress": "Want to change shipping address",
+        "changePayment": "Want to change payment method",
+        "changeMind": "Changed my mind, no longer want to buy",
+        "betterPrice": "Found better price elsewhere",
+        "wrongItem": "Ordered wrong product or quantity",
+        "other": "Other"
+      }
     }
   },
   "validation": {
@@ -1848,5 +1861,81 @@
     "quickSettingsTitle": "Settings & Approvals",
     "approvalDesc": "Require admin approval for participating seller products",
     "activeDesc": "Enable to make this campaign publicly visible on schedule"
+  },
+  "reviews": {
+    "sectionTitle": "Product Reviews",
+    "outOfFive": "out of 5 stars",
+    "stars": "stars",
+    "totalReviewsCount": "{count} ratings",
+    "verifiedPurchase": "Verified Purchase",
+    "sellerReply": "Seller",
+    "dialog": {
+      "title": "Write a Review",
+      "description": "Share your genuine experience to help other shoppers make better decisions.",
+      "productQuality": "Product Quality",
+      "quickTagsLabel": "Quick Feedback Suggestions",
+      "completedOrder": "Completed Order",
+      "quickTags": {
+        "quality": "Great Quality 👍",
+        "fastDelivery": "Fast Shipping ⚡",
+        "goodPackaging": "Carefully Packed 📦",
+        "asDescribed": "Item as Described 💯",
+        "worthTheMoney": "Great Value 💰",
+        "greatService": "Attentive Support 💬"
+      }
+    },
+    "product": {
+      "variant": "Variation"
+    },
+    "ratings": {
+      "terrible": "Terrible",
+      "poor": "Poor",
+      "average": "Average",
+      "good": "Good",
+      "excellent": "Excellent"
+    },
+    "form": {
+      "commentLabel": "Your review",
+      "commentPlaceholder": "Share your thoughts on product quality, packaging, delivery speed...",
+      "mediaLabel": "Real Photos & Videos",
+      "mediaDescription": "Upload real photos or videos to make your review more informative (up to 6 files)",
+      "replyPlaceholder": "Write your reply...",
+      "replyTo": "Reply to {name}..."
+    },
+    "filters": {
+      "all": "All",
+      "hasMedia": "With Photos / Videos"
+    },
+    "sort": {
+      "label": "Sort by",
+      "newest": "Newest",
+      "helpful": "Most Helpful",
+      "ratingDesc": "Highest Rating"
+    },
+    "buttons": {
+      "cancel": "Cancel",
+      "submitting": "Submitting...",
+      "submitReview": "Submit Review",
+      "helpful": "Helpful",
+      "reply": "Reply",
+      "sendReply": "Send",
+      "writeReview": "Review",
+      "reviewed": "Reviewed"
+    },
+    "messages": {
+      "createSuccess": "Thank you for reviewing this product!",
+      "replySuccess": "Reply submitted successfully!"
+    },
+    "errors": {
+      "createFailed": "Failed to submit review. Please try again.",
+      "replyFailed": "Failed to submit reply. Please try again.",
+      "voteFailed": "Failed to update vote. Please try again.",
+      "loadTitle": "Could not load reviews",
+      "loadDescription": "An error occurred while connecting to the server. Please click to retry."
+    },
+    "empty": {
+      "title": "No reviews yet",
+      "description": "Be the first to purchase and share your review for this product!"
+    }
   }
 }

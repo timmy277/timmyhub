@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
+import { useTranslations } from 'next-intl'
 import {
     ArrowLeftIcon,
     ChevronRightIcon,
@@ -23,6 +24,8 @@ import {
     ShoppingBagIcon,
     RotateCcwIcon,
     TicketIcon,
+    StarIcon,
+    CheckCircle2Icon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { OrderDetail } from '@timmyhub/contracts'
@@ -44,6 +47,7 @@ import {
 import { QUERY_KEY, ROUTE } from '@/constants'
 import { addToCartAction } from '@/features/cart'
 import { cancelOrderAction } from '@/features/checkout'
+import { CreateReviewDialog } from '@/features/engagement'
 import { formatCurrencyVND } from '@/utils'
 import { OrderStatusBadge, PaymentStatusBadge } from './order-status-badge'
 import { OrderTimeline } from './order-timeline'
@@ -65,6 +69,7 @@ const CANCEL_REASONS = [
 ]
 
 export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false, onClose }: OrderDetailViewProps) {
+    const tReview = useTranslations('reviews')
     const router = useRouter()
     const queryClient = useQueryClient()
     const [cancelledOrder, setCancelledOrder] = useState<OrderDetail | null>(null)
@@ -77,6 +82,8 @@ export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false, on
     const [selectedReason, setSelectedReason] = useState<string>(CANCEL_REASONS[0]!)
     const [customReason, setCustomReason] = useState('')
     const [isSubmittingCancel, setIsSubmittingCancel] = useState(false)
+    // Review modal state
+    const [reviewingItem, setReviewingItem] = useState<OrderDetail['items'][number] | null>(null)
 
     const canCancel = order.status === 'PENDING' || order.status === 'CONFIRMED'
 
@@ -212,6 +219,33 @@ export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false, on
                                 Huỷ đơn hàng
                             </Button>
                         )}
+                        {(order.status === 'DELIVERED' || order.status === 'COMPLETED') &&
+                            (order.items.some((i) => !i.isReviewed) ? (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        const targetItem = order.items.find((i) => !i.isReviewed) || order.items[0]
+                                        if (targetItem) setReviewingItem(targetItem)
+                                    }}
+                                    className="text-xs sm:text-sm font-semibold rounded-lg border-amber-500/50 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10 shadow-2xs gap-1.5 transition-colors"
+                                >
+                                    <StarIcon className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                                    {tReview('buttons.writeReview')}
+                                </Button>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled
+                                    className="text-xs sm:text-sm text-muted-foreground gap-1.5 opacity-80 cursor-default"
+                                >
+                                    <CheckCircle2Icon className="h-3.5 w-3.5 text-emerald-500" />
+                                    {tReview('buttons.reviewed')}
+                                </Button>
+                            ))}
                         <Button
                             variant="default"
                             size="sm"
@@ -385,11 +419,29 @@ export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false, on
                                             </div>
                                         </div>
 
-                                        <div className="text-right shrink-0 sm:self-center flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-border/40">
+                                        <div className="text-right shrink-0 sm:self-center flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-border/40 gap-1.5">
                                             <span className="text-xs text-muted-foreground sm:hidden">Tổng:</span>
                                             <span className="font-bold text-sm sm:text-base text-foreground">
                                                 {formatCurrencyVND(item.lineTotal)}
                                             </span>
+                                            {(order.status === 'DELIVERED' || order.status === 'COMPLETED') &&
+                                                (item.isReviewed ? (
+                                                    <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
+                                                        <CheckCircle2Icon className="h-3 w-3 text-emerald-500" />
+                                                        Đã đánh giá
+                                                    </span>
+                                                ) : (
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => setReviewingItem(item)}
+                                                        className="h-7 px-2.5 text-xs font-semibold rounded-lg border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10 shadow-2xs gap-1"
+                                                    >
+                                                        <StarIcon className="h-3 w-3 fill-amber-400 text-amber-400" />
+                                                        Đánh giá
+                                                    </Button>
+                                                ))}
                                         </div>
                                     </div>
                                 ))}
@@ -657,6 +709,28 @@ export function OrderDetailView({ initialOrder, onBack, isModalOrTab = false, on
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Modal Đánh giá sản phẩm */}
+            {reviewingItem && (
+                <CreateReviewDialog
+                    open={Boolean(reviewingItem)}
+                    onOpenChange={(open) => !open && setReviewingItem(null)}
+                    product={{
+                        id: reviewingItem.productId,
+                        name: reviewingItem.productName,
+                        imageUrl: reviewingItem.imageUrl,
+                        variantLabel: reviewingItem.variantLabel,
+                    }}
+                    orderItemId={reviewingItem.id}
+                    onSuccess={() => {
+                        void queryClient.invalidateQueries({ queryKey: QUERY_KEY.ORDER.ALL })
+                        void queryClient.invalidateQueries({ queryKey: QUERY_KEY.ORDER.DETAIL(order.id) })
+                        startTransition(() => {
+                            router.refresh()
+                        })
+                    }}
+                />
+            )}
         </div>
     )
 }

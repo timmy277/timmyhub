@@ -36,6 +36,7 @@ import {
 } from '@/components'
 import { QUERY_KEY, ROUTE, SEARCH_DEBOUNCE_MS } from '@/constants'
 import { cancelOrderAction, getMyOrdersAction, getOrderByIdAction } from '@/features/checkout'
+import { CreateReviewDialog } from '@/features/engagement'
 import { OrderCard, OrderDetailView } from '@/features/orders'
 import { useDebouncedValue } from '@/hooks'
 
@@ -75,6 +76,10 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
     const [selectedReason, setSelectedReason] = useState<string>(CANCEL_REASONS[0]!)
     const [customReason, setCustomReason] = useState('')
     const [isSubmittingCancel, setIsSubmittingCancel] = useState(false)
+    const [reviewingItem, setReviewingItem] = useState<{
+        order: OrderDetail
+        item: OrderDetail['items'][number]
+    } | null>(null)
 
     // Khi tab là ALL thì không truyền status lên API (lấy tất cả)
     const apiStatus = activeTab === 'ALL' ? undefined : activeTab
@@ -329,6 +334,7 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
                                     onCancelClick={(o) => setCancellingOrder(o)}
                                     onViewDetail={handleViewDetail}
                                     onCloseDialog={onCloseDialog}
+                                    onReviewClick={(o, item) => setReviewingItem({ order: o, item })}
                                 />
                             ))}
                         </div>
@@ -429,6 +435,24 @@ export function OrdersTab({ onCloseDialog }: OrdersTabProps) {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Modal Đánh giá sản phẩm */}
+            {reviewingItem && (
+                <CreateReviewDialog
+                    open={Boolean(reviewingItem)}
+                    onOpenChange={(open) => !open && setReviewingItem(null)}
+                    product={{
+                        id: reviewingItem.item.productId,
+                        name: reviewingItem.item.productName,
+                        imageUrl: reviewingItem.item.imageUrl,
+                        variantLabel: reviewingItem.item.variantLabel,
+                    }}
+                    orderItemId={reviewingItem.item.id}
+                    onSuccess={() => {
+                        void queryClient.invalidateQueries({ queryKey: QUERY_KEY.ORDER.ALL })
+                    }}
+                />
+            )}
         </div>
     )
 }

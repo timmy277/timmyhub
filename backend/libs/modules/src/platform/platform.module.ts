@@ -7,6 +7,7 @@ import { AuditContextInterceptor } from './auth/interceptors/index'
 import { RbacConsistencyChecker } from './auth/checkers/index'
 import { JwtAuthGuard, PermissionsGuard, RolesGuard } from './auth/guards/index'
 import { PlatformEventsListener } from './events/index'
+import { ProductGateway } from './gateways/index'
 import { PlatformController } from './platform.controller'
 import { PlatformService } from './platform.service'
 
@@ -19,6 +20,7 @@ import { PlatformService } from './platform.service'
     providers: [
         PlatformService,
         PlatformEventsListener,
+        ProductGateway,
         RbacConsistencyChecker,
         // Bọc mọi request để audit entry ghi được IP/User-Agent (xem audit-context.interceptor.ts).
         { provide: APP_INTERCEPTOR, useClass: AuditContextInterceptor },

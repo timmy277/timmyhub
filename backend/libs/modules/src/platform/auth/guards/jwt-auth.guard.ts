@@ -30,10 +30,27 @@ export class JwtAuthGuard implements CanActivate {
             context.getHandler(),
             context.getClass(),
         ])
-        if (isPublic) return true
-
         const request = context.switchToHttp().getRequest<Request>()
         const token = this.extractBearerToken(request)
+
+        if (isPublic) {
+            if (token) {
+                const rawPublicKey = this.configService.get<string>('JWT_ACCESS_PUBLIC_KEY')
+                if (rawPublicKey) {
+                    try {
+                        const publicKey = createPublicKey(normalizePem(rawPublicKey))
+                        const payload = await this.jwtService.verifyAsync<AccessTokenPayload>(token, {
+                            algorithms: [ACCESS_TOKEN_VERIFY_ALGORITHM],
+                            publicKey: publicKey as unknown as string,
+                        })
+                        request.user = { id: payload.sub, email: payload.email, roles: payload.roles }
+                    } catch {
+                        // Public route: ignore invalid/expired token without failing request
+                    }
+                }
+            }
+            return true
+        }
         if (!token) {
             throw new ApiError('UNAUTHORIZED', { messageKey: apiMessageKey('auth.missingAccessToken') })
         }

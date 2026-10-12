@@ -5,13 +5,14 @@ import {
     AlertCircle,
     CameraIcon,
     CheckCircle2,
-    Eye,
     Film,
     Image as ImageIcon,
     Loader2,
     Trash2,
     UploadCloud,
     X,
+    ZoomIn,
+    Play,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -184,7 +185,7 @@ export function UploadSection<TValue = string | string[] | MediaAsset | MediaAss
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [isDragging, setIsDragging] = useState(false)
     const [queue, setQueue] = useState<UploadQueueProgressItem[]>([])
-    const [lightboxItem, setLightboxItem] = useState<MediaLightboxItem | null>(null)
+    const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
     // ===== Upload Mutations =====
     const presignedUpload = usePresignedUpload()
@@ -207,6 +208,18 @@ export function UploadSection<TValue = string | string[] | MediaAsset | MediaAss
         if (Array.isArray(value)) return value as unknown as Array<string | MediaAsset>
         return [value as unknown as string | MediaAsset]
     }, [value])
+
+    // ===== Lightbox Items List =====
+    const allLightboxItems = useMemo<MediaLightboxItem[]>(() => {
+        return existingItems.map((it, i) => {
+            const url = normalizeToUrl(it)
+            return {
+                url,
+                type: isVideoUrl(url) ? 'VIDEO' : 'IMAGE',
+                title: `Tệp ${i + 1}`,
+            }
+        })
+    }, [existingItems])
 
     // ===== Default Helper Text =====
     const defaultHelperText = useMemo(() => {
@@ -384,6 +397,9 @@ export function UploadSection<TValue = string | string[] | MediaAsset | MediaAss
                     ;(onChange as ((val: unknown) => void) | undefined)?.(newUrls[0] ?? null)
                 }
                 toast.success(`Đã tải lên thành công ${uploadedAssets.length} file.`)
+
+                // Xoá các file đã tải lên thành công khỏi queue để tránh hiển thị duplicate với existingItems
+                setQueue((prev) => prev.filter((item) => item.status !== 'success'))
             }
         },
         [
@@ -719,138 +735,157 @@ export function UploadSection<TValue = string | string[] | MediaAsset | MediaAss
             {error && <p className="text-xs font-medium text-destructive">{error}</p>}
 
             {/* Preview Section */}
-            {showPreview && (queue.length > 0 || existingItems.length > 0) && (
-                <div className="flex flex-col gap-2 pt-1">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>
-                            Đã tải lên: {existingItems.length}
-                            {isMultiple && ` / tối đa ${effectiveMaxFiles}`}
-                        </span>
-                    </div>
+            {showPreview &&
+                (queue.some((i) => i.status === 'uploading' || i.status === 'error') || existingItems.length > 0) && (
+                    <div className="flex flex-col gap-2 pt-1">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>
+                                Đã tải lên: {existingItems.length}
+                                {isMultiple && ` / tối đa ${effectiveMaxFiles}`}
+                            </span>
+                        </div>
 
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                        {/* 1. Existing Saved Files */}
-                        {existingItems.map((item, idx) => {
-                            const url = normalizeToUrl(item)
-                            const isVid = isVideoUrl(url)
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                            {/* 1. Existing Saved Files */}
+                            {existingItems.map((item, idx) => {
+                                const url = normalizeToUrl(item)
+                                const isVid = isVideoUrl(url)
 
-                            return (
-                                <div
-                                    key={`existing-${idx}`}
-                                    className="group relative flex aspect-square flex-col overflow-hidden rounded-xl border bg-muted/20 transition-all hover:shadow-md"
-                                >
-                                    {isVid ? (
-                                        <div className="flex size-full items-center justify-center bg-black/80">
-                                            <video src={url} className="size-full object-cover" muted playsInline />
-                                            <Film className="absolute size-8 text-white/70" />
-                                        </div>
-                                    ) : (
-                                        <Image
-                                            src={url}
-                                            alt=""
-                                            fill
-                                            sizes="120px"
-                                            className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                        />
-                                    )}
+                                return (
+                                    <div
+                                        key={`existing-${idx}`}
+                                        className="group relative flex aspect-square flex-col overflow-hidden rounded-2xl border-2 border-border/80 bg-muted/20 shadow-2xs transition-all duration-200 hover:border-primary/70 hover:shadow-md cursor-pointer select-none"
+                                        onClick={() => setLightboxIndex(idx)}
+                                    >
+                                        {isVid ? (
+                                            <div className="relative size-full flex items-center justify-center bg-black/90">
+                                                <video src={url} className="size-full object-cover" muted playsInline />
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/20 transition-colors">
+                                                    <div className="size-9 rounded-full bg-white/20 text-white backdrop-blur-md border border-white/20 flex items-center justify-center group-hover:scale-110 transition-transform shadow-md">
+                                                        <Play className="size-4 fill-white text-white ml-0.5" />
+                                                    </div>
+                                                </div>
+                                                <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/70 text-white text-[10px] font-medium flex items-center gap-1 backdrop-blur-sm">
+                                                    <Film className="size-2.5 text-amber-400" /> Video
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <div className="relative size-full">
+                                                <Image
+                                                    src={url}
+                                                    alt=""
+                                                    fill
+                                                    sizes="(max-width: 640px) 140px, 180px"
+                                                    className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                />
+                                            </div>
+                                        )}
 
-                                    {/* Action overlay */}
-                                    <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 backdrop-blur-[2px] transition-opacity duration-200 group-hover:opacity-100">
+                                        {/* Top left badge: Index */}
+                                        <span className="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 rounded-md bg-black/60 text-white font-mono text-[10px] font-bold backdrop-blur-md pointer-events-none">
+                                            #{idx + 1}
+                                        </span>
+
+                                        {/* Top right: Always accessible delete button */}
                                         <button
                                             type="button"
-                                            className="flex size-8 items-center justify-center rounded-lg bg-white/20 text-white backdrop-blur-md transition-colors hover:bg-white/40"
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                setLightboxItem({
-                                                    url,
-                                                    type: isVid ? 'VIDEO' : 'IMAGE',
-                                                })
-                                            }}
-                                            title="Xem phóng to"
-                                        >
-                                            <Eye className="size-4" />
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            className="flex size-8 items-center justify-center rounded-lg bg-destructive/80 text-white backdrop-blur-md transition-colors hover:bg-destructive"
+                                            className="absolute top-1.5 right-1.5 z-20 size-6 sm:size-7 rounded-full bg-black/60 hover:bg-rose-600 text-white backdrop-blur-md flex items-center justify-center shadow-md transition-all hover:scale-110 active:scale-95"
                                             onClick={(e) => {
                                                 e.stopPropagation()
                                                 handleRemoveExisting(idx)
                                             }}
                                             disabled={disabled}
                                             title="Xoá file này"
+                                            aria-label="Xoá file"
                                         >
-                                            <Trash2 className="size-4" />
+                                            <X className="size-3.5" />
                                         </button>
-                                    </div>
-                                </div>
-                            )
-                        })}
 
-                        {/* 2. In-Progress Uploading Items */}
-                        {queue.map((item) => (
-                            <div
-                                key={item.id}
-                                className="relative flex aspect-square flex-col justify-end overflow-hidden rounded-xl border bg-muted/40 p-2.5"
-                            >
-                                {item.type === 'VIDEO' ? (
-                                    <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                                        <Film className="size-8 text-white/50" />
+                                        {/* Center Hover Action Hint */}
+                                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-[1px] pointer-events-none">
+                                            <div className="size-8 rounded-full bg-white/25 text-white backdrop-blur-md flex items-center justify-center shadow-sm">
+                                                <ZoomIn className="size-4" />
+                                            </div>
+                                        </div>
                                     </div>
-                                ) : (
-                                    <Image
-                                        src={item.previewUrl}
-                                        alt=""
-                                        fill
-                                        unoptimized
-                                        sizes="120px"
-                                        className="size-full object-cover opacity-60"
-                                    />
-                                )}
+                                )
+                            })}
 
-                                <div className="relative z-10 flex flex-col gap-1 rounded-lg bg-black/75 p-2 text-white backdrop-blur-sm">
-                                    <div className="flex items-center justify-between text-[11px]">
-                                        <span className="truncate max-w-[80px]">{item.file.name}</span>
-                                        {item.status === 'uploading' && (
-                                            <span className="font-semibold">{item.progress}%</span>
-                                        )}
-                                        {item.status === 'success' && (
-                                            <CheckCircle2 className="size-3.5 text-emerald-400" />
-                                        )}
-                                        {item.status === 'error' && <AlertCircle className="size-3.5 text-rose-400" />}
-                                    </div>
-
-                                    {item.status === 'uploading' && (
-                                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/20">
-                                            <div
-                                                className="h-full bg-primary transition-all duration-200"
-                                                style={{ width: `${item.progress}%` }}
+                            {/* 2. In-Progress Uploading Items */}
+                            {queue
+                                .filter((item) => item.status === 'uploading' || item.status === 'error')
+                                .map((item) => (
+                                    <div
+                                        key={item.id}
+                                        className="relative flex aspect-square flex-col justify-end overflow-hidden rounded-2xl border-2 border-border/80 bg-muted/40 p-2 shadow-2xs"
+                                    >
+                                        {item.type === 'VIDEO' ? (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+                                                <Film className="size-8 text-white/50" />
+                                            </div>
+                                        ) : (
+                                            <Image
+                                                src={item.previewUrl}
+                                                alt=""
+                                                fill
+                                                unoptimized
+                                                sizes="120px"
+                                                className="size-full object-cover opacity-60"
                                             />
-                                        </div>
-                                    )}
+                                        )}
 
-                                    {item.status === 'error' && (
-                                        <div className="flex items-center justify-between pt-0.5 text-[10px] text-rose-300">
-                                            <span>Lỗi tải lên</span>
-                                            <button
-                                                type="button"
-                                                className="text-white hover:underline"
-                                                onClick={() => handleRemoveQueueItem(item.id)}
-                                            >
-                                                Bỏ qua
-                                            </button>
+                                        <div className="relative z-10 flex flex-col gap-1 rounded-xl bg-black/80 p-1.5 sm:p-2 text-white backdrop-blur-md">
+                                            <div className="flex items-center justify-between text-[10px] sm:text-[11px]">
+                                                <span className="truncate max-w-[65px] font-medium">
+                                                    {item.file.name}
+                                                </span>
+                                                {item.status === 'uploading' && (
+                                                    <span className="font-semibold font-mono">{item.progress}%</span>
+                                                )}
+                                                {item.status === 'success' && (
+                                                    <CheckCircle2 className="size-3 text-emerald-400" />
+                                                )}
+                                                {item.status === 'error' && (
+                                                    <AlertCircle className="size-3 text-rose-400" />
+                                                )}
+                                            </div>
+
+                                            {item.status === 'uploading' && (
+                                                <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/20">
+                                                    <div
+                                                        className="h-full bg-primary transition-all duration-200"
+                                                        style={{ width: `${item.progress}%` }}
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {item.status === 'error' && (
+                                                <div className="flex items-center justify-between pt-0.5 text-[10px] text-rose-300">
+                                                    <span>Lỗi tải lên</span>
+                                                    <button
+                                                        type="button"
+                                                        className="text-white hover:underline font-medium"
+                                                        onClick={() => handleRemoveQueueItem(item.id)}
+                                                    >
+                                                        Bỏ qua
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
+                                    </div>
+                                ))}
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
 
             {/* Lightbox Viewer */}
-            <MediaLightbox item={lightboxItem} onClose={() => setLightboxItem(null)} />
+            {lightboxIndex !== null && (
+                <MediaLightbox
+                    items={allLightboxItems}
+                    initialIndex={lightboxIndex}
+                    onClose={() => setLightboxIndex(null)}
+                />
+            )}
         </div>
     )
 }

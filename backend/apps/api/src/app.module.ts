@@ -10,6 +10,7 @@ import { SellerModule } from '@timmyhub/modules/seller'
 import { CartModule } from '@timmyhub/modules/cart'
 import { OrderModule } from '@timmyhub/modules/order'
 import { PromotionModule } from '@timmyhub/modules/promotion'
+import { EngagementModule } from '@timmyhub/modules/engagement'
 import { PrismaModule } from '@timmyhub/prisma'
 
 @Module({
@@ -25,6 +26,7 @@ import { PrismaModule } from '@timmyhub/prisma'
         CartModule,
         OrderModule,
         PromotionModule,
+        EngagementModule,
     ],
 })
 export class AppModule {}

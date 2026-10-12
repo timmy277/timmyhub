@@ -70,4 +70,11 @@ export const QUERY_KEY = {
         MY_SAVED_VOUCHERS: ['promotion', 'my-saved-vouchers'] as const,
         MY_VOUCHERS_LIST: (status?: string) => ['promotion', 'my-vouchers-list', status] as const,
     },
+    ENGAGEMENT: {
+        ALL: ['engagement'] as const,
+        REVIEWS: (productId: string, params?: Record<string, unknown>) =>
+            ['engagement', 'reviews', productId, params] as const,
+        SUMMARY: (productId: string) => ['engagement', 'summary', productId] as const,
+        PENDING: ['engagement', 'pending'] as const,
+    },
 } as const

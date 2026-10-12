@@ -1,8 +1,10 @@
 'use client'
 
-import React, { useMemo, useState, useTransition } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslations } from 'next-intl'
 import {
     AlertTriangleIcon,
     ChevronRightIcon,
@@ -15,7 +17,10 @@ import {
     XCircleIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
+
 import type { OrderDetail, OrderStatusType } from '@timmyhub/contracts'
+import { CancelOrderInputSchema } from '@timmyhub/contracts'
+
 import {
     Button,
     Dialog,
@@ -25,54 +30,104 @@ import {
     DialogHeader,
     DialogTitle,
     Input,
-    Textarea,
+    RadioGroup,
+    RadioGroupItem,
 } from '@/components'
-import { ROUTE, SELLER_SHOP_PERMISSION } from '@/constants'
-import { cancelOrderAction } from '@/features/checkout'
-import { usePermissions } from '@/hooks'
+import { FloatTextarea } from '@/components/common'
+import { QUERY_KEY, ROUTE, SEARCH_DEBOUNCE_MS, SELLER_SHOP_PERMISSION } from '@/constants'
+import { cancelOrderAction, getMyOrdersAction } from '@/features/checkout'
+import { CreateReviewDialog } from '@/features/engagement'
+import { useDebouncedValue, usePermissions } from '@/hooks'
+
 import { OrderCard } from './order-card'
 
 interface OrderListViewProps {
     initialOrders: OrderDetail[]
 }
 
-const ORDER_TABS: Array<{ label: string; status: OrderStatusType | 'ALL' }> = [
-    { label: 'Tất cả', status: 'ALL' },
-    { label: 'Chờ xác nhận', status: 'PENDING' },
-    { label: 'Đã xác nhận', status: 'CONFIRMED' },
-    { label: 'Đang giao hàng', status: 'SHIPPING' },
-    { label: 'Hoàn thành', status: 'DELIVERED' },
-    { label: 'Đã huỷ', status: 'CANCELLED' },
+const ORDER_TAB_CONFIG: Array<{ labelKey: string; status: OrderStatusType | 'ALL' }> = [
+    { labelKey: 'tabAll', status: 'ALL' },
+    { labelKey: 'tabPending', status: 'PENDING' },
+    { labelKey: 'tabConfirmed', status: 'CONFIRMED' },
+    { labelKey: 'tabShipping', status: 'SHIPPING' },
+    { labelKey: 'tabDelivered', status: 'DELIVERED' },
+    { labelKey: 'tabCancelled', status: 'CANCELLED' },
 ]
 
-const CANCEL_REASONS = [
-    'Muốn thay đổi địa chỉ giao hàng',
-    'Muốn đổi phương thức thanh toán',
-    'Đổi ý, không muốn mua nữa',
-    'Tìm thấy sản phẩm giá tốt hơn ở nơi khác',
-    'Đặt nhầm sản phẩm hoặc số lượng',
-    'Khác',
-]
+const CANCEL_REASON_KEYS = [
+    'changeAddress',
+    'changePayment',
+    'changeMind',
+    'betterPrice',
+    'wrongItem',
+    'other',
+] as const
 
 export function OrderListView({ initialOrders }: OrderListViewProps) {
-    const router = useRouter()
-    const { hasPermission } = usePermissions()
-    const isSeller = hasPermission(SELLER_SHOP_PERMISSION) || hasPermission('orders:orders:list:shop')
-    const [orders, setOrders] = useState<OrderDetail[]>(initialOrders)
+    // ===== State =====
     const [activeTab, setActiveTab] = useState<OrderStatusType | 'ALL'>('ALL')
     const [searchQuery, setSearchQuery] = useState('')
-    const [, startTransition] = useTransition()
 
-    // State cho Modal huỷ đơn
+    // Modal đánh giá sản phẩm
+    const [reviewingItem, setReviewingItem] = useState<{
+        order: OrderDetail
+        item: OrderDetail['items'][number]
+    } | null>(null)
+
+    // Modal huỷ đơn
     const [cancellingOrder, setCancellingOrder] = useState<OrderDetail | null>(null)
-    const [selectedReason, setSelectedReason] = useState<string>(CANCEL_REASONS[0]!)
+    const [selectedReasonKey, setSelectedReasonKey] = useState<string>(CANCEL_REASON_KEYS[0]!)
     const [customReason, setCustomReason] = useState('')
-    const [isSubmittingCancel, setIsSubmittingCancel] = useState(false)
 
-    // Lọc đơn hàng theo Tab và Query tìm kiếm
+    // ===== Hooks =====
+    const t = useTranslations('account.orders')
+    const router = useRouter()
+    const queryClient = useQueryClient()
+    const { hasPermission } = usePermissions()
+    const isSeller = hasPermission(SELLER_SHOP_PERMISSION) || hasPermission('orders:orders:list:shop')
+    const debouncedSearch = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS)
+
+    // Đồng bộ đơn hàng qua TanStack Query với initialData từ Server Component
+    const { data: orders = initialOrders } = useQuery<OrderDetail[]>({
+        queryKey: QUERY_KEY.ORDER.MY_ORDERS(),
+        queryFn: async () => {
+            const res = await getMyOrdersAction()
+            return res.ok ? res.data : initialOrders
+        },
+        initialData: initialOrders,
+    })
+
+    // Mutation huỷ đơn hàng qua React Query
+    const cancelOrderMutation = useMutation({
+        mutationFn: async ({ orderId, reason }: { orderId: string; reason: string }) => {
+            const validation = CancelOrderInputSchema.safeParse({ reason })
+            if (!validation.success) {
+                throw new Error(validation.error.issues[0]?.message || 'Lý do không hợp lệ')
+            }
+            return cancelOrderAction(orderId, reason)
+        },
+        onSuccess: (res) => {
+            if (!res.ok) {
+                toast.error(t('cancelFailed', { error: res.message || '' }))
+                return
+            }
+
+            toast.success(t('cancelSuccess'))
+            setCancellingOrder(null)
+            setCustomReason('')
+            setSelectedReasonKey(CANCEL_REASON_KEYS[0]!)
+            void queryClient.invalidateQueries({ queryKey: QUERY_KEY.ORDER.ALL })
+            router.refresh()
+        },
+        onError: (err: Error) => {
+            toast.error(t('cancelFailed', { error: err.message || '' }))
+        },
+    })
+
+    // ===== Derived =====
     const filteredOrders = useMemo(() => {
         return orders.filter((order) => {
-            // Lọc theo Tab
+            // Lọc theo Tab trạng thái
             if (activeTab !== 'ALL') {
                 if (activeTab === 'DELIVERED') {
                     if (order.status !== 'DELIVERED' && order.status !== 'COMPLETED') return false
@@ -81,9 +136,9 @@ export function OrderListView({ initialOrders }: OrderListViewProps) {
                 }
             }
 
-            // Lọc theo tìm kiếm (Mã đơn hoặc tên sản phẩm)
-            if (searchQuery.trim()) {
-                const query = searchQuery.toLowerCase().trim()
+            // Lọc theo Debounced Query tìm kiếm
+            if (debouncedSearch.trim()) {
+                const query = debouncedSearch.toLowerCase().trim()
                 const matchesId = order.id.toLowerCase().includes(query)
                 const matchesItem = order.items.some(
                     (it) =>
@@ -96,43 +151,23 @@ export function OrderListView({ initialOrders }: OrderListViewProps) {
 
             return true
         })
-    }, [orders, activeTab, searchQuery])
+    }, [orders, activeTab, debouncedSearch])
 
-    // Xử lý xác nhận huỷ đơn
-    const handleConfirmCancel = async () => {
+    // ===== Handlers =====
+    const handleConfirmCancel = () => {
         if (!cancellingOrder) return
 
-        const finalReason = selectedReason === 'Khác' ? customReason.trim() : selectedReason
-        if (selectedReason === 'Khác' && !finalReason) {
-            toast.error('Vui lòng nhập lý do huỷ đơn hàng')
+        const finalReason = selectedReasonKey === 'other' ? customReason.trim() : t(`reasons.${selectedReasonKey}`)
+
+        if (selectedReasonKey === 'other' && !finalReason) {
+            toast.error(t('customReasonPlaceholder'))
             return
         }
 
-        setIsSubmittingCancel(true)
-        try {
-            const res = await cancelOrderAction(cancellingOrder.id, finalReason)
-            if (!res.ok) {
-                toast.error(res.message || 'Huỷ đơn hàng thất bại')
-                return
-            }
-
-            toast.success('Đã huỷ đơn hàng thành công')
-            // Cập nhật trạng thái trực tiếp trong danh sách
-            setOrders((prev) =>
-                prev.map((o) =>
-                    o.id === cancellingOrder.id ? { ...o, status: 'CANCELLED', cancelReason: finalReason } : o,
-                ),
-            )
-            setCancellingOrder(null)
-            setCustomReason('')
-            startTransition(() => {
-                router.refresh()
-            })
-        } catch {
-            toast.error('Có lỗi xảy ra khi huỷ đơn hàng')
-        } finally {
-            setIsSubmittingCancel(false)
-        }
+        cancelOrderMutation.mutate({
+            orderId: cancellingOrder.id,
+            reason: finalReason,
+        })
     }
 
     return (
@@ -146,10 +181,10 @@ export function OrderListView({ initialOrders }: OrderListViewProps) {
                             className="hover:text-foreground transition-colors flex items-center gap-1.5"
                         >
                             <HomeIcon className="size-3.5 text-primary" />
-                            <span>Trang chủ</span>
+                            <span>{t('breadcrumbHome')}</span>
                         </Link>
                         <ChevronRightIcon className="size-3 text-muted-foreground/60" />
-                        <span className="font-medium text-foreground">Đơn hàng của tôi</span>
+                        <span className="font-medium text-foreground">{t('breadcrumbOrders')}</span>
                     </nav>
                 </div>
             </div>
@@ -160,11 +195,9 @@ export function OrderListView({ initialOrders }: OrderListViewProps) {
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
                             <PackageIcon className="h-7 w-7 text-primary" />
-                            Đơn hàng của tôi
+                            {t('title')}
                         </h1>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Quản lý và theo dõi tiến độ các đơn hàng bạn đã mua trên TimmyHub
-                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">{t('description')}</p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
@@ -172,14 +205,14 @@ export function OrderListView({ initialOrders }: OrderListViewProps) {
                             <Link href={ROUTE.SELLER_ORDERS}>
                                 <Button variant="default" size="sm" className="gap-2 text-xs sm:text-sm">
                                     <StoreIcon className="h-4 w-4" />
-                                    Vào Quản lý đơn bán hàng
+                                    {t('sellerManagement')}
                                 </Button>
                             </Link>
                         )}
                         <Link href="/">
                             <Button variant="outline" size="sm" className="gap-2 text-xs sm:text-sm">
                                 <ShoppingBagIcon className="h-4 w-4" />
-                                Tiếp tục mua sắm
+                                {t('continueShopping')}
                             </Button>
                         </Link>
                     </div>
@@ -189,7 +222,7 @@ export function OrderListView({ initialOrders }: OrderListViewProps) {
                 <div className="space-y-4">
                     {/* Status Tabs */}
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none border-b border-border/60">
-                        {ORDER_TABS.map((tab) => {
+                        {ORDER_TAB_CONFIG.map((tab) => {
                             const isActive = activeTab === tab.status
                             const count =
                                 tab.status === 'ALL'
@@ -204,13 +237,13 @@ export function OrderListView({ initialOrders }: OrderListViewProps) {
                                     key={tab.status}
                                     type="button"
                                     onClick={() => setActiveTab(tab.status)}
-                                    className={`px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 flex items-center gap-2 ${
+                                    className={`px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-all duration-150 flex items-center gap-2 select-none cursor-pointer ${
                                         isActive
                                             ? 'bg-primary text-primary-foreground shadow-sm'
                                             : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                                     }`}
                                 >
-                                    <span>{tab.label}</span>
+                                    <span>{t(tab.labelKey)}</span>
                                     {count > 0 && (
                                         <span
                                             className={`px-1.5 py-0.2 rounded-full text-xs font-semibold ${
@@ -232,7 +265,7 @@ export function OrderListView({ initialOrders }: OrderListViewProps) {
                         <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                             type="text"
-                            placeholder="Tìm kiếm theo mã đơn hàng, tên sản phẩm hoặc tên Shop..."
+                            placeholder={t('searchPlaceholder')}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-10 pr-4 h-10 w-full bg-card"
@@ -249,9 +282,10 @@ export function OrderListView({ initialOrders }: OrderListViewProps) {
                                 order={order}
                                 onCancelClick={(ord) => {
                                     setCancellingOrder(ord)
-                                    setSelectedReason(CANCEL_REASONS[0]!)
+                                    setSelectedReasonKey(CANCEL_REASON_KEYS[0]!)
                                     setCustomReason('')
                                 }}
+                                onReviewClick={(ord, item) => setReviewingItem({ order: ord, item })}
                             />
                         ))}
                     </div>
@@ -261,31 +295,31 @@ export function OrderListView({ initialOrders }: OrderListViewProps) {
                         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-4">
                             <ShoppingBagIcon className="h-8 w-8" />
                         </div>
-                        <h3 className="text-lg font-semibold text-foreground">Không tìm thấy đơn hàng nào</h3>
+                        <h3 className="text-lg font-semibold text-foreground">
+                            {debouncedSearch ? t('searchEmptyTitle') : t('emptyTitle')}
+                        </h3>
                         <p className="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">
-                            {searchQuery
-                                ? `Không có đơn hàng nào khớp với từ khoá "${searchQuery}". Vui lòng thử từ khoá khác.`
-                                : activeTab !== 'ALL'
-                                  ? 'Bạn chưa có đơn hàng nào trong trạng thái này.'
-                                  : 'Bạn chưa đặt đơn hàng nào trên TimmyHub. Hãy khám phá và mua sắm ngay!'}
+                            {debouncedSearch
+                                ? t('searchEmptyDescription', { query: debouncedSearch })
+                                : t('emptyDescription')}
                         </p>
                         <div className="mt-6 flex flex-wrap justify-center gap-3">
-                            {searchQuery && (
+                            {debouncedSearch && (
                                 <Button variant="outline" size="sm" onClick={() => setSearchQuery('')}>
-                                    Xoá tìm kiếm
+                                    {t('clearSearch')}
                                 </Button>
                             )}
                             {isSeller && (
                                 <Link href={ROUTE.SELLER_ORDERS}>
                                     <Button size="sm" className="gap-2">
                                         <StoreIcon className="h-4 w-4" />
-                                        Vào Quản lý đơn bán hàng
+                                        {t('sellerManagement')}
                                     </Button>
                                 </Link>
                             )}
                             <Link href="/">
                                 <Button variant={isSeller ? 'outline' : 'default'} size="sm">
-                                    Khám phá sản phẩm
+                                    {t('shopNow')}
                                 </Button>
                             </Link>
                         </div>
@@ -298,45 +332,38 @@ export function OrderListView({ initialOrders }: OrderListViewProps) {
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
                                 <AlertTriangleIcon className="h-5 w-5" />
-                                Xác nhận huỷ đơn hàng
+                                {t('cancelDialogTitle')}
                             </DialogTitle>
-                            <DialogDescription>
-                                Bạn có chắc chắn muốn huỷ đơn hàng{' '}
-                                <span className="font-mono font-medium text-foreground">{cancellingOrder?.id}</span>?
-                                Thao tác này sẽ giải phóng sản phẩm đã giữ cho bạn.
-                            </DialogDescription>
+                            <DialogDescription>{t('cancelDialogDescription')}</DialogDescription>
                         </DialogHeader>
 
                         <div className="space-y-3 py-2">
-                            <label className="text-sm font-medium text-foreground block">Chọn lý do huỷ đơn:</label>
-                            <div className="space-y-2">
-                                {CANCEL_REASONS.map((reason) => (
+                            <span className="text-sm font-medium text-foreground block">{t('cancelReasonLabel')}</span>
+                            <RadioGroup
+                                value={selectedReasonKey}
+                                onValueChange={setSelectedReasonKey}
+                                className="space-y-1.5"
+                            >
+                                {CANCEL_REASON_KEYS.map((reasonKey) => (
                                     <label
-                                        key={reason}
+                                        key={reasonKey}
                                         className="flex items-center gap-2.5 text-sm cursor-pointer p-2 rounded-lg border border-border/60 hover:bg-muted/40 transition-colors"
                                     >
-                                        <input
-                                            type="radio"
-                                            name="cancelReason"
-                                            value={reason}
-                                            checked={selectedReason === reason}
-                                            onChange={() => setSelectedReason(reason)}
-                                            className="h-4 w-4 text-primary"
-                                        />
-                                        <span>{reason}</span>
+                                        <RadioGroupItem value={reasonKey} id={`cancel-reason-${reasonKey}`} />
+                                        <span className="flex-1">{t(`reasons.${reasonKey}`)}</span>
                                     </label>
                                 ))}
-                            </div>
+                            </RadioGroup>
 
-                            {selectedReason === 'Khác' && (
-                                <div className="mt-2 space-y-1">
-                                    <label className="text-xs text-muted-foreground">Nhập lý do chi tiết:</label>
-                                    <Textarea
+                            {selectedReasonKey === 'other' && (
+                                <div className="mt-3">
+                                    <FloatTextarea
+                                        label={t('customReasonPlaceholder')}
+                                        placeholder=" "
                                         rows={3}
-                                        placeholder="Vui lòng cung cấp lý do bạn muốn huỷ đơn..."
+                                        maxLength={300}
                                         value={customReason}
                                         onChange={(e) => setCustomReason(e.target.value)}
-                                        className="text-sm"
                                     />
                                 </div>
                             )}
@@ -344,33 +371,54 @@ export function OrderListView({ initialOrders }: OrderListViewProps) {
 
                         <DialogFooter className="gap-2 sm:gap-0">
                             <Button
+                                type="button"
                                 variant="outline"
                                 onClick={() => setCancellingOrder(null)}
-                                disabled={isSubmittingCancel}
+                                disabled={cancelOrderMutation.isPending}
                             >
-                                Đóng
+                                {t('close')}
                             </Button>
                             <Button
+                                type="button"
                                 variant="destructive"
                                 onClick={handleConfirmCancel}
-                                disabled={isSubmittingCancel}
+                                disabled={cancelOrderMutation.isPending}
                                 className="gap-2"
                             >
-                                {isSubmittingCancel ? (
+                                {cancelOrderMutation.isPending ? (
                                     <>
                                         <Loader2Icon className="h-4 w-4 animate-spin" />
-                                        Đang huỷ...
+                                        {t('cancelling')}
                                     </>
                                 ) : (
                                     <>
                                         <XCircleIcon className="h-4 w-4" />
-                                        Xác nhận huỷ đơn
+                                        {t('confirmCancel')}
                                     </>
                                 )}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
+
+                {/* Modal Đánh giá sản phẩm */}
+                {reviewingItem && (
+                    <CreateReviewDialog
+                        open={Boolean(reviewingItem)}
+                        onOpenChange={(open) => !open && setReviewingItem(null)}
+                        product={{
+                            id: reviewingItem.item.productId,
+                            name: reviewingItem.item.productName,
+                            imageUrl: reviewingItem.item.imageUrl,
+                            variantLabel: reviewingItem.item.variantLabel,
+                        }}
+                        orderItemId={reviewingItem.item.id}
+                        onSuccess={() => {
+                            void queryClient.invalidateQueries({ queryKey: QUERY_KEY.ORDER.ALL })
+                            router.refresh()
+                        }}
+                    />
+                )}
             </div>
         </div>
     )

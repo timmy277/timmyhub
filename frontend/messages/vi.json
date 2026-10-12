@@ -573,7 +573,20 @@
       "cancelFailed": "Huỷ đơn hàng thất bại: {error}",
       "searchEmptyTitle": "Không tìm thấy đơn hàng nào",
       "searchEmptyDescription": "Không có đơn hàng nào khớp với \"{query}\"",
-      "clearSearch": "Xoá tìm kiếm"
+      "clearSearch": "Xoá tìm kiếm",
+      "continueShopping": "Tiếp tục mua sắm",
+      "sellerManagement": "Vào Quản lý đơn bán hàng",
+      "breadcrumbHome": "Trang chủ",
+      "breadcrumbOrders": "Đơn hàng của tôi",
+      "close": "Đóng",
+      "reasons": {
+        "changeAddress": "Muốn thay đổi địa chỉ giao hàng",
+        "changePayment": "Muốn đổi phương thức thanh toán",
+        "changeMind": "Đổi ý, không muốn mua nữa",
+        "betterPrice": "Tìm thấy sản phẩm giá tốt hơn ở nơi khác",
+        "wrongItem": "Đặt nhầm sản phẩm hoặc số lượng",
+        "other": "Khác"
+      }
     }
   },
   "validation": {
@@ -1848,5 +1861,81 @@
     "quickSettingsTitle": "Cài đặt & Phê duyệt",
     "approvalDesc": "Yêu cầu admin duyệt từng sản phẩm trước khi tham gia sự kiện",
     "activeDesc": "Bật để chiến dịch xuất hiện trên toàn sàn theo lịch trình"
+  },
+  "reviews": {
+    "sectionTitle": "Đánh giá sản phẩm",
+    "outOfFive": "trên 5 sao",
+    "stars": "sao",
+    "totalReviewsCount": "{count} lượt đánh giá",
+    "verifiedPurchase": "Đã mua hàng tại shop",
+    "sellerReply": "Seller",
+    "dialog": {
+      "title": "Đánh giá sản phẩm",
+      "description": "Chia sẻ trải nghiệm chân thực của bạn để giúp đỡ những người mua khác nhé.",
+      "productQuality": "Chất lượng sản phẩm",
+      "quickTagsLabel": "Gợi ý nhận xét nhanh",
+      "completedOrder": "Đơn hoàn tất",
+      "quickTags": {
+        "quality": "Chất lượng tuyệt vời 👍",
+        "fastDelivery": "Giao hàng siêu nhanh ⚡",
+        "goodPackaging": "Đóng gói cẩn thận 📦",
+        "asDescribed": "Đúng như mô tả 💯",
+        "worthTheMoney": "Đáng tiền mua 💰",
+        "greatService": "Shop phục vụ chu đáo 💬"
+      }
+    },
+    "product": {
+      "variant": "Phân loại"
+    },
+    "ratings": {
+      "terrible": "Tệ",
+      "poor": "Không hài lòng",
+      "average": "Bình thường",
+      "good": "Hài lòng",
+      "excellent": "Tuyệt vời"
+    },
+    "form": {
+      "commentLabel": "Nhận xét của bạn",
+      "commentPlaceholder": "Hãy chia sẻ về chất lượng sản phẩm, độ hoàn thiện, dịch vụ đóng gói và giao hàng...",
+      "mediaLabel": "Hình ảnh & Video thực tế",
+      "mediaDescription": "Đăng tải ảnh hoặc video thực tế giúp đánh giá của bạn hữu ích hơn (Tối đa 6 tệp)",
+      "replyPlaceholder": "Viết phản hồi của bạn...",
+      "replyTo": "Trả lời {name}..."
+    },
+    "filters": {
+      "all": "Tất cả",
+      "hasMedia": "Có ảnh / video"
+    },
+    "sort": {
+      "label": "Sắp xếp theo",
+      "newest": "Mới nhất",
+      "helpful": "Hữu ích nhất",
+      "ratingDesc": "Đánh giá cao nhất"
+    },
+    "buttons": {
+      "cancel": "Huỷ bỏ",
+      "submitting": "Đang gửi...",
+      "submitReview": "Gửi đánh giá",
+      "helpful": "Hữu ích",
+      "reply": "Phản hồi",
+      "sendReply": "Gửi",
+      "writeReview": "Đánh giá",
+      "reviewed": "Đã đánh giá"
+    },
+    "messages": {
+      "createSuccess": "Cảm ơn bạn đã đánh giá sản phẩm!",
+      "replySuccess": "Đã gửi phản hồi thành công!"
+    },
+    "errors": {
+      "createFailed": "Không thể gửi đánh giá. Vui lòng thử lại sau.",
+      "replyFailed": "Không thể gửi phản hồi. Vui lòng thử lại sau.",
+      "voteFailed": "Không thể cập nhật bình chọn. Vui lòng thử lại.",
+      "loadTitle": "Không thể tải danh sách đánh giá",
+      "loadDescription": "Đã có lỗi xảy ra khi kết nối máy chủ. Vui lòng bấm thử lại."
+    },
+    "empty": {
+      "title": "Chưa có đánh giá nào",
+      "description": "Hãy là người đầu tiên trải nghiệm và chia sẻ nhận xét về sản phẩm này nhé!"
+    }
   }
 }

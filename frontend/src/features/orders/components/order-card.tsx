@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
+import { useTranslations } from 'next-intl'
 import {
     CalendarIcon,
     ChevronRightIcon,
@@ -13,6 +14,8 @@ import {
     EyeIcon,
     RotateCcwIcon,
     Loader2Icon,
+    StarIcon,
+    CheckCircle2Icon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { OrderDetail } from '@timmyhub/contracts'
@@ -27,9 +30,11 @@ interface OrderCardProps {
     onCancelClick?: (order: OrderDetail) => void
     onViewDetail?: (order: OrderDetail) => void
     onCloseDialog?: () => void
+    onReviewClick?: (order: OrderDetail, item: OrderDetail['items'][number]) => void
 }
 
-export function OrderCard({ order, onCancelClick, onViewDetail, onCloseDialog }: OrderCardProps) {
+export function OrderCard({ order, onCancelClick, onViewDetail, onCloseDialog, onReviewClick }: OrderCardProps) {
+    const tReview = useTranslations('reviews')
     const router = useRouter()
     const queryClient = useQueryClient()
     const [isReordering, setIsReordering] = useState(false)
@@ -145,7 +150,7 @@ export function OrderCard({ order, onCancelClick, onViewDetail, onCloseDialog }:
                             </div>
                         </div>
 
-                        <div className="text-right shrink-0">
+                        <div className="text-right shrink-0 flex flex-col items-end justify-center">
                             <span className="font-semibold text-sm sm:text-base text-foreground">
                                 {formatCurrencyVND(item.lineTotal)}
                             </span>
@@ -155,8 +160,8 @@ export function OrderCard({ order, onCancelClick, onViewDetail, onCloseDialog }:
             </CardContent>
 
             {/* Card Footer: Thành tiền & Action buttons */}
-            <CardFooter className="bg-muted/10 border-t border-border/50 p-4 sm:px-6 flex flex-wrap items-center justify-end gap-3 sm:gap-4">
-                <div className="flex items-baseline gap-1.5 mr-1 shrink-0">
+            <CardFooter className="bg-muted/10 border-t border-border/50 p-4 sm:px-6 flex flex-wrap items-center justify-end gap-2.5 sm:gap-3">
+                <div className="flex items-baseline gap-1.5 mr-auto shrink-0">
                     <span className="text-xs text-muted-foreground whitespace-nowrap">Thành tiền:</span>
                     <span className="text-base sm:text-lg font-bold text-primary whitespace-nowrap">
                         {formatCurrencyVND(order.totalAmount)}
@@ -174,6 +179,37 @@ export function OrderCard({ order, onCancelClick, onViewDetail, onCloseDialog }:
                         Huỷ đơn
                     </Button>
                 )}
+
+                {/* Nút Đánh giá sản phẩm (ngang hàng với Mua lại, Chi tiết) */}
+                {(order.status === 'DELIVERED' || order.status === 'COMPLETED') &&
+                    onReviewClick &&
+                    (order.items.some((i) => !i.isReviewed) ? (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                const targetItem = order.items.find((i) => !i.isReviewed) || order.items[0]
+                                if (targetItem) onReviewClick(order, targetItem)
+                            }}
+                            className="text-xs sm:text-sm font-semibold rounded-lg border-amber-500/50 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10 shadow-2xs gap-1.5 transition-colors"
+                        >
+                            <StarIcon className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                            {tReview('buttons.writeReview')}
+                        </Button>
+                    ) : (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled
+                            className="text-xs sm:text-sm text-muted-foreground gap-1.5 opacity-80 cursor-default"
+                        >
+                            <CheckCircle2Icon className="h-3.5 w-3.5 text-emerald-500" />
+                            {tReview('buttons.reviewed')}
+                        </Button>
+                    ))}
 
                 <Button
                     variant="outline"

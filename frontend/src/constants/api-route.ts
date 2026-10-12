@@ -4,6 +4,7 @@
 
 // Base URL backend — apps/api chạy cổng 3001 (project-plan.md bảng cổng dịch vụ; FE dev chiếm 3000).
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+export const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
 // Trần thời gian chờ một lượt gọi backend. Không có nó thì một backend treo sẽ giữ request của Server Component/
 // Server Action mở vô hạn (Next dev không tự ngắt), trang đứng im mà không có thông báo nào. 10s đủ rộng cho truy vấn
@@ -121,5 +122,12 @@ export const API_ROUTE = {
         MY_SAVED_VOUCHERS: 'v1/promotions/my-saved-vouchers',
         MY_VOUCHERS: 'v1/promotions/my-vouchers',
         CLAIM_VOUCHER_CODE: 'v1/promotions/claim-code',
+    },
+    ENGAGEMENT: {
+        REVIEWS: 'v1/engagement/reviews',
+        SUMMARY: 'v1/engagement/reviews/summary',
+        PENDING: 'v1/engagement/reviews/pending',
+        COMMENTS: (reviewId: string) => `v1/engagement/reviews/${encodeURIComponent(reviewId)}/comments`,
+        HELPFUL: (reviewId: string) => `v1/engagement/reviews/${encodeURIComponent(reviewId)}/helpful`,
     },
 } as const

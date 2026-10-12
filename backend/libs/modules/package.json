@@ -45,6 +45,10 @@
     "./promotion": {
       "types": "./dist/promotion/index.d.ts",
       "default": "./dist/promotion/index.js"
+    },
+    "./engagement": {
+      "types": "./dist/engagement/index.d.ts",
+      "default": "./dist/engagement/index.js"
     }
   },
   "scripts": {
@@ -62,13 +66,16 @@
     "@nestjs/event-emitter": "^12.0.1",
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/platform-socket.io": "^11.0.1",
     "@nestjs/swagger": "^11.4.7",
+    "@nestjs/websockets": "^11.0.1",
     "@timmyhub/common": "workspace:*",
     "@timmyhub/contracts": "workspace:*",
     "@timmyhub/prisma": "workspace:*",
     "bcryptjs": "^3.0.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "socket.io": "^4.8.4",
     "vnpay": "^2.5.0",
     "zod": "^4.0.0"
   },
