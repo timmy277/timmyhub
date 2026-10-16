@@ -1,0 +1,8 @@
+# TimmyHub
+
+> Sàn thương mại điện tử đa tiện ích hàng đầu. Mua sắm sản phẩm công nghệ, điện thoại, phụ kiện chính hãng với ưu đãi freeship và voucher giảm giá mỗi ngày.
+
+## Core Sections
+- [Trang chủ](https://timmyhub.com/): Khám phá sản phẩm công nghệ, điện thoại chính hãng và voucher giảm giá.
+- [Sản phẩm](https://timmyhub.com/products): Danh sách các sản phẩm đang được bán trên sàn.
+- [Đăng nhập](https://timmyhub.com/login): Trang đăng nhập tài khoản người dùng và nhà bán hàng.

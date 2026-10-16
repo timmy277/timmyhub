@@ -26,11 +26,14 @@ export function CartButton() {
                     variant="ghost"
                     size="icon"
                     className="relative size-9 rounded-xl text-foreground/80 hover:text-foreground hover:bg-muted/80 transition-transform active:scale-95"
-                    aria-label={t('dropdown.title')}
+                    aria-label={totalItems > 0 ? `${t('dropdown.title')} (${totalItems})` : t('dropdown.title')}
                 >
                     <ShoppingCartIcon className="size-4.5" />
                     {totalItems > 0 && (
-                        <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 font-mono text-[11px] font-bold text-primary-foreground shadow-sm animate-in zoom-in-75 duration-200">
+                        <span
+                            aria-hidden="true"
+                            className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 font-mono text-[11px] font-bold text-primary-foreground shadow-sm animate-in zoom-in-75 duration-200"
+                        >
                             {totalItems > 99 ? '99+' : totalItems}
                         </span>
                     )}

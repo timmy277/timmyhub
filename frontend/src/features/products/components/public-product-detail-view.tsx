@@ -349,7 +349,6 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                     alt={product.name}
                                     fill
                                     priority
-                                    loading="eager"
                                     sizes="(max-width: 1024px) 100vw, 50vw"
                                     className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                                 />
@@ -457,7 +456,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                     <span>{product.shopName || 'TimmyHub Mall'}</span>
                                     <CheckCircle2Icon className="size-3 text-emerald-800 dark:text-emerald-300" />
                                 </Link>
-                                <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-semibold text-neutral-800 dark:text-neutral-200">
                                     Mã SP: {activeVariant?.sku || product.slug}
                                 </span>
                             </div>
@@ -478,7 +477,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                     className="flex items-center gap-1.5 text-foreground font-semibold hover:opacity-80 transition-opacity cursor-pointer group"
                                     variant="ghost"
                                 >
-                                    <span className="text-amber-500 font-bold underline-offset-4 group-hover:underline">
+                                    <span className="text-amber-700 dark:text-amber-400 font-bold underline-offset-4 group-hover:underline">
                                         {product.ratingAvg.toFixed(1)}
                                     </span>
                                     <div className="flex items-center text-amber-400">
@@ -574,10 +573,10 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                                         variant="secondary"
                                                         className={`text-[9px] font-bold px-1 py-0 border-0 ${
                                                             isShipping
-                                                                ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'
+                                                                ? 'bg-emerald-500/20 text-emerald-950 dark:text-emerald-200'
                                                                 : isShop
-                                                                  ? 'bg-blue-500/20 text-blue-700 dark:text-blue-400'
-                                                                  : 'bg-purple-500/20 text-purple-700 dark:text-purple-400'
+                                                                  ? 'bg-blue-500/20 text-blue-950 dark:text-blue-200'
+                                                                  : 'bg-purple-500/20 text-purple-950 dark:text-purple-200'
                                                         }`}
                                                     >
                                                         {isShipping ? 'Freeship' : isShop ? 'Shop' : 'Sàn'}
@@ -759,12 +758,12 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                     href={ROUTE.SHOP_DETAIL(product.shopSlug || product.shopId)}
                                     className="hover:underline hover:text-primary transition-colors inline-block"
                                 >
-                                    <h3 className="font-heading text-base sm:text-lg font-bold text-foreground truncate">
+                                    <h2 className="font-heading text-base sm:text-lg font-bold text-foreground truncate">
                                         {product.shopName || 'Gian hàng chính hãng'}
-                                    </h3>
+                                    </h2>
                                 </Link>
-                                <Badge className="bg-primary/15 text-primary border-primary/30 font-semibold gap-1 text-[10px] py-0">
-                                    <CheckCircle2Icon className="size-3 text-primary" />
+                                <Badge className="bg-primary/15 text-emerald-950 dark:text-emerald-100 border-primary/30 font-bold gap-1 text-[10px] py-0">
+                                    <CheckCircle2Icon className="size-3 text-emerald-800 dark:text-emerald-300" />
                                     Chính hãng
                                 </Badge>
                             </div>
@@ -813,9 +812,9 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                         </TabsList>
 
                         <TabsContent value="description" className="space-y-4">
-                            <h3 className="font-heading text-lg font-bold text-foreground">
+                            <h2 className="font-heading text-lg font-bold text-foreground">
                                 Chi tiết về {product.name}
-                            </h3>
+                            </h2>
                             <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground leading-relaxed whitespace-pre-line">
                                 {product.description ||
                                     'Sản phẩm chất lượng cao được phân phối trực tiếp từ thương hiệu chính hãng trên TimmyHub. Cam kết quy trình đóng gói tiêu chuẩn, bảo vệ an toàn sản phẩm trong suốt quá trình vận chuyển.'}
@@ -823,7 +822,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                         </TabsContent>
 
                         <TabsContent value="specs" className="space-y-4">
-                            <h3 className="font-heading text-lg font-bold text-foreground">Bảng thông số sản phẩm</h3>
+                            <h2 className="font-heading text-lg font-bold text-foreground">Bảng thông số sản phẩm</h2>
                             <div className="divide-y border-border/60 rounded-2xl border border-border/60 overflow-hidden text-xs">
                                 <div className="grid grid-cols-3 p-3 bg-muted/30">
                                     <span className="font-semibold text-muted-foreground">Tên sản phẩm</span>
@@ -857,9 +856,9 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                         </TabsContent>
 
                         <TabsContent value="shipping" className="space-y-4">
-                            <h3 className="font-heading text-lg font-bold text-foreground">
+                            <h2 className="font-heading text-lg font-bold text-foreground">
                                 Chính sách bảo hành & Vận chuyển TimmyHub
-                            </h3>
+                            </h2>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-muted-foreground">
                                 <div className="rounded-2xl border border-border/60 p-4 space-y-1.5 bg-background">
                                     <p className="font-bold text-foreground">Bảo hành 12 tháng</p>

@@ -252,7 +252,7 @@ export function PublicShopView({ shop, initialProducts, categories = [] }: Publi
                                 className={`rounded-xl font-bold gap-2 shadow-md transition-all duration-300 ${
                                     isFollowing
                                         ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 border border-rose-500/30'
-                                        : 'bg-primary text-white hover:bg-primary/90'
+                                        : 'bg-emerald-800 text-white hover:bg-emerald-900 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-500'
                                 }`}
                             >
                                 <Heart
@@ -378,7 +378,7 @@ export function PublicShopView({ shop, initialProducts, categories = [] }: Publi
                                     >
                                         <div className="space-y-1 min-w-0">
                                             <div className="flex items-center gap-1.5 flex-wrap">
-                                                <span className="font-mono text-xs font-black text-primary px-1.5 py-0.5 rounded bg-primary/10">
+                                                <span className="font-mono text-xs font-black text-emerald-950 dark:text-emerald-100 px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60">
                                                     {v.code}
                                                 </span>
                                                 <Badge
@@ -536,8 +536,8 @@ export function PublicShopView({ shop, initialProducts, categories = [] }: Publi
                                         onClick={() => setSelectedCategoryId('ALL')}
                                         className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
                                             selectedCategoryId === 'ALL'
-                                                ? 'bg-primary text-white shadow-sm'
-                                                : 'bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground'
+                                                ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-sm'
+                                                : 'bg-muted/70 text-neutral-800 dark:text-neutral-200 hover:bg-muted hover:text-foreground'
                                         }`}
                                         variant="ghost"
                                     >
@@ -550,8 +550,8 @@ export function PublicShopView({ shop, initialProducts, categories = [] }: Publi
                                             onClick={() => setSelectedCategoryId(c.id)}
                                             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
                                                 selectedCategoryId === c.id
-                                                    ? 'bg-primary text-white shadow-sm'
-                                                    : 'bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground'
+                                                    ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-sm'
+                                                    : 'bg-muted/70 text-neutral-800 dark:text-neutral-200 hover:bg-muted hover:text-foreground'
                                             }`}
                                             variant="ghost"
                                         >

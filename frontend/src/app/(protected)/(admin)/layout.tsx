@@ -1,7 +1,12 @@
+import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 
 import { NavLayout } from '@/components/layout'
+
+export const metadata: Metadata = {
+    robots: { index: false, follow: false },
+}
 import {
     AUDIT_PERMISSION,
     DASHBOARD_PERMISSION,

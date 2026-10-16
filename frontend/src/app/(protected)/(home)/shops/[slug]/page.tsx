@@ -12,26 +12,54 @@ interface ShopPageProps {
 
 export async function generateMetadata({ params }: ShopPageProps): Promise<Metadata> {
     const { slug } = await params
+    const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://timmyhub.com'
     const res = await getPublicShopAction(slug)
 
     if (!res.ok || !res.data) {
         return {
             title: 'Gian hàng không tồn tại | TimmyHub',
+            robots: { index: false, follow: false },
         }
     }
 
     const shop = res.data
-    const description =
+    const description = (
         shop.description ||
         `Mua sắm các sản phẩm chính hãng, chất lượng từ gian hàng ${shop.shopName} trên sàn thương mại điện tử TimmyHub.`
+    ).slice(0, 160)
+    const canonicalUrl = `${siteUrl}/shops/${slug}`
 
     return {
         title: `${shop.shopName} - Gian hàng chính hãng | TimmyHub`,
-        description: description.slice(0, 160),
+        description,
+        alternates: {
+            canonical: canonicalUrl,
+        },
         openGraph: {
             title: `${shop.shopName} - Gian hàng chính hãng | TimmyHub`,
-            description: description.slice(0, 160),
+            description,
+            url: canonicalUrl,
+            siteName: 'TimmyHub',
+            locale: 'vi_VN',
+            type: 'website',
             images: shop.shopLogo ? [{ url: shop.shopLogo }] : [],
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: `${shop.shopName} - Gian hàng chính hãng | TimmyHub`,
+            description,
+            images: shop.shopLogo ? [shop.shopLogo] : [],
+        },
+        robots: {
+            index: true,
+            follow: true,
+            googleBot: {
+                index: true,
+                follow: true,
+                'max-video-preview': -1,
+                'max-image-preview': 'large',
+                'max-snippet': -1,
+            },
         },
     }
 }

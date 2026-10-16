@@ -134,7 +134,7 @@ export function ProductReviewsSection({ productId, className }: ProductReviewsSe
                     {/* Điểm trung bình to rõ */}
                     <div className="flex items-center gap-5">
                         <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 min-w-32">
-                            <span className="text-4xl font-extrabold text-amber-500 tracking-tight">
+                            <span className="text-4xl font-extrabold text-amber-700 dark:text-amber-400 tracking-tight">
                                 {summary?.ratingAvg ? summary.ratingAvg.toFixed(1) : '5.0'}
                             </span>
                             <div className="flex items-center gap-0.5 mt-1.5 mb-1">
@@ -150,11 +150,13 @@ export function ProductReviewsSection({ productId, className }: ProductReviewsSe
                                     />
                                 ))}
                             </div>
-                            <span className="text-xs text-muted-foreground font-medium">{t('outOfFive')}</span>
+                            <span className="text-xs text-neutral-800 dark:text-neutral-200 font-semibold">
+                                {t('outOfFive')}
+                            </span>
                         </div>
 
                         <div>
-                            <h3 className="text-lg font-bold text-foreground">{t('sectionTitle')}</h3>
+                            <h2 className="text-lg font-bold text-foreground">{t('sectionTitle')}</h2>
                             <p className="text-sm text-muted-foreground mt-0.5">
                                 {t('totalReviewsCount', { count: summary?.ratingCount ?? 0 })}
                             </p>
@@ -247,7 +249,7 @@ export function ProductReviewsSection({ productId, className }: ProductReviewsSe
                                 setPage(1)
                             }}
                         >
-                            <SelectTrigger className="h-8 w-[150px] text-xs">
+                            <SelectTrigger className="h-8 w-[150px] text-xs" aria-label={t('sort.label')}>
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -507,7 +509,7 @@ function ReviewCardItem({ review, productId, onOpenLightbox }: ReviewCardItemPro
                                 {review.isVerified && (
                                     <Badge
                                         variant="secondary"
-                                        className="text-[11px] font-normal py-0 h-5 px-1.5 gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                        className="text-[11px] font-medium py-0 h-5 px-1.5 gap-1 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/25"
                                     >
                                         <CheckCircle2 className="h-3 w-3" />
                                         {t('verifiedPurchase')}
@@ -784,14 +786,20 @@ function CommentItemCard({ comment, reviewId, productId, depth = 0 }: CommentIte
                         {comment.isSellerReply && (
                             <Badge
                                 variant="secondary"
-                                className="text-[10px] py-0 h-4 px-1.5 gap-1 bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-medium"
+                                className="text-[10px] py-0 h-4 px-1.5 gap-1 bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 font-medium"
                             >
                                 <Store className="h-2.5 w-2.5" />
                                 {t('sellerReply')}
                             </Badge>
                         )}
                     </div>
-                    <span className="text-[11px] text-muted-foreground font-mono" suppressHydrationWarning>
+                    <span
+                        className={cn(
+                            'text-[11px] font-mono',
+                            comment.isSellerReply ? 'text-stone-700 dark:text-stone-300' : 'text-muted-foreground',
+                        )}
+                        suppressHydrationWarning
+                    >
                         {formatReviewDateTime(comment.createdAt)}
                     </span>
                 </div>
@@ -803,7 +811,10 @@ function CommentItemCard({ comment, reviewId, productId, depth = 0 }: CommentIte
                     <Button
                         type="button"
                         onClick={() => setIsReplying(!isReplying)}
-                        className="text-[11px] text-muted-foreground hover:text-foreground font-medium flex items-center gap-1 transition-colors"
+                        className={cn(
+                            'text-[11px] font-medium flex items-center gap-1 transition-colors hover:text-foreground',
+                            comment.isSellerReply ? 'text-stone-700 dark:text-stone-300' : 'text-muted-foreground',
+                        )}
                         variant="ghost"
                     >
                         <CornerDownRight className="h-3 w-3" />

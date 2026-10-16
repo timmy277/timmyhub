@@ -8,6 +8,7 @@ import { getActor } from '@/lib/actor-permissions'
 export const metadata: Metadata = {
     title: 'Đơn hàng của tôi · TimmyHub',
     description: 'Danh sách và trạng thái các đơn hàng của bạn trên sàn thương mại điện tử TimmyHub',
+    robots: { index: false, follow: false },
 }
 
 export default async function OrdersPage() {

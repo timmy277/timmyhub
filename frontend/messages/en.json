@@ -1,8 +1,12 @@
 {
   "metadata": {
-    "title": "TimmyHub",
+    "title": "TimmyHub - Modern Multi-Utility E-Commerce Marketplace",
     "titleTemplate": "%s · TimmyHub",
-    "description": "TimmyHub e-commerce marketplace"
+    "description": "Shop online for thousands of authentic technology products, smartphones, accessories with free shipping, daily vouchers, and trusted warranty on TimmyHub."
+  },
+  "home": {
+    "title": "TimmyHub - Modern Multi-Utility E-Commerce Marketplace",
+    "description": "Shop online for thousands of authentic technology products, smartphones, accessories with free shipping, daily vouchers, and trusted warranty on TimmyHub."
   },
   "common": {
     "language": "Language",

@@ -11,8 +11,8 @@ import { ROUTE } from '@/constants'
 //
 // `auth()` chạy ở edge runtime và chỉ giải mã JWT, không gọi mạng khi phiên còn hiệu lực.
 
-// Route công khai: chỉ trang đăng nhập — mọi trang khác nằm trong nhóm `(protected)`.
-const PUBLIC_PATHS = [ROUTE.LOGIN]
+// Route công khai cho phép xem catalog không cần đăng nhập (khách và bot tìm kiếm)
+const PUBLIC_PATHS = [ROUTE.LOGIN, ROUTE.HOME, '/products', '/shops', '/llms.txt', '/robots.txt', '/sitemap.xml']
 
 // Header gắn đích gốc vào request để Server Component (vd (protected)/layout.tsx) đọc khi cần điều hướng về
 // login kèm callbackUrl — proxy chạy trước layout nên không đọc được pathname bằng cách khác.
@@ -21,10 +21,10 @@ const REQUEST_PATH_HEADER = 'x-original-path'
 export const proxy = auth((request) => {
     const { pathname } = request.nextUrl
     const isPublic = PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))
+    const isLoginPage = pathname === ROUTE.LOGIN || pathname.startsWith(`${ROUTE.LOGIN}/`)
     const isAuthenticated = Boolean(request.auth?.user?.id)
 
-    // Chưa có phiên hợp lệ mà vào trang protected → về login kèm callbackUrl (REQ-IDN-032). Đích gốc lấy từ
-    // chính request, không tin tham số do client truyền lên. Chỉ gán callbackUrl nếu khác trang chủ ROUTE.HOME.
+    // Chưa có phiên hợp lệ mà vào trang protected (ví dụ cart, checkout, dashboard...) → về login kèm callbackUrl (REQ-IDN-032).
     if (!isPublic && !isAuthenticated) {
         const loginUrl = new URL(ROUTE.LOGIN, request.url)
         if (pathname !== ROUTE.HOME) {
@@ -33,9 +33,9 @@ export const proxy = auth((request) => {
         return NextResponse.redirect(loginUrl)
     }
 
-    // Đã có phiên hợp lệ mà vào trang công khai (/login) → proxy chuyển hướng ngay qua /api/auth/redirect
+    // Đã có phiên hợp lệ mà vào trang đăng nhập (/login) → proxy chuyển hướng ngay qua /api/auth/redirect
     // để đến thẳng đích theo role (dashboard cho admin, home cho user), không cần render trang login.
-    if (isPublic && isAuthenticated) {
+    if (isLoginPage && isAuthenticated) {
         const rawCallback = request.nextUrl.searchParams.get('callbackUrl')
         const redirectUrl = new URL('/api/auth/redirect', request.url)
         if (rawCallback && rawCallback !== ROUTE.HOME) {
@@ -52,7 +52,7 @@ export const proxy = auth((request) => {
 
 export const config = {
     matcher: [
-        // Bỏ qua static files, image optimization, favicon, sitemap, robots, và chính route NextAuth.
-        '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
+        // Bỏ qua static files, image optimization, favicon, sitemap, robots, llms.txt, và chính route NextAuth.
+        '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|llms.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt)$).*)',
     ],
 }

@@ -1,8 +1,12 @@
 {
   "metadata": {
-    "title": "TimmyHub",
+    "title": "TimmyHub - Sàn Thương Mại Điện Tử Đa Tiện Ích Hàng Đầu",
     "titleTemplate": "%s · TimmyHub",
-    "description": "Sàn thương mại điện tử TimmyHub"
+    "description": "Mua sắm trực tuyến hàng ngàn sản phẩm công nghệ, điện thoại, phụ kiện chính hãng với ưu đãi freeship, voucher giảm giá mỗi ngày và bảo hành uy tín tại TimmyHub."
+  },
+  "home": {
+    "title": "TimmyHub - Sàn Thương Mại Điện Tử Đa Tiện Ích",
+    "description": "Mua sắm trực tuyến hàng ngàn sản phẩm công nghệ, điện thoại chính hãng với ưu đãi freeship, voucher giảm giá mỗi ngày và chính sách bảo hành uy tín tại TimmyHub."
   },
   "common": {
     "language": "Ngôn ngữ",

@@ -6,6 +6,7 @@ import { getCartAction } from '@/features/cart'
 export const metadata: Metadata = {
     title: 'Thanh toán đơn hàng · TimmyHub',
     description: 'Xác nhận thông tin giao hàng và đặt hàng trên sàn thương mại điện tử TimmyHub',
+    robots: { index: false, follow: false },
 }
 
 export default async function CheckoutPage() {
