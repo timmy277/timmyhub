@@ -74,11 +74,18 @@ export function useWishlist() {
                 toast.info(t('wishlistRemove', { name }))
             }
         },
-        onError: (_err, _variables, context) => {
+        onError: (err: unknown, _variables, context) => {
             if (context?.previousIds) {
                 queryClient.setQueryData<string[]>(QUERY_KEY.WISHLIST.IDS, context.previousIds)
             }
-            toast.error(tCommon('errorGeneric') || 'Có lỗi xảy ra, vui lòng thử lại sau.')
+            const errAny = err as { response?: { data?: { details?: string; message?: string } }; message?: string }
+            const message =
+                errAny?.response?.data?.details ||
+                errAny?.response?.data?.message ||
+                errAny?.message ||
+                tCommon('errorGeneric') ||
+                'Có lỗi xảy ra, vui lòng thử lại sau.'
+            toast.error(message)
         },
     })
 
@@ -114,14 +121,21 @@ export function useWishlist() {
             const name = variables.productName || 'Sản phẩm'
             toast.info(t('wishlistRemove', { name }))
         },
-        onError: (_err, _variables, context) => {
+        onError: (err: unknown, _variables, context) => {
             if (context?.previousIds) {
                 queryClient.setQueryData<string[]>(QUERY_KEY.WISHLIST.IDS, context.previousIds)
             }
             if (context?.previousList) {
                 queryClient.setQueryData<WishlistListResponseDto>(QUERY_KEY.WISHLIST.LIST, context.previousList)
             }
-            toast.error(tCommon('errorGeneric') || 'Có lỗi xảy ra, vui lòng thử lại sau.')
+            const errAny = err as { response?: { data?: { details?: string; message?: string } }; message?: string }
+            const message =
+                errAny?.response?.data?.details ||
+                errAny?.response?.data?.message ||
+                errAny?.message ||
+                tCommon('errorGeneric') ||
+                'Có lỗi xảy ra, vui lòng thử lại sau.'
+            toast.error(message)
         },
     })
 

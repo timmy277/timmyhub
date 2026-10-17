@@ -368,16 +368,10 @@ export class EngagementRepository {
         if (!productIds.length) return []
         return this.prisma.product.findMany({
             where: {
-                id: { in: productIds },
-            },
-            include: {
-                variants: {
-                    select: {
-                        id: true,
-                        price: true,
-                        stock: true,
-                    },
-                },
+                OR: [
+                    { id: { in: productIds } },
+                    { slug: { in: productIds } },
+                ],
             },
         })
     }

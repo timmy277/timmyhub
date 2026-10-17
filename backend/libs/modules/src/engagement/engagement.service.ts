@@ -281,10 +281,8 @@ export class EngagementService {
             const product = productMap.get(item.productId)
             if (!product) continue
 
-            const prices = product.variants.map((v) => v.price)
-            const minPrice = prices.length ? Math.min(...prices) : 0
-            const maxPrice = prices.length ? Math.max(...prices) : 0
-            const totalStock = product.variants.reduce((acc, v) => acc + v.stock, 0)
+            const minPrice = product.minPrice ? Number(product.minPrice) : 0
+            const maxPrice = product.maxPrice ? Number(product.maxPrice) : minPrice
 
             items.push({
                 id: item.id,
@@ -292,12 +290,12 @@ export class EngagementService {
                 name: product.name,
                 slug: product.slug,
                 description: product.description,
-                images: product.images,
+                images: product.images ?? [],
                 minPrice,
                 maxPrice,
-                ratingAvg: product.ratingAvg,
-                ratingCount: product.ratingCount,
-                inStock: totalStock > 0,
+                ratingAvg: product.ratingAvg ?? 0,
+                ratingCount: product.ratingCount ?? 0,
+                inStock: (product.totalStock ?? 0) > 0,
                 createdAt: item.createdAt.toISOString(),
             })
         }
@@ -313,24 +311,29 @@ export class EngagementService {
     }
 
     async toggleWishlist(userId: string, productId: string): Promise<ToggleWishlistResponseDto> {
-        const existing = await this.repository.findWishlistItem(userId, productId)
-        if (existing) {
-            await this.repository.removeWishlistItem(userId, productId)
-            return { inWishlist: false, productId }
-        }
-
-        // Kiểm tra sản phẩm có tồn tại không
+        // Kiểm tra sản phẩm có tồn tại theo id hoặc slug
         const products = await this.repository.findProductsByIds([productId])
-        if (!products.length) {
-            throw new ApiError('NOT_FOUND')
+        const product = products[0]
+        const realProductId = product ? product.id : productId
+
+        const existing = await this.repository.findWishlistItem(userId, realProductId)
+        if (existing) {
+            await this.repository.removeWishlistItem(userId, realProductId)
+            return { inWishlist: false, productId: realProductId }
         }
 
-        await this.repository.addWishlistItem(userId, productId)
-        return { inWishlist: true, productId }
+        if (!product) {
+            throw new ApiError('NOT_FOUND', { details: 'Không tìm thấy sản phẩm' })
+        }
+
+        await this.repository.addWishlistItem(userId, realProductId)
+        return { inWishlist: true, productId: realProductId }
     }
 
     async removeFromWishlist(userId: string, productId: string): Promise<{ success: boolean }> {
-        await this.repository.removeWishlistItem(userId, productId)
+        const products = await this.repository.findProductsByIds([productId])
+        const realProductId = products[0]?.id || productId
+        await this.repository.removeWishlistItem(userId, realProductId)
         return { success: true }
     }
 }
