@@ -220,3 +220,54 @@ export function formatRelativeTime(value: string | Date | null | undefined): str
     if (diffDay < 7) return `${diffDay} ngày`
     return format(date, 'dd/MM')
 }
+
+// Định dạng thời gian kiểu Messenger (Facebook) cho khung chat
+export function formatMessengerTimestamp(value: string | Date | null | undefined, locale: 'vi' | 'en' = 'vi'): string {
+    if (!value) return ''
+    const date = typeof value === 'string' ? parseISO(value) : value
+    if (!isValid(date)) return ''
+
+    const now = new Date()
+    const isSameDay =
+        date.getDate() === now.getDate() &&
+        date.getMonth() === now.getMonth() &&
+        date.getFullYear() === now.getFullYear()
+
+    const yesterday = new Date(now)
+    yesterday.setDate(now.getDate() - 1)
+    const isYesterday =
+        date.getDate() === yesterday.getDate() &&
+        date.getMonth() === yesterday.getMonth() &&
+        date.getFullYear() === yesterday.getFullYear()
+
+    const isSameYear = date.getFullYear() === now.getFullYear()
+    const timeStr = format(date, 'HH:mm')
+
+    if (isSameDay) {
+        return timeStr
+    }
+    if (isYesterday) {
+        return locale === 'vi' ? `Hôm qua ${timeStr}` : `Yesterday ${timeStr}`
+    }
+    if (isSameYear) {
+        return format(date, 'dd/MM, HH:mm')
+    }
+    return format(date, 'dd/MM/yyyy, HH:mm')
+}
+
+// Kiểm tra hiển thị mốc thời gian giữa 2 tin nhắn (chênh lệch > 20 phút hoặc khác ngày)
+export function shouldShowMessageDivider(
+    currentDateVal: string | Date | null | undefined,
+    prevDateVal: string | Date | null | undefined
+): boolean {
+    if (!currentDateVal) return false
+    if (!prevDateVal) return true
+
+    const cur = typeof currentDateVal === 'string' ? parseISO(currentDateVal) : currentDateVal
+    const prev = typeof prevDateVal === 'string' ? parseISO(prevDateVal) : prevDateVal
+    if (!isValid(cur) || !isValid(prev)) return false
+
+    if (cur.toDateString() !== prev.toDateString()) return true
+    return Math.abs(cur.getTime() - prev.getTime()) > 20 * 60 * 1000
+}
+

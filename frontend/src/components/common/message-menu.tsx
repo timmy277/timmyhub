@@ -197,8 +197,8 @@ export function MessageMenu() {
                                                 </span>
                                             </div>
 
-                                            <div className="flex items-center justify-between gap-2">
-                                                <p className={`text-xs truncate ${isUnread ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                                            <div className="flex items-center justify-between gap-2 min-w-0">
+                                                <p className={`text-xs truncate min-w-0 flex-1 ${isUnread ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                                                     {isSelfLast && <span className="text-muted-foreground">Bạn: </span>}
                                                     {conv.lastMessage || 'Bắt đầu cuộc trò chuyện'}
                                                 </p>

@@ -2,19 +2,19 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { format } from 'date-fns'
 import {
     CheckCheckIcon,
-    ExternalLinkIcon,
     ImageIcon,
     Loader2Icon,
     Maximize2Icon,
     MinusIcon,
-    PaperclipIcon,
     SendIcon,
     StoreIcon,
     XIcon,
 } from 'lucide-react'
-import type { ChatMessageDto, ConversationDto } from '@timmyhub/contracts'
+import { useTranslations } from 'next-intl'
+import type { ConversationDto } from '@timmyhub/contracts'
 
 import {
     Avatar,
@@ -28,7 +28,11 @@ import { ROUTE } from '@/constants'
 import { useChat, useConversationMessages } from '@/hooks/use-chat'
 import { useUploadMedia } from '@/hooks/use-media'
 import { useChatStore } from '@/stores/use-chat-store'
-import { formatCurrencyVND, formatRelativeTime } from '@/utils'
+import {
+    formatCurrencyVND,
+    formatMessengerTimestamp,
+    shouldShowMessageDivider,
+} from '@/utils'
 
 // Khung chat nổi đơn lẻ (Floating Chat Box)
 function SingleFloatingChatBox({
@@ -40,6 +44,7 @@ function SingleFloatingChatBox({
     onClose: () => void
     onMinimize: () => void
 }) {
+    const t = useTranslations('chat')
     const { userId, sendMessage, isSending, markConversationRead } = useChat()
     const { messages, isLoading } = useConversationMessages(conversation.id)
     const { mutateAsync: uploadMedia, isPending: isUploading } = useUploadMedia()
@@ -134,7 +139,10 @@ function SingleFloatingChatBox({
     return (
         <div className="w-[340px] sm:w-[360px] h-[480px] bg-background border border-border/80 shadow-2xl rounded-t-2xl flex flex-col pointer-events-auto overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
             {/* Header */}
-            <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border/60 bg-card/80 backdrop-blur-md">
+            <div
+                className="flex items-center justify-between px-3.5 py-2.5 border-b border-border/60 bg-card/80 backdrop-blur-md cursor-pointer select-none"
+                onClick={onMinimize}
+            >
                 <div className="flex items-center gap-2.5 min-w-0">
                     <div className="relative shrink-0">
                         <Avatar className="size-8 border border-border/50">
@@ -151,31 +159,31 @@ function SingleFloatingChatBox({
                     </div>
 
                     <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
                             <p className="text-xs font-bold text-foreground truncate max-w-[150px]">
                                 {conversation.peer.name}
                             </p>
                             {conversation.peer.isSeller && (
-                                <span className="text-[9px] font-semibold px-1 rounded-sm bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                                    Shop
+                                <span className="text-[9px] font-semibold px-1 rounded-sm bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                                    {t('shop')}
                                 </span>
                             )}
                         </div>
-                        <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                            <span className="size-1.5 rounded-full bg-emerald-500 inline-block" />
-                            Đang hoạt động
+                        <p className="text-[10px] text-muted-foreground flex items-center gap-1 truncate">
+                            <span className="size-1.5 rounded-full bg-emerald-500 inline-block shrink-0" />
+                            <span>{t('active')}</span>
                         </p>
                     </div>
                 </div>
 
                 {/* Window Actions */}
-                <div className="flex items-center gap-0.5">
+                <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <Button
                         variant="ghost"
                         size="icon"
                         className="size-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
                         onClick={onMinimize}
-                        title="Thu nhỏ"
+                        title={t('minimizeToChatHead')}
                     >
                         <MinusIcon className="size-3.5" />
                     </Button>
@@ -185,7 +193,7 @@ function SingleFloatingChatBox({
                             variant="ghost"
                             size="icon"
                             className="size-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
-                            title="Mở toàn màn hình"
+                            title={t('openFullScreen')}
                         >
                             <Link href={ROUTE.SELLER_CHAT}>
                                 <Maximize2Icon className="size-3.5" />
@@ -197,19 +205,19 @@ function SingleFloatingChatBox({
                         size="icon"
                         className="size-7 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         onClick={onClose}
-                        title="Đóng chat"
+                        title={t('closeChat')}
                     >
                         <XIcon className="size-3.5" />
                     </Button>
                 </div>
             </div>
 
-            {/* Messages Thread Body */}
-            <ScrollArea className="flex-1 p-3 bg-muted/10">
+            {/* Messages Thread Body - Messenger Facebook Style */}
+            <ScrollArea className="flex-1 p-3 bg-gradient-to-b from-muted/5 via-muted/10 to-background">
                 {isLoading ? (
                     <div className="flex items-center justify-center h-full py-12 text-xs text-muted-foreground">
                         <Loader2Icon className="size-4 animate-spin mr-1.5" />
-                        Đang tải tin nhắn...
+                        {t('loadingMessages')}
                     </div>
                 ) : messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
@@ -217,134 +225,180 @@ function SingleFloatingChatBox({
                             <StoreIcon className="size-6" />
                         </div>
                         <p className="text-xs font-semibold text-foreground">
-                            Bắt đầu nhắn tin với {conversation.peer.name}
+                            {t('startChatWith', { name: conversation.peer.name })}
                         </p>
                         <p className="text-[11px] text-muted-foreground max-w-[220px]">
-                            Gửi tin nhắn, hỏi thông tin sản phẩm hoặc chia sẻ ảnh/video dễ dàng.
+                            {t('startChatSubtitle')}
                         </p>
                     </div>
                 ) : (
-                    <div className="space-y-3 pb-1">
-                        {messages.map((msg) => {
+                    <div className="space-y-1 pb-1">
+                        {messages.map((msg, index) => {
                             const isMe = msg.senderId === userId
+                            const prevMsg = index > 0 ? messages[index - 1] : null
+                            const nextMsg = index < messages.length - 1 ? messages[index + 1] : null
+                            const showDivider = shouldShowMessageDivider(msg.createdAt, prevMsg?.createdAt)
+                            const isLastInSenderGroup =
+                                !nextMsg ||
+                                nextMsg.senderId !== msg.senderId ||
+                                shouldShowMessageDivider(nextMsg.createdAt, msg.createdAt)
 
                             return (
-                                <div
-                                    key={msg.id}
-                                    className={`flex items-end gap-2 group ${isMe ? 'justify-end' : 'justify-start'}`}
-                                >
-                                    {!isMe && (
-                                        <Avatar className="size-6 mb-0.5 border border-border/50 shrink-0">
-                                            <AvatarImage src={msg.senderAvatar ?? undefined} />
-                                            <AvatarFallback className="text-[8px] bg-muted">
-                                                {msg.senderName?.slice(0, 2).toUpperCase() || 'U'}
-                                            </AvatarFallback>
-                                        </Avatar>
+                                <div key={msg.id} className="space-y-1">
+                                    {/* Mốc thời gian phân cách kiểu Messenger */}
+                                    {showDivider && (
+                                        <div className="flex justify-center my-2.5">
+                                            <span className="text-[10px] font-medium text-muted-foreground/75 px-2.5 py-0.5 rounded-full bg-muted/60 select-none">
+                                                {formatMessengerTimestamp(msg.createdAt)}
+                                            </span>
+                                        </div>
                                     )}
 
                                     <div
-                                        className={`flex flex-col max-w-[78%] ${isMe ? 'items-end' : 'items-start'}`}
+                                        className={`flex items-end gap-1.5 group/msg ${
+                                            isMe ? 'justify-end' : 'justify-start'
+                                        }`}
                                     >
-                                        {/* Attached Product Snippet */}
-                                        {msg.attachedProduct && (
-                                            <Link
-                                                href={ROUTE.PRODUCT_DETAIL(msg.attachedProduct.slug)}
-                                                className="mb-1 p-2 rounded-xl border border-border/70 bg-card hover:border-primary/50 transition-colors flex items-center gap-2 text-left shadow-xs w-full"
-                                            >
-                                                {msg.attachedProduct.thumbnailUrl && (
-                                                    // eslint-disable-next-line @next/next/no-img-element
-                                                    <img
-                                                        src={msg.attachedProduct.thumbnailUrl}
-                                                        alt={msg.attachedProduct.name}
-                                                        className="size-10 rounded-md object-cover shrink-0"
-                                                    />
-                                                )}
-                                                <div className="min-w-0">
-                                                    <p className="text-[11px] font-semibold text-foreground truncate">
-                                                        {msg.attachedProduct.name}
-                                                    </p>
-                                                    <p className="text-[11px] font-bold text-primary">
-                                                        {formatCurrencyVND(msg.attachedProduct.price)}
-                                                    </p>
-                                                </div>
-                                            </Link>
-                                        )}
-
-                                        {/* Attached Order Snippet */}
-                                        {msg.attachedOrder && (
-                                            <Link
-                                                href={ROUTE.ORDER_DETAIL(msg.attachedOrder.id)}
-                                                className="mb-1 p-2 rounded-xl border border-border/70 bg-card hover:border-primary/50 transition-colors flex items-center gap-2 text-left shadow-xs w-full"
-                                            >
-                                                <div className="size-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-                                                    <StoreIcon className="size-4" />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-[11px] font-semibold text-foreground">
-                                                        Đơn #{msg.attachedOrder.orderNumber}
-                                                    </p>
-                                                    <p className="text-[10px] text-muted-foreground">
-                                                        {formatCurrencyVND(msg.attachedOrder.totalAmount)} • {msg.attachedOrder.status}
-                                                    </p>
-                                                </div>
-                                            </Link>
-                                        )}
-
-                                        {/* Message Content Bubble */}
-                                        {msg.content && (
-                                            <div
-                                                className={`px-3.5 py-2 text-xs leading-relaxed break-words rounded-2xl shadow-xs ${
-                                                    isMe
-                                                        ? 'bg-primary text-primary-foreground rounded-tr-xs'
-                                                        : 'bg-card text-foreground border border-border/60 rounded-tl-xs'
-                                                }`}
-                                            >
-                                                {msg.content}
+                                        {/* Avatar phía bên trái chỉ hiện ở tin nhắn cuối của nhóm cùng người gửi */}
+                                        {!isMe && (
+                                            <div className="size-6 mb-0.5 shrink-0">
+                                                {isLastInSenderGroup ? (
+                                                    <Avatar className="size-6 border border-border/50">
+                                                        <AvatarImage src={msg.senderAvatar ?? undefined} />
+                                                        <AvatarFallback className="text-[8px] bg-muted font-bold">
+                                                            {msg.senderName?.slice(0, 2).toUpperCase() || 'U'}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                ) : null}
                                             </div>
                                         )}
 
-                                        {/* Attached Images */}
-                                        {msg.imageUrls?.length > 0 && (
-                                            <div className="mt-1 flex flex-wrap gap-1.5">
-                                                {msg.imageUrls.map((url, i) => (
-                                                    <a
-                                                        key={i}
-                                                        href={url}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="relative rounded-xl overflow-hidden border border-border/50 group/img shadow-xs block"
-                                                    >
-                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <div
+                                            className={`flex flex-col max-w-[78%] ${
+                                                isMe ? 'items-end' : 'items-start'
+                                            }`}
+                                        >
+                                            {/* Attached Product Snippet */}
+                                            {msg.attachedProduct && (
+                                                <Link
+                                                    href={ROUTE.PRODUCT_DETAIL(msg.attachedProduct.slug)}
+                                                    className="mb-1 p-2 rounded-xl border border-border/70 bg-card hover:border-primary/50 transition-colors flex items-center gap-2 text-left shadow-xs w-full"
+                                                >
+                                                    {msg.attachedProduct.thumbnailUrl && (
+                                                        // eslint-disable-next-line @next/next/no-img-element
                                                         <img
-                                                            src={url}
-                                                            alt="Attached"
-                                                            className="max-h-36 max-w-[200px] object-cover transition-transform group-hover/img:scale-105"
+                                                            src={msg.attachedProduct.thumbnailUrl}
+                                                            alt={msg.attachedProduct.name}
+                                                            className="size-10 rounded-md object-cover shrink-0"
                                                         />
-                                                    </a>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Attached Videos */}
-                                        {msg.videoUrls?.length > 0 && (
-                                            <div className="mt-1 space-y-1 w-full">
-                                                {msg.videoUrls.map((url, i) => (
-                                                    <div key={i} className="rounded-xl overflow-hidden border border-border/50 bg-black/60 shadow-xs">
-                                                        <video
-                                                            src={url}
-                                                            controls
-                                                            preload="metadata"
-                                                            className="max-h-44 max-w-full rounded-xl w-full"
-                                                        />
+                                                    )}
+                                                    <div className="min-w-0">
+                                                        <p className="text-[11px] font-semibold text-foreground truncate">
+                                                            {msg.attachedProduct.name}
+                                                        </p>
+                                                        <p className="text-[11px] font-bold text-primary">
+                                                            {formatCurrencyVND(msg.attachedProduct.price)}
+                                                        </p>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        )}
+                                                </Link>
+                                            )}
 
-                                        {/* Timestamp */}
-                                        <span className="text-[9px] text-muted-foreground/70 mt-0.5 px-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            {formatRelativeTime(msg.createdAt)}
-                                        </span>
+                                            {/* Attached Order Snippet */}
+                                            {msg.attachedOrder && (
+                                                <Link
+                                                    href={ROUTE.ORDER_DETAIL(msg.attachedOrder.id)}
+                                                    className="mb-1 p-2 rounded-xl border border-border/70 bg-card hover:border-primary/50 transition-colors flex items-center gap-2 text-left shadow-xs w-full"
+                                                >
+                                                    <div className="size-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                                                        <StoreIcon className="size-4" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-[11px] font-semibold text-foreground">
+                                                            {t('orderNumber', { number: msg.attachedOrder.orderNumber })}
+                                                        </p>
+                                                        <p className="text-[10px] text-muted-foreground">
+                                                            {formatCurrencyVND(msg.attachedOrder.totalAmount)} • {msg.attachedOrder.status}
+                                                        </p>
+                                                    </div>
+                                                </Link>
+                                            )}
+
+                                            {/* Message Content Bubble with Messenger-style hover timestamp */}
+                                            {msg.content && (
+                                                <div
+                                                    className={`flex items-center gap-1.5 group/bubble ${
+                                                        isMe ? 'justify-end' : 'justify-start'
+                                                    }`}
+                                                >
+                                                    {isMe && (
+                                                        <span className="text-[9px] text-muted-foreground/60 opacity-0 group-hover/bubble:opacity-100 transition-opacity select-none order-first">
+                                                            {format(new Date(msg.createdAt), 'HH:mm')}
+                                                        </span>
+                                                    )}
+                                                    <div
+                                                        className={`px-3.5 py-2 text-xs leading-relaxed break-words rounded-2xl shadow-xs ${
+                                                            isMe
+                                                                ? 'bg-gradient-to-r from-primary to-primary/95 text-primary-foreground rounded-br-xs'
+                                                                : 'bg-card text-foreground border border-border/60 rounded-bl-xs'
+                                                        }`}
+                                                        title={format(new Date(msg.createdAt), 'HH:mm, dd/MM/yyyy')}
+                                                    >
+                                                        {msg.content}
+                                                    </div>
+                                                    {!isMe && (
+                                                        <span className="text-[9px] text-muted-foreground/60 opacity-0 group-hover/bubble:opacity-100 transition-opacity select-none">
+                                                            {format(new Date(msg.createdAt), 'HH:mm')}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Attached Images */}
+                                            {msg.imageUrls?.length > 0 && (
+                                                <div className="mt-1 flex flex-wrap gap-1.5">
+                                                    {msg.imageUrls.map((url, i) => (
+                                                        <a
+                                                            key={i}
+                                                            href={url}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="relative rounded-xl overflow-hidden border border-border/50 group/img shadow-xs block"
+                                                        >
+                                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                            <img
+                                                                src={url}
+                                                                alt="Attached"
+                                                                className="max-h-36 max-w-[200px] object-cover transition-transform group-hover/img:scale-105"
+                                                            />
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Attached Videos */}
+                                            {msg.videoUrls?.length > 0 && (
+                                                <div className="mt-1 space-y-1 w-full">
+                                                    {msg.videoUrls.map((url, i) => (
+                                                        <div key={i} className="rounded-xl overflow-hidden border border-border/50 bg-black/60 shadow-xs">
+                                                            <video
+                                                                src={url}
+                                                                controls
+                                                                preload="metadata"
+                                                                className="max-h-44 max-w-full rounded-xl w-full"
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Trạng thái gửi cho tin nhắn cuối cùng của Me */}
+                                            {isMe && index === messages.length - 1 && (
+                                                <span className="text-[9px] text-muted-foreground/75 flex items-center gap-1 justify-end mt-0.5 pr-0.5 select-none">
+                                                    <CheckCheckIcon className="size-2.5 text-primary" />
+                                                    <span>{t('delivered')}</span>
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             )
@@ -394,13 +448,13 @@ function SingleFloatingChatBox({
                     size="icon"
                     className="size-8 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0"
                     onClick={() => fileInputRef.current?.click()}
-                    title="Đính kèm ảnh hoặc video"
+                    title={t('attachMedia')}
                 >
                     <ImageIcon className="size-4" />
                 </Button>
 
                 <Input
-                    placeholder="Nhập tin nhắn..."
+                    placeholder={t('inputPlaceholderShort')}
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -426,8 +480,9 @@ function SingleFloatingChatBox({
     )
 }
 
-// Thanh Dock chứa các khung chat nổi ở góc dưới bên phải màn hình (như Facebook)
+// Thanh Dock chứa các khung chat nổi ở góc dưới bên phải màn hình (kiểu Facebook Messenger)
 export function FloatingChatDock() {
+    const t = useTranslations('chat')
     const { openConversations, minimizedIds, closeChat, toggleMinimize } = useChatStore()
 
     if (openConversations.length === 0) {
@@ -440,47 +495,55 @@ export function FloatingChatDock() {
                 const isMinimized = minimizedIds.includes(conv.id)
 
                 if (isMinimized) {
-                    // Minimized Tab Bar / Pill
+                    // Chat Head avatar tròn nổi ở góc dưới bên phải (kiểu Facebook Messenger)
                     return (
                         <div
                             key={conv.id}
-                            className="h-10 px-3 bg-card/95 backdrop-blur-md border border-border/80 rounded-t-xl shadow-xl flex items-center gap-2 cursor-pointer pointer-events-auto hover:bg-accent/80 transition-all select-none group"
+                            className="relative group pointer-events-auto cursor-pointer mb-3 sm:mb-4 select-none transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-75 duration-200"
                             onClick={() => toggleMinimize(conv.id)}
+                            title={conv.peer.name}
                         >
-                            <div className="relative shrink-0">
-                                <Avatar className="size-6 border border-border/60">
+                            {/* Avatar Bubble */}
+                            <div className="size-12 sm:size-13 rounded-full border-2 border-primary/20 bg-card shadow-2xl p-0.5 ring-2 ring-background hover:ring-primary/50 transition-all flex items-center justify-center">
+                                <Avatar className="size-full rounded-full">
                                     <AvatarImage src={conv.peer.avatar ?? undefined} alt={conv.peer.name} />
-                                    <AvatarFallback className="text-[8px] bg-primary/10 text-primary font-bold">
+                                    <AvatarFallback className="text-xs bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-bold">
                                         {conv.peer.isSeller ? (
-                                            <StoreIcon className="size-3" />
+                                            <StoreIcon className="size-5" />
                                         ) : (
                                             conv.peer.name.slice(0, 2).toUpperCase()
                                         )}
                                     </AvatarFallback>
                                 </Avatar>
-                                <span className="absolute bottom-0 right-0 size-1.5 rounded-full bg-emerald-500 ring-1 ring-background" />
                             </div>
 
-                            <span className="text-xs font-semibold text-foreground max-w-[100px] truncate">
-                                {conv.peer.name}
-                            </span>
+                            {/* Online Indicator */}
+                            <span className="absolute bottom-0 right-0 size-3.5 rounded-full bg-emerald-500 ring-2 ring-background shadow-xs" />
 
+                            {/* Unread Count Badge */}
                             {conv.unreadCount > 0 && (
-                                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] text-white font-bold">
-                                    {conv.unreadCount}
+                                <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] text-white font-extrabold shadow-md ring-2 ring-background">
+                                    {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
                                 </span>
                             )}
 
+                            {/* Hover close 'X' button */}
                             <button
                                 type="button"
                                 onClick={(e) => {
                                     e.stopPropagation()
                                     closeChat(conv.id)
                                 }}
-                                className="size-4 rounded-full text-muted-foreground hover:text-destructive flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="absolute -top-1 -left-1 size-5 rounded-full bg-muted-foreground/80 hover:bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md ring-2 ring-background"
+                                title={t('closeChatHead')}
                             >
                                 <XIcon className="size-3" />
                             </button>
+
+                            {/* Hover tooltip with peer name */}
+                            <div className="absolute right-full mr-2.5 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-popover text-popover-foreground text-xs font-semibold shadow-lg border border-border/80 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none hidden sm:block">
+                                {conv.peer.name}
+                            </div>
                         </div>
                     )
                 }
@@ -490,7 +553,7 @@ export function FloatingChatDock() {
                     <SingleFloatingChatBox
                         key={conv.id}
                         conversation={conv}
-                        onClose={() => closeChat(conv.id)}
+                        onClose={() => toggleMinimize(conv.id)}
                         onMinimize={() => toggleMinimize(conv.id)}
                     />
                 )

@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState, useEffect } from 'react'
 import Link from 'next/link'
+import { format } from 'date-fns'
 import {
     CheckCheckIcon,
     ChevronRightIcon,
@@ -30,6 +31,7 @@ import {
     VideoIcon,
     XIcon,
 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import type { ChatMessageDto, ConversationDto } from '@timmyhub/contracts'
 
@@ -52,7 +54,12 @@ import {
 import { ROUTE } from '@/constants'
 import { useChat, useConversationMessages } from '@/hooks/use-chat'
 import { useUploadMedia } from '@/hooks/use-media'
-import { formatCurrencyVND, formatRelativeTime } from '@/utils'
+import {
+    formatCurrencyVND,
+    formatMessengerTimestamp,
+    formatRelativeTime,
+    shouldShowMessageDivider,
+} from '@/utils'
 
 // Các mẫu câu trả lời nhanh (Canned Replies) cho Seller chăm sóc khách hàng
 const QUICK_REPLIES = [
@@ -64,6 +71,7 @@ const QUICK_REPLIES = [
 ]
 
 export default function SellerChatPage() {
+    const t = useTranslations('chat')
     const { userId, conversations, totalUnreadCount, isLoading, markConversationRead, sendMessage, isSending, refetchConversations } =
         useChat()
 
@@ -176,7 +184,7 @@ export default function SellerChatPage() {
                 }
             } catch (err) {
                 console.error('Lỗi khi tải ảnh/video lên:', err)
-                toast.error('Không thể tải tệp lên. Vui lòng thử lại.')
+                toast.error('Không thể tải tệp tin đính kèm. Vui lòng thử lại.')
             }
         }
 
@@ -192,7 +200,7 @@ export default function SellerChatPage() {
             setMediaPreviews([])
         } catch (err) {
             console.error('Lỗi khi gửi tin nhắn:', err)
-            toast.error('Không thể gửi tin nhắn. Vui lòng thử lại.')
+            toast.error('Gửi tin nhắn thất bại')
         }
     }
 
@@ -213,22 +221,20 @@ export default function SellerChatPage() {
             {/* CỘT 1: DANH SÁCH KHÁCH HÀNG / HỘI THOẠI (320px - 360px)   */}
             {/* ======================================================== */}
             <div className="w-80 lg:w-88 h-full flex flex-col border-r border-border/80 bg-card/60 backdrop-blur-xl shrink-0 overflow-hidden">
-                {/* Header Kênh Chăm sóc khách hàng */}
-                <div className="p-4 border-b border-border/60 flex items-center justify-between">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <div className="size-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold shadow-xs">
-                                <MessageCircleIcon className="size-4" />
-                            </div>
-                            <div>
-                                <h1 className="font-bold text-base tracking-tight text-foreground">
-                                    Tin nhắn tư vấn
-                                </h1>
-                                <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                                    <span className="size-1.5 rounded-full bg-emerald-500 inline-block" />
-                                    Trực tuyến • Phản hồi ~5 phút
-                                </p>
-                            </div>
+                {/* Header Kênh Chăm sóc khách hàng - Đồng bộ h-16 với 2 cột bên */}
+                <div className="h-16 px-4 border-b border-border/80 bg-card/80 backdrop-blur-md flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="size-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold shadow-xs shrink-0">
+                            <MessageCircleIcon className="size-4" />
+                        </div>
+                        <div className="min-w-0">
+                            <h1 className="font-bold text-sm sm:text-base tracking-tight text-foreground truncate">
+                                {t('advisorMessages')}
+                            </h1>
+                            <p className="text-[11px] text-muted-foreground flex items-center gap-1 truncate">
+                                <span className="size-1.5 rounded-full bg-emerald-500 inline-block shrink-0" />
+                                <span className="truncate">{t('advisorSubtitle')}</span>
+                            </p>
                         </div>
                     </div>
 
@@ -236,8 +242,8 @@ export default function SellerChatPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => void refetchConversations()}
-                        className="size-8 rounded-lg text-muted-foreground hover:text-foreground"
-                        title="Làm mới danh sách"
+                        className="size-8 rounded-lg text-muted-foreground hover:text-foreground shrink-0"
+                        title={t('refreshList')}
                     >
                         <RefreshCwIcon className="size-3.5" />
                     </Button>
@@ -248,7 +254,7 @@ export default function SellerChatPage() {
                     <div className="relative">
                         <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
                         <Input
-                            placeholder="Tìm khách hàng hoặc tin nhắn..."
+                            placeholder={t('searchPlaceholder')}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="h-8 pl-8 text-xs rounded-xl bg-background/80 border-border/60"
@@ -266,7 +272,7 @@ export default function SellerChatPage() {
                                     : 'bg-muted/60 text-muted-foreground hover:bg-muted'
                             }`}
                         >
-                            Tất cả ({conversations.length})
+                            {t('tabAll')} ({conversations.length})
                         </button>
                         <button
                             type="button"
@@ -277,7 +283,7 @@ export default function SellerChatPage() {
                                     : 'bg-muted/60 text-muted-foreground hover:bg-muted'
                             }`}
                         >
-                            Chưa đọc {totalUnreadCount > 0 && `(${totalUnreadCount})`}
+                            {t('tabUnread')} {totalUnreadCount > 0 && `(${totalUnreadCount})`}
                         </button>
                         <button
                             type="button"
@@ -288,30 +294,30 @@ export default function SellerChatPage() {
                                     : 'bg-muted/60 text-muted-foreground hover:bg-muted'
                             }`}
                         >
-                            Có đơn hàng
+                            {t('tabHasOrder')}
                         </button>
                     </div>
                 </div>
 
-                {/* Danh sách các cuộc trò chuyện */}
-                <ScrollArea className="flex-1 divide-y divide-border/20">
+                {/* Danh sách các cuộc trò chuyện - Bo tròn đẹp, border 4 phía rõ nét, text truncate chuẩn */}
+                <ScrollArea className="flex-1">
                     {isLoading ? (
                         <div className="p-8 text-center text-xs text-muted-foreground flex flex-col items-center gap-2">
                             <Loader2Icon className="size-5 animate-spin text-primary" />
-                            Đang tải hội thoại...
+                            {t('loadingConversations')}
                         </div>
                     ) : filteredConversations.length === 0 ? (
                         <div className="p-8 text-center text-xs text-muted-foreground flex flex-col items-center gap-2">
                             <div className="size-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
                                 <MessageSquareIcon className="size-6" />
                             </div>
-                            <p className="font-semibold text-foreground">Không có hội thoại nào</p>
+                            <p className="font-semibold text-foreground">{t('noConversations')}</p>
                             <p className="text-[11px] text-muted-foreground max-w-[200px]">
-                                {searchQuery ? 'Thử tìm kiếm với từ khóa khác' : 'Khi khách hàng nhắn tin cho shop, danh sách sẽ hiện ở đây.'}
+                                {searchQuery ? t('noConversationsSearch') : t('noConversationsDesc')}
                             </p>
                         </div>
                     ) : (
-                        <div className="p-2 space-y-1">
+                        <div className="p-2.5 space-y-1.5">
                             {filteredConversations.map((conv) => {
                                 const isSelected = conv.id === selectedConvId
                                 const isUnread = conv.unreadCount > 0
@@ -323,10 +329,10 @@ export default function SellerChatPage() {
                                         onClick={() => setSelectedConvId(conv.id)}
                                         className={`flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all border ${
                                             isSelected
-                                                ? 'bg-primary/10 border-primary/30 shadow-xs ring-1 ring-primary/20'
+                                                ? 'bg-primary/10 border-primary/40 shadow-xs ring-1 ring-primary/30'
                                                 : isUnread
                                                 ? 'bg-card border-border/70 hover:bg-accent/40 font-semibold'
-                                                : 'bg-transparent border-transparent hover:bg-accent/40 hover:border-border/30'
+                                                : 'bg-transparent border-transparent hover:bg-accent/40 hover:border-border/40'
                                         }`}
                                     >
                                         {/* Avatar & Online Dot */}
@@ -342,8 +348,8 @@ export default function SellerChatPage() {
 
                                         {/* Info */}
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between gap-1 mb-1">
-                                                <span className={`text-sm truncate ${isUnread ? 'font-bold text-foreground' : 'font-medium text-foreground/90'}`}>
+                                            <div className="flex items-center justify-between gap-1.5 mb-1 min-w-0">
+                                                <span className={`text-sm truncate min-w-0 ${isUnread ? 'font-bold text-foreground' : 'font-medium text-foreground/90'}`}>
                                                     {conv.peer.name}
                                                 </span>
                                                 <span className="text-[11px] text-muted-foreground font-normal shrink-0">
@@ -353,18 +359,18 @@ export default function SellerChatPage() {
 
                                             {/* Order tag if attached */}
                                             {conv.orderId && (
-                                                <div className="mb-1">
-                                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.2 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                                                        <PackageIcon className="size-2.5" />
-                                                        Đơn #{conv.orderId.slice(-8).toUpperCase()}
+                                                <div className="mb-1 min-w-0 truncate">
+                                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.2 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 truncate max-w-full">
+                                                        <PackageIcon className="size-2.5 shrink-0" />
+                                                        <span className="truncate">{t('orderNumber', { number: conv.orderId.slice(-8).toUpperCase() })}</span>
                                                     </span>
                                                 </div>
                                             )}
 
-                                            <div className="flex items-center justify-between gap-2">
-                                                <p className={`text-xs truncate ${isUnread ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>
-                                                    {isSelfLast && <span className="text-muted-foreground font-normal">Bạn: </span>}
-                                                    {conv.lastMessage || 'Bắt đầu cuộc trò chuyện'}
+                                            <div className="flex items-center justify-between gap-2 min-w-0">
+                                                <p className={`text-xs truncate min-w-0 flex-1 ${isUnread ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>
+                                                    {isSelfLast && <span className="text-muted-foreground font-normal">{t('you')}: </span>}
+                                                    {conv.lastMessage || t('startAdvising')}
                                                 </p>
                                                 {isUnread && (
                                                     <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] text-white font-bold shrink-0">
@@ -387,8 +393,8 @@ export default function SellerChatPage() {
             <div className="flex-1 min-w-0 min-h-0 h-full flex flex-col overflow-hidden bg-background/50">
                 {activeConversation ? (
                     <>
-                        {/* Header Hội thoại đang mở */}
-                        <div className="h-16 px-6 border-b border-border/80 bg-card/80 backdrop-blur-md flex items-center justify-between shrink-0">
+                        {/* Header Hội thoại đang mở - h-16 đồng bộ với 2 cột bên */}
+                        <div className="h-16 px-4 sm:px-6 border-b border-border/80 bg-card/80 backdrop-blur-md flex items-center justify-between shrink-0">
                             <div className="flex items-center gap-3.5 min-w-0">
                                 <div className="relative shrink-0">
                                     <Avatar className="size-10 border border-border/60 shadow-xs">
@@ -401,26 +407,26 @@ export default function SellerChatPage() {
                                 </div>
 
                                 <div className="min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <h2 className="font-bold text-sm sm:text-base text-foreground truncate">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <h2 className="font-bold text-sm sm:text-base text-foreground truncate max-w-[180px] sm:max-w-[280px] md:max-w-[340px]">
                                             {activeConversation.peer.name}
                                         </h2>
-                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1 shrink-0">
                                             <UserCheckIcon className="size-2.5" />
-                                            Khách hàng
+                                            {t('customer')}
                                         </span>
                                     </div>
-                                    <p className="text-xs text-muted-foreground flex items-center gap-2">
-                                        <span>Đang trực tuyến</span>
+                                    <p className="text-xs text-muted-foreground flex items-center gap-2 truncate">
+                                        <span className="shrink-0">{t('online')}</span>
                                         {activeConversation.orderId && (
                                             <>
-                                                <span>•</span>
+                                                <span className="shrink-0">•</span>
                                                 <Link
                                                     href={ROUTE.ORDER_DETAIL(activeConversation.orderId)}
-                                                    className="text-primary hover:underline font-medium inline-flex items-center gap-0.5"
+                                                    className="text-primary hover:underline font-medium inline-flex items-center gap-0.5 truncate"
                                                 >
-                                                    Đơn hàng #{activeConversation.orderId.slice(-8).toUpperCase()}
-                                                    <ExternalLinkIcon className="size-2.5" />
+                                                    <span className="truncate">{t('orderNumber', { number: activeConversation.orderId.slice(-8).toUpperCase() })}</span>
+                                                    <ExternalLinkIcon className="size-2.5 shrink-0" />
                                                 </Link>
                                             </>
                                         )}
@@ -429,35 +435,35 @@ export default function SellerChatPage() {
                             </div>
 
                             {/* Actions Right Header */}
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 shrink-0">
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => void refetchMessages()}
-                                    className="h-8 text-xs gap-1.5 rounded-xl border-border/60"
+                                    className="h-8 text-xs gap-1.5 rounded-xl border-border/60 shrink-0"
                                 >
                                     <RefreshCwIcon className="size-3" />
-                                    <span>Làm mới</span>
+                                    <span>{t('refresh')}</span>
                                 </Button>
 
                                 <Button
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => setShowCustomerCrm(!showCustomerCrm)}
-                                    className={`size-8 rounded-xl transition-colors ${showCustomerCrm ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}
-                                    title={showCustomerCrm ? 'Ẩn thông tin khách hàng' : 'Xem thông tin khách hàng'}
+                                    className={`size-8 rounded-xl transition-colors shrink-0 ${showCustomerCrm ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}
+                                    title={showCustomerCrm ? t('hideCustomerInfo') : t('showCustomerInfo')}
                                 >
                                     {showCustomerCrm ? <PanelRightCloseIcon className="size-4" /> : <PanelRightOpenIcon className="size-4" />}
                                 </Button>
                             </div>
                         </div>
 
-                        {/* Vùng tin nhắn (Messages Canvas) */}
-                        <ScrollArea className="flex-1 min-h-0 p-6 bg-gradient-to-b from-muted/5 via-muted/10 to-background">
+                        {/* Vùng tin nhắn (Messages Canvas) - Kiểu Facebook Messenger chuẩn */}
+                        <ScrollArea className="flex-1 min-h-0 p-4 sm:p-6 bg-gradient-to-b from-muted/5 via-muted/10 to-background">
                             {isLoadingMessages ? (
                                 <div className="flex items-center justify-center py-20 text-xs text-muted-foreground gap-2">
                                     <Loader2Icon className="size-5 animate-spin text-primary" />
-                                    Đang tải tin nhắn...
+                                    {t('loadingMessages')}
                                 </div>
                             ) : messages.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
@@ -465,137 +471,180 @@ export default function SellerChatPage() {
                                         <MessageSquareIcon className="size-8" />
                                     </div>
                                     <h3 className="font-bold text-base text-foreground">
-                                        Bắt đầu tư vấn khách hàng
+                                        {t('startAdvising')}
                                     </h3>
                                     <p className="text-xs text-muted-foreground max-w-sm">
-                                        Gửi tin nhắn, hỏi thăm nhu cầu, tư vấn sản phẩm hoặc gửi hình ảnh/video để chốt đơn nhanh chóng.
+                                        {t('startAdvisingDesc')}
                                     </p>
                                 </div>
                             ) : (
-                                <div className="space-y-4 max-w-4xl mx-auto pb-2">
-                                    {messages.map((msg) => {
+                                <div className="space-y-1 max-w-4xl mx-auto pb-2">
+                                    {messages.map((msg, index) => {
                                         const isMe = msg.senderId === userId
+                                        const prevMsg = index > 0 ? messages[index - 1] : null
+                                        const nextMsg = index < messages.length - 1 ? messages[index + 1] : null
+                                        const showDivider = shouldShowMessageDivider(msg.createdAt, prevMsg?.createdAt)
+                                        const isLastInSenderGroup =
+                                            !nextMsg ||
+                                            nextMsg.senderId !== msg.senderId ||
+                                            shouldShowMessageDivider(nextMsg.createdAt, msg.createdAt)
 
                                         return (
-                                            <div
-                                                key={msg.id}
-                                                className={`flex items-end gap-2.5 group ${isMe ? 'justify-end' : 'justify-start'}`}
-                                            >
-                                                {!isMe && (
-                                                    <Avatar className="size-8 mb-1 border border-border/60 shrink-0">
-                                                        <AvatarImage src={msg.senderAvatar ?? undefined} />
-                                                        <AvatarFallback className="text-[10px] bg-muted font-bold">
-                                                            {msg.senderName?.slice(0, 2).toUpperCase() || 'KH'}
-                                                        </AvatarFallback>
-                                                    </Avatar>
+                                            <div key={msg.id} className="space-y-1">
+                                                {/* Mốc thời gian phân cách kiểu Facebook Messenger */}
+                                                {showDivider && (
+                                                    <div className="flex justify-center my-3">
+                                                        <span className="text-[11px] font-medium text-muted-foreground/75 px-3 py-0.5 rounded-full bg-muted/60 select-none shadow-xs">
+                                                            {formatMessengerTimestamp(msg.createdAt)}
+                                                        </span>
+                                                    </div>
                                                 )}
 
-                                                <div className={`flex flex-col max-w-[70%] ${isMe ? 'items-end' : 'items-start'}`}>
-                                                    {/* Sender name label */}
-                                                    <span className="text-[11px] text-muted-foreground/80 mb-1 px-1 font-medium">
-                                                        {isMe ? 'Bạn (Shop)' : msg.senderName}
-                                                    </span>
-
-                                                    {/* Attached Product Card */}
-                                                    {msg.attachedProduct && (
-                                                        <Link
-                                                            href={ROUTE.PRODUCT_DETAIL(msg.attachedProduct.slug)}
-                                                            className="mb-1.5 p-3 rounded-2xl border border-border/80 bg-card hover:border-primary/50 transition-all flex items-center gap-3 shadow-xs w-full max-w-sm"
-                                                        >
-                                                            {msg.attachedProduct.thumbnailUrl && (
-                                                                // eslint-disable-next-line @next/next/no-img-element
-                                                                <img
-                                                                    src={msg.attachedProduct.thumbnailUrl}
-                                                                    alt={msg.attachedProduct.name}
-                                                                    className="size-12 rounded-xl object-cover shrink-0"
-                                                                />
-                                                            )}
-                                                            <div className="min-w-0">
-                                                                <p className="text-xs font-bold text-foreground truncate">
-                                                                    {msg.attachedProduct.name}
-                                                                </p>
-                                                                <p className="text-xs font-extrabold text-primary">
-                                                                    {formatCurrencyVND(msg.attachedProduct.price)}
-                                                                </p>
-                                                            </div>
-                                                        </Link>
-                                                    )}
-
-                                                    {/* Attached Order Card */}
-                                                    {msg.attachedOrder && (
-                                                        <Link
-                                                            href={ROUTE.ORDER_DETAIL(msg.attachedOrder.id)}
-                                                            className="mb-1.5 p-3 rounded-2xl border border-border/80 bg-card hover:border-primary/50 transition-all flex items-center gap-3 shadow-xs w-full max-w-sm"
-                                                        >
-                                                            <div className="size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-                                                                <PackageIcon className="size-5" />
-                                                            </div>
-                                                            <div className="min-w-0">
-                                                                <p className="text-xs font-bold text-foreground">
-                                                                    Đơn hàng #{msg.attachedOrder.orderNumber}
-                                                                </p>
-                                                                <p className="text-[11px] text-muted-foreground">
-                                                                    {formatCurrencyVND(msg.attachedOrder.totalAmount)} • Trạng thái: {msg.attachedOrder.status}
-                                                                </p>
-                                                            </div>
-                                                        </Link>
-                                                    )}
-
-                                                    {/* Text Content */}
-                                                    {msg.content && (
-                                                        <div
-                                                            className={`px-4 py-2.5 text-sm leading-relaxed break-words rounded-2xl shadow-xs ${
-                                                                isMe
-                                                                    ? 'bg-gradient-to-r from-primary to-primary/95 text-primary-foreground rounded-tr-xs'
-                                                                    : 'bg-card text-foreground border border-border/80 rounded-tl-xs shadow-xs'
-                                                            }`}
-                                                        >
-                                                            {msg.content}
+                                                <div
+                                                    className={`flex items-end gap-2 group/msg ${
+                                                        isMe ? 'justify-end' : 'justify-start'
+                                                    }`}
+                                                >
+                                                    {/* Avatar bên trái chỉ hiện ở tin nhắn cuối của nhóm */}
+                                                    {!isMe && (
+                                                        <div className="size-8 mb-0.5 shrink-0">
+                                                            {isLastInSenderGroup ? (
+                                                                <Avatar className="size-8 border border-border/60 shadow-xs">
+                                                                    <AvatarImage src={msg.senderAvatar ?? undefined} />
+                                                                    <AvatarFallback className="text-[10px] bg-muted font-bold">
+                                                                        {msg.senderName?.slice(0, 2).toUpperCase() || 'KH'}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                            ) : null}
                                                         </div>
                                                     )}
 
-                                                    {/* Images Gallery */}
-                                                    {msg.imageUrls?.length > 0 && (
-                                                        <div className="mt-1.5 flex flex-wrap gap-2">
-                                                            {msg.imageUrls.map((url, i) => (
-                                                                <a
-                                                                    key={i}
-                                                                    href={url}
-                                                                    target="_blank"
-                                                                    rel="noreferrer"
-                                                                    className="relative rounded-2xl overflow-hidden border border-border/60 shadow-sm block group/img"
-                                                                >
-                                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    <div
+                                                        className={`flex flex-col max-w-[70%] ${
+                                                            isMe ? 'items-end' : 'items-start'
+                                                        }`}
+                                                    >
+                                                        {/* Attached Product Card */}
+                                                        {msg.attachedProduct && (
+                                                            <Link
+                                                                href={ROUTE.PRODUCT_DETAIL(msg.attachedProduct.slug)}
+                                                                className="mb-1.5 p-3 rounded-2xl border border-border/80 bg-card hover:border-primary/50 transition-all flex items-center gap-3 shadow-xs w-full max-w-sm"
+                                                            >
+                                                                {msg.attachedProduct.thumbnailUrl && (
+                                                                    // eslint-disable-next-line @next/next/no-img-element
                                                                     <img
-                                                                        src={url}
-                                                                        alt="Đính kèm"
-                                                                        className="max-h-56 max-w-[280px] object-cover transition-transform group-hover/img:scale-105"
+                                                                        src={msg.attachedProduct.thumbnailUrl}
+                                                                        alt={msg.attachedProduct.name}
+                                                                        className="size-12 rounded-xl object-cover shrink-0"
                                                                     />
-                                                                </a>
-                                                            ))}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Videos Player */}
-                                                    {msg.videoUrls?.length > 0 && (
-                                                        <div className="mt-1.5 space-y-2 w-full max-w-md">
-                                                            {msg.videoUrls.map((url, i) => (
-                                                                <div key={i} className="rounded-2xl overflow-hidden border border-border/60 bg-black/80 shadow-md">
-                                                                    <video
-                                                                        src={url}
-                                                                        controls
-                                                                        preload="metadata"
-                                                                        className="max-h-60 rounded-2xl w-full"
-                                                                    />
+                                                                )}
+                                                                <div className="min-w-0">
+                                                                    <p className="text-xs font-bold text-foreground truncate">
+                                                                        {msg.attachedProduct.name}
+                                                                    </p>
+                                                                    <p className="text-xs font-extrabold text-primary">
+                                                                        {formatCurrencyVND(msg.attachedProduct.price)}
+                                                                    </p>
                                                                 </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
+                                                            </Link>
+                                                        )}
 
-                                                    {/* Timestamp */}
-                                                    <span className="text-[10px] text-muted-foreground mt-1 px-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        {formatRelativeTime(msg.createdAt)}
-                                                    </span>
+                                                        {/* Attached Order Card */}
+                                                        {msg.attachedOrder && (
+                                                            <Link
+                                                                href={ROUTE.ORDER_DETAIL(msg.attachedOrder.id)}
+                                                                className="mb-1.5 p-3 rounded-2xl border border-border/80 bg-card hover:border-primary/50 transition-all flex items-center gap-3 shadow-xs w-full max-w-sm"
+                                                            >
+                                                                <div className="size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                                                                    <PackageIcon className="size-5" />
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <p className="text-xs font-bold text-foreground">
+                                                                        {t('orderNumber', { number: msg.attachedOrder.orderNumber })}
+                                                                    </p>
+                                                                    <p className="text-[11px] text-muted-foreground">
+                                                                        {formatCurrencyVND(msg.attachedOrder.totalAmount)} • {msg.attachedOrder.status}
+                                                                    </p>
+                                                                </div>
+                                                            </Link>
+                                                        )}
+
+                                                        {/* Text Content Bubble - Giống Messenger: Hover hiện giờ bên cạnh */}
+                                                        {msg.content && (
+                                                            <div
+                                                                className={`flex items-center gap-2 group/bubble ${
+                                                                    isMe ? 'justify-end' : 'justify-start'
+                                                                }`}
+                                                            >
+                                                                {isMe && (
+                                                                    <span className="text-[10px] text-muted-foreground/60 opacity-0 group-hover/bubble:opacity-100 transition-opacity select-none order-first">
+                                                                        {format(new Date(msg.createdAt), 'HH:mm')}
+                                                                    </span>
+                                                                )}
+                                                                <div
+                                                                    className={`px-4 py-2.5 text-sm leading-relaxed break-words rounded-2xl shadow-xs ${
+                                                                        isMe
+                                                                            ? 'bg-gradient-to-r from-primary to-primary/95 text-primary-foreground rounded-br-xs'
+                                                                            : 'bg-card text-foreground border border-border/80 rounded-bl-xs shadow-xs'
+                                                                    }`}
+                                                                    title={format(new Date(msg.createdAt), 'HH:mm, dd/MM/yyyy')}
+                                                                >
+                                                                    {msg.content}
+                                                                </div>
+                                                                {!isMe && (
+                                                                    <span className="text-[10px] text-muted-foreground/60 opacity-0 group-hover/bubble:opacity-100 transition-opacity select-none">
+                                                                        {format(new Date(msg.createdAt), 'HH:mm')}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Images Gallery */}
+                                                        {msg.imageUrls?.length > 0 && (
+                                                            <div className="mt-1.5 flex flex-wrap gap-2">
+                                                                {msg.imageUrls.map((url, i) => (
+                                                                    <a
+                                                                        key={i}
+                                                                        href={url}
+                                                                        target="_blank"
+                                                                        rel="noreferrer"
+                                                                        className="relative rounded-2xl overflow-hidden border border-border/60 shadow-sm block group/img"
+                                                                    >
+                                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                                        <img
+                                                                            src={url}
+                                                                            alt="Đính kèm"
+                                                                            className="max-h-56 max-w-[280px] object-cover transition-transform group-hover/img:scale-105"
+                                                                        />
+                                                                    </a>
+                                                                ))}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Videos Player */}
+                                                        {msg.videoUrls?.length > 0 && (
+                                                            <div className="mt-1.5 space-y-2 w-full max-w-md">
+                                                                {msg.videoUrls.map((url, i) => (
+                                                                    <div key={i} className="rounded-2xl overflow-hidden border border-border/60 bg-black/80 shadow-md">
+                                                                        <video
+                                                                            src={url}
+                                                                            controls
+                                                                            preload="metadata"
+                                                                            className="max-h-60 rounded-2xl w-full"
+                                                                        />
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Trạng thái gửi cho tin nhắn cuối cùng của Me */}
+                                                        {isMe && index === messages.length - 1 && (
+                                                            <span className="text-[10px] text-muted-foreground/75 flex items-center gap-1 justify-end mt-1 pr-1 select-none">
+                                                                <CheckCheckIcon className="size-3 text-primary" />
+                                                                <span>{t('delivered')}</span>
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         )
@@ -605,18 +654,18 @@ export default function SellerChatPage() {
                             )}
                         </ScrollArea>
 
-                        {/* Canned Replies Shortcuts */}
-                        <div className="px-6 py-2 border-t border-border/40 bg-muted/20 flex items-center gap-2 overflow-x-auto">
-                            <span className="text-[11px] font-semibold text-muted-foreground shrink-0 flex items-center gap-1">
-                                <SparklesIcon className="size-3 text-amber-500" />
-                                Mẫu trả lời:
+                        {/* Thanh mẫu câu trả lời nhanh (Canned Replies) */}
+                        <div className="px-4 sm:px-6 py-2 border-t border-border/60 bg-muted/20 flex items-center gap-2 overflow-x-auto shrink-0">
+                            <span className="text-[11px] font-medium text-muted-foreground shrink-0 flex items-center gap-1">
+                                <SparklesIcon className="size-3 text-primary" />
+                                {t('quickReplyTip')}
                             </span>
                             {QUICK_REPLIES.map((reply, i) => (
                                 <button
                                     key={i}
                                     type="button"
                                     onClick={() => insertQuickReply(reply)}
-                                    className="px-2.5 py-1 text-xs rounded-lg bg-card border border-border/70 text-foreground/80 hover:text-primary hover:border-primary/50 transition-all shrink-0 truncate max-w-[260px] shadow-2xs"
+                                    className="text-xs px-2.5 py-1 rounded-lg bg-card border border-border/60 hover:border-primary/50 hover:bg-primary/5 text-foreground transition-all shrink-0 whitespace-nowrap shadow-xs"
                                 >
                                     {reply}
                                 </button>
@@ -664,14 +713,14 @@ export default function SellerChatPage() {
                                     size="icon"
                                     onClick={() => fileInputRef.current?.click()}
                                     className="size-9 rounded-xl border-border/70 text-muted-foreground hover:text-primary hover:border-primary/50"
-                                    title="Đính kèm ảnh hoặc video"
+                                    title={t('attachMedia')}
                                 >
                                     <ImageIcon className="size-4" />
                                 </Button>
                             </div>
 
                             <Textarea
-                                placeholder="Nhập tin nhắn tư vấn khách hàng (Nhấn Enter để gửi, Shift+Enter xuống dòng)..."
+                                placeholder={t('inputPlaceholder')}
                                 value={inputText}
                                 onChange={(e) => setInputText(e.target.value)}
                                 onKeyDown={handleKeyDown}
@@ -688,11 +737,11 @@ export default function SellerChatPage() {
                                 {isSending || isUploading ? (
                                     <>
                                         <Loader2Icon className="size-4 animate-spin" />
-                                        <span>Đang gửi...</span>
+                                        <span>{t('sending')}</span>
                                     </>
                                 ) : (
                                     <>
-                                        <span>Gửi</span>
+                                        <span>{t('send')}</span>
                                         <SendIcon className="size-4" />
                                     </>
                                 )}
@@ -705,10 +754,10 @@ export default function SellerChatPage() {
                             <MessageCircleIcon className="size-10" />
                         </div>
                         <h2 className="font-bold text-lg text-foreground">
-                            Chọn một khách hàng để bắt đầu tư vấn
+                            {t('selectCustomerPrompt')}
                         </h2>
                         <p className="text-xs text-muted-foreground max-w-sm">
-                            Xem lịch sử trò chuyện, hỗ trợ đơn hàng và gửi hình ảnh/video trực tiếp tới khách hàng.
+                            {t('selectCustomerDesc')}
                         </p>
                     </div>
                 )}
@@ -719,18 +768,20 @@ export default function SellerChatPage() {
             {/* ======================================================== */}
             {showCustomerCrm && activeConversation && (
                 <div className="w-80 lg:w-84 border-l border-border/80 bg-card/60 backdrop-blur-xl h-full flex flex-col shrink-0 overflow-hidden">
-                    <div className="p-4 border-b border-border/60 flex items-center justify-between">
-                        <h3 className="font-bold text-sm text-foreground flex items-center gap-1.5">
-                            <InfoIcon className="size-4 text-primary" />
-                            Thông tin khách hàng
+                    {/* Header Cột 3 - h-16 đồng bộ với 2 cột bên */}
+                    <div className="h-16 px-4 border-b border-border/80 bg-card/80 backdrop-blur-md flex items-center justify-between shrink-0">
+                        <h3 className="font-bold text-sm text-foreground flex items-center gap-2 min-w-0 truncate">
+                            <InfoIcon className="size-4 text-primary shrink-0" />
+                            <span className="truncate">{t('customerInfo')}</span>
                         </h3>
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => setShowCustomerCrm(false)}
-                            className="size-7 rounded-lg text-muted-foreground hover:text-foreground"
+                            className="size-8 rounded-lg text-muted-foreground hover:text-foreground shrink-0"
+                            title={t('close')}
                         >
-                            <XIcon className="size-3.5" />
+                            <XIcon className="size-4" />
                         </Button>
                     </div>
 
@@ -744,20 +795,20 @@ export default function SellerChatPage() {
                                 </AvatarFallback>
                             </Avatar>
 
-                            <h4 className="font-bold text-sm text-foreground">
+                            <h4 className="font-bold text-sm text-foreground truncate max-w-full">
                                 {activeConversation.peer.name}
                             </h4>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                                Khách hàng đã xác thực
+                                {t('verifiedCustomer')}
                             </p>
 
                             <div className="grid grid-cols-2 gap-2 w-full mt-4 pt-3 border-t border-border/50 text-left">
                                 <div className="p-2 rounded-xl bg-background/80 border border-border/40">
-                                    <p className="text-[10px] text-muted-foreground">Tổng đơn hàng</p>
+                                    <p className="text-[10px] text-muted-foreground">{t('totalOrders')}</p>
                                     <p className="text-xs font-bold text-foreground">3 đơn</p>
                                 </div>
                                 <div className="p-2 rounded-xl bg-background/80 border border-border/40">
-                                    <p className="text-[10px] text-muted-foreground">Đã chi tiêu</p>
+                                    <p className="text-[10px] text-muted-foreground">{t('totalSpent')}</p>
                                     <p className="text-xs font-bold text-primary">1.250.000₫</p>
                                 </div>
                             </div>
@@ -827,10 +878,10 @@ export default function SellerChatPage() {
                         <div className="space-y-2 mt-4">
                             <h4 className="font-semibold text-xs text-foreground flex items-center gap-1.5">
                                 <SparklesIcon className="size-3.5 text-violet-500" />
-                                Ghi chú nội bộ
+                                {t('notes')}
                             </h4>
                             <Textarea
-                                placeholder="Ghi chú về sở thích, lưu ý của khách (chỉ shop nhìn thấy)..."
+                                placeholder={t('addNotePlaceholder')}
                                 value={customerNotes[activeConversation.id] ?? ''}
                                 onChange={(e) =>
                                     setCustomerNotes((prev) => ({
@@ -838,7 +889,7 @@ export default function SellerChatPage() {
                                         [activeConversation.id]: e.target.value,
                                     }))
                                 }
-                                className="min-h-20 text-xs rounded-xl bg-background border-border/60"
+                                className="min-h-20 text-xs rounded-xl bg-background border-border/60 resize-none"
                             />
                         </div>
                     </ScrollArea>
