@@ -1548,6 +1548,7 @@
     "shareSuccess": "Product link copied to clipboard!",
     "wishlistAdd": "Added \"{name}\" to wishlist!",
     "wishlistRemove": "Removed \"{name}\" from wishlist",
+    "wishlistLoginRequired": "Please log in to save products to your wishlist.",
     "addCartSuccess": "Added {quantity} items to cart!",
     "addCartError": "Failed to add product to cart",
     "buyNowNotice": "Buy Now feature is being integrated with payment gateway!",

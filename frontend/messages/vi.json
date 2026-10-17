@@ -1548,6 +1548,7 @@
     "shareSuccess": "Đã sao chép liên kết sản phẩm vào khay nhớ tạm!",
     "wishlistAdd": "Đã thêm \"{name}\" vào danh sách yêu thích!",
     "wishlistRemove": "Đã bỏ \"{name}\" khỏi danh sách yêu thích",
+    "wishlistLoginRequired": "Vui lòng đăng nhập để lưu sản phẩm yêu thích.",
     "addCartSuccess": "Đã thêm {quantity} sản phẩm vào giỏ hàng!",
     "addCartError": "Không thể thêm sản phẩm vào giỏ hàng",
     "buyNowNotice": "Tính năng mua ngay đang được tích hợp cổng thanh toán!",

@@ -13,7 +13,7 @@ import { API_ROUTE, QUERY_KEY, ROUTE } from '@/constants'
 import { apiClient } from '@/services'
 
 export function useWishlist() {
-    const t = useTranslations('products')
+    const t = useTranslations('productDetail')
     const tCommon = useTranslations('common')
     const queryClient = useQueryClient()
     const router = useRouter()
