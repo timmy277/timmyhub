@@ -93,7 +93,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @MessageBody() data: { conversationId: string; userId: string; lastReadMessageId?: string },
     ): void {
         if (!data?.conversationId || !data?.userId) return
-        this.emitConversationRead(data.conversationId, data.userId, data.lastReadMessageId)
+        this.emitConversationRead(data.conversationId, data.userId, [], data.lastReadMessageId)
     }
 
     // ===== Server Emitters =====
