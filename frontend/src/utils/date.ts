@@ -201,3 +201,22 @@ export function parseDisplayRange(text: string): DateRange | null {
 export function isSameRange(a: DateRange | null | undefined, b: DateRange | null | undefined): boolean {
     return a?.from?.getTime() === b?.from?.getTime() && a?.to?.getTime() === b?.to?.getTime()
 }
+
+export function formatRelativeTime(value: string | Date | null | undefined): string {
+    if (!value) return ''
+    const date = typeof value === 'string' ? parseISO(value) : value
+    if (!isValid(date)) return ''
+
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffSec = Math.floor(diffMs / 1000)
+    const diffMin = Math.floor(diffSec / 60)
+    const diffHour = Math.floor(diffMin / 60)
+    const diffDay = Math.floor(diffHour / 24)
+
+    if (diffSec < 60) return 'vừa xong'
+    if (diffMin < 60) return `${diffMin}p`
+    if (diffHour < 24) return `${diffHour}h`
+    if (diffDay < 7) return `${diffDay} ngày`
+    return format(date, 'dd/MM')
+}

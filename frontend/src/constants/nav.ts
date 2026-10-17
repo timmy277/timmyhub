@@ -4,6 +4,7 @@ import {
     HistoryIcon,
     KeyRoundIcon,
     LayoutGridIcon,
+    MessageSquareIcon,
     PackageIcon,
     SettingsIcon,
     ShieldCheckIcon,
@@ -125,6 +126,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
                 url: ROUTE.SELLER_ORDERS,
                 icon: ShoppingBagIcon,
                 requirePermission: [SELLER_SHOP_PERMISSION, 'orders:orders:list:shop'],
+                excludePermission: DASHBOARD_PERMISSION,
+            },
+            {
+                titleKey: 'sellerChat',
+                url: ROUTE.SELLER_CHAT,
+                icon: MessageSquareIcon,
+                requirePermission: SELLER_SHOP_PERMISSION,
                 excludePermission: DASHBOARD_PERMISSION,
             },
             {

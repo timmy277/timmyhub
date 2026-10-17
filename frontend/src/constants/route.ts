@@ -12,6 +12,7 @@ export const ROUTE = {
     SELLER_REGISTER: '/seller/register',
     SELLER_PORTAL: '/seller/portal',
     SELLER_ORDERS: '/seller/orders',
+    SELLER_CHAT: '/seller/chat',
     SELLER_VOUCHERS: '/seller/vouchers',
     SELLER_SETTINGS: '/seller/settings',
     ADMIN_SELLER_APPLICATIONS: '/seller-applications',

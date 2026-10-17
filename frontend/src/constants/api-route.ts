@@ -136,4 +136,12 @@ export const API_ROUTE = {
         MARK_READ: (id: string) => `v1/notifications/${encodeURIComponent(id)}/read`,
         MARK_ALL_READ: 'v1/notifications/read-all',
     },
+    CHAT: {
+        CONVERSATIONS: 'v1/chat/conversations',
+        CONVERSATION_DETAIL: (id: string) => `v1/chat/conversations/${encodeURIComponent(id)}`,
+        MESSAGES: (id: string) => `v1/chat/conversations/${encodeURIComponent(id)}/messages`,
+        SEND_MESSAGE: (id: string) => `v1/chat/conversations/${encodeURIComponent(id)}/messages`,
+        SEND: 'v1/chat/messages',
+        READ: (id: string) => `v1/chat/conversations/${encodeURIComponent(id)}/read`,
+    },
 } as const

@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import {
     Breadcrumbs,
     LocaleSwitcher,
+    MessageMenu,
     NotificationMenu,
     ThemeMenu,
     ThemeModeToggle,
@@ -26,6 +27,7 @@ export function Header() {
                 <LocaleSwitcher />
                 <ThemeMenu />
                 <ThemeModeToggle />
+                <MessageMenu />
                 <NotificationMenu />
                 <Suspense fallback={<Skeleton className="h-8 w-8 rounded-full" />}>
                     <UserMenu />

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { LayoutGridIcon, StoreIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 
-import { LocaleSwitcher, NotificationMenu, ThemeMenu, ThemeModeToggle, UserMenu } from '@/components/common'
+import { LocaleSwitcher, MessageMenu, NotificationMenu, ThemeMenu, ThemeModeToggle, UserMenu } from '@/components/common'
 import { Button, Skeleton } from '@/components/ui'
 import { DASHBOARD_PERMISSION, ROUTE, SELLER_SHOP_PERMISSION } from '@/constants'
 import { getMyShopAction } from '@/features/seller'
@@ -65,6 +65,7 @@ export async function HomeHeader() {
                 <LocaleSwitcher />
                 <ThemeMenu />
                 <ThemeModeToggle />
+                <MessageMenu />
                 <NotificationMenu />
                 <CartButton />
                 <Suspense fallback={<Skeleton className="h-8 w-8 rounded-full" />}>

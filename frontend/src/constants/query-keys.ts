@@ -85,4 +85,10 @@ export const QUERY_KEY = {
         LIST: ['notification', 'list'] as const,
         UNREAD_COUNT: ['notification', 'unread-count'] as const,
     },
+    CHAT: {
+        ALL: ['chat'] as const,
+        CONVERSATIONS: ['chat', 'conversations'] as const,
+        CONVERSATION: (id: string) => ['chat', 'conversation', id] as const,
+        MESSAGES: (id: string) => ['chat', 'messages', id] as const,
+    },
 } as const
