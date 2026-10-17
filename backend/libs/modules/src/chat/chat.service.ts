@@ -576,6 +576,12 @@ export class ChatService {
     async createConversation(userId: string, input: CreateConversationInput): Promise<ConversationDto> {
         const targetId = input.targetUserId
 
+        if (targetId === userId) {
+            throw new ApiError('BAD_REQUEST', {
+                messageKey: 'chat.cannotChatWithSelf',
+            })
+        }
+
         // Tìm hoặc tạo
         let conv = await this.prisma.conversation.findFirst({
             where: {
@@ -590,6 +596,13 @@ export class ChatService {
             const recipientSeller = await this.prisma.sellerProfile.findFirst({
                 where: { OR: [{ id: targetId }, { userId: targetId }] },
             })
+
+            if (recipientSeller && recipientSeller.userId === userId) {
+                throw new ApiError('BAD_REQUEST', {
+                    messageKey: 'chat.cannotChatWithSelf',
+                })
+            }
+
             const userSeller = await this.prisma.sellerProfile.findUnique({
                 where: { userId },
             })
