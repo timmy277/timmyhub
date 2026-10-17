@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { format } from 'date-fns'
 import {
     CheckCheckIcon,
@@ -496,10 +497,17 @@ function SingleFloatingChatBox({
 // Thanh Dock chứa các khung chat nổi ở góc dưới bên phải màn hình (kiểu Facebook Messenger)
 export function FloatingChatDock() {
     const t = useTranslations('chat')
-    const { conversations, markConversationRead } = useChat()
+    const pathname = usePathname()
+    const { conversations, markConversationRead, isAuthenticated } = useChat()
     const { openConversations, minimizedIds, closeChat, toggleMinimize } = useChatStore()
 
-    if (openConversations.length === 0) {
+    // Ẩn hoàn toàn nếu chưa đăng nhập, hoặc không có hội thoại mở, hoặc đang ở trang đăng nhập / đăng ký
+    if (
+        !isAuthenticated ||
+        openConversations.length === 0 ||
+        pathname.startsWith('/login') ||
+        pathname.startsWith('/register')
+    ) {
         return null
     }
 

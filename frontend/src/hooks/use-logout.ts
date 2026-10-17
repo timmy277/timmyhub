@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 
 import { revokeSessionAction } from '@/features/login'
+import { useChatStore } from '@/stores'
 
 // Đăng xuất: signOut() của next-auth/react chạy POST /api/auth/signout — NextAuth xoá cookie phiên
 // HttpOnly VÀ reset SessionProvider về 'unauthenticated' (server action không reset được state client).
@@ -21,6 +22,7 @@ export function useLogout() {
             // Xoá cookie HttpOnly + reset SessionProvider (status → 'unauthenticated').
             await signOut({ redirect: false })
             queryClient.clear()
+            useChatStore.getState().closeAllChats()
         },
         onSettled: () => {
             router.push('/login')
