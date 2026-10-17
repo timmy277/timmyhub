@@ -577,9 +577,7 @@ export class ChatService {
         const targetId = input.targetUserId
 
         if (targetId === userId) {
-            throw new ApiError('BAD_REQUEST', {
-                messageKey: 'chat.cannotChatWithSelf',
-            })
+            throw new ApiError('CANNOT_MODIFY_SELF')
         }
 
         // Tìm hoặc tạo
@@ -598,9 +596,7 @@ export class ChatService {
             })
 
             if (recipientSeller && recipientSeller.userId === userId) {
-                throw new ApiError('BAD_REQUEST', {
-                    messageKey: 'chat.cannotChatWithSelf',
-                })
+                throw new ApiError('CANNOT_MODIFY_SELF')
             }
 
             const userSeller = await this.prisma.sellerProfile.findUnique({
