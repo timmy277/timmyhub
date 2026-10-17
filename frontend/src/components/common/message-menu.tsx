@@ -61,12 +61,15 @@ export function MessageMenu() {
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="relative size-9 rounded-full transition-all hover:bg-accent/80 active:scale-95"
-                    aria-label={t('messages')}
+                    className="relative"
+                    aria-label={totalUnreadCount > 0 ? `${t('messages')} (${totalUnreadCount})` : t('messages')}
                 >
-                    <MessageCircleIcon className="size-5 text-foreground/80" />
+                    <MessageCircleIcon aria-hidden className="size-4" />
                     {totalUnreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] text-white font-bold shadow-sm animate-in zoom-in-50 duration-200">
+                        <span
+                            aria-hidden="true"
+                            className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-white shadow-xs animate-in zoom-in-50 duration-200"
+                        >
                             {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
                         </span>
                     )}

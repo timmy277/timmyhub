@@ -6,9 +6,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm, useWatch } from 'react-hook-form'
+import { useSession } from 'next-auth/react'
 import {
     Star,
     ThumbsUp,
+    MessageCircle,
     MessageSquare,
     CheckCircle2,
     ImageIcon,
@@ -50,6 +52,7 @@ import { ErrorState, UserAvatar } from '@/components/common'
 import { MediaLightbox, type MediaLightboxItem } from '@/features/media'
 import { QUERY_KEY } from '@/constants'
 import { cn } from '@/utils'
+import { useChat } from '@/hooks/use-chat'
 import { createCommentAction, getProductReviewsAction, toggleHelpfulAction } from '../actions'
 import { useProductRealtime } from '../hooks/use-product-realtime'
 
@@ -361,6 +364,30 @@ function ReviewCardItem({ review, productId, onOpenLightbox }: ReviewCardItemPro
     const t = useTranslations('reviews')
     const tValidation = useTranslations('validation')
     const queryClient = useQueryClient()
+    const { data: session } = useSession()
+    const { openChatWithUser, isAuthenticated } = useChat()
+    const [isStartingChat, setIsStartingChat] = useState(false)
+    const currentUserId = session?.user?.id
+    const isSelf = Boolean(currentUserId && currentUserId === review.userId)
+
+    const handleChatWithReviewer = async () => {
+        if (!isAuthenticated) {
+            toast.info('Vui lòng đăng nhập để nhắn tin với người đánh giá')
+            return
+        }
+        if (isSelf) return
+
+        setIsStartingChat(true)
+        try {
+            await openChatWithUser(review.userId)
+        } catch (err) {
+            console.error('Lỗi khi mở cuộc trò chuyện:', err)
+            toast.error('Không thể mở cuộc trò chuyện lúc này. Vui lòng thử lại.')
+        } finally {
+            setIsStartingChat(false)
+        }
+    }
+
     const [isReplying, setIsReplying] = useState(false)
     const [isSubmittingReply, setIsSubmittingReply] = useState(false)
     const replyForm = useForm<CreateReviewCommentInput>({
@@ -498,49 +525,90 @@ function ReviewCardItem({ review, productId, onOpenLightbox }: ReviewCardItemPro
                 {/* Người đánh giá & Thông tin */}
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                        <UserAvatar
-                            name={review.userName}
-                            imageUrl={review.userAvatar}
-                            className="h-10 w-10 border border-border/60"
-                        />
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <span className="font-semibold text-sm text-foreground">{review.userName}</span>
-                                {review.isVerified && (
-                                    <Badge
-                                        variant="secondary"
-                                        className="text-[11px] font-medium py-0 h-5 px-1.5 gap-1 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/25"
-                                    >
-                                        <CheckCircle2 className="h-3 w-3" />
-                                        {t('verifiedPurchase')}
-                                    </Badge>
+                        <div
+                            onClick={!isSelf ? () => void handleChatWithReviewer() : undefined}
+                            className={cn(
+                                'group/user flex items-center gap-3 text-left transition-all',
+                                !isSelf && 'cursor-pointer',
+                            )}
+                            title={isSelf ? 'Đánh giá của bạn' : `Nhắn tin với ${review.userName}`}
+                        >
+                            <div className="relative">
+                                <UserAvatar
+                                    name={review.userName}
+                                    imageUrl={review.userAvatar}
+                                    className={cn(
+                                        'h-10 w-10 border border-border/60 transition-all',
+                                        !isSelf &&
+                                            'group-hover/user:ring-2 group-hover/user:ring-primary/40 group-hover/user:border-primary/50 group-hover/user:scale-105',
+                                    )}
+                                />
+                                {!isSelf && (
+                                    <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
                                 )}
                             </div>
-                            <div className="flex items-center gap-2 mt-1">
-                                <div className="flex items-center gap-0.5">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                        <Star
-                                            key={star}
-                                            className={cn(
-                                                'h-3.5 w-3.5',
-                                                star <= review.rating
-                                                    ? 'fill-amber-400 text-amber-400'
-                                                    : 'fill-transparent text-muted-foreground/30',
-                                            )}
-                                        />
-                                    ))}
-                                </div>
-                                <span className="text-xs text-muted-foreground font-mono" suppressHydrationWarning>
-                                    {formatReviewDateTime(review.createdAt)}
-                                </span>
-                                {review.variantLabel && (
-                                    <span className="text-xs text-muted-foreground/80 before:content-['•'] before:mr-2">
-                                        {review.variantLabel}
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <span
+                                        className={cn(
+                                            'font-semibold text-sm text-foreground transition-colors',
+                                            !isSelf && 'group-hover/user:text-primary group-hover/user:underline',
+                                        )}
+                                    >
+                                        {review.userName}
                                     </span>
-                                )}
+                                    {review.isVerified && (
+                                        <Badge
+                                            variant="secondary"
+                                            className="text-[11px] font-medium py-0 h-5 px-1.5 gap-1 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/25"
+                                        >
+                                            <CheckCircle2 className="h-3 w-3" />
+                                            {t('verifiedPurchase')}
+                                        </Badge>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <div className="flex items-center gap-0.5">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                            <Star
+                                                key={star}
+                                                className={cn(
+                                                    'h-3.5 w-3.5',
+                                                    star <= review.rating
+                                                        ? 'fill-amber-400 text-amber-400'
+                                                        : 'fill-transparent text-muted-foreground/30',
+                                                )}
+                                            />
+                                        ))}
+                                    </div>
+                                    <span className="text-xs text-muted-foreground font-mono" suppressHydrationWarning>
+                                        {formatReviewDateTime(review.createdAt)}
+                                    </span>
+                                    {review.variantLabel && (
+                                        <span className="text-xs text-muted-foreground/80 before:content-['•'] before:mr-2">
+                                            {review.variantLabel}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
+
+                    {/* Dedicated Chat Action Button */}
+                    {!isSelf && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => void handleChatWithReviewer()}
+                            disabled={isStartingChat}
+                            className="h-8 px-2.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full transition-all gap-1.5 shrink-0 group/chat border border-border/40 hover:border-primary/30"
+                            title={`Nhắn tin với ${review.userName}`}
+                        >
+                            <MessageCircle className="size-3.5 text-muted-foreground group-hover/chat:text-primary transition-colors" />
+                            <span className="hidden sm:inline font-medium">Nhắn tin</span>
+                        </Button>
+                    )}
                 </div>
 
                 {/* Nội dung nhận xét */}
@@ -733,6 +801,30 @@ function CommentItemCard({ comment, reviewId, productId, depth = 0 }: CommentIte
     const t = useTranslations('reviews')
     const tValidation = useTranslations('validation')
     const queryClient = useQueryClient()
+    const { data: session } = useSession()
+    const { openChatWithUser, isAuthenticated } = useChat()
+    const [isStartingChat, setIsStartingChat] = useState(false)
+    const currentUserId = session?.user?.id
+    const isCommentSelf = Boolean(currentUserId && currentUserId === comment.userId)
+
+    const handleChatWithCommenter = async () => {
+        if (!isAuthenticated) {
+            toast.info('Vui lòng đăng nhập để nhắn tin')
+            return
+        }
+        if (isCommentSelf) return
+
+        setIsStartingChat(true)
+        try {
+            await openChatWithUser(comment.userId)
+        } catch (err) {
+            console.error('Lỗi khi mở cuộc trò chuyện:', err)
+            toast.error('Không thể mở cuộc trò chuyện lúc này. Vui lòng thử lại.')
+        } finally {
+            setIsStartingChat(false)
+        }
+    }
+
     const [isReplying, setIsReplying] = useState(false)
     const [isSubmittingReply, setIsSubmittingReply] = useState(false)
     const replyForm = useForm<CreateReviewCommentInput>({
@@ -806,7 +898,7 @@ function CommentItemCard({ comment, reviewId, productId, depth = 0 }: CommentIte
 
                 <p className="text-foreground/90 pl-8 whitespace-pre-wrap leading-relaxed">{comment.content}</p>
 
-                {/* Nút hành động Trả lời */}
+                {/* Nút hành động Trả lời & Nhắn tin */}
                 <div className="pl-8 pt-0.5 flex items-center gap-3">
                     <Button
                         type="button"
@@ -820,6 +912,20 @@ function CommentItemCard({ comment, reviewId, productId, depth = 0 }: CommentIte
                         <CornerDownRight className="h-3 w-3" />
                         <span>{t('buttons.reply')}</span>
                     </Button>
+
+                    {!isCommentSelf && !comment.isSellerReply && (
+                        <Button
+                            type="button"
+                            onClick={() => void handleChatWithCommenter()}
+                            disabled={isStartingChat}
+                            className="text-[11px] font-medium flex items-center gap-1 transition-colors text-muted-foreground hover:text-primary"
+                            variant="ghost"
+                            title={`Nhắn tin với ${comment.userName}`}
+                        >
+                            <MessageCircle className="size-3" />
+                            <span>Nhắn tin</span>
+                        </Button>
+                    )}
                 </div>
 
                 {/* Form nhập phản hồi cho bình luận này */}

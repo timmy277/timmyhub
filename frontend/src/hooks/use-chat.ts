@@ -11,11 +11,13 @@ import {
     type ChatMessageListResponseDto,
     type ConversationDto,
     type ConversationListResponseDto,
+    type CreateConversationInput,
     type SendChatMessageInput,
 } from '@timmyhub/contracts'
 
 import { API_ROUTE, QUERY_KEY, WS_BASE_URL } from '@/constants'
 import { apiClient } from '@/services'
+import { useChatStore } from '@/stores/use-chat-store'
 
 export function useChat() {
     const { data: session } = useSession()
@@ -113,6 +115,38 @@ export function useChat() {
         },
     })
 
+    // Mở hoặc tạo mới cuộc trò chuyện với user khác
+    const createConversationMutation = useMutation({
+        mutationFn: async (payload: CreateConversationInput) => {
+            const res = await apiClient.post<ConversationDto>(API_ROUTE.CHAT.CONVERSATIONS, payload)
+            return res.data
+        },
+        onSuccess: (conversation) => {
+            void queryClient.invalidateQueries({ queryKey: QUERY_KEY.CHAT.CONVERSATIONS })
+            if (conversation) {
+                useChatStore.getState().openChat(conversation)
+            }
+        },
+    })
+
+    const openChatWithUser = async (targetUserId: string, initialMessage?: string) => {
+        const conversations = conversationsQuery.data?.items ?? []
+        const existing = conversations.find(
+            (c) => c.peer.id === targetUserId || c.buyerId === targetUserId || c.sellerId === targetUserId,
+        )
+        if (existing) {
+            useChatStore.getState().openChat(existing)
+            return existing
+        }
+
+        const newConv = await createConversationMutation.mutateAsync({
+            targetUserId,
+            ...(initialMessage ? { initialMessage } : {}),
+        })
+        useChatStore.getState().openChat(newConv)
+        return newConv
+    }
+
     return {
         isAuthenticated,
         userId,
@@ -123,6 +157,8 @@ export function useChat() {
         markConversationRead: markReadMutation.mutate,
         sendMessage: sendMessageMutation.mutateAsync,
         isSending: sendMessageMutation.isPending,
+        openChatWithUser,
+        isCreatingConversation: createConversationMutation.isPending,
         refetchConversations: conversationsQuery.refetch,
     }
 }
