@@ -26,7 +26,7 @@ import {
     ScrollArea,
 } from '@/components'
 import { CHAT_CONFIG, ROUTE } from '@/constants'
-import { useChat, useConversationMessages, useUploadMedia } from '@/hooks'
+import { useChat, useConversationMessages, useIsSeller, useUploadMedia } from '@/hooks'
 import { useChatStore } from '@/stores'
 import {
     formatCurrencyVND,
@@ -46,6 +46,7 @@ function SingleFloatingChatBox({
 }) {
     const t = useTranslations('chat')
     const locale = useLocale() as 'vi' | 'en'
+    const { isSeller } = useIsSeller()
     const { userId, sendMessage, isSending, markConversationRead } = useChat()
     const { messages, isLoading } = useConversationMessages(conversation.id)
     const { mutateAsync: uploadMedia, isPending: isUploading } = useUploadMedia()
@@ -188,7 +189,7 @@ function SingleFloatingChatBox({
                     >
                         <MinusIcon className="size-3.5" />
                     </Button>
-                    {conversation.peer.isSeller && (
+                    {isSeller && (
                         <Button
                             asChild
                             variant="ghost"

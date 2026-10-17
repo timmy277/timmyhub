@@ -24,7 +24,7 @@ import {
     ScrollArea,
 } from '@/components'
 import { ROUTE } from '@/constants'
-import { useChat } from '@/hooks'
+import { useChat, useIsSeller } from '@/hooks'
 import { useChatStore } from '@/stores'
 import { formatRelativeTime } from '@/utils'
 
@@ -32,6 +32,7 @@ export function MessageMenu() {
     const locale = useLocale() as 'vi' | 'en'
     const tNav = useTranslations('nav')
     const tChat = useTranslations('chat')
+    const { isSeller } = useIsSeller()
     const { isAuthenticated, userId, conversations, totalUnreadCount, isLoading, markConversationRead } = useChat()
     const openChat = useChatStore((s) => s.openChat)
     const [searchTerm, setSearchTerm] = useState('')
@@ -94,14 +95,16 @@ export function MessageMenu() {
                         )}
                     </div>
 
-                    <Link
-                        href={ROUTE.SELLER_CHAT}
-                        onClick={() => setIsOpen(false)}
-                        className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 font-medium group"
-                    >
-                        <span>{tChat('sellerChannel')}</span>
-                        <ExternalLinkIcon className="size-3 transition-transform group-hover:translate-x-0.5" />
-                    </Link>
+                    {isSeller && (
+                        <Link
+                            href={ROUTE.SELLER_CHAT}
+                            onClick={() => setIsOpen(false)}
+                            className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 font-medium group"
+                        >
+                            <span>{tChat('sellerChannel')}</span>
+                            <ExternalLinkIcon className="size-3 transition-transform group-hover:translate-x-0.5" />
+                        </Link>
+                    )}
                 </div>
 
                 {/* Search Box */}
@@ -216,18 +219,20 @@ export function MessageMenu() {
                 </ScrollArea>
 
                 {/* Footer */}
-                <div className="p-2 border-t border-border/40 bg-muted/30 text-center">
-                    <Button
-                        asChild
-                        variant="ghost"
-                        size="sm"
-                        className="w-full text-xs font-medium h-8 rounded-lg hover:bg-background/80"
-                    >
-                        <Link href={ROUTE.SELLER_CHAT} onClick={() => setIsOpen(false)}>
-                            {tChat('openFullScreenInSeller')}
-                        </Link>
-                    </Button>
-                </div>
+                {isSeller && (
+                    <div className="p-2 border-t border-border/40 bg-muted/30 text-center">
+                        <Button
+                            asChild
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-xs font-medium h-8 rounded-lg hover:bg-background/80"
+                        >
+                            <Link href={ROUTE.SELLER_CHAT} onClick={() => setIsOpen(false)}>
+                                {tChat('openFullScreenInSeller')}
+                            </Link>
+                        </Button>
+                    </div>
+                )}
             </DropdownMenuContent>
         </DropdownMenu>
     )
