@@ -25,3 +25,5 @@ export * from './use-promotions'
 export * from './use-notifications'
 export * from './use-chat'
 export * from './use-is-seller'
+export * from './use-wishlist'
+

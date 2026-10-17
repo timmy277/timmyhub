@@ -3,7 +3,7 @@
 import { useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
-import { BadgeCheckIcon, LayoutGridIcon, LogOutIcon, PackageIcon, TicketIcon } from 'lucide-react'
+import { HeartIcon, LayoutGridIcon, LogOutIcon, PackageIcon, TicketIcon, UserIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -147,17 +147,21 @@ export function UserMenu() {
                                 </Link>
                             </DropdownMenuItem>
                         )}
+                        <DropdownMenuItem onSelect={() => handleOpenAccount('profile')}>
+                            <UserIcon aria-hidden />
+                            {t('myProfile')}
+                        </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => handleOpenAccount('orders')}>
                             <PackageIcon aria-hidden />
                             {t('myOrders')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => handleOpenAccount('vouchers')}>
                             <TicketIcon aria-hidden />
-                            {t('myVouchers') || 'Kho Voucher'}
+                            {t('myVouchers')}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleOpenAccount('profile')}>
-                            <BadgeCheckIcon aria-hidden />
-                            {t('account')}
+                        <DropdownMenuItem onSelect={() => handleOpenAccount('wishlist')}>
+                            <HeartIcon aria-hidden />
+                            {t('myWishlist')}
                         </DropdownMenuItem>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />

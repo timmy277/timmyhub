@@ -42,7 +42,13 @@ import {
 import { ROUTE } from '@/constants'
 import { ProductReviewsSection } from '@/features/engagement'
 import { MediaLightbox, type MediaLightboxItem } from '@/features/media'
-import { useAddToCart, useMySavedVoucherIds, usePublicAvailableVouchers, useSaveUserVoucher } from '@/hooks'
+import {
+    useAddToCart,
+    useMySavedVoucherIds,
+    usePublicAvailableVouchers,
+    useSaveUserVoucher,
+    useWishlist,
+} from '@/hooks'
 import { formatCurrencyVND } from '@/utils'
 
 interface PublicProductDetailViewProps {
@@ -53,6 +59,9 @@ interface PublicProductDetailViewProps {
 export function PublicProductDetailView({ product, relatedProducts = [] }: PublicProductDetailViewProps) {
     const t = useTranslations('productDetail')
     const router = useRouter()
+    const { isInWishlist, toggleWishlist, isToggling } = useWishlist()
+    const isWishlist = isInWishlist(product.id)
+
     // ===== Gallery State =====
     const allImages = useMemo(() => {
         if (product.images && product.images.length > 0) {
@@ -63,7 +72,6 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
 
     const [selectedImageIndex, setSelectedImageIndex] = useState(0)
     const [isLightboxOpen, setIsLightboxOpen] = useState(false)
-    const [isWishlist, setIsWishlist] = useState(false)
     const [quantity, setQuantity] = useState(1)
     const [quantityInput, setQuantityInput] = useState('1')
     const addToCartMutation = useAddToCart()
@@ -158,15 +166,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
     }
 
     const handleToggleWishlist = () => {
-        setIsWishlist((prev) => {
-            const next = !prev
-            if (next) {
-                toast.success(t('wishlistAdd', { name: product.name }))
-            } else {
-                toast.info(t('wishlistRemove', { name: product.name }))
-            }
-            return next
-        })
+        toggleWishlist(product.id, product.name)
     }
 
     const quantityRef = useRef(quantity)
@@ -381,8 +381,9 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                 </Button>
                                 <Button
                                     onClick={handleToggleWishlist}
+                                    disabled={isToggling}
                                     aria-label="Yêu thích sản phẩm"
-                                    className="flex size-9 items-center justify-center rounded-full bg-background/80 text-foreground shadow-md backdrop-blur-md transition-all hover:bg-background hover:scale-110 active:scale-95"
+                                    className="flex size-9 items-center justify-center rounded-full bg-background/80 text-foreground shadow-md backdrop-blur-md transition-all hover:bg-background hover:scale-110 active:scale-95 disabled:opacity-50"
                                     variant="ghost"
                                 >
                                     <HeartIcon

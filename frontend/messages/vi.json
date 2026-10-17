@@ -307,8 +307,11 @@
     "breadcrumb": "Đường dẫn trang",
     "themeMode": "Chuyển chế độ sáng/tối",
     "account": "Tài khoản",
+    "myProfile": "Hồ sơ của tôi",
+    "myOrders": "Đơn mua",
+    "myVouchers": "Kho Voucher",
+    "myWishlist": "Sản phẩm yêu thích",
     "accountComingSoon": "Trang tài khoản đang được xây dựng.",
-    "myOrders": "Đơn hàng của tôi",
     "buyerOrders": "Đơn mua hàng",
     "notifications": "Thông báo",
     "noNotifications": "Chưa có thông báo nào",
@@ -556,10 +559,23 @@
     "tabs": {
       "profile": "Hồ sơ cá nhân",
       "orders": "Đơn hàng của tôi",
+      "vouchers": "Kho Voucher",
+      "wishlist": "Sản phẩm yêu thích",
       "security": "Bảo mật & Mật khẩu",
       "addresses": "Sổ địa chỉ",
-      "notifications": "Cài đặt thông báo",
-      "vouchers": "Kho Voucher"
+      "notifications": "Cài đặt thông báo"
+    },
+    "wishlist": {
+      "title": "Sản phẩm yêu thích",
+      "description": "Danh sách các sản phẩm bạn đã lưu để theo dõi và mua sắm.",
+      "emptyTitle": "Chưa có sản phẩm yêu thích",
+      "emptyDescription": "Bạn chưa thêm sản phẩm nào vào danh sách yêu thích. Hãy bấm vào biểu tượng trái tim ở sản phẩm để lưu lại nhé!",
+      "exploreBtn": "Khám phá sản phẩm ngay",
+      "remove": "Bỏ thích",
+      "addToCart": "Thêm vào giỏ",
+      "inStock": "Còn hàng",
+      "outOfStock": "Tạm hết hàng",
+      "viewDetail": "Xem chi tiết"
     },
     "memberSince": "Thành viên từ {date}",
     "errorLoadTitle": "Không thể tải thông tin tài khoản",

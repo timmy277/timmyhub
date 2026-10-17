@@ -307,8 +307,11 @@
     "breadcrumb": "Breadcrumb",
     "themeMode": "Toggle light/dark mode",
     "account": "Account",
-    "accountComingSoon": "The account page is under construction.",
+    "myProfile": "My Profile",
     "myOrders": "My Orders",
+    "myVouchers": "My Vouchers",
+    "myWishlist": "My Wishlist",
+    "accountComingSoon": "The account page is under construction.",
     "buyerOrders": "My Purchases",
     "notifications": "Notifications",
     "noNotifications": "No notifications yet",
@@ -556,10 +559,23 @@
     "tabs": {
       "profile": "Profile",
       "orders": "My Orders",
+      "vouchers": "Vouchers",
+      "wishlist": "Wishlist",
       "security": "Security & Password",
       "addresses": "Address Book",
-      "notifications": "Notification Settings",
-      "vouchers": "Vouchers"
+      "notifications": "Notification Settings"
+    },
+    "wishlist": {
+      "title": "My Wishlist",
+      "description": "Products you have saved for later.",
+      "emptyTitle": "Your wishlist is empty",
+      "emptyDescription": "You haven't added any products to your wishlist yet. Explore and save your favorite items!",
+      "exploreBtn": "Explore Products",
+      "remove": "Remove",
+      "addToCart": "Add to Cart",
+      "inStock": "In Stock",
+      "outOfStock": "Out of Stock",
+      "viewDetail": "View Details"
     },
     "memberSince": "Member since {date}",
     "errorLoadTitle": "Unable to load account information",

@@ -144,4 +144,11 @@ export const API_ROUTE = {
         SEND: 'v1/chat/messages',
         READ: (id: string) => `v1/chat/conversations/${encodeURIComponent(id)}/read`,
     },
+    WISHLIST: {
+        LIST: 'v1/wishlist',
+        IDS: 'v1/wishlist/ids',
+        TOGGLE: (productId: string) => `v1/wishlist/${encodeURIComponent(productId)}/toggle`,
+        REMOVE: (productId: string) => `v1/wishlist/${encodeURIComponent(productId)}`,
+    },
 } as const
+

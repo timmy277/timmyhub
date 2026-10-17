@@ -9,6 +9,9 @@ import type {
     ReviewItem,
     ReviewListResult,
     ReviewQuery,
+    ToggleWishlistResponseDto,
+    WishlistItemDto,
+    WishlistListResponseDto,
 } from '@timmyhub/contracts'
 
 import { ENGAGEMENT_EVENT } from './engagement.constants'
@@ -259,5 +262,75 @@ export class EngagementService {
         }
 
         return this.repository.toggleHelpfulVote(reviewId, userId)
+    }
+
+    // ===== Wishlist =====
+
+    async getWishlist(userId: string): Promise<WishlistListResponseDto> {
+        const wishlistItems = await this.repository.findWishlistByUserId(userId)
+        if (!wishlistItems.length) {
+            return { items: [], total: 0 }
+        }
+
+        const productIds = wishlistItems.map((item) => item.productId)
+        const products = await this.repository.findProductsByIds(productIds)
+        const productMap = new Map(products.map((p) => [p.id, p]))
+
+        const items: WishlistItemDto[] = []
+        for (const item of wishlistItems) {
+            const product = productMap.get(item.productId)
+            if (!product) continue
+
+            const prices = product.variants.map((v) => v.price)
+            const minPrice = prices.length ? Math.min(...prices) : 0
+            const maxPrice = prices.length ? Math.max(...prices) : 0
+            const totalStock = product.variants.reduce((acc, v) => acc + v.stock, 0)
+
+            items.push({
+                id: item.id,
+                productId: product.id,
+                name: product.name,
+                slug: product.slug,
+                description: product.description,
+                images: product.images,
+                minPrice,
+                maxPrice,
+                ratingAvg: product.ratingAvg,
+                ratingCount: product.ratingCount,
+                inStock: totalStock > 0,
+                createdAt: item.createdAt.toISOString(),
+            })
+        }
+
+        return {
+            items,
+            total: items.length,
+        }
+    }
+
+    async getWishlistProductIds(userId: string): Promise<string[]> {
+        return this.repository.findWishlistProductIds(userId)
+    }
+
+    async toggleWishlist(userId: string, productId: string): Promise<ToggleWishlistResponseDto> {
+        const existing = await this.repository.findWishlistItem(userId, productId)
+        if (existing) {
+            await this.repository.removeWishlistItem(userId, productId)
+            return { inWishlist: false, productId }
+        }
+
+        // Kiểm tra sản phẩm có tồn tại không
+        const products = await this.repository.findProductsByIds([productId])
+        if (!products.length) {
+            throw new ApiError('NOT_FOUND')
+        }
+
+        await this.repository.addWishlistItem(userId, productId)
+        return { inWishlist: true, productId }
+    }
+
+    async removeFromWishlist(userId: string, productId: string): Promise<{ success: boolean }> {
+        await this.repository.removeWishlistItem(userId, productId)
+        return { success: true }
     }
 }

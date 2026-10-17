@@ -317,4 +317,68 @@ export class EngagementRepository {
             }
         })
     }
+
+    // ===== Wishlist =====
+
+    async findWishlistByUserId(userId: string) {
+        return this.prisma.wishlistItem.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+        })
+    }
+
+    async findWishlistProductIds(userId: string): Promise<string[]> {
+        const items = await this.prisma.wishlistItem.findMany({
+            where: { userId },
+            select: { productId: true },
+        })
+        return items.map((i) => i.productId)
+    }
+
+    async findWishlistItem(userId: string, productId: string) {
+        return this.prisma.wishlistItem.findUnique({
+            where: {
+                userId_productId: {
+                    userId,
+                    productId,
+                },
+            },
+        })
+    }
+
+    async addWishlistItem(userId: string, productId: string) {
+        return this.prisma.wishlistItem.create({
+            data: {
+                userId,
+                productId,
+            },
+        })
+    }
+
+    async removeWishlistItem(userId: string, productId: string) {
+        return this.prisma.wishlistItem.deleteMany({
+            where: {
+                userId,
+                productId,
+            },
+        })
+    }
+
+    async findProductsByIds(productIds: string[]) {
+        if (!productIds.length) return []
+        return this.prisma.product.findMany({
+            where: {
+                id: { in: productIds },
+            },
+            include: {
+                variants: {
+                    select: {
+                        id: true,
+                        price: true,
+                        stock: true,
+                    },
+                },
+            },
+        })
+    }
 }

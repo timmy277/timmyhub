@@ -51,6 +51,7 @@ import {
     usePublicAvailableVouchers,
     usePublicProducts,
     useSaveUserVoucher,
+    useWishlist,
 } from '@/hooks'
 import { formatCurrencyVND } from '@/utils'
 
@@ -842,21 +843,11 @@ export function HomePage() {
     // 4. Products Tab & View Mode
     const [productTab, setProductTab] = useState<'all' | 'new' | 'best'>('all')
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-    const [wishlist, setWishlist] = useState<Set<string>>(new Set())
+    const { isInWishlist, toggleWishlist } = useWishlist()
 
     const handleToggleWishlist = useCallback((productId: string, name: string) => {
-        setWishlist((prev) => {
-            const next = new Set(prev)
-            if (next.has(productId)) {
-                next.delete(productId)
-                toast.info(`Đã xoá khỏi danh sách yêu thích`, { description: name })
-            } else {
-                next.add(productId)
-                toast.success(`Đã thêm vào danh sách yêu thích`, { description: name })
-            }
-            return next
-        })
-    }, [])
+        toggleWishlist(productId, name)
+    }, [toggleWishlist])
 
     // Lấy danh sách sản phẩm thật đã được duyệt từ backend
     const { data: publicProductsData } = usePublicProducts({ pageSize: 30 })
@@ -1611,7 +1602,7 @@ export function HomePage() {
                     {viewMode === 'grid' ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4">
                             {filteredProducts.map((p) => {
-                                const isLiked = wishlist.has(p.id)
+                                const isLiked = isInWishlist(p.id)
                                 return (
                                     <Product3DCard
                                         key={p.id}

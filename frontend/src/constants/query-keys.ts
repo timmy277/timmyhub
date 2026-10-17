@@ -91,4 +91,9 @@ export const QUERY_KEY = {
         CONVERSATION: (id: string) => ['chat', 'conversation', id] as const,
         MESSAGES: (id: string) => ['chat', 'messages', id] as const,
     },
+    WISHLIST: {
+        ALL: ['wishlist'] as const,
+        LIST: ['wishlist', 'list'] as const,
+        IDS: ['wishlist', 'ids'] as const,
+    },
 } as const

@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
     BellIcon,
     CalendarIcon,
+    HeartIcon,
     LockIcon,
     MapPinIcon,
     PackageIcon,
@@ -29,13 +30,15 @@ import { OrdersTab } from './orders-tab'
 import { ProfileTab } from './profile-tab'
 import { SecurityTab } from './security-tab'
 import { VouchersTab } from './vouchers-tab'
+import { WishlistTab } from './wishlist-tab'
 
-export type AccountTabKey = 'profile' | 'orders' | 'vouchers' | 'security' | 'addresses' | 'notifications'
+export type AccountTabKey = 'profile' | 'orders' | 'vouchers' | 'wishlist' | 'security' | 'addresses' | 'notifications'
 
 const VALID_TABS: readonly AccountTabKey[] = [
     'profile',
     'orders',
     'vouchers',
+    'wishlist',
     'security',
     'addresses',
     'notifications',
@@ -48,12 +51,19 @@ function isValidAccountTab(tab: string | null): tab is AccountTabKey {
 const NAV_ITEMS: {
     key: AccountTabKey
     labelKey:
-        'tabs.profile' | 'tabs.orders' | 'tabs.vouchers' | 'tabs.security' | 'tabs.addresses' | 'tabs.notifications'
+        | 'tabs.profile'
+        | 'tabs.orders'
+        | 'tabs.vouchers'
+        | 'tabs.wishlist'
+        | 'tabs.security'
+        | 'tabs.addresses'
+        | 'tabs.notifications'
     icon: React.ComponentType<{ className?: string }>
 }[] = [
     { key: 'profile', labelKey: 'tabs.profile', icon: UserIcon },
     { key: 'orders', labelKey: 'tabs.orders', icon: PackageIcon },
     { key: 'vouchers', labelKey: 'tabs.vouchers', icon: TicketIcon },
+    { key: 'wishlist', labelKey: 'tabs.wishlist', icon: HeartIcon },
     { key: 'security', labelKey: 'tabs.security', icon: ShieldCheckIcon },
     { key: 'addresses', labelKey: 'tabs.addresses', icon: MapPinIcon },
     { key: 'notifications', labelKey: 'tabs.notifications', icon: BellIcon },
@@ -93,7 +103,11 @@ export function AccountDialog({ open, onOpenChange, defaultTab = 'profile' }: Ac
     const navItems = useMemo(() => {
         if (isAdmin) {
             return NAV_ITEMS.filter(
-                (item) => item.key !== 'orders' && item.key !== 'addresses' && item.key !== 'vouchers',
+                (item) =>
+                    item.key !== 'orders' &&
+                    item.key !== 'addresses' &&
+                    item.key !== 'vouchers' &&
+                    item.key !== 'wishlist',
             )
         }
         return NAV_ITEMS
@@ -102,7 +116,10 @@ export function AccountDialog({ open, onOpenChange, defaultTab = 'profile' }: Ac
     const queryTab = searchParams.get('tab')
     const rawTab: AccountTabKey = isValidAccountTab(queryTab) ? queryTab : defaultTab
     const activeTab: AccountTabKey =
-        isAdmin && (rawTab === 'orders' || rawTab === 'addresses' || rawTab === 'vouchers') ? 'profile' : rawTab
+        isAdmin &&
+        (rawTab === 'orders' || rawTab === 'addresses' || rawTab === 'vouchers' || rawTab === 'wishlist')
+            ? 'profile'
+            : rawTab
 
     const handleTabChange = (key: AccountTabKey) => {
         const params = new URLSearchParams(searchParams.toString())
@@ -217,6 +234,9 @@ export function AccountDialog({ open, onOpenChange, defaultTab = 'profile' }: Ac
                                 <OrdersTab onCloseDialog={() => onOpenChange(false)} />
                             )}
                             {!isAdmin && activeTab === 'vouchers' && <VouchersTab />}
+                            {!isAdmin && activeTab === 'wishlist' && (
+                                <WishlistTab onCloseDialog={() => onOpenChange(false)} />
+                            )}
                             {activeTab === 'security' && <SecurityTab user={user} />}
                             {!isAdmin && activeTab === 'addresses' && <AddressesTab />}
                             {activeTab === 'notifications' && <NotificationsTab />}
