@@ -16,6 +16,7 @@ backend/libs/prisma/src/generated/
 coverage/
 .turbo/
 .cache/
+lighthouse*.json
 
 # env — chỉ commit file mẫu
 .env

@@ -80,4 +80,9 @@ export const QUERY_KEY = {
         SUMMARY: (productId: string) => ['engagement', 'summary', productId] as const,
         PENDING: ['engagement', 'pending'] as const,
     },
+    NOTIFICATION: {
+        ALL: ['notification'] as const,
+        LIST: ['notification', 'list'] as const,
+        UNREAD_COUNT: ['notification', 'unread-count'] as const,
+    },
 } as const

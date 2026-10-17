@@ -542,7 +542,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                     <Button
                                         type="button"
                                         onClick={() => setIsVoucherModalOpen(true)}
-                                        className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                                        className="text-xs font-bold text-emerald-800 dark:text-emerald-300 hover:underline flex items-center gap-1 cursor-pointer"
                                         variant="ghost"
                                     >
                                         <span>Xem tất cả</span>
@@ -595,7 +595,7 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
                                                     className={`px-2.5 py-1.5 text-[11px] font-bold transition-colors ${
                                                         isSaved
                                                             ? 'text-muted-foreground bg-muted/40 cursor-default'
-                                                            : 'text-primary hover:text-primary/80 hover:bg-primary/15'
+                                                            : 'text-emerald-800 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-emerald-200 hover:bg-primary/15'
                                                     }`}
                                                     variant="ghost"
                                                 >

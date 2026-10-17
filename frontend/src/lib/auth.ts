@@ -110,6 +110,7 @@ export const authConfig = {
                 token.refreshToken = user.refreshToken
                 token.roles = user.roles
                 token.name = user.name
+                token.email = user.email
                 token.picture = user.image
                 token.accessExpiresAt = Date.now() + ACCESS_TOKEN_TTL_MS
                 return token
@@ -151,6 +152,7 @@ export const authConfig = {
                 token.refreshToken = data.refreshToken
                 token.roles = data.user.roles
                 token.name = data.user.displayName
+                token.email = data.user.email
                 token.picture = data.user.avatar
                 token.accessExpiresAt = Date.now() + ACCESS_TOKEN_TTL_MS
                 return token
@@ -177,6 +179,7 @@ export const authConfig = {
             if (token.sub) session.user.id = token.sub
             if (token.accessToken) session.accessToken = token.accessToken
             if (token.name !== undefined) session.user.name = token.name
+            if (token.email) session.user.email = token.email
             if (token.picture !== undefined) session.user.image = token.picture
             return session
         },

@@ -632,7 +632,7 @@ const Product3DCard = memo(function Product3DCard({ product: p, isLiked, onToggl
                                             }
                                         }
                                     }}
-                                    className="flex items-center gap-1.5 min-w-0 hover:underline cursor-pointer group/vendor z-30"
+                                    className="flex items-center gap-1.5 min-w-0 min-h-[28px] py-1 hover:underline cursor-pointer group/vendor z-30"
                                 >
                                     <div className="flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-transform duration-300 group-hover/vendor:scale-110 group-hover/vendor:bg-primary group-hover/vendor:text-primary-foreground">
                                         <StoreIcon className="size-3" />

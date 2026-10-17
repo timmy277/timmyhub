@@ -130,4 +130,10 @@ export const API_ROUTE = {
         COMMENTS: (reviewId: string) => `v1/engagement/reviews/${encodeURIComponent(reviewId)}/comments`,
         HELPFUL: (reviewId: string) => `v1/engagement/reviews/${encodeURIComponent(reviewId)}/helpful`,
     },
+    NOTIFICATION: {
+        LIST: 'v1/notifications',
+        UNREAD_COUNT: 'v1/notifications/unread-count',
+        MARK_READ: (id: string) => `v1/notifications/${encodeURIComponent(id)}/read`,
+        MARK_ALL_READ: 'v1/notifications/read-all',
+    },
 } as const

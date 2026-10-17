@@ -5,8 +5,124 @@
     "description": "Mua sắm trực tuyến hàng ngàn sản phẩm công nghệ, điện thoại, phụ kiện chính hãng với ưu đãi freeship, voucher giảm giá mỗi ngày và bảo hành uy tín tại TimmyHub."
   },
   "home": {
-    "title": "TimmyHub - Sàn Thương Mại Điện Tử Đa Tiện Ích",
-    "description": "Mua sắm trực tuyến hàng ngàn sản phẩm công nghệ, điện thoại chính hãng với ưu đãi freeship, voucher giảm giá mỗi ngày và chính sách bảo hành uy tín tại TimmyHub."
+    "title": "Trang chủ",
+    "description": "Chào mừng bạn đến với TimmyHub.",
+    "storefront": {
+      "orders": "đơn",
+      "sellerChannel": "Kênh người bán",
+      "serviceGuarantees": "Cam kết dịch vụ",
+      "categoriesTitle": "Danh mục sản phẩm",
+      "viewAllCategories": "Xem tất cả danh mục hàng hoá",
+      "viewAll": "Xem tất cả",
+      "vouchersTitle": "Mã giảm giá cho bạn",
+      "maximumSavings": "Tiết kiệm tối đa",
+      "sponsoredBy": "Được tài trợ bởi TimmyHub",
+      "minimumOrder": "Đơn tối thiểu",
+      "code": "Mã",
+      "saved": "Đã lưu",
+      "saving": "Đang lưu...",
+      "saveVoucher": "Lưu mã",
+      "hero": {
+        "slide1Tag": "Ưu đãi hôm nay",
+        "slide1Title": "Siêu Sale Đón Hè\nGiảm Đến 50%",
+        "slide1Description": "Hàng ngàn sản phẩm thời trang, phụ kiện công nghệ và đồ gia dụng chính hãng với ưu đãi độc quyền.",
+        "slide1Action": "Khám phá ngay",
+        "slide1Label": "Bán chạy nhất",
+        "slide2Tag": "Công nghệ mới 2026",
+        "slide2Title": "Tech Fest 2026\nCông Nghệ Đỉnh Cao",
+        "slide2Description": "Nâng cấp phong cách sống hiện đại với laptop AI, smartphone thế hệ mới và tai nghe chống ồn cao cấp.",
+        "slide2Action": "Xem bộ sưu tập",
+        "slide2Label": "Hàng mới về",
+        "slide3Tag": "Không gian sống",
+        "slide3Title": "Nội Thất & Gia Dụng\nGiá Tốt Nhất Năm",
+        "slide3Description": "Trang hoàng tổ ấm tiện nghi với thiết bị gia dụng thông minh và nội thất hiện đại bảo hành 2 năm.",
+        "slide3Action": "Mua sắm ngay",
+        "slide3Label": "Deal hot tuần"
+      },
+      "features": {
+        "freeShipping": {
+          "title": "Giao hàng miễn phí",
+          "description": "Freeship đơn từ 500k toàn quốc"
+        },
+        "authenticProducts": {
+          "title": "100% Chính hãng",
+          "description": "Bảo hành 1 đổi 1 trong 7 ngày"
+        },
+        "support": {
+          "title": "Hỗ trợ 24/7",
+          "description": "Tư vấn tận tâm mọi lúc mọi nơi"
+        },
+        "expressDelivery": {
+          "title": "Giao hàng siêu tốc",
+          "description": "Nhận hàng 2 - 4h tại nội thành"
+        }
+      },
+      "categories": {
+        "laptop": {
+          "name": "Laptop & PC",
+          "count": "1.2k+ SP"
+        },
+        "phones": {
+          "name": "Điện thoại",
+          "count": "3.4k+ SP"
+        },
+        "audio": {
+          "name": "Âm thanh",
+          "count": "890 SP"
+        },
+        "watches": {
+          "name": "Đồng hồ",
+          "count": "650 SP"
+        },
+        "cameras": {
+          "name": "Camera",
+          "count": "430 SP"
+        },
+        "gaming": {
+          "name": "Gaming",
+          "count": "920 SP"
+        },
+        "home": {
+          "name": "Nhà cửa",
+          "count": "2.1k+ SP"
+        },
+        "beauty": {
+          "name": "Làm đẹp",
+          "count": "1.8k+ SP"
+        },
+        "books": {
+          "name": "Sách & VPP",
+          "count": "760 SP"
+        },
+        "sports": {
+          "name": "Thể thao",
+          "count": "1.1k+ SP"
+        }
+      }
+    },
+    "welcomeHeroTitle": "Chào mừng bạn đến với TimmyHub",
+    "welcomeHeroSubtitle": "Nền tảng thương mại điện tử và dịch vụ số toàn diện dành cho bạn.",
+    "accountCardTitle": "Tài khoản của bạn",
+    "accountCardDescription": "Quản lý thông tin cá nhân, bảo mật mật khẩu và sổ địa chỉ giao hàng.",
+    "manageAccount": "Quản lý tài khoản",
+    "dashboardCardTitle": "Bảng điều khiển quản trị",
+    "dashboardCardDescription": "Truy cập hệ thống quản lý số liệu, phân quyền người dùng và kiểm toán.",
+    "goToDashboard": "Vào Bảng điều khiển",
+    "servicesTitle": "Tiện ích & Dịch vụ",
+    "securityCardTitle": "Bảo mật tài khoản",
+    "securityCardDescription": "Bảo vệ tài khoản với mật khẩu mạnh và cài đặt bảo mật cá nhân.",
+    "notificationsCardTitle": "Thông báo hệ thống",
+    "notificationsCardDescription": "Theo dõi các cập nhật tài khoản và thông tin quan trọng từ hệ thống.",
+    "footer": {
+      "newsletterTitle": "Đăng ký nhận voucher giảm đến 50%",
+      "newsletterDescription": "Đừng bỏ lỡ các đợt flash sale siêu chớp, deal công nghệ độc quyền và xu hướng mua sắm mới nhất được gửi trực tiếp mỗi tuần.",
+      "newsletterSubmit": "Đăng ký",
+      "newsletterInvalid": "Vui lòng nhập địa chỉ email hợp lệ",
+      "newsletterSuccess": "Đăng ký nhận bản tin thành công!",
+      "newsletterSuccessDesc": "TimmyHub sẽ gửi các mã giảm giá độc quyền đến hộp thư của bạn.",
+      "newsletterPlaceholder": "Nhập email của bạn...",
+      "newsletterLabel": "Email"
+    }
   },
   "common": {
     "language": "Ngôn ngữ",
@@ -215,7 +331,10 @@
     "sellerSection": "Kênh Người Bán",
     "vouchers": "Mã giảm giá",
     "campaigns": "Chiến dịch khuyến mãi",
-    "myVouchers": "Kho Voucher"
+    "myVouchers": "Kho Voucher",
+    "markAllAsRead": "Đánh dấu tất cả đã đọc",
+    "login": "Đăng nhập",
+    "register": "Đăng ký"
   },
   "theme": {
     "triggerLabel": "Mở tuỳ chỉnh giao diện",
@@ -230,84 +349,6 @@
     "shuffle": "Ngẫu nhiên",
     "reset": "Đặt lại mặc định",
     "loading": "Đang tải giao diện đã lưu…"
-  },
-  "home": {
-    "title": "Trang chủ",
-    "description": "Chào mừng bạn đến với TimmyHub.",
-    "storefront": {
-      "orders": "đơn",
-      "sellerChannel": "Kênh người bán",
-      "serviceGuarantees": "Cam kết dịch vụ",
-      "categoriesTitle": "Danh mục sản phẩm",
-      "viewAllCategories": "Xem tất cả danh mục hàng hoá",
-      "viewAll": "Xem tất cả",
-      "vouchersTitle": "Mã giảm giá cho bạn",
-      "maximumSavings": "Tiết kiệm tối đa",
-      "sponsoredBy": "Được tài trợ bởi TimmyHub",
-      "minimumOrder": "Đơn tối thiểu",
-      "code": "Mã",
-      "saved": "Đã lưu",
-      "saving": "Đang lưu...",
-      "saveVoucher": "Lưu mã",
-      "hero": {
-        "slide1Tag": "Ưu đãi hôm nay",
-        "slide1Title": "Siêu Sale Đón Hè\nGiảm Đến 50%",
-        "slide1Description": "Hàng ngàn sản phẩm thời trang, phụ kiện công nghệ và đồ gia dụng chính hãng với ưu đãi độc quyền.",
-        "slide1Action": "Khám phá ngay",
-        "slide1Label": "Bán chạy nhất",
-        "slide2Tag": "Công nghệ mới 2026",
-        "slide2Title": "Tech Fest 2026\nCông Nghệ Đỉnh Cao",
-        "slide2Description": "Nâng cấp phong cách sống hiện đại với laptop AI, smartphone thế hệ mới và tai nghe chống ồn cao cấp.",
-        "slide2Action": "Xem bộ sưu tập",
-        "slide2Label": "Hàng mới về",
-        "slide3Tag": "Không gian sống",
-        "slide3Title": "Nội Thất & Gia Dụng\nGiá Tốt Nhất Năm",
-        "slide3Description": "Trang hoàng tổ ấm tiện nghi với thiết bị gia dụng thông minh và nội thất hiện đại bảo hành 2 năm.",
-        "slide3Action": "Mua sắm ngay",
-        "slide3Label": "Deal hot tuần"
-      },
-      "features": {
-        "freeShipping": { "title": "Giao hàng miễn phí", "description": "Freeship đơn từ 500k toàn quốc" },
-        "authenticProducts": { "title": "100% Chính hãng", "description": "Bảo hành 1 đổi 1 trong 7 ngày" },
-        "support": { "title": "Hỗ trợ 24/7", "description": "Tư vấn tận tâm mọi lúc mọi nơi" },
-        "expressDelivery": { "title": "Giao hàng siêu tốc", "description": "Nhận hàng 2 - 4h tại nội thành" }
-      },
-      "categories": {
-        "laptop": { "name": "Laptop & PC", "count": "1.2k+ SP" },
-        "phones": { "name": "Điện thoại", "count": "3.4k+ SP" },
-        "audio": { "name": "Âm thanh", "count": "890 SP" },
-        "watches": { "name": "Đồng hồ", "count": "650 SP" },
-        "cameras": { "name": "Camera", "count": "430 SP" },
-        "gaming": { "name": "Gaming", "count": "920 SP" },
-        "home": { "name": "Nhà cửa", "count": "2.1k+ SP" },
-        "beauty": { "name": "Làm đẹp", "count": "1.8k+ SP" },
-        "books": { "name": "Sách & VPP", "count": "760 SP" },
-        "sports": { "name": "Thể thao", "count": "1.1k+ SP" }
-      }
-    },
-    "welcomeHeroTitle": "Chào mừng bạn đến với TimmyHub",
-    "welcomeHeroSubtitle": "Nền tảng thương mại điện tử và dịch vụ số toàn diện dành cho bạn.",
-    "accountCardTitle": "Tài khoản của bạn",
-    "accountCardDescription": "Quản lý thông tin cá nhân, bảo mật mật khẩu và sổ địa chỉ giao hàng.",
-    "manageAccount": "Quản lý tài khoản",
-    "dashboardCardTitle": "Bảng điều khiển quản trị",
-    "dashboardCardDescription": "Truy cập hệ thống quản lý số liệu, phân quyền người dùng và kiểm toán.",
-    "goToDashboard": "Vào Bảng điều khiển",
-    "servicesTitle": "Tiện ích & Dịch vụ",
-    "securityCardTitle": "Bảo mật tài khoản",
-    "securityCardDescription": "Bảo vệ tài khoản với mật khẩu mạnh và cài đặt bảo mật cá nhân.",
-    "notificationsCardTitle": "Thông báo hệ thống",
-    "notificationsCardDescription": "Theo dõi các cập nhật tài khoản và thông tin quan trọng từ hệ thống.",
-    "footer": {
-      "newsletterTitle": "Đăng ký nhận voucher giảm đến 50%",
-      "newsletterDescription": "Đừng bỏ lỡ các đợt flash sale siêu chớp, deal công nghệ độc quyền và xu hướng mua sắm mới nhất được gửi trực tiếp mỗi tuần.",
-      "newsletterSubmit": "Đăng ký",
-      "newsletterInvalid": "Vui lòng nhập địa chỉ email hợp lệ",
-      "newsletterSuccess": "Đăng ký nhận bản tin thành công!",
-      "newsletterSuccessDesc": "TimmyHub sẽ gửi các mã giảm giá độc quyền đến hộp thư của bạn.",
-      "newsletterPlaceholder": "Nhập email của bạn...",
-      "newsletterLabel": "Email"
-    }
   },
   "login": {
     "metaTitle": "Đăng nhập",

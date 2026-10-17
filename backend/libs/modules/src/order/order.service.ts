@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common'
+import { EventEmitter2 } from '@nestjs/event-emitter'
 import type { Address, OrderItem, OrderStatus } from '@timmyhub/prisma'
 import { Prisma, PrismaService } from '@timmyhub/prisma'
 import type {
@@ -23,6 +24,7 @@ export class OrderService {
         private readonly prisma: PrismaService,
         private readonly orderRepo: OrderRepository,
         private readonly vnpayService: VnpayService,
+        @Optional() private readonly eventEmitter?: EventEmitter2,
     ) {}
 
     // ===== Address Management =====
@@ -711,6 +713,18 @@ export class OrderService {
 
         const totalAmount = createdOrders.reduce((sum, o) => sum + Number(o.totalAmount), 0).toString()
 
+        if (this.eventEmitter) {
+            for (const o of createdOrders) {
+                this.eventEmitter.emit('order.created', {
+                    orderId: o.id,
+                    orderNumber: o.id.slice(-8).toUpperCase(),
+                    userId: o.buyerId,
+                    shopId: o.sellerId,
+                    totalAmount: o.totalAmount.toString(),
+                })
+            }
+        }
+
         let paymentUrl: string | null = null
         if (input.paymentMethod === 'VNPAY') {
             const vnpayRes = await this.vnpayService.createPaymentUrl(
@@ -876,6 +890,17 @@ export class OrderService {
             where: { id: updatedOrder.sellerId },
         })
 
+        if (this.eventEmitter) {
+            this.eventEmitter.emit('order.cancelled', {
+                orderId: updatedOrder.id,
+                orderNumber: updatedOrder.id.slice(-8).toUpperCase(),
+                userId: updatedOrder.buyerId,
+                cancelledBy: userId,
+                reason: cancelReason,
+                shopId: updatedOrder.sellerId,
+            })
+        }
+
         const [formatted] = await this.attachVoucherDetailsToOrders([
             { ...updatedOrder, shopName: seller?.shopName, shopSlug: seller?.shopSlug },
         ])
@@ -1036,6 +1061,16 @@ export class OrderService {
             : await this.prisma.sellerProfile.findUnique({
                   where: { id: updatedOrder.sellerId },
               })
+
+        if (this.eventEmitter) {
+            this.eventEmitter.emit('order.status_updated', {
+                orderId: updatedOrder.id,
+                orderNumber: updatedOrder.id.slice(-8).toUpperCase(),
+                userId: updatedOrder.buyerId,
+                newStatus: toStatus,
+                shopId: updatedOrder.sellerId,
+            })
+        }
 
         const [formatted] = await this.attachVoucherDetailsToOrders([
             { ...updatedOrder, shopName: shop?.shopName, shopSlug: shop?.shopSlug },

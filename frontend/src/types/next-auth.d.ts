@@ -31,6 +31,7 @@ declare module '@auth/core/jwt' {
         refreshToken?: string
         roles?: UserRole[]
         name?: string | null
+        email?: string | null
         picture?: string | null
         /** Thời điểm access token hết hạn (epoch ms) — jwt callback dùng để chủ động refresh trước hạn. */
         accessExpiresAt?: number
