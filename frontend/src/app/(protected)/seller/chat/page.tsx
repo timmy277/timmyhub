@@ -46,18 +46,22 @@ import {
     shouldShowMessageDivider,
 } from '@/utils'
 
-// Các mẫu câu trả lời nhanh (Canned Replies) cho Seller chăm sóc khách hàng
-const QUICK_REPLIES = [
-    'Chào bạn! Shop có thể tư vấn kích thước hoặc hỗ trợ gì cho bạn ạ?',
-    'Dạ shop đã xác nhận đơn hàng và đang đóng gói để giao sớm nhất ạ!',
-    'Bạn vui lòng cung cấp thêm hình ảnh hoặc video cận cảnh để shop hỗ trợ ngay nhé.',
-    'Sản phẩm hiện đang có sẵn trong kho, bạn đặt sớm shop gửi ngay trong ngày ạ!',
-    'Shop gửi tặng bạn mã giảm giá ưu đãi khi mua đơn hàng này nhé!',
-]
-
 export default function SellerChatPage() {
     const t = useTranslations('chat')
     const locale = useLocale() as 'vi' | 'en'
+
+    // Các mẫu câu trả lời nhanh (Canned Replies) đa ngôn ngữ cho Seller
+    const quickReplies = useMemo(
+        () => [
+            t('quickReply1'),
+            t('quickReply2'),
+            t('quickReply3'),
+            t('quickReply4'),
+            t('quickReply5'),
+        ],
+        [t],
+    )
+
     const { userId, conversations, totalUnreadCount, isLoading, markConversationRead, sendMessage, isSending, refetchConversations } =
         useChat()
 
@@ -171,8 +175,8 @@ export default function SellerChatPage() {
                     }
                 }
             } catch (err) {
-                console.error('Lỗi khi tải ảnh/video lên:', err)
-                toast.error('Không thể tải tệp tin đính kèm. Vui lòng thử lại.')
+                console.error('Error uploading media:', err)
+                toast.error(t('uploadMediaFailed'))
             }
         }
 
@@ -187,8 +191,8 @@ export default function SellerChatPage() {
             setSelectedFiles([])
             setMediaPreviews([])
         } catch (err) {
-            console.error('Lỗi khi gửi tin nhắn:', err)
-            toast.error('Gửi tin nhắn thất bại')
+            console.error('Error sending message:', err)
+            toast.error(t('sendMessageFailed'))
         }
     }
 
@@ -658,7 +662,7 @@ export default function SellerChatPage() {
                                 <SparklesIcon className="size-3 text-primary" />
                                 {t('quickReplyTip')}
                             </span>
-                            {QUICK_REPLIES.map((reply, i) => (
+                            {quickReplies.map((reply, i) => (
                                 <Button
                                     key={i}
                                     type="button"
@@ -811,7 +815,7 @@ export default function SellerChatPage() {
                             <div className="grid grid-cols-2 gap-2 w-full mt-4 pt-3 border-t border-border/50 text-left">
                                 <div className="p-2 rounded-xl bg-background/80 border border-border/40">
                                     <p className="text-[10px] text-muted-foreground">{t('totalOrders')}</p>
-                                    <p className="text-xs font-bold text-foreground">3 đơn</p>
+                                    <p className="text-xs font-bold text-foreground">{t('ordersCount', { count: 3 })}</p>
                                 </div>
                                 <div className="p-2 rounded-xl bg-background/80 border border-border/40">
                                     <p className="text-[10px] text-muted-foreground">{t('totalSpent')}</p>
@@ -825,7 +829,7 @@ export default function SellerChatPage() {
                             <div className="flex items-center justify-between">
                                 <h4 className="font-semibold text-xs text-foreground flex items-center gap-1.5">
                                     <PackageIcon className="size-3.5 text-blue-500" />
-                                    Đơn hàng liên quan
+                                    {t('relatedOrders')}
                                 </h4>
                             </div>
 
@@ -839,17 +843,17 @@ export default function SellerChatPage() {
                                             #{activeConversation.orderId.slice(-8).toUpperCase()}
                                         </span>
                                         <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-                                            Đã xác nhận
+                                            {t('orderConfirmed')}
                                         </Badge>
                                     </div>
                                     <p className="text-xs text-muted-foreground flex items-center justify-between">
-                                        <span>Tổng tiền:</span>
+                                        <span>{t('totalAmount')}</span>
                                         <span className="font-bold text-foreground">450.000₫</span>
                                     </p>
                                 </Link>
                             ) : (
                                 <div className="p-3 text-center rounded-xl bg-muted/20 border border-border/40 text-[11px] text-muted-foreground">
-                                    Chưa có đơn hàng nào gắn vào cuộc trò chuyện này.
+                                    {t('noRelatedOrders')}
                                 </div>
                             )}
                         </div>
@@ -858,24 +862,24 @@ export default function SellerChatPage() {
                         <div className="space-y-2 mt-4">
                             <h4 className="font-semibold text-xs text-foreground flex items-center gap-1.5">
                                 <TagIcon className="size-3.5 text-amber-500" />
-                                Tặng voucher nhanh
+                                {t('sendVoucherQuick')}
                             </h4>
 
                             <div className="p-3 rounded-xl border border-border/60 bg-card space-y-2">
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-bold text-primary">GIAM20K</span>
-                                    <span className="text-[10px] text-muted-foreground">Đơn từ 200k</span>
+                                    <span className="text-[10px] text-muted-foreground">{t('voucherMinOrder', { min: '200k' })}</span>
                                 </div>
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => {
-                                        setInputText((prev) => `${prev} Shop tặng bạn mã giảm giá GIAM20K giảm 20.000₫ nha!`)
-                                        toast.success('Đã chèn mã voucher vào ô chat!')
+                                        setInputText((prev) => `${prev} ${t('voucherGiftMessage', { code: 'GIAM20K', discount: '20.000₫' })}`)
+                                        toast.success(t('voucherInserted'))
                                     }}
                                     className="w-full h-7 text-xs rounded-lg border-border/60 hover:bg-primary hover:text-primary-foreground"
                                 >
-                                    Gửi mã vào chat
+                                    {t('sendVoucherToChat')}
                                 </Button>
                             </div>
                         </div>

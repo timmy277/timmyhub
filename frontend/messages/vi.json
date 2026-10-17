@@ -2139,7 +2139,24 @@
     "noMatchFound": "Không tìm thấy kết quả phù hợp",
     "noConversationsYet": "Chưa có cuộc trò chuyện nào",
     "startConversationPrompt": "Bắt đầu cuộc trò chuyện",
-    "openFullScreenInSeller": "Mở toàn màn hình trong Kênh Người Bán"
+    "openFullScreenInSeller": "Mở toàn màn hình trong Kênh Người Bán",
+    "quickReply1": "Chào bạn! Shop có thể tư vấn kích thước hoặc hỗ trợ gì cho bạn ạ?",
+    "quickReply2": "Dạ shop đã xác nhận đơn hàng và đang đóng gói để giao sớm nhất ạ!",
+    "quickReply3": "Bạn vui lòng cung cấp thêm hình ảnh hoặc video cận cảnh để shop hỗ trợ ngay nhé.",
+    "quickReply4": "Sản phẩm hiện đang có sẵn trong kho, bạn đặt sớm shop gửi ngay trong ngày ạ!",
+    "quickReply5": "Shop gửi tặng bạn mã giảm giá ưu đãi khi mua đơn hàng này nhé!",
+    "relatedOrders": "Đơn hàng liên quan",
+    "noRelatedOrders": "Chưa có đơn hàng nào gắn vào cuộc trò chuyện này.",
+    "totalAmount": "Tổng tiền:",
+    "orderConfirmed": "Đã xác nhận",
+    "ordersCount": "{count} đơn",
+    "sendVoucherQuick": "Tặng voucher nhanh",
+    "voucherMinOrder": "Đơn từ {min}",
+    "voucherInserted": "Đã chèn mã voucher vào ô chat!",
+    "sendVoucherToChat": "Gửi mã vào chat",
+    "voucherGiftMessage": "Shop tặng bạn mã giảm giá {code} giảm {discount} nha!",
+    "uploadMediaFailed": "Không thể tải tệp tin đính kèm. Vui lòng thử lại.",
+    "sendMessageFailed": "Gửi tin nhắn thất bại"
   }
 }
 

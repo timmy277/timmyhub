@@ -2139,7 +2139,24 @@
     "noMatchFound": "No matching results found",
     "noConversationsYet": "No conversations yet",
     "startConversationPrompt": "Start a conversation",
-    "openFullScreenInSeller": "Open full screen in Seller Channel"
+    "openFullScreenInSeller": "Open full screen in Seller Channel",
+    "quickReply1": "Hello! How can our shop assist you with sizing or questions today?",
+    "quickReply2": "Shop has confirmed your order and is packing it for the earliest dispatch!",
+    "quickReply3": "Please provide close-up photos or videos so we can assist you right away.",
+    "quickReply4": "This product is currently in stock; order soon and we will dispatch today!",
+    "quickReply5": "Shop gifts you an exclusive discount voucher for this order!",
+    "relatedOrders": "Related Orders",
+    "noRelatedOrders": "No orders attached to this conversation.",
+    "totalAmount": "Total:",
+    "orderConfirmed": "Confirmed",
+    "ordersCount": "{count} orders",
+    "sendVoucherQuick": "Send Quick Voucher",
+    "voucherMinOrder": "Orders from {min}",
+    "voucherInserted": "Voucher code inserted into chat!",
+    "sendVoucherToChat": "Insert code into chat",
+    "voucherGiftMessage": "Shop gifts you voucher code {code} for {discount} off!",
+    "uploadMediaFailed": "Failed to upload attachments. Please try again.",
+    "sendMessageFailed": "Failed to send message"
   }
 }
 
