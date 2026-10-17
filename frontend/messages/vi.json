@@ -2126,7 +2126,8 @@
     "quickReplies": "Câu trả lời nhanh",
     "quickReplyTip": "Gợi ý câu trả lời nhanh:",
     "delivered": "Đã gửi",
-    "seen": "Đã xem"
+    "seen": "Đã xem",
+    "moreChatHeads": "+{count} đoạn chat khác"
   }
 }
 

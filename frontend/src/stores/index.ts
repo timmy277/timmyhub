@@ -3,3 +3,4 @@
 // Phiên đăng nhập KHÔNG nằm ở đây — NextAuth quản lý qua cookie HttpOnly (ADR-0005, REQ-IDN-022).
 export * from './theme-config.store'
 export * from './user-profile.store'
+export * from './use-chat-store'

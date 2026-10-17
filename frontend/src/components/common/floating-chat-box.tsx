@@ -24,11 +24,10 @@ import {
     Button,
     Input,
     ScrollArea,
-} from '@/components/ui'
-import { ROUTE } from '@/constants'
-import { useChat, useConversationMessages } from '@/hooks/use-chat'
-import { useUploadMedia } from '@/hooks/use-media'
-import { useChatStore } from '@/stores/use-chat-store'
+} from '@/components'
+import { CHAT_CONFIG, ROUTE } from '@/constants'
+import { useChat, useConversationMessages, useUploadMedia } from '@/hooks'
+import { useChatStore } from '@/stores'
 import {
     formatCurrencyVND,
     formatMessengerTimestamp,
@@ -91,8 +90,8 @@ function SingleFloatingChatBox({
         const text = inputText.trim()
         if (!text && selectedFiles.length === 0) return
 
-        let uploadedImageUrls: string[] = []
-        let uploadedVideoUrls: string[] = []
+        const uploadedImageUrls: string[] = []
+        const uploadedVideoUrls: string[] = []
 
         if (selectedFiles.length > 0) {
             try {
@@ -366,13 +365,14 @@ function SingleFloatingChatBox({
                                                             href={url}
                                                             target="_blank"
                                                             rel="noreferrer"
-                                                            className="relative rounded-xl overflow-hidden border border-border/50 group/img shadow-xs block"
+                                                            className="relative rounded-xl overflow-hidden border border-border/50 group/img shadow-xs block h-36 w-44"
                                                         >
-                                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                            <img
+                                                            <Image
                                                                 src={url}
-                                                                alt="Attached"
-                                                                className="max-h-36 max-w-[200px] object-cover transition-transform group-hover/img:scale-105"
+                                                                alt={t('attachMedia')}
+                                                                fill
+                                                                sizes="(max-width: 640px) 160px, 200px"
+                                                                className="object-cover transition-transform group-hover/img:scale-105"
                                                             />
                                                         </a>
                                                     ))}
@@ -420,16 +420,23 @@ function SingleFloatingChatBox({
                             {preview.type === 'video' ? (
                                 <video src={preview.url} className="size-full object-cover" />
                             ) : (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={preview.url} alt="Staged" className="size-full object-cover" />
+                                <Image
+                                    src={preview.url}
+                                    alt="Staged"
+                                    fill
+                                    sizes="48px"
+                                    className="object-cover"
+                                />
                             )}
-                            <button
+                            <Button
                                 type="button"
+                                size="icon"
+                                variant="secondary"
                                 onClick={() => removeFile(i)}
-                                className="absolute top-0.5 right-0.5 size-4 rounded-full bg-black/70 text-white flex items-center justify-center opacity-80 hover:opacity-100"
+                                className="absolute top-0.5 right-0.5 size-4 rounded-full bg-black/70 text-white hover:bg-black/90 p-0"
                             >
                                 <XIcon className="size-2.5" />
-                            </button>
+                            </Button>
                         </div>
                     ))}
                 </div>
@@ -494,19 +501,69 @@ export function FloatingChatDock() {
         return null
     }
 
+    // Tách riêng các hội thoại đang mở full box và các hội thoại đang thu nhỏ (minimized)
+    const activeBoxes: ConversationDto[] = []
+    const minimizedHeads: ConversationDto[] = []
+
+    for (const storedConv of openConversations) {
+        const liveConv = conversations.find((c) => c.id === storedConv.id) ?? storedConv
+        if (minimizedIds.includes(liveConv.id)) {
+            minimizedHeads.push(liveConv)
+        } else {
+            activeBoxes.push(liveConv)
+        }
+    }
+
+    // Giới hạn hiển thị tối đa MAX_VISIBLE_CHAT_HEADS (5) avatar theo cột dọc
+    const maxHeads = CHAT_CONFIG.MAX_VISIBLE_CHAT_HEADS
+    const visibleHeads = minimizedHeads.slice(0, maxHeads)
+    const overflowCount = Math.max(0, minimizedHeads.length - maxHeads)
+
     return (
         <div className="fixed bottom-0 right-3 sm:right-6 z-50 flex items-end gap-3 pointer-events-none">
-            {openConversations.map((storedConv) => {
-                // Hợp nhất dữ liệu realtime từ React Query cache
-                const liveConv = conversations.find((c) => c.id === storedConv.id) ?? storedConv
-                const isMinimized = minimizedIds.includes(liveConv.id)
+            {/* 1. Các khung chat nổi mở đầy đủ (nằm ngang cạnh nhau sang trái) */}
+            {activeBoxes.map((conv) => (
+                <SingleFloatingChatBox
+                    key={conv.id}
+                    conversation={conv}
+                    onClose={() => toggleMinimize(conv.id)}
+                    onMinimize={() => toggleMinimize(conv.id)}
+                />
+            ))}
 
-                if (isMinimized) {
-                    // Chat Head avatar tròn nổi ở góc dưới bên phải (kiểu Facebook Messenger)
-                    return (
+            {/* 2. Cột dọc các Chat Head avatar thu nhỏ ở góc ngoài cùng bên phải */}
+            {minimizedHeads.length > 0 && (
+                <div className="flex flex-col-reverse items-center gap-2 mb-3 sm:mb-4 pointer-events-auto">
+                    {/* Bong bóng +N nếu số lượng avatar vượt quá giới hạn 5 */}
+                    {overflowCount > 0 && (
+                        <div
+                            className="relative group cursor-pointer select-none transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-75 duration-200"
+                            onClick={() => {
+                                const nextConv = minimizedHeads[maxHeads]
+                                if (nextConv) {
+                                    toggleMinimize(nextConv.id)
+                                    if (nextConv.unreadCount > 0) {
+                                        markConversationRead(nextConv.id)
+                                    }
+                                }
+                            }}
+                            title={t('moreChatHeads', { count: overflowCount })}
+                        >
+                            <div className="size-12 rounded-full border-2 border-primary/30 bg-primary/10 text-primary font-black shadow-xl ring-2 ring-background hover:ring-primary/50 transition-all flex items-center justify-center text-sm backdrop-blur-md">
+                                +{overflowCount}
+                            </div>
+                            {/* Hover tooltip */}
+                            <div className="absolute right-full mr-2.5 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-popover text-popover-foreground text-xs font-semibold shadow-lg border border-border/80 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none hidden sm:block">
+                                {t('moreChatHeads', { count: overflowCount })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Danh sách các Chat Head avatar (tối đa 5 item) xếp theo hàng dọc */}
+                    {visibleHeads.map((liveConv) => (
                         <div
                             key={liveConv.id}
-                            className="relative group pointer-events-auto cursor-pointer mb-3 sm:mb-4 select-none transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-75 duration-200"
+                            className="relative group cursor-pointer select-none transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-75 duration-200"
                             onClick={() => {
                                 toggleMinimize(liveConv.id)
                                 if (liveConv.unreadCount > 0) {
@@ -539,37 +596,29 @@ export function FloatingChatDock() {
                                 </span>
                             )}
 
-                            {/* Hover close 'X' button ở góc trên bên phải */}
-                            <button
+                            {/* Hover close 'X' button ở góc trên bên phải bằng shadcn Button */}
+                            <Button
                                 type="button"
+                                size="icon"
+                                variant="secondary"
                                 onClick={(e) => {
                                     e.stopPropagation()
                                     closeChat(liveConv.id)
                                 }}
-                                className="absolute -top-1 -right-1 size-5 rounded-full bg-muted-foreground/90 hover:bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md ring-2 ring-background z-10 hover:scale-110 active:scale-95"
+                                className="absolute -top-1 -right-1 size-5 rounded-full bg-muted-foreground/90 hover:bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md ring-2 ring-background z-10 hover:scale-110 active:scale-95 p-0"
                                 title={t('closeChatHead')}
                             >
                                 <XIcon className="size-3" />
-                            </button>
+                            </Button>
 
                             {/* Hover tooltip with peer name */}
                             <div className="absolute right-full mr-2.5 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-popover text-popover-foreground text-xs font-semibold shadow-lg border border-border/80 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none hidden sm:block">
                                 {liveConv.peer.name}
                             </div>
                         </div>
-                    )
-                }
-
-                // Full Floating Box
-                return (
-                    <SingleFloatingChatBox
-                        key={liveConv.id}
-                        conversation={liveConv}
-                        onClose={() => toggleMinimize(liveConv.id)}
-                        onMinimize={() => toggleMinimize(liveConv.id)}
-                    />
-                )
-            })}
+                    ))}
+                </div>
+            )}
         </div>
     )
 }

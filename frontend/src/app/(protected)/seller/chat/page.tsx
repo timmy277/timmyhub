@@ -6,12 +6,7 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import {
     CheckCheckIcon,
-    ChevronRightIcon,
-    CopyIcon,
     ExternalLinkIcon,
-    FilterIcon,
-    FolderKanbanIcon,
-    HelpCircleIcon,
     ImageIcon,
     InfoIcon,
     Loader2Icon,
@@ -20,21 +15,16 @@ import {
     PackageIcon,
     PanelRightCloseIcon,
     PanelRightOpenIcon,
-    PaperclipIcon,
     RefreshCwIcon,
     SearchIcon,
     SendIcon,
     SparklesIcon,
-    StoreIcon,
     TagIcon,
     UserCheckIcon,
-    UserIcon,
-    VideoIcon,
     XIcon,
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
-import type { ChatMessageDto, ConversationDto } from '@timmyhub/contracts'
 
 import {
     Avatar,
@@ -42,20 +32,13 @@ import {
     AvatarImage,
     Badge,
     Button,
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
     Input,
     ScrollArea,
-    Separator,
     Textarea,
-} from '@/components/ui'
+} from '@/components'
 import { ROUTE } from '@/constants'
-import { useChat, useConversationMessages } from '@/hooks/use-chat'
-import { useUploadMedia } from '@/hooks/use-media'
-import { useChatStore } from '@/stores/use-chat-store'
+import { useChat, useConversationMessages, useUploadMedia } from '@/hooks'
+import { useChatStore } from '@/stores'
 import {
     formatCurrencyVND,
     formatMessengerTimestamp,
@@ -93,23 +76,16 @@ export default function SellerChatPage() {
     const fileInputRef = useRef<HTMLInputElement>(null)
     const { mutateAsync: uploadMedia, isPending: isUploading } = useUploadMedia()
 
-    // Tự động chọn cuộc hội thoại đầu tiên nếu chưa chọn
-    useEffect(() => {
-        if (!selectedConvId && conversations.length > 0) {
-            const first = conversations[0]
-            if (first) {
-                setSelectedConvId(first.id)
-            }
-        }
-    }, [conversations, selectedConvId])
+    // Chọn hội thoại: nếu chưa chọn thủ công, mặc định dùng cuộc hội thoại đầu tiên
+    const effectiveSelectedConvId = selectedConvId ?? conversations[0]?.id ?? null
 
     // Lấy thông tin cuộc hội thoại đang chọn
     const activeConversation = useMemo(() => {
-        return conversations.find((c) => c.id === selectedConvId) ?? null
-    }, [conversations, selectedConvId])
+        return conversations.find((c) => c.id === effectiveSelectedConvId) ?? null
+    }, [conversations, effectiveSelectedConvId])
 
     // Lấy tin nhắn của cuộc hội thoại đang chọn
-    const { messages, isLoading: isLoadingMessages, refetch: refetchMessages } = useConversationMessages(selectedConvId)
+    const { messages, isLoading: isLoadingMessages, refetch: refetchMessages } = useConversationMessages(effectiveSelectedConvId)
 
     // Tự động cuộn xuống cuối khi có tin nhắn mới
     useEffect(() => {
@@ -119,12 +95,12 @@ export default function SellerChatPage() {
     // Đánh dấu đã đọc và gán activeConversationId khi chọn hội thoại
     useEffect(() => {
         const { setActiveConversationId } = useChatStore.getState()
-        setActiveConversationId(selectedConvId)
+        setActiveConversationId(effectiveSelectedConvId)
 
         return () => {
             setActiveConversationId(null)
         }
-    }, [selectedConvId])
+    }, [effectiveSelectedConvId])
 
     useEffect(() => {
         if (activeConversation && activeConversation.unreadCount > 0) {
@@ -170,19 +146,19 @@ export default function SellerChatPage() {
 
     // Gửi tin nhắn
     const handleSend = async () => {
-        if (!selectedConvId) return
+        if (!effectiveSelectedConvId) return
         const text = inputText.trim()
         if (!text && selectedFiles.length === 0) return
 
-        let uploadedImageUrls: string[] = []
-        let uploadedVideoUrls: string[] = []
+        const uploadedImageUrls: string[] = []
+        const uploadedVideoUrls: string[] = []
 
         if (selectedFiles.length > 0) {
             try {
                 const assets = await uploadMedia({
                     files: selectedFiles,
                     ownerType: 'GENERAL',
-                    ownerId: selectedConvId,
+                    ownerId: effectiveSelectedConvId,
                 })
                 for (let i = 0; i < assets.length; i++) {
                     const asset = assets[i]
@@ -201,7 +177,7 @@ export default function SellerChatPage() {
 
         try {
             await sendMessage({
-                conversationId: selectedConvId,
+                conversationId: effectiveSelectedConvId,
                 content: text || undefined,
                 imageUrls: uploadedImageUrls.filter(Boolean),
                 videoUrls: uploadedVideoUrls.filter(Boolean),
@@ -274,39 +250,45 @@ export default function SellerChatPage() {
 
                     {/* Filter Tabs */}
                     <div className="flex items-center gap-1.5 mt-2.5">
-                        <button
+                        <Button
                             type="button"
+                            variant={filterTab === 'all' ? 'default' : 'ghost'}
+                            size="sm"
                             onClick={() => setFilterTab('all')}
-                            className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
+                            className={`h-7 px-2.5 text-xs rounded-lg font-medium transition-all ${
                                 filterTab === 'all'
                                     ? 'bg-primary text-primary-foreground shadow-xs'
                                     : 'bg-muted/60 text-muted-foreground hover:bg-muted'
                             }`}
                         >
                             {t('tabAll')} ({conversations.length})
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="button"
+                            variant={filterTab === 'unread' ? 'default' : 'ghost'}
+                            size="sm"
                             onClick={() => setFilterTab('unread')}
-                            className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
+                            className={`h-7 px-2.5 text-xs rounded-lg font-medium transition-all ${
                                 filterTab === 'unread'
                                     ? 'bg-primary text-primary-foreground shadow-xs'
                                     : 'bg-muted/60 text-muted-foreground hover:bg-muted'
                             }`}
                         >
                             {t('tabUnread')} {totalUnreadCount > 0 && `(${totalUnreadCount})`}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="button"
+                            variant={filterTab === 'order' ? 'default' : 'ghost'}
+                            size="sm"
                             onClick={() => setFilterTab('order')}
-                            className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all ${
+                            className={`h-7 px-2.5 text-xs rounded-lg font-medium transition-all ${
                                 filterTab === 'order'
                                     ? 'bg-primary text-primary-foreground shadow-xs'
                                     : 'bg-muted/60 text-muted-foreground hover:bg-muted'
                             }`}
                         >
                             {t('tabHasOrder')}
-                        </button>
+                        </Button>
                     </div>
                 </div>
 
@@ -622,13 +604,14 @@ export default function SellerChatPage() {
                                                                         href={url}
                                                                         target="_blank"
                                                                         rel="noreferrer"
-                                                                        className="relative rounded-2xl overflow-hidden border border-border/60 shadow-sm block group/img"
+                                                                        className="relative rounded-2xl overflow-hidden border border-border/60 shadow-sm block group/img h-56 w-72"
                                                                     >
-                                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                                        <img
+                                                                        <Image
                                                                             src={url}
-                                                                            alt="Đính kèm"
-                                                                            className="max-h-56 max-w-[280px] object-cover transition-transform group-hover/img:scale-105"
+                                                                            alt={t('attachMedia')}
+                                                                            fill
+                                                                            sizes="(max-width: 640px) 240px, 288px"
+                                                                            className="object-cover transition-transform group-hover/img:scale-105"
                                                                         />
                                                                     </a>
                                                                 ))}
@@ -675,14 +658,16 @@ export default function SellerChatPage() {
                                 {t('quickReplyTip')}
                             </span>
                             {QUICK_REPLIES.map((reply, i) => (
-                                <button
+                                <Button
                                     key={i}
                                     type="button"
+                                    variant="outline"
+                                    size="sm"
                                     onClick={() => insertQuickReply(reply)}
-                                    className="text-xs px-2.5 py-1 rounded-lg bg-card border border-border/60 hover:border-primary/50 hover:bg-primary/5 text-foreground transition-all shrink-0 whitespace-nowrap shadow-xs"
+                                    className="h-7 text-xs px-2.5 rounded-lg bg-card border-border/60 hover:border-primary/50 hover:bg-primary/5 text-foreground transition-all shrink-0 whitespace-nowrap shadow-xs"
                                 >
                                     {reply}
-                                </button>
+                                </Button>
                             ))}
                         </div>
 
@@ -694,16 +679,23 @@ export default function SellerChatPage() {
                                         {preview.type === 'video' ? (
                                             <video src={preview.url} className="size-full object-cover" />
                                         ) : (
-                                            // eslint-disable-next-line @next/next/no-img-element
-                                            <img src={preview.url} alt="Staged" className="size-full object-cover" />
+                                            <Image
+                                                src={preview.url}
+                                                alt="Staged"
+                                                fill
+                                                sizes="64px"
+                                                className="object-cover"
+                                            />
                                         )}
-                                        <button
+                                        <Button
                                             type="button"
+                                            size="icon"
+                                            variant="secondary"
                                             onClick={() => removeFile(i)}
-                                            className="absolute top-1 right-1 size-5 rounded-full bg-black/70 text-white flex items-center justify-center opacity-80 hover:opacity-100"
+                                            className="absolute top-1 right-1 size-5 rounded-full bg-black/70 text-white hover:bg-black/90 p-0"
                                         >
                                             <XIcon className="size-3" />
-                                        </button>
+                                        </Button>
                                     </div>
                                 ))}
                             </div>
@@ -711,7 +703,7 @@ export default function SellerChatPage() {
 
                         {/* Composer Input Bar */}
                         <div className="p-4 border-t border-border/80 bg-card/70 backdrop-blur-md flex items-center gap-2.5 shrink-0">
-                            <input
+                            <Input
                                 type="file"
                                 ref={fileInputRef}
                                 onChange={handleFileChange}

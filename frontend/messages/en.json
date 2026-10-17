@@ -2126,7 +2126,8 @@
     "quickReplies": "Quick Replies",
     "quickReplyTip": "Quick replies suggestions:",
     "delivered": "Delivered",
-    "seen": "Seen"
+    "seen": "Seen",
+    "moreChatHeads": "+{count} other chats"
   }
 }
 

@@ -30,10 +30,7 @@ export class ChatController {
 
     @AuthenticatedOnly()
     @Get(CHAT_ROUTE.CONVERSATION_DETAIL)
-    getConversationDetail(
-        @Param('id') id: string,
-        @CurrentUser() actor: AuthUser,
-    ): Promise<ConversationDto> {
+    getConversationDetail(@Param('id') id: string, @CurrentUser() actor: AuthUser): Promise<ConversationDto> {
         return this.chatService.getConversationDetail(actor.id, id)
     }
 
@@ -84,10 +81,7 @@ export class ChatController {
 
     @AuthenticatedOnly()
     @Patch(CHAT_ROUTE.READ)
-    markConversationRead(
-        @Param('id') id: string,
-        @CurrentUser() actor: AuthUser,
-    ): Promise<{ success: boolean }> {
+    markConversationRead(@Param('id') id: string, @CurrentUser() actor: AuthUser): Promise<{ success: boolean }> {
         return this.chatService.markConversationRead(actor.id, id)
     }
 }
