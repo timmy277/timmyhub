@@ -706,7 +706,7 @@ export default function SellerChatPage() {
                         )}
 
                         {/* Composer Input Bar */}
-                        <div className="p-4 border-t border-border/80 bg-card/70 backdrop-blur-md flex items-end gap-2.5 shrink-0">
+                        <div className="p-4 border-t border-border/80 bg-card/70 backdrop-blur-md flex items-center gap-2.5 shrink-0">
                             <input
                                 type="file"
                                 ref={fileInputRef}
@@ -716,18 +716,16 @@ export default function SellerChatPage() {
                                 className="hidden"
                             />
 
-                            <div className="flex items-center gap-1">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="size-9 rounded-xl border-border/70 text-muted-foreground hover:text-primary hover:border-primary/50"
-                                    title={t('attachMedia')}
-                                >
-                                    <ImageIcon className="size-4" />
-                                </Button>
-                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                onClick={() => fileInputRef.current?.click()}
+                                className="size-11 rounded-xl border-border/70 text-muted-foreground hover:text-primary hover:border-primary/50 shrink-0"
+                                title={t('attachMedia')}
+                            >
+                                <ImageIcon className="size-5" />
+                            </Button>
 
                             <Textarea
                                 placeholder={t('inputPlaceholder')}
@@ -735,14 +733,15 @@ export default function SellerChatPage() {
                                 onChange={(e) => setInputText(e.target.value)}
                                 onKeyDown={handleKeyDown}
                                 disabled={isSending || isUploading}
-                                className="min-h-11 max-h-32 text-sm rounded-xl resize-none py-2.5 px-3.5 bg-background border-border/70 focus-visible:ring-1"
+                                rows={1}
+                                className="min-h-11 max-h-32 text-sm rounded-xl resize-none py-3 px-3.5 bg-background border-border/70 focus-visible:ring-1 flex-1 leading-normal"
                             />
 
                             <Button
                                 type="button"
                                 onClick={() => void handleSend()}
                                 disabled={(inputText.trim().length === 0 && selectedFiles.length === 0) || isSending || isUploading}
-                                className="h-11 px-5 rounded-xl bg-primary text-primary-foreground font-semibold shadow-sm hover:bg-primary/90 transition-all active:scale-95 shrink-0 gap-1.5"
+                                className="h-11 px-5 rounded-xl bg-primary text-primary-foreground font-semibold shadow-sm hover:bg-primary/90 transition-all active:scale-95 shrink-0 flex items-center justify-center gap-1.5"
                             >
                                 {isSending || isUploading ? (
                                     <>
