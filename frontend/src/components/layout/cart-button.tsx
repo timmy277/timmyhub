@@ -28,7 +28,7 @@ export function CartButton() {
                     className="relative size-9 rounded-xl text-foreground/80 hover:text-foreground hover:bg-muted/80 transition-transform active:scale-95"
                     aria-label={totalItems > 0 ? `${t('dropdown.title')} (${totalItems})` : t('dropdown.title')}
                 >
-                    <ShoppingCartIcon className="size-4.5" />
+                    <ShoppingCartIcon className="size-4.5 text-primary" />
                     {totalItems > 0 && (
                         <span
                             aria-hidden="true"

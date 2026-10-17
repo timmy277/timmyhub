@@ -21,8 +21,8 @@ export function ThemeModeToggle() {
                     aria-label={t('themeMode')}
                     onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
                 >
-                    <MoonIcon aria-hidden className="dark:hidden" />
-                    <SunIcon aria-hidden className="hidden dark:block" />
+                    <MoonIcon aria-hidden className="text-primary dark:hidden" />
+                    <SunIcon aria-hidden className="hidden text-primary dark:block" />
                 </Button>
             </TooltipTrigger>
             <TooltipContent>{t('themeMode')}</TooltipContent>

@@ -65,7 +65,7 @@ export function MessageMenu() {
                     className="relative"
                     aria-label={totalUnreadCount > 0 ? `${tNav('messages')} (${totalUnreadCount})` : tNav('messages')}
                 >
-                    <MessageCircleIcon aria-hidden className="size-4" />
+                    <MessageCircleIcon aria-hidden className="size-4 text-primary" />
                     {totalUnreadCount > 0 && (
                         <span
                             aria-hidden="true"

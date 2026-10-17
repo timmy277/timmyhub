@@ -135,7 +135,7 @@ export function NotificationMenu() {
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label={label} className="relative">
-                    <BellIcon aria-hidden className="size-4" />
+                    <BellIcon aria-hidden className="size-4 text-primary" />
                     {unreadCount > 0 && (
                         <span
                             aria-hidden="true"
