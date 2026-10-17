@@ -2127,7 +2127,19 @@
     "quickReplyTip": "Quick replies suggestions:",
     "delivered": "Delivered",
     "seen": "Seen",
-    "moreChatHeads": "+{count} other chats"
+    "moreChatHeads": "+{count} other chats",
+    "dropdownTitle": "Chats",
+    "newBadge": "{count} new",
+    "sellerChannel": "Seller Channel",
+    "searchUserShopPlaceholder": "Search users, shops...",
+    "loginToViewMessages": "Log in to view messages",
+    "loginToViewMessagesDesc": "Chat directly with sellers and other users.",
+    "loginNow": "Log In Now",
+    "loadingChats": "Loading chats...",
+    "noMatchFound": "No matching results found",
+    "noConversationsYet": "No conversations yet",
+    "startConversationPrompt": "Start a conversation",
+    "openFullScreenInSeller": "Open full screen in Seller Channel"
   }
 }
 

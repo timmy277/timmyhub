@@ -202,7 +202,7 @@ export function isSameRange(a: DateRange | null | undefined, b: DateRange | null
     return a?.from?.getTime() === b?.from?.getTime() && a?.to?.getTime() === b?.to?.getTime()
 }
 
-export function formatRelativeTime(value: string | Date | null | undefined): string {
+export function formatRelativeTime(value: string | Date | null | undefined, locale: 'vi' | 'en' = 'vi'): string {
     if (!value) return ''
     const date = typeof value === 'string' ? parseISO(value) : value
     if (!isValid(date)) return ''
@@ -214,11 +214,11 @@ export function formatRelativeTime(value: string | Date | null | undefined): str
     const diffHour = Math.floor(diffMin / 60)
     const diffDay = Math.floor(diffHour / 24)
 
-    if (diffSec < 60) return 'vừa xong'
-    if (diffMin < 60) return `${diffMin}p`
+    if (diffSec < 60) return locale === 'en' ? 'just now' : 'vừa xong'
+    if (diffMin < 60) return locale === 'en' ? `${diffMin}m` : `${diffMin}p`
     if (diffHour < 24) return `${diffHour}h`
-    if (diffDay < 7) return `${diffDay} ngày`
-    return format(date, 'dd/MM')
+    if (diffDay < 7) return locale === 'en' ? `${diffDay}d` : `${diffDay} ngày`
+    return format(date, locale === 'en' ? 'MM/dd' : 'dd/MM')
 }
 
 // Định dạng thời gian kiểu Messenger (Facebook) cho khung chat

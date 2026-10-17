@@ -14,7 +14,7 @@ import {
     StoreIcon,
     XIcon,
 } from 'lucide-react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import type { ConversationDto } from '@timmyhub/contracts'
 
 import {
@@ -45,6 +45,7 @@ function SingleFloatingChatBox({
     onMinimize: () => void
 }) {
     const t = useTranslations('chat')
+    const locale = useLocale() as 'vi' | 'en'
     const { userId, sendMessage, isSending, markConversationRead } = useChat()
     const { messages, isLoading } = useConversationMessages(conversation.id)
     const { mutateAsync: uploadMedia, isPending: isUploading } = useUploadMedia()
@@ -249,7 +250,7 @@ function SingleFloatingChatBox({
                                     {showDivider && (
                                         <div className="flex justify-center my-2.5">
                                             <span className="text-[10px] font-medium text-muted-foreground/75 px-2.5 py-0.5 rounded-full bg-muted/60 select-none">
-                                                {formatMessengerTimestamp(msg.createdAt)}
+                                                {formatMessengerTimestamp(msg.createdAt, locale)}
                                             </span>
                                         </div>
                                     )}
@@ -444,7 +445,7 @@ function SingleFloatingChatBox({
 
             {/* Input Composer Footer */}
             <div className="p-2.5 border-t border-border/60 bg-card/60 backdrop-blur-md flex items-center gap-1.5">
-                <input
+                <Input
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileChange}

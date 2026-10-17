@@ -7,9 +7,8 @@ import {
     MessageCircleIcon,
     SearchIcon,
     StoreIcon,
-    UserIcon,
 } from 'lucide-react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import type { ConversationDto } from '@timmyhub/contracts'
 
 import {
@@ -23,14 +22,16 @@ import {
     DropdownMenuTrigger,
     Input,
     ScrollArea,
-} from '@/components/ui'
+} from '@/components'
 import { ROUTE } from '@/constants'
-import { useChat } from '@/hooks/use-chat'
-import { useChatStore } from '@/stores/use-chat-store'
+import { useChat } from '@/hooks'
+import { useChatStore } from '@/stores'
 import { formatRelativeTime } from '@/utils'
 
 export function MessageMenu() {
-    const t = useTranslations('nav')
+    const locale = useLocale() as 'vi' | 'en'
+    const tNav = useTranslations('nav')
+    const tChat = useTranslations('chat')
     const { isAuthenticated, userId, conversations, totalUnreadCount, isLoading, markConversationRead } = useChat()
     const openChat = useChatStore((s) => s.openChat)
     const [searchTerm, setSearchTerm] = useState('')
@@ -62,7 +63,7 @@ export function MessageMenu() {
                     variant="ghost"
                     size="icon"
                     className="relative"
-                    aria-label={totalUnreadCount > 0 ? `${t('messages')} (${totalUnreadCount})` : t('messages')}
+                    aria-label={totalUnreadCount > 0 ? `${tNav('messages')} (${totalUnreadCount})` : tNav('messages')}
                 >
                     <MessageCircleIcon aria-hidden className="size-4" />
                     {totalUnreadCount > 0 && (
@@ -84,11 +85,11 @@ export function MessageMenu() {
                 <div className="flex items-center justify-between px-4 pt-3.5 pb-2.5 border-b border-border/50">
                     <div className="flex items-center gap-2">
                         <h3 className="font-bold text-base tracking-tight text-foreground">
-                            Đoạn chat
+                            {tChat('dropdownTitle')}
                         </h3>
                         {totalUnreadCount > 0 && (
                             <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-xs font-semibold">
-                                {totalUnreadCount} mới
+                                {tChat('newBadge', { count: totalUnreadCount })}
                             </span>
                         )}
                     </div>
@@ -98,7 +99,7 @@ export function MessageMenu() {
                         onClick={() => setIsOpen(false)}
                         className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 font-medium group"
                     >
-                        <span>Kênh Người Bán</span>
+                        <span>{tChat('sellerChannel')}</span>
                         <ExternalLinkIcon className="size-3 transition-transform group-hover:translate-x-0.5" />
                     </Link>
                 </div>
@@ -108,7 +109,7 @@ export function MessageMenu() {
                     <div className="relative">
                         <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
                         <Input
-                            placeholder="Tìm kiếm người dùng, shop..."
+                            placeholder={tChat('searchUserShopPlaceholder')}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="h-8 pl-8 text-xs rounded-xl bg-background/80 border-border/60 focus-visible:ring-1"
@@ -124,20 +125,20 @@ export function MessageMenu() {
                                 <MessageCircleIcon className="size-6" />
                             </div>
                             <div>
-                                <p className="text-xs font-semibold text-foreground">Đăng nhập để xem tin nhắn</p>
+                                <p className="text-xs font-semibold text-foreground">{tChat('loginToViewMessages')}</p>
                                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                                    Trò chuyện trực tiếp với người bán và người dùng khác.
+                                    {tChat('loginToViewMessagesDesc')}
                                 </p>
                             </div>
                             <Button asChild size="sm" className="h-8 text-xs rounded-xl mt-1">
                                 <Link href={ROUTE.LOGIN} onClick={() => setIsOpen(false)}>
-                                    Đăng nhập ngay
+                                    {tChat('loginNow')}
                                 </Link>
                             </Button>
                         </div>
                     ) : isLoading ? (
                         <div className="p-6 text-center text-xs text-muted-foreground animate-pulse">
-                            Đang tải đoạn chat...
+                            {tChat('loadingChats')}
                         </div>
                     ) : filteredConversations.length === 0 ? (
                         <div className="p-8 text-center flex flex-col items-center justify-center gap-2">
@@ -145,7 +146,7 @@ export function MessageMenu() {
                                 <MessageCircleIcon className="size-5" />
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                {searchTerm ? 'Không tìm thấy kết quả phù hợp' : 'Chưa có cuộc trò chuyện nào'}
+                                {searchTerm ? tChat('noMatchFound') : tChat('noConversationsYet')}
                             </p>
                         </div>
                     ) : (
@@ -188,19 +189,19 @@ export function MessageMenu() {
                                                     </span>
                                                     {conv.peer.isSeller && (
                                                         <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.2 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                                                            Shop
+                                                            {tChat('shop')}
                                                         </span>
                                                     )}
                                                 </div>
                                                 <span className="text-[11px] text-muted-foreground shrink-0 font-normal">
-                                                    {formatRelativeTime(conv.lastMessageAt)}
+                                                    {formatRelativeTime(conv.lastMessageAt, locale)}
                                                 </span>
                                             </div>
 
                                             <div className="flex items-center justify-between gap-2 min-w-0">
                                                 <p className={`text-xs truncate min-w-0 flex-1 ${isUnread ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-                                                    {isSelfLast && <span className="text-muted-foreground">Bạn: </span>}
-                                                    {conv.lastMessage || 'Bắt đầu cuộc trò chuyện'}
+                                                    {isSelfLast && <span className="text-muted-foreground">{tChat('you')}: </span>}
+                                                    {conv.lastMessage || tChat('startConversationPrompt')}
                                                 </p>
                                                 {isUnread && (
                                                     <span className="size-2 rounded-full bg-primary shrink-0 animate-pulse" />
@@ -223,7 +224,7 @@ export function MessageMenu() {
                         className="w-full text-xs font-medium h-8 rounded-lg hover:bg-background/80"
                     >
                         <Link href={ROUTE.SELLER_CHAT} onClick={() => setIsOpen(false)}>
-                            Mở toàn màn hình trong Kênh Người Bán
+                            {tChat('openFullScreenInSeller')}
                         </Link>
                     </Button>
                 </div>

@@ -23,7 +23,7 @@ import {
     UserCheckIcon,
     XIcon,
 } from 'lucide-react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 
 import {
@@ -57,6 +57,7 @@ const QUICK_REPLIES = [
 
 export default function SellerChatPage() {
     const t = useTranslations('chat')
+    const locale = useLocale() as 'vi' | 'en'
     const { userId, conversations, totalUnreadCount, isLoading, markConversationRead, sendMessage, isSending, refetchConversations } =
         useChat()
 
@@ -346,7 +347,7 @@ export default function SellerChatPage() {
                                                     {conv.peer.name}
                                                 </span>
                                                 <span className="text-[11px] text-muted-foreground font-normal shrink-0">
-                                                    {formatRelativeTime(conv.lastMessageAt)}
+                                                    {formatRelativeTime(conv.lastMessageAt, locale)}
                                                 </span>
                                             </div>
 
@@ -488,7 +489,7 @@ export default function SellerChatPage() {
                                                 {showDivider && (
                                                     <div className="flex justify-center my-3">
                                                         <span className="text-[11px] font-medium text-muted-foreground/75 px-3 py-0.5 rounded-full bg-muted/60 select-none shadow-xs">
-                                                            {formatMessengerTimestamp(msg.createdAt)}
+                                                            {formatMessengerTimestamp(msg.createdAt, locale)}
                                                         </span>
                                                     </div>
                                                 )}

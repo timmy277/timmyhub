@@ -2127,7 +2127,19 @@
     "quickReplyTip": "Gợi ý câu trả lời nhanh:",
     "delivered": "Đã gửi",
     "seen": "Đã xem",
-    "moreChatHeads": "+{count} đoạn chat khác"
+    "moreChatHeads": "+{count} đoạn chat khác",
+    "dropdownTitle": "Đoạn chat",
+    "newBadge": "{count} mới",
+    "sellerChannel": "Kênh Người Bán",
+    "searchUserShopPlaceholder": "Tìm kiếm người dùng, shop...",
+    "loginToViewMessages": "Đăng nhập để xem tin nhắn",
+    "loginToViewMessagesDesc": "Trò chuyện trực tiếp với người bán và người dùng khác.",
+    "loginNow": "Đăng nhập ngay",
+    "loadingChats": "Đang tải đoạn chat...",
+    "noMatchFound": "Không tìm thấy kết quả phù hợp",
+    "noConversationsYet": "Chưa có cuộc trò chuyện nào",
+    "startConversationPrompt": "Bắt đầu cuộc trò chuyện",
+    "openFullScreenInSeller": "Mở toàn màn hình trong Kênh Người Bán"
   }
 }
 
