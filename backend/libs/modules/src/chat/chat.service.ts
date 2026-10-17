@@ -98,6 +98,7 @@ export class ChatService {
         // Tìm mọi cuộc hội thoại mà user là buyerId hoặc sellerId (hoặc sellerProfile của user)
         const sellerProfile = await this.prisma.sellerProfile.findUnique({
             where: { userId },
+            select: { id: true },
         })
         const sellerIdMatch = sellerProfile?.id
 
@@ -118,29 +119,121 @@ export class ChatService {
             orderBy: [{ lastMessageAt: 'desc' }, { createdAt: 'desc' }],
         })
 
-        let totalUnreadCount = 0
-        const items: ConversationDto[] = []
+        if (!conversations.length) {
+            return {
+                items: [],
+                totalUnreadCount: 0,
+            }
+        }
 
-        for (const conv of conversations) {
-            // Xác định peerId
+        const convIds = conversations.map((c) => c.id)
+
+        // 1. Batch query đếm unread count theo conversationId (O(1) query thay vì N queries)
+        const unreadGroups = await this.prisma.chatMessage.groupBy({
+            by: ['conversationId'],
+            where: {
+                conversationId: { in: convIds },
+                senderId: { not: userId },
+                isRead: false,
+            },
+            _count: {
+                id: true,
+            },
+        })
+
+        const unreadMap = new Map<string, number>()
+        let totalUnreadCount = 0
+        for (const g of unreadGroups) {
+            unreadMap.set(g.conversationId, g._count.id)
+            totalUnreadCount += g._count.id
+        }
+
+        // 2. Batch resolve peer info cho toàn bộ danh sách hội thoại
+        const peerIds = Array.from(
+            new Set(
+                conversations.map((c) => {
+                    const isUserBuyer = c.buyerId === userId
+                    return isUserBuyer ? c.sellerId : c.buyerId
+                }),
+            ),
+        )
+
+        // Lấy tất cả seller profile tương ứng
+        const matchedSellers = await this.prisma.sellerProfile.findMany({
+            where: {
+                OR: [{ id: { in: peerIds } }, { userId: { in: peerIds } }],
+            },
+            select: {
+                id: true,
+                userId: true,
+                shopName: true,
+                shopLogo: true,
+                shopSlug: true,
+            },
+        })
+
+        const sellerByPeerId = new Map<string, (typeof matchedSellers)[0]>()
+        for (const s of matchedSellers) {
+            sellerByPeerId.set(s.id, s)
+            sellerByPeerId.set(s.userId, s)
+        }
+
+        // Với những peerId không phải là seller, tìm User
+        const nonSellerPeerIds = peerIds.filter((id) => !sellerByPeerId.has(id))
+        const matchedUsers = nonSellerPeerIds.length
+            ? await this.prisma.user.findMany({
+                  where: { id: { in: nonSellerPeerIds } },
+                  include: { profile: true },
+              })
+            : []
+
+        const userByPeerId = new Map<string, (typeof matchedUsers)[0]>()
+        for (const u of matchedUsers) {
+            userByPeerId.set(u.id, u)
+        }
+
+        const items: ConversationDto[] = conversations.map((conv) => {
             const isUserBuyer = conv.buyerId === userId
             const peerId = isUserBuyer ? conv.sellerId : conv.buyerId
-            const peer = await this.resolvePeerInfo(peerId)
 
-            // Đếm số tin chưa đọc trong hội thoại này
-            const unreadCount = await this.prisma.chatMessage.count({
-                where: {
-                    conversationId: conv.id,
-                    senderId: { not: userId },
-                    isRead: false,
-                },
-            })
+            let peer: ConversationPeerDto
+            const seller = sellerByPeerId.get(peerId)
+            if (seller) {
+                peer = {
+                    id: seller.userId,
+                    name: seller.shopName,
+                    avatar: seller.shopLogo,
+                    isSeller: true,
+                    shopSlug: seller.shopSlug,
+                }
+            } else {
+                const user = userByPeerId.get(peerId)
+                if (user) {
+                    const displayName =
+                        user.profile?.displayName ||
+                        [user.profile?.firstName, user.profile?.lastName].filter(Boolean).join(' ') ||
+                        user.email.split('@')[0] ||
+                        'Người dùng'
+                    peer = {
+                        id: user.id,
+                        name: displayName,
+                        avatar: user.profile?.avatar,
+                        isSeller: false,
+                    }
+                } else {
+                    peer = {
+                        id: peerId,
+                        name: 'Người dùng TimmyHub',
+                        avatar: null,
+                        isSeller: false,
+                    }
+                }
+            }
 
-            totalUnreadCount += unreadCount
-
+            const unreadCount = unreadMap.get(conv.id) ?? 0
             const lastMsg = conv.messages[0]
 
-            items.push({
+            return {
                 id: conv.id,
                 buyerId: conv.buyerId,
                 sellerId: conv.sellerId,
@@ -151,8 +244,8 @@ export class ChatService {
                 unreadCount,
                 peer,
                 createdAt: conv.createdAt.toISOString(),
-            })
-        }
+            }
+        })
 
         return {
             items,
@@ -460,7 +553,16 @@ export class ChatService {
         }
 
         // Xác định đối tác để gửi notification / socket update
-        const recipientUserId = conv.buyerId === userId ? conv.sellerId : conv.buyerId
+        const rawPeerId = conv.buyerId === userId ? conv.sellerId : conv.buyerId
+        // Nếu peerId là sellerProfile.id, cần map sang sellerProfile.userId để phát socket tới user room chính xác
+        let recipientUserId = rawPeerId
+        const sellerTarget = await this.prisma.sellerProfile.findUnique({
+            where: { id: rawPeerId },
+            select: { userId: true },
+        })
+        if (sellerTarget?.userId) {
+            recipientUserId = sellerTarget.userId
+        }
 
         // Phát WebSocket realtime
         this.chatGateway.emitNewMessage(conversationId, messageDto, [userId, recipientUserId])
@@ -526,6 +628,11 @@ export class ChatService {
     }
 
     async markConversationRead(userId: string, conversationId: string): Promise<{ success: boolean }> {
+        const conv = await this.prisma.conversation.findUnique({
+            where: { id: conversationId },
+            select: { buyerId: true, sellerId: true },
+        })
+
         // Đánh dấu các tin nhắn người khác gửi là đã đọc
         await this.prisma.chatMessage.updateMany({
             where: {
@@ -536,8 +643,23 @@ export class ChatService {
             data: { isRead: true },
         })
 
-        // Bắn WebSocket thông báo đã đọc
-        this.chatGateway.emitConversationRead(conversationId, userId)
+        // Tìm đối tác để bắn thông báo đã đọc
+        const notifyUserIds: string[] = []
+        if (conv) {
+            const rawPeerId = conv.buyerId === userId ? conv.sellerId : conv.buyerId
+            let peerUserId = rawPeerId
+            const sellerTarget = await this.prisma.sellerProfile.findUnique({
+                where: { id: rawPeerId },
+                select: { userId: true },
+            })
+            if (sellerTarget?.userId) {
+                peerUserId = sellerTarget.userId
+            }
+            notifyUserIds.push(peerUserId)
+        }
+
+        // Bắn WebSocket thông báo đã đọc tới convRoom, reader tabs và sender user room
+        this.chatGateway.emitConversationRead(conversationId, userId, notifyUserIds)
 
         return { success: true }
     }

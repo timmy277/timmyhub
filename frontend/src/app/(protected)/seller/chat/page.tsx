@@ -54,6 +54,7 @@ import {
 import { ROUTE } from '@/constants'
 import { useChat, useConversationMessages } from '@/hooks/use-chat'
 import { useUploadMedia } from '@/hooks/use-media'
+import { useChatStore } from '@/stores/use-chat-store'
 import {
     formatCurrencyVND,
     formatMessengerTimestamp,
@@ -114,7 +115,16 @@ export default function SellerChatPage() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [messages, mediaPreviews])
 
-    // Đánh dấu đã đọc khi chọn hội thoại
+    // Đánh dấu đã đọc và gán activeConversationId khi chọn hội thoại
+    useEffect(() => {
+        const { setActiveConversationId } = useChatStore.getState()
+        setActiveConversationId(selectedConvId)
+
+        return () => {
+            setActiveConversationId(null)
+        }
+    }, [selectedConvId])
+
     useEffect(() => {
         if (activeConversation && activeConversation.unreadCount > 0) {
             markConversationRead(activeConversation.id)

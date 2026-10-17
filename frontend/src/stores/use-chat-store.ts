@@ -10,6 +10,7 @@ interface ChatStoreState {
     // Floating chat boxes dock at bottom-right
     openConversations: ConversationDto[]
     minimizedIds: string[]
+    activeConversationId: string | null
 
     // Actions
     openChat: (conversation: ConversationDto) => void
@@ -18,15 +19,18 @@ interface ChatStoreState {
     restoreChat: (conversationId: string) => void
     toggleMinimize: (conversationId: string) => void
     closeAllChats: () => void
+    setActiveConversationId: (id: string | null) => void
+    isChatOpenAndActive: (conversationId: string) => boolean
 }
 
-export const useChatStore = create<ChatStoreState>((set) => ({
+export const useChatStore = create<ChatStoreState>((set, get) => ({
     isDropdownOpen: false,
     setDropdownOpen: (open) => set({ isDropdownOpen: open }),
     toggleDropdown: () => set((state) => ({ isDropdownOpen: !state.isDropdownOpen })),
 
     openConversations: [],
     minimizedIds: [],
+    activeConversationId: null,
 
     openChat: (conversation) =>
         set((state) => {
@@ -43,6 +47,7 @@ export const useChatStore = create<ChatStoreState>((set) => ({
                     openConversations: reordered,
                     minimizedIds: newMinimized,
                     isDropdownOpen: false,
+                    activeConversationId: conversation.id,
                 }
             }
 
@@ -52,6 +57,7 @@ export const useChatStore = create<ChatStoreState>((set) => ({
                 openConversations: updated,
                 minimizedIds: newMinimized,
                 isDropdownOpen: false,
+                activeConversationId: conversation.id,
             }
         }),
 
@@ -59,6 +65,8 @@ export const useChatStore = create<ChatStoreState>((set) => ({
         set((state) => ({
             openConversations: state.openConversations.filter((c) => c.id !== conversationId),
             minimizedIds: state.minimizedIds.filter((id) => id !== conversationId),
+            activeConversationId:
+                state.activeConversationId === conversationId ? null : state.activeConversationId,
         })),
 
     minimizeChat: (conversationId) =>
@@ -66,19 +74,41 @@ export const useChatStore = create<ChatStoreState>((set) => ({
             minimizedIds: state.minimizedIds.includes(conversationId)
                 ? state.minimizedIds
                 : [...state.minimizedIds, conversationId],
+            activeConversationId:
+                state.activeConversationId === conversationId ? null : state.activeConversationId,
         })),
 
     restoreChat: (conversationId) =>
         set((state) => ({
             minimizedIds: state.minimizedIds.filter((id) => id !== conversationId),
+            activeConversationId: conversationId,
         })),
 
     toggleMinimize: (conversationId) =>
-        set((state) => ({
-            minimizedIds: state.minimizedIds.includes(conversationId)
+        set((state) => {
+            const isCurrentlyMinimized = state.minimizedIds.includes(conversationId)
+            const newMinimized = isCurrentlyMinimized
                 ? state.minimizedIds.filter((id) => id !== conversationId)
-                : [...state.minimizedIds, conversationId],
-        })),
+                : [...state.minimizedIds, conversationId]
+            return {
+                minimizedIds: newMinimized,
+                activeConversationId: isCurrentlyMinimized ? conversationId : null,
+            }
+        }),
 
-    closeAllChats: () => set({ openConversations: [], minimizedIds: [] }),
+    closeAllChats: () => set({ openConversations: [], minimizedIds: [], activeConversationId: null }),
+
+    setActiveConversationId: (id) => set({ activeConversationId: id }),
+
+    isChatOpenAndActive: (conversationId) => {
+        const state = get()
+        // Kiểm tra nếu là active id (ví dụ đang ở trang /seller/chat hoặc đang click vào chat box)
+        if (state.activeConversationId === conversationId) return true
+
+        // Hoặc kiểm tra xem có đang mở floating chat box không bị minimize không
+        const isFloatingOpen = state.openConversations.some(
+            (c) => c.id === conversationId && !state.minimizedIds.includes(conversationId),
+        )
+        return isFloatingOpen
+    },
 }))

@@ -483,6 +483,7 @@ function SingleFloatingChatBox({
 // Thanh Dock chứa các khung chat nổi ở góc dưới bên phải màn hình (kiểu Facebook Messenger)
 export function FloatingChatDock() {
     const t = useTranslations('chat')
+    const { conversations, markConversationRead } = useChat()
     const { openConversations, minimizedIds, closeChat, toggleMinimize } = useChatStore()
 
     if (openConversations.length === 0) {
@@ -491,27 +492,34 @@ export function FloatingChatDock() {
 
     return (
         <div className="fixed bottom-0 right-3 sm:right-6 z-50 flex items-end gap-3 pointer-events-none">
-            {openConversations.map((conv) => {
-                const isMinimized = minimizedIds.includes(conv.id)
+            {openConversations.map((storedConv) => {
+                // Hợp nhất dữ liệu realtime từ React Query cache
+                const liveConv = conversations.find((c) => c.id === storedConv.id) ?? storedConv
+                const isMinimized = minimizedIds.includes(liveConv.id)
 
                 if (isMinimized) {
                     // Chat Head avatar tròn nổi ở góc dưới bên phải (kiểu Facebook Messenger)
                     return (
                         <div
-                            key={conv.id}
+                            key={liveConv.id}
                             className="relative group pointer-events-auto cursor-pointer mb-3 sm:mb-4 select-none transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-75 duration-200"
-                            onClick={() => toggleMinimize(conv.id)}
-                            title={conv.peer.name}
+                            onClick={() => {
+                                toggleMinimize(liveConv.id)
+                                if (liveConv.unreadCount > 0) {
+                                    markConversationRead(liveConv.id)
+                                }
+                            }}
+                            title={liveConv.peer.name}
                         >
                             {/* Avatar Bubble */}
                             <div className="size-12 sm:size-13 rounded-full border-2 border-primary/20 bg-card shadow-2xl p-0.5 ring-2 ring-background hover:ring-primary/50 transition-all flex items-center justify-center">
                                 <Avatar className="size-full rounded-full">
-                                    <AvatarImage src={conv.peer.avatar ?? undefined} alt={conv.peer.name} />
+                                    <AvatarImage src={liveConv.peer.avatar ?? undefined} alt={liveConv.peer.name} />
                                     <AvatarFallback className="text-xs bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-bold">
-                                        {conv.peer.isSeller ? (
+                                        {liveConv.peer.isSeller ? (
                                             <StoreIcon className="size-5" />
                                         ) : (
-                                            conv.peer.name.slice(0, 2).toUpperCase()
+                                            liveConv.peer.name.slice(0, 2).toUpperCase()
                                         )}
                                     </AvatarFallback>
                                 </Avatar>
@@ -521,9 +529,9 @@ export function FloatingChatDock() {
                             <span className="absolute bottom-0 right-0 size-3.5 rounded-full bg-emerald-500 ring-2 ring-background shadow-xs" />
 
                             {/* Unread Count Badge */}
-                            {conv.unreadCount > 0 && (
+                            {liveConv.unreadCount > 0 && (
                                 <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] text-white font-extrabold shadow-md ring-2 ring-background">
-                                    {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
+                                    {liveConv.unreadCount > 99 ? '99+' : liveConv.unreadCount}
                                 </span>
                             )}
 
@@ -532,7 +540,7 @@ export function FloatingChatDock() {
                                 type="button"
                                 onClick={(e) => {
                                     e.stopPropagation()
-                                    closeChat(conv.id)
+                                    closeChat(liveConv.id)
                                 }}
                                 className="absolute -top-1 -left-1 size-5 rounded-full bg-muted-foreground/80 hover:bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md ring-2 ring-background"
                                 title={t('closeChatHead')}
@@ -542,7 +550,7 @@ export function FloatingChatDock() {
 
                             {/* Hover tooltip with peer name */}
                             <div className="absolute right-full mr-2.5 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-popover text-popover-foreground text-xs font-semibold shadow-lg border border-border/80 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none hidden sm:block">
-                                {conv.peer.name}
+                                {liveConv.peer.name}
                             </div>
                         </div>
                     )
@@ -551,10 +559,10 @@ export function FloatingChatDock() {
                 // Full Floating Box
                 return (
                     <SingleFloatingChatBox
-                        key={conv.id}
-                        conversation={conv}
-                        onClose={() => toggleMinimize(conv.id)}
-                        onMinimize={() => toggleMinimize(conv.id)}
+                        key={liveConv.id}
+                        conversation={liveConv}
+                        onClose={() => toggleMinimize(liveConv.id)}
+                        onMinimize={() => toggleMinimize(liveConv.id)}
                     />
                 )
             })}
