@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import {
@@ -541,12 +542,15 @@ export default function SellerChatPage() {
                                                                 className="mb-1.5 p-3 rounded-2xl border border-border/80 bg-card hover:border-primary/50 transition-all flex items-center gap-3 shadow-xs w-full max-w-sm"
                                                             >
                                                                 {msg.attachedProduct.thumbnailUrl && (
-                                                                    // eslint-disable-next-line @next/next/no-img-element
-                                                                    <img
-                                                                        src={msg.attachedProduct.thumbnailUrl}
-                                                                        alt={msg.attachedProduct.name}
-                                                                        className="size-12 rounded-xl object-cover shrink-0"
-                                                                    />
+                                                                    <div className="relative size-12 rounded-xl overflow-hidden shrink-0">
+                                                                        <Image
+                                                                            src={msg.attachedProduct.thumbnailUrl}
+                                                                            alt={msg.attachedProduct.name}
+                                                                            fill
+                                                                            sizes="48px"
+                                                                            className="object-cover"
+                                                                        />
+                                                                    </div>
                                                                 )}
                                                                 <div className="min-w-0">
                                                                     <p className="text-xs font-bold text-foreground truncate">

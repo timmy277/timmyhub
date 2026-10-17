@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import {
@@ -285,12 +286,15 @@ function SingleFloatingChatBox({
                                                     className="mb-1 p-2 rounded-xl border border-border/70 bg-card hover:border-primary/50 transition-colors flex items-center gap-2 text-left shadow-xs w-full"
                                                 >
                                                     {msg.attachedProduct.thumbnailUrl && (
-                                                        // eslint-disable-next-line @next/next/no-img-element
-                                                        <img
-                                                            src={msg.attachedProduct.thumbnailUrl}
-                                                            alt={msg.attachedProduct.name}
-                                                            className="size-10 rounded-md object-cover shrink-0"
-                                                        />
+                                                        <div className="relative size-10 rounded-md overflow-hidden shrink-0">
+                                                            <Image
+                                                                src={msg.attachedProduct.thumbnailUrl}
+                                                                alt={msg.attachedProduct.name}
+                                                                fill
+                                                                sizes="40px"
+                                                                className="object-cover"
+                                                            />
+                                                        </div>
                                                     )}
                                                     <div className="min-w-0">
                                                         <p className="text-[11px] font-semibold text-foreground truncate">
