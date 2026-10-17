@@ -28,7 +28,7 @@ import { PrismaModule } from '@timmyhub/prisma'
         CartModule,
         OrderModule,
         PromotionModule,
-        EngagementModule,
+        EngagementModule, // Bao gồm reviews và wishlist
         NotificationModule,
         ChatModule,
     ],

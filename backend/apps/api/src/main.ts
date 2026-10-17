@@ -8,7 +8,7 @@ import { ApiExceptionFilter } from '@timmyhub/common'
 
 import { AppModule } from './app.module'
 
-// NestJS application bootstrap (ChatModule & Notifications enabled)
+// NestJS application bootstrap (ChatModule, Notifications & Wishlist enabled)
 async function bootstrap(): Promise<void> {
     const app = await NestFactory.create<NestExpressApplication>(AppModule)
     // Chạy OnModuleDestroy/OnApplicationShutdown khi nhận SIGTERM/SIGINT — PrismaService ngắt kết nối DB êm.
