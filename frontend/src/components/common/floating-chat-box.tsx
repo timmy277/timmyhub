@@ -196,7 +196,7 @@ function SingleFloatingChatBox({
                             className="size-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
                             title={t('openFullScreen')}
                         >
-                            <Link href={ROUTE.SELLER_CHAT}>
+                            <Link href={ROUTE.SELLER_CHAT_CONVERSATION(conversation.id)}>
                                 <Maximize2Icon className="size-3.5" />
                             </Link>
                         </Button>

@@ -23,6 +23,7 @@ import {
     UserCheckIcon,
     XIcon,
 } from 'lucide-react'
+import { useParams, useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 
@@ -62,11 +63,19 @@ export default function SellerChatPage() {
         [t],
     )
 
+    const params = useParams()
+    const router = useRouter()
+    const routeId = (params?.id as string) || null
+
     const { userId, conversations, totalUnreadCount, isLoading, markConversationRead, sendMessage, isSending, refetchConversations } =
         useChat()
 
-    // Trạng thái hội thoại đang chọn
-    const [selectedConvId, setSelectedConvId] = useState<string | null>(null)
+    // Tìm cuộc hội thoại theo conv.id hoặc peer.id trong URL param
+    const matchedRouteConv = useMemo(() => {
+        if (!routeId) return null
+        return conversations.find((c) => c.id === routeId || c.peer.id === routeId) ?? null
+    }, [conversations, routeId])
+
     const [filterTab, setFilterTab] = useState<'all' | 'unread' | 'order'>('all')
     const [searchQuery, setSearchQuery] = useState('')
     const [showCustomerCrm, setShowCustomerCrm] = useState(true)
@@ -81,13 +90,36 @@ export default function SellerChatPage() {
     const fileInputRef = useRef<HTMLInputElement>(null)
     const { mutateAsync: uploadMedia, isPending: isUploading } = useUploadMedia()
 
-    // Chọn hội thoại: nếu chưa chọn thủ công, mặc định dùng cuộc hội thoại đầu tiên
-    const effectiveSelectedConvId = selectedConvId ?? conversations[0]?.id ?? null
+    // Chọn hội thoại: ưu tiên route param -> cuộc hội thoại đầu tiên
+    const effectiveSelectedConvId =
+        matchedRouteConv?.id ??
+        (routeId && !conversations.some((c) => c.id === routeId) ? routeId : null) ??
+        conversations[0]?.id ??
+        null
 
     // Lấy thông tin cuộc hội thoại đang chọn
     const activeConversation = useMemo(() => {
-        return conversations.find((c) => c.id === effectiveSelectedConvId) ?? null
+        return (
+            conversations.find((c) => c.id === effectiveSelectedConvId || c.peer.id === effectiveSelectedConvId) ??
+            null
+        )
     }, [conversations, effectiveSelectedConvId])
+
+    // Điều hướng route /seller/chat/[id] khi chọn cuộc trò chuyện
+    const handleSelectConversation = (convId: string) => {
+        router.replace(ROUTE.SELLER_CHAT_CONVERSATION(convId), { scroll: false })
+        const target = conversations.find((c) => c.id === convId)
+        if (target && target.unreadCount > 0) {
+            markConversationRead(convId)
+        }
+    }
+
+    // Tự động đồng bộ URL nếu truy cập /seller/chat chưa có id
+    useEffect(() => {
+        if (!routeId && conversations.length > 0 && effectiveSelectedConvId) {
+            router.replace(ROUTE.SELLER_CHAT_CONVERSATION(effectiveSelectedConvId), { scroll: false })
+        }
+    }, [routeId, conversations.length, effectiveSelectedConvId, router])
 
     // Lấy tin nhắn của cuộc hội thoại đang chọn
     const { messages, isLoading: isLoadingMessages, refetch: refetchMessages } = useConversationMessages(effectiveSelectedConvId)
@@ -317,14 +349,14 @@ export default function SellerChatPage() {
                     ) : (
                         <div className="p-2.5 space-y-1.5">
                             {filteredConversations.map((conv) => {
-                                const isSelected = conv.id === selectedConvId
+                                const isSelected = conv.id === effectiveSelectedConvId
                                 const isUnread = conv.unreadCount > 0
                                 const isSelfLast = conv.lastSenderId === userId
 
                                 return (
                                     <div
                                         key={conv.id}
-                                        onClick={() => setSelectedConvId(conv.id)}
+                                        onClick={() => handleSelectConversation(conv.id)}
                                         className={`flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all border ${
                                             isSelected
                                                 ? 'bg-primary/10 border-primary/40 shadow-xs ring-1 ring-primary/30'
