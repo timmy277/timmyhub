@@ -65,8 +65,16 @@ export type SellerApplicationQuery = z.infer<typeof SellerApplicationQuerySchema
 export const UpdateSellerProfileSchema = z.object({
     shopName: z.string().min(3, 'validation.shopNameMin').max(50, 'validation.shopNameMax').trim().optional(),
     description: z.string().max(1000, 'validation.shopDescriptionLongMax').trim().optional(),
-    shopLogo: z.string().url('validation.imageUrlInvalid').optional().or(z.literal('')),
-    shopBanner: z.string().url('validation.imageUrlInvalid').optional().or(z.literal('')),
+    shopLogo: z
+        .string()
+        .refine((val) => !val || val.startsWith('/') || /^https?:\/\//i.test(val), 'validation.imageUrlInvalid')
+        .optional()
+        .or(z.literal('')),
+    shopBanner: z
+        .string()
+        .refine((val) => !val || val.startsWith('/') || /^https?:\/\//i.test(val), 'validation.imageUrlInvalid')
+        .optional()
+        .or(z.literal('')),
     warehouseAddressLine: z.string().max(255, 'validation.warehouseAddressMax').trim().optional(),
     provinceCode: z.string().max(20).optional(),
     districtCode: z.string().max(20).optional(),
@@ -144,6 +152,7 @@ export type SellerProfileDetail = {
 
 export type PublicShopDetail = {
     id: string
+    sellerId?: string
     shopName: string
     shopSlug: string
     shopLogo?: string | null

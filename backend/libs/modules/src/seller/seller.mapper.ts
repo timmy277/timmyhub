@@ -81,6 +81,7 @@ export function toSellerProfileDetail(profile: SellerProfile): SellerProfileDeta
 export function toPublicShopDetail(profile: SellerProfile): PublicShopDetail {
     return {
         id: profile.id,
+        sellerId: profile.userId,
         shopName: profile.shopName,
         shopSlug: profile.shopSlug,
         shopLogo: profile.shopLogo,

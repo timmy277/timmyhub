@@ -3,6 +3,7 @@
 import { useId, useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
     ArrowUpDown,
@@ -13,6 +14,7 @@ import {
     Package,
     RotateCcw,
     Search,
+    Settings,
     Share2,
     ShieldCheck,
     ShoppingBag,
@@ -27,10 +29,10 @@ import { toast } from 'sonner'
 
 import type { CategorySummary, ProductListResult, PublicShopDetail } from '@timmyhub/contracts'
 
-import { Badge, Button, Card, CardContent, Input, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components'
+import { Badge, Button, Card, CardContent, Input, Spinner, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components'
 import { IconPath } from '@/components/icons'
 import { ROUTE } from '@/constants'
-import { useMySavedVoucherIds, usePublicAvailableVouchers, useSaveUserVoucher } from '@/hooks'
+import { useChat, useMySavedVoucherIds, usePublicAvailableVouchers, useSaveUserVoucher } from '@/hooks'
 import { formatCurrencyVND } from '@/utils'
 
 export interface PublicShopViewProps {
@@ -44,6 +46,40 @@ type SortOption = 'popular' | 'latest' | 'best_selling' | 'price_asc' | 'price_d
 export function PublicShopView({ shop, initialProducts, categories = [] }: PublicShopViewProps) {
     const t = useTranslations('seller.publicShop')
     const searchInputId = useId()
+    const router = useRouter()
+    const { openChatWithUser, isAuthenticated, userId } = useChat()
+    const [isOpeningChat, setIsOpeningChat] = useState(false)
+
+    // Kiểm tra xem người dùng hiện tại có phải là chủ shop hay không
+    const isOwnShop = Boolean(userId && (shop.sellerId === userId || shop.id === userId))
+
+    const handleChatWithSeller = async () => {
+        if (!isAuthenticated) {
+            toast.info(t('loginToChat'))
+            router.push(ROUTE.LOGIN)
+            return
+        }
+
+        if (isOwnShop) {
+            toast.info(t('cannotChatSelf'))
+            return
+        }
+
+        const targetUserId = shop.sellerId || shop.id
+        if (!targetUserId) {
+            toast.error(t('cannotFindSeller'))
+            return
+        }
+
+        try {
+            setIsOpeningChat(true)
+            await openChatWithUser(targetUserId)
+        } catch {
+            toast.error(t('chatError'))
+        } finally {
+            setIsOpeningChat(false)
+        }
+    }
 
     // ===== Interactive Follow & Stats State =====
     const [isFollowing, setIsFollowing] = useState(false)
@@ -263,17 +299,32 @@ export function PublicShopView({ shop, initialProducts, categories = [] }: Publi
                                 <span>{isFollowing ? t('following') : t('follow')}</span>
                             </Button>
 
+                            {isOwnShop && (
+                                <Button
+                                    asChild
+                                    variant="outline"
+                                    size="sm"
+                                    className="rounded-xl font-semibold gap-1.5 shadow-sm border-primary/30 text-primary hover:bg-primary/10"
+                                >
+                                    <Link href={ROUTE.SELLER_SETTINGS}>
+                                        <Settings className="size-4" />
+                                        <span>{t('editShop')}</span>
+                                    </Link>
+                                </Button>
+                            )}
+
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() =>
-                                    toast.info(
-                                        `Hộp thư chăm sóc khách hàng của ${shop.shopName} đang kết nối trực tiếp...`,
-                                    )
-                                }
+                                disabled={isOpeningChat}
+                                onClick={handleChatWithSeller}
                                 className="rounded-xl font-semibold gap-1.5 shadow-sm hover:border-primary/50"
                             >
-                                <MessageCircle className="size-4 text-primary" />
+                                {isOpeningChat ? (
+                                    <Spinner className="size-4 text-primary" />
+                                ) : (
+                                    <MessageCircle className="size-4 text-primary" />
+                                )}
                                 <span>{t('chatNow')}</span>
                             </Button>
 
