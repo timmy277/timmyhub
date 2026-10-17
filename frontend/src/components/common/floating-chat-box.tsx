@@ -528,21 +528,21 @@ export function FloatingChatDock() {
                             {/* Online Indicator */}
                             <span className="absolute bottom-0 right-0 size-3.5 rounded-full bg-emerald-500 ring-2 ring-background shadow-xs" />
 
-                            {/* Unread Count Badge */}
+                            {/* Unread Count Badge (ẩn khi hover để ưu tiên nút X đóng chat) */}
                             {liveConv.unreadCount > 0 && (
-                                <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] text-white font-extrabold shadow-md ring-2 ring-background">
+                                <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] text-white font-extrabold shadow-md ring-2 ring-background group-hover:opacity-0 transition-opacity">
                                     {liveConv.unreadCount > 99 ? '99+' : liveConv.unreadCount}
                                 </span>
                             )}
 
-                            {/* Hover close 'X' button */}
+                            {/* Hover close 'X' button ở góc trên bên phải */}
                             <button
                                 type="button"
                                 onClick={(e) => {
                                     e.stopPropagation()
                                     closeChat(liveConv.id)
                                 }}
-                                className="absolute -top-1 -left-1 size-5 rounded-full bg-muted-foreground/80 hover:bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md ring-2 ring-background"
+                                className="absolute -top-1 -right-1 size-5 rounded-full bg-muted-foreground/90 hover:bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md ring-2 ring-background z-10 hover:scale-110 active:scale-95"
                                 title={t('closeChatHead')}
                             >
                                 <XIcon className="size-3" />
