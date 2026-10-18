@@ -173,15 +173,16 @@ export function HomeVideoFeed() {
                                         onError={() => handleThumbnailError(post.id)}
                                         className="object-cover transition-transform duration-500 group-hover:scale-105"
                                     />
-                                ) : (
+                                ) : !post.videoUrl.includes('.m3u8') ? (
                                     <video
                                         src={post.videoUrl.includes('#t=') ? post.videoUrl : `${post.videoUrl}#t=0.001`}
                                         preload="metadata"
                                         playsInline
                                         muted
+                                        onError={() => handleThumbnailError(post.id)}
                                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 pointer-events-none"
                                     />
-                                )}
+                                ) : null}
 
                                 {/* Overlay gradient mềm mượt */}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent group-hover:via-black/10 transition-colors" />

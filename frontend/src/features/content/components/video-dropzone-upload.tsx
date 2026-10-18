@@ -42,14 +42,21 @@ export function VideoDropzoneUpload({ value, onChange, onThumbnailChange, error 
     // 3.2. Frame Extractor: Tự động trích xuất frame tại 0.0001s từ video
     const extractFrameAtTime = useCallback(
         (videoSource: string, timeSec = 0.0001) => {
+            if (!videoSource) return
             setIsExtractingFrame(true)
             const video = document.createElement('video')
             video.crossOrigin = 'anonymous'
             video.preload = 'metadata'
-            video.src = videoSource
             video.muted = true
             video.playsInline = true
-            video.currentTime = timeSec
+
+            video.onloadedmetadata = () => {
+                try {
+                    video.currentTime = Math.min(timeSec, Math.max(0, (video.duration || 1) - 0.001))
+                } catch {
+                    setIsExtractingFrame(false)
+                }
+            }
 
             video.onseeked = () => {
                 try {
@@ -61,20 +68,25 @@ export function VideoDropzoneUpload({ value, onChange, onThumbnailChange, error 
                         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
                         const dataUrl = canvas.toDataURL('image/jpeg', 0.88)
                         onThumbnailChange(dataUrl)
-                        toast.success('Đã tự động trích xuất ảnh bìa tại 0.0001s thành công!')
+                        toast.success('Đã tự động trích xuất ảnh bìa thành công!')
                     }
                 } catch {
-                    // Fallback fragment
-                    onThumbnailChange(`${videoSource}#t=0.0001`)
+                    if (!videoSource.endsWith('.m3u8')) {
+                        onThumbnailChange(`${videoSource}#t=0.0001`)
+                    }
                 } finally {
                     setIsExtractingFrame(false)
                 }
             }
 
             video.onerror = () => {
-                onThumbnailChange(`${videoSource}#t=0.0001`)
+                if (!videoSource.endsWith('.m3u8')) {
+                    onThumbnailChange(`${videoSource}#t=0.0001`)
+                }
                 setIsExtractingFrame(false)
             }
+
+            video.src = videoSource
         },
         [onThumbnailChange],
     )

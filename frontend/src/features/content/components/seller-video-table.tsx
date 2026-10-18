@@ -191,7 +191,7 @@ export function SellerVideoTable({ videos, onSelectDetail, onDeleteVideo, isDele
                                                         className="object-cover"
                                                         unoptimized
                                                     />
-                                                ) : (
+                                                ) : !video.videoUrl.includes('.m3u8') ? (
                                                     <video
                                                         src={
                                                             video.videoUrl.includes('#t=')
@@ -201,9 +201,12 @@ export function SellerVideoTable({ videos, onSelectDetail, onDeleteVideo, isDele
                                                         preload="metadata"
                                                         muted
                                                         playsInline
+                                                        onError={(e) => {
+                                                            e.currentTarget.style.display = 'none'
+                                                        }}
                                                         className="size-full object-cover"
                                                     />
-                                                )}
+                                                ) : null}
                                                 <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                                                     <div className="flex size-6 items-center justify-center rounded-full bg-emerald-500 text-black shadow-sm">
                                                         <Play className="size-3 fill-black ml-0.5" />

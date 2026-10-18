@@ -133,7 +133,10 @@ export function HlsVideoPlayer({
                 setQualities(mappedLevels)
 
                 if (autoPlay) {
-                    void video.play().catch(() => setIsPlaying(false))
+                    const playPromise = video.play()
+                    if (playPromise !== undefined) {
+                        playPromise.catch(() => setIsPlaying(false))
+                    }
                 }
             })
 
@@ -161,12 +164,26 @@ export function HlsVideoPlayer({
                     }
                 }
             })
-        } else {
-            // Native video fallback (Safari hoặc file MP4) — thêm #t=0.001 để trích xuất frame đầu tiên nếu không có poster (giống timmyhub gốc)
-            const fallbackSrc = !isHlsStream && !src.includes('#t=') ? `${src}#t=0.001` : src
-            video.src = fallbackSrc
+        } else if (isHlsStream && video.canPlayType('application/vnd.apple.mpegurl')) {
+            // Native HLS fallback (Safari)
+            video.src = src
             if (autoPlay) {
-                void video.play().catch(() => setIsPlaying(false))
+                const playPromise = video.play()
+                if (playPromise !== undefined) {
+                    playPromise.catch(() => setIsPlaying(false))
+                }
+            }
+        } else if (!isHlsStream) {
+            // Native video fallback (MP4 / WebM)
+            const cleanSrc = src.replace(/#t=[^&]*/, '')
+            if (video.src !== cleanSrc) {
+                video.src = cleanSrc
+            }
+            if (autoPlay) {
+                const playPromise = video.play()
+                if (playPromise !== undefined) {
+                    playPromise.catch(() => setIsPlaying(false))
+                }
             }
         }
 
@@ -201,8 +218,15 @@ export function HlsVideoPlayer({
         if (!video) return
 
         if (video.paused) {
-            void video.play()
-            setIsPlaying(true)
+            const playPromise = video.play()
+            if (playPromise !== undefined) {
+                playPromise
+                    .then(() => setIsPlaying(true))
+                    .catch((err) => {
+                        console.warn('Playback could not start:', err)
+                        setIsPlaying(false)
+                    })
+            }
         } else {
             video.pause()
             setIsPlaying(false)
@@ -265,8 +289,25 @@ export function HlsVideoPlayer({
         }, 3000)
     }
 
-    // Fallback thumbnail 0.0001s nếu poster không được truyền
-    const resolvedPoster = poster || `${src}#t=0.0001`
+    // Fallback thumbnail nếu poster không được truyền (chỉ áp dụng cho non-HLS)
+    const resolvedPoster =
+        poster || (!HLS_REGEX.test(src) && src ? `${src.replace(/#t=[^&]*/, '')}#t=0.001` : undefined)
+
+    if (!src) {
+        return (
+            <div
+                className={cn(
+                    'group relative flex items-center justify-center overflow-hidden bg-black select-none text-muted-foreground text-xs',
+                    className,
+                )}
+            >
+                <div className="flex flex-col items-center gap-2">
+                    <Play className="size-8 opacity-40" />
+                    <span>Chưa có nguồn video</span>
+                </div>
+            </div>
+        )
+    }
 
     // 4.6. JSX Return
     return (
@@ -283,6 +324,7 @@ export function HlsVideoPlayer({
             {/* Video Element */}
             <video
                 ref={videoRef}
+                src={!HLS_REGEX.test(src) && src ? src.replace(/#t=[^&]*/, '') : undefined}
                 poster={resolvedPoster}
                 loop={loop}
                 muted={isMuted}
@@ -301,6 +343,11 @@ export function HlsVideoPlayer({
                     setIsPlaying(true)
                 }}
                 onPause={() => setIsPlaying(false)}
+                onError={(e) => {
+                    console.warn('Video source load error:', e)
+                    setIsBuffering(false)
+                    setIsPlaying(false)
+                }}
                 onEnded={onEnded}
                 className="h-full w-full object-contain cursor-pointer"
             />

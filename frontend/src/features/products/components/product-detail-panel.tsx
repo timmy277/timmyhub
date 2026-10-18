@@ -274,6 +274,11 @@ export function ProductDetailPanel({ id, isAdmin = false, initialDetail }: Produ
                                         key={idx}
                                         src={vid}
                                         controls
+                                        playsInline
+                                        preload="metadata"
+                                        onError={(e) => {
+                                            e.currentTarget.style.display = 'none'
+                                        }}
                                         className="w-full rounded-lg max-h-48 bg-black"
                                     />
                                 ))}

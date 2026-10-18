@@ -331,12 +331,18 @@ export function MediaLibrary() {
                             <div className="relative aspect-square w-full bg-neutral-950 flex items-center justify-center overflow-hidden">
                                 {asset.type === 'VIDEO' ? (
                                     <div className="relative w-full h-full flex items-center justify-center">
-                                        <video
-                                            src={asset.originalUrl || ''}
-                                            muted
-                                            playsInline
-                                            className="w-full h-full object-cover"
-                                        />
+                                        {asset.originalUrl ? (
+                                            <video
+                                                src={asset.originalUrl}
+                                                muted
+                                                playsInline
+                                                preload="metadata"
+                                                onError={(e) => {
+                                                    e.currentTarget.style.display = 'none'
+                                                }}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : null}
                                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/10 transition-colors">
                                             <div className="p-2.5 rounded-full bg-black/60 text-amber-300 backdrop-blur-md">
                                                 <Film className="w-5 h-5" />

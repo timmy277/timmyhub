@@ -55,8 +55,10 @@ export function MediaPreviewCard({ item, onRemove, onRetry, onOpenLightbox }: Me
             videoRef.current.pause()
             setIsPlaying(false)
         } else {
-            void videoRef.current.play()
-            setIsPlaying(true)
+            const playPromise = videoRef.current.play()
+            if (playPromise !== undefined) {
+                playPromise.then(() => setIsPlaying(true)).catch(() => setIsPlaying(false))
+            }
         }
     }
 

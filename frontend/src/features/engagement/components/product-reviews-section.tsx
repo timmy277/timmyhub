@@ -641,6 +641,10 @@ function ReviewCardItem({ review, productId, onOpenLightbox }: ReviewCardItemPro
                                                 className="size-full object-cover"
                                                 muted
                                                 playsInline
+                                                preload="metadata"
+                                                onError={(e) => {
+                                                    e.currentTarget.style.display = 'none'
+                                                }}
                                             />
                                             <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/20 transition-colors">
                                                 <div className="size-8 rounded-full bg-white/20 text-white backdrop-blur-md border border-white/20 flex items-center justify-center group-hover:scale-110 transition-transform shadow-md">
