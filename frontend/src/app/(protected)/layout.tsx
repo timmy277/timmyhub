@@ -20,7 +20,10 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
     const headerList = await headers()
     const pathname = headerList.get('x-original-path') || ''
     const isPublicStorefront =
-        pathname === ROUTE.HOME || pathname.startsWith('/products') || pathname.startsWith('/shops')
+        pathname === ROUTE.HOME ||
+        pathname.startsWith('/products') ||
+        pathname.startsWith('/shops') ||
+        pathname.startsWith('/videos')
 
     // Cho phép khách và bot tìm kiếm xem catalog công khai (home, chi tiết sản phẩm, gian hàng) mà không bị ép đăng nhập
     if (!isPublicStorefront) {

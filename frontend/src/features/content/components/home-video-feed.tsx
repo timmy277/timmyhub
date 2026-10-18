@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import React, { useState } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import {
     CheckCircle2,
     ChevronRight,
@@ -19,30 +20,44 @@ import {
 import { toast } from 'sonner'
 
 import { Avatar, AvatarFallback, AvatarImage, Badge, Button, Card, Skeleton } from '@/components/ui'
+import { ROUTE } from '@/constants'
 import { cn } from '@/utils'
 
 import { useVideoFeed } from '../hooks/use-video-feed'
-import { ShoppableVideoModal } from './shoppable-video-modal'
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 2. COMPONENT DEFINITION (Rule 20 Lifecycle Structure)
+// 2. CONSTANTS & ACCENT PALETTES
+// ═══════════════════════════════════════════════════════════════════════════
+const ACCENT_GRADIENTS = [
+    'from-emerald-500/25 via-teal-500/15 to-emerald-900/40',
+    'from-purple-500/25 via-pink-500/15 to-purple-900/40',
+    'from-amber-500/25 via-orange-500/15 to-amber-900/40',
+    'from-blue-500/25 via-cyan-500/15 to-blue-900/40',
+]
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 3. COMPONENT DEFINITION (Rule 20 Lifecycle Structure)
 // ═══════════════════════════════════════════════════════════════════════════
 export function HomeVideoFeed() {
-    // 2.1. State & Hooks
-    const { videos, isLoading, toggleLike, recordView } = useVideoFeed({ limit: 3 })
-    const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null)
-    const [isModalOpen, setIsModalOpen] = useState(false)
+    // 3.1. State & Routing Hooks
+    const router = useRouter()
+    const { videos, isLoading, toggleLike } = useVideoFeed({ limit: 3 })
+    const [failedThumbnails, setFailedThumbnails] = useState<Record<string, boolean>>({})
 
-    // 2.2. Handlers
-    const handleOpenModal = (videoId?: string) => {
-        setSelectedVideoId(videoId ?? videos[0]?.id ?? null)
-        setIsModalOpen(true)
+    // 3.2. Handlers: Điều hướng trực tiếp sang trang xem video full màn hình
+    const handleOpenVideo = (videoId?: string) => {
+        if (videoId) {
+            router.push(ROUTE.VIDEO_DETAIL(videoId))
+        } else {
+            router.push(ROUTE.VIDEOS)
+        }
     }
 
-    const handleShare = (e: React.MouseEvent, title: string) => {
+    const handleShare = (e: React.MouseEvent, postId: string, title: string) => {
         e.stopPropagation()
         if (typeof window !== 'undefined') {
-            navigator.clipboard?.writeText(window.location.href)
+            const shareUrl = `${window.location.origin}${ROUTE.VIDEO_DETAIL(postId)}`
+            navigator.clipboard?.writeText(shareUrl)
             toast.success(`Đã sao chép liên kết video: "${title}"`)
         }
     }
@@ -52,7 +67,11 @@ export function HomeVideoFeed() {
         toggleLike(postId)
     }
 
-    // 2.3. Loading Skeletons
+    const handleThumbnailError = (postId: string) => {
+        setFailedThumbnails((prev) => ({ ...prev, [postId]: true }))
+    }
+
+    // 3.3. Loading Skeletons
     if (isLoading && videos.length === 0) {
         return (
             <section aria-labelledby="posts-heading" className="space-y-4">
@@ -91,7 +110,7 @@ export function HomeVideoFeed() {
         return null
     }
 
-    // 2.4. JSX Return
+    // 3.4. JSX Return
     return (
         <section aria-labelledby="posts-heading" className="space-y-4">
             {/* ═══════════════════════════════════════════════════════════════════
@@ -113,7 +132,7 @@ export function HomeVideoFeed() {
                     </div>
                 </div>
                 <Button
-                    onClick={() => handleOpenModal()}
+                    onClick={() => handleOpenVideo()}
                     className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1"
                     variant="ghost"
                 >
@@ -126,49 +145,56 @@ export function HomeVideoFeed() {
              * GRID 3 VIDEO NGẪU NHIÊN CÓ THẬT TỪ DATABASE
              * ═══════════════════════════════════════════════════════════════════ */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                {videos.map((post) => {
+                {videos.map((post, idx) => {
                     const primaryProduct = post.productTags[0]?.product
+                    const accentGradient = ACCENT_GRADIENTS[idx % ACCENT_GRADIENTS.length]
+                    const isThumbFailed = failedThumbnails[post.id]
 
                     return (
                         <Card
                             key={post.id}
-                            onClick={() => handleOpenModal(post.id)}
-                            className="group flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-primary/40 cursor-pointer p-0"
+                            onClick={() => handleOpenVideo(post.id)}
+                            className="group flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:border-primary/50 cursor-pointer p-0"
                         >
-                            {/* Video Thumbnail (Hỗ trợ fallback URL #t=0.0001 nếu không có thumbnail) */}
-                            <div className="relative h-44 w-full bg-neutral-900 flex items-center justify-center overflow-hidden border-b border-border/50">
-                                {post.thumbnailUrl ? (
+                            {/* Video Thumbnail với gradient background rực rỡ, không bao giờ đen sì */}
+                            <div
+                                className={cn(
+                                    'relative h-48 w-full bg-gradient-to-br flex items-center justify-center overflow-hidden border-b border-border/50',
+                                    accentGradient,
+                                )}
+                            >
+                                {post.thumbnailUrl && !isThumbFailed ? (
                                     <Image
                                         src={post.thumbnailUrl}
                                         alt={post.title}
                                         fill
                                         sizes="(max-width: 768px) 100vw, 33vw"
                                         unoptimized
-                                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                        onError={() => handleThumbnailError(post.id)}
+                                        className="object-cover transition-transform duration-500 group-hover:scale-105"
                                     />
                                 ) : (
-                                    // Fallback media fragment HTML5: tải khung hình tại 0.0001s
                                     <video
-                                        src={`${post.videoUrl}#t=0.0001`}
+                                        src={post.videoUrl}
                                         preload="metadata"
                                         playsInline
                                         muted
-                                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                                     />
                                 )}
 
-                                {/* Overlay gradient */}
-                                <div className="absolute inset-0 bg-black/25 group-hover:bg-black/10 transition-colors" />
+                                {/* Overlay gradient mềm mượt */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent group-hover:via-black/10 transition-colors" />
 
-                                {/* Play button icon to ở giữa */}
-                                <div className="relative flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform duration-200 group-hover:scale-110">
+                                {/* Play button icon hiệu ứng nổi bật */}
+                                <div className="relative flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/95">
                                     <Play className="size-5 fill-current ml-0.5 text-primary-foreground" />
                                 </div>
 
                                 {/* Badge thời lượng / HLS Adaptive */}
                                 <Badge
                                     variant="secondary"
-                                    className="absolute bottom-2.5 right-2.5 rounded-md bg-black/75 px-2 py-0.5 font-mono text-[10px] font-bold text-white border-0"
+                                    className="absolute bottom-2.5 right-2.5 rounded-md bg-black/75 px-2 py-0.5 font-mono text-[10px] font-bold text-white border border-white/10 backdrop-blur-sm"
                                 >
                                     {post.videoDuration || 'HLS HD'}
                                 </Badge>
@@ -176,9 +202,9 @@ export function HomeVideoFeed() {
                                 {/* Badge lượt xem */}
                                 <Badge
                                     variant="secondary"
-                                    className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/95 border-0 backdrop-blur-sm"
+                                    className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-md bg-black/65 px-2 py-0.5 text-[10px] font-medium text-white border border-white/10 backdrop-blur-sm shadow-sm"
                                 >
-                                    <Eye className="size-3" />
+                                    <Eye className="size-3 text-emerald-400" />
                                     {post.viewCount.toLocaleString('vi-VN')} lượt xem
                                 </Badge>
                             </div>
@@ -187,7 +213,7 @@ export function HomeVideoFeed() {
                             <div className="flex flex-1 flex-col p-4 space-y-3">
                                 {/* Creator Info */}
                                 <div className="flex items-center gap-2.5">
-                                    <Avatar className="size-8 ring-1 ring-primary/30">
+                                    <Avatar className="size-8 ring-1 ring-primary/40 shadow-sm">
                                         {post.shopLogo && <AvatarImage src={post.shopLogo} alt={post.shopName} />}
                                         <AvatarFallback className="bg-primary/10 text-emerald-800 dark:text-emerald-300 font-bold text-xs">
                                             {post.shopName.slice(0, 2).toUpperCase()}
@@ -216,8 +242,8 @@ export function HomeVideoFeed() {
 
                                 {/* Tagged Shoppable Product Link */}
                                 {primaryProduct ? (
-                                    <div className="mt-auto rounded-xl bg-muted/50 p-2.5 border border-border/60 flex items-center gap-2.5 text-xs">
-                                        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-emerald-800 dark:text-emerald-300">
+                                    <div className="mt-auto rounded-xl bg-muted/60 p-2.5 border border-border/70 flex items-center gap-2.5 text-xs transition-colors group-hover:border-primary/30">
+                                        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
                                             <ShoppingBag className="size-3.5" />
                                         </div>
                                         <div className="min-w-0 flex-1">
@@ -236,7 +262,7 @@ export function HomeVideoFeed() {
                                 )}
 
                                 {/* Engagement Counters */}
-                                <div className="flex items-center justify-between pt-2 border-t border-border/40 text-xs text-muted-foreground">
+                                <div className="flex items-center justify-between pt-2 border-t border-border/50 text-xs text-muted-foreground">
                                     <Button
                                         variant="ghost"
                                         size="sm"
@@ -260,7 +286,7 @@ export function HomeVideoFeed() {
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={(e) => handleShare(e, post.title)}
+                                        onClick={(e) => handleShare(e, post.id, post.title)}
                                         className="h-7 px-2 text-xs flex items-center gap-1 text-muted-foreground hover:text-primary"
                                     >
                                         <Share2 className="size-3.5" />
@@ -272,16 +298,6 @@ export function HomeVideoFeed() {
                     )
                 })}
             </div>
-
-            {/* Modal xem video full TikTok / Reels có thể scroll qua các video ngẫu nhiên */}
-            <ShoppableVideoModal
-                open={isModalOpen}
-                onOpenChange={setIsModalOpen}
-                initialPostId={selectedVideoId ?? undefined}
-                videos={videos}
-                onToggleLike={toggleLike}
-                onRecordView={recordView}
-            />
         </section>
     )
 }

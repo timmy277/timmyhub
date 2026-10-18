@@ -383,9 +383,9 @@ export class ContentService {
                     title: 'Trải nghiệm phong cách Minimalism với Áo thun nam Basic Cotton 100%',
                     content:
                         'Chất vải cotton co giãn 4 chiều mềm mịn, không xù lông khi giặt máy. Phù hợp cả đi làm lẫn dạo phố cuối tuần! #aothun #thoitrangnam #minimalism',
-                    // Sử dụng stream HLS đa phân giải chính thức từ Mux (hỗ trợ 1080p, 720p, 480p, 360p adaptive)
-                    videoUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-                    thumbnailUrl: 'https://cdn.timmyhub.dev/seed/posts/ao-thun-basic-1.jpg',
+                    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+                    thumbnailUrl:
+                        'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80',
                     hashtags: ['aothun', 'thoitrangnam', 'minimalism'],
                     sellerId: sellers[0]?.id || defaultSellerId,
                     productIndex: 0,
@@ -396,8 +396,9 @@ export class ContentService {
                     title: 'Đập hộp & Test camera Xphone 12 Pro: Siêu phẩm quay đêm cực đỉnh!',
                     content:
                         'Camera AI cảm biến lớn bắt nét siêu nhanh, chống rung quang học OIS cực êm. Xem ngay ưu đãi trả góp 0% tại TimmyHub! #xphone #techreview #smartphone',
-                    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-                    thumbnailUrl: 'https://cdn.timmyhub.dev/seed/posts/xphone-12-review-1.jpg',
+                    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+                    thumbnailUrl:
+                        'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&auto=format&fit=crop&q=80',
                     hashtags: ['xphone', 'techreview', 'dienthoai'],
                     sellerId: sellers[1]?.id || defaultSellerId,
                     productIndex: 1,
@@ -408,8 +409,9 @@ export class ContentService {
                     title: 'Bí quyết nấu ăn không dính với Bộ nồi chảo vân đá Ceramic cao cấp',
                     content:
                         'Đáy từ 5 lớp bắt nhiệt siêu nhanh, tiết kiệm 30% điện năng khi dùng bếp từ. Thử ngay món trứng cuộn lướt nhẹ êm ru! #giadung #bepnha #sale',
-                    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-                    thumbnailUrl: 'https://cdn.timmyhub.dev/seed/posts/bo-noi-sale-1.jpg',
+                    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+                    thumbnailUrl:
+                        'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
                     hashtags: ['giadung', 'nhabep', 'sale'],
                     sellerId: sellers[2]?.id || defaultSellerId,
                     productIndex: 2,
@@ -420,8 +422,9 @@ export class ContentService {
                     title: 'Lookbook Hoodie TimmyWear Streetwear Collection Thu Đông',
                     content:
                         'Form oversize cá tính, chất nỉ bông dày dặn ấm áp. Phối với quần jogger hoặc jean rách đều chất! #timmywear #hoodie #streetwear',
-                    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-                    thumbnailUrl: 'https://cdn.timmyhub.dev/seed/posts/hoodie-lookbook-1.jpg',
+                    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+                    thumbnailUrl:
+                        'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=800&auto=format&fit=crop&q=80',
                     hashtags: ['timmywear', 'hoodie', 'streetwear'],
                     sellerId: sellers[0]?.id || defaultSellerId,
                     productIndex: 3,

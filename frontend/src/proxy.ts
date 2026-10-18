@@ -12,7 +12,16 @@ import { ROUTE } from '@/constants'
 // `auth()` chạy ở edge runtime và chỉ giải mã JWT, không gọi mạng khi phiên còn hiệu lực.
 
 // Route công khai cho phép xem catalog không cần đăng nhập (khách và bot tìm kiếm)
-const PUBLIC_PATHS = [ROUTE.LOGIN, ROUTE.HOME, '/products', '/shops', '/llms.txt', '/robots.txt', '/sitemap.xml']
+const PUBLIC_PATHS = [
+    ROUTE.LOGIN,
+    ROUTE.HOME,
+    '/products',
+    '/shops',
+    '/videos',
+    '/llms.txt',
+    '/robots.txt',
+    '/sitemap.xml',
+]
 
 // Header gắn đích gốc vào request để Server Component (vd (protected)/layout.tsx) đọc khi cần điều hướng về
 // login kèm callbackUrl — proxy chạy trước layout nên không đọc được pathname bằng cách khác.

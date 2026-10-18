@@ -33,4 +33,6 @@ export const ROUTE = {
     MY_VOUCHERS: '/account?tab=vouchers',
     ACCOUNT_VOUCHERS: '/account?tab=vouchers',
     SHOP_DETAIL: (slug: string) => `/shops/${encodeURIComponent(slug)}`,
+    VIDEOS: '/videos',
+    VIDEO_DETAIL: (id: string) => `/videos?id=${encodeURIComponent(id)}`,
 } as const

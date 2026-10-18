@@ -3,233 +3,217 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // 1. IMPORTS
 // ═══════════════════════════════════════════════════════════════════════════
-import React, { useState } from 'react'
-import Image from 'next/image'
-import { Eye, Film, Heart, Play, Plus, ShoppingBag, Trash2, Video } from 'lucide-react'
+import React, { useMemo, useState } from 'react'
+import type { VideoPostDto } from '@timmyhub/contracts'
+import { Eye, Film, Heart, Plus, ShoppingBag, Video, X } from 'lucide-react'
 
-import { Badge, Button, Card, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
-import { SellerVideoForm, ShoppableVideoModal, useSellerVideos } from '@/features/content'
+import { Button, Card, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
+import { SellerVideoDetailPanel, SellerVideoForm, SellerVideoTable, useSellerVideos } from '@/features/content'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 2. PAGE DEFINITION (Rule 20 Lifecycle Structure)
 // ═══════════════════════════════════════════════════════════════════════════
 export default function SellerVideosPage() {
-    // 2.1. State & Hooks
-    const [activeTab, setActiveTab] = useState<'list' | 'create'>('list')
-    const [previewVideoId, setPreviewVideoId] = useState<string | null>(null)
-    const [isPreviewOpen, setIsPreviewOpen] = useState(false)
-
+    // 2.1. State & Data Hooks
     const { videos, total, isLoading, deleteVideo, isDeleting } = useSellerVideos()
 
-    // 2.2. Handlers
-    const handlePreview = (videoId: string) => {
-        setPreviewVideoId(videoId)
-        setIsPreviewOpen(true)
+    const [activeTab, setActiveTab] = useState<'list' | 'create' | 'detail'>('list')
+    const [selectedVideo, setSelectedVideo] = useState<VideoPostDto | null>(null)
+
+    // 2.2. Calculated Stats
+    const stats = useMemo(() => {
+        const totalViews = videos.reduce((acc, v) => acc + (v.viewCount || 0), 0)
+        const totalLikes = videos.reduce((acc, v) => acc + (v.likeCount || 0), 0)
+        const totalProductsTagged = videos.reduce((acc, v) => acc + (v.productTags?.length || 0), 0)
+
+        return {
+            totalVideos: total || videos.length,
+            totalViews,
+            totalLikes,
+            totalProductsTagged,
+        }
+    }, [videos, total])
+
+    // 2.3. Handlers
+    const handleSelectDetail = (video: VideoPostDto) => {
+        setSelectedVideo(video)
+        setActiveTab('detail')
+    }
+
+    const handleBackToList = () => {
+        setActiveTab('list')
+    }
+
+    const handleCloseDetailTab = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        setSelectedVideo(null)
+        setActiveTab('list')
     }
 
     const handleDelete = async (videoId: string) => {
         if (window.confirm('Bạn có chắc chắn muốn xóa video bài đăng này không?')) {
             await deleteVideo(videoId)
+            if (selectedVideo?.id === videoId) {
+                setSelectedVideo(null)
+                setActiveTab('list')
+            }
         }
     }
 
-    // 2.3. JSX Return
+    const handleCreateSuccess = () => {
+        setActiveTab('list')
+    }
+
+    // 2.4. JSX Return
     return (
         <div className="space-y-6 p-4 md:p-8 max-w-7xl mx-auto">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
+            {/* Header Portal */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-5">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
-                        <Video className="size-6 text-primary" />
-                        Quản lý Video Bán Hàng (Shoppable Videos)
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
+                        <div className="flex size-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                            <Video className="size-5" />
+                        </div>
+                        <span>Quản lý Video & Bài Viết Bán Hàng</span>
                     </h1>
                     <p className="text-xs text-muted-foreground mt-1">
-                        Đăng tải video ngắn giới thiệu sản phẩm kèm tính năng giỏ hàng mua sắm trực tiếp trên video.
+                        Đăng tải video ngắn shoppable, gắn link giỏ hàng trực tiếp để khách hàng mua sắm ngay trong
+                        video.
                     </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                     <Button
-                        onClick={() => setActiveTab(activeTab === 'list' ? 'create' : 'list')}
-                        className="rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5"
+                        onClick={() => setActiveTab(activeTab === 'create' ? 'list' : 'create')}
+                        className="rounded-2xl text-xs font-bold shadow-md flex items-center gap-1.5 h-10 px-4 bg-emerald-500 hover:bg-emerald-600 text-black"
                     >
-                        {activeTab === 'list' ? (
+                        {activeTab === 'create' ? (
                             <>
-                                <Plus className="size-4" />
-                                Đăng video mới
+                                <Film className="size-4" />
+                                Danh sách video
                             </>
                         ) : (
                             <>
-                                <Film className="size-4" />
-                                Xem danh sách video
+                                <Plus className="size-4" />
+                                Đăng video mới
                             </>
                         )}
                     </Button>
                 </div>
             </div>
 
-            {/* Tabs */}
-            <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'list' | 'create')}>
-                <TabsList className="bg-muted/60 p-1 rounded-xl">
-                    <TabsTrigger value="list" className="rounded-lg text-xs font-semibold px-4">
-                        Video của Shop ({total})
+            {/* Stats Overview Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="p-4 rounded-3xl border-border bg-card space-y-1 shadow-xs">
+                    <div className="flex items-center justify-between text-muted-foreground">
+                        <span className="text-xs font-semibold">Tổng số video</span>
+                        <Film className="size-4 text-emerald-500" />
+                    </div>
+                    <p className="text-2xl font-black text-foreground font-mono">{stats.totalVideos}</p>
+                    <p className="text-[10px] text-muted-foreground">Video đang lưu hành</p>
+                </Card>
+
+                <Card className="p-4 rounded-3xl border-border bg-card space-y-1 shadow-xs">
+                    <div className="flex items-center justify-between text-muted-foreground">
+                        <span className="text-xs font-semibold">Lượt xem tích lũy</span>
+                        <Eye className="size-4 text-emerald-500" />
+                    </div>
+                    <p className="text-2xl font-black text-foreground font-mono">
+                        {stats.totalViews.toLocaleString('vi-VN')}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">Trên toàn storefront</p>
+                </Card>
+
+                <Card className="p-4 rounded-3xl border-border bg-card space-y-1 shadow-xs">
+                    <div className="flex items-center justify-between text-muted-foreground">
+                        <span className="text-xs font-semibold">Lượt thích</span>
+                        <Heart className="size-4 text-red-500" />
+                    </div>
+                    <p className="text-2xl font-black text-foreground font-mono">
+                        {stats.totalLikes.toLocaleString('vi-VN')}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">Tương tác từ khách</p>
+                </Card>
+
+                <Card className="p-4 rounded-3xl border-border bg-card space-y-1 shadow-xs">
+                    <div className="flex items-center justify-between text-muted-foreground">
+                        <span className="text-xs font-semibold">Sản phẩm gắn kèm</span>
+                        <ShoppingBag className="size-4 text-emerald-500" />
+                    </div>
+                    <p className="text-2xl font-black text-foreground font-mono">{stats.totalProductsTagged}</p>
+                    <p className="text-[10px] text-muted-foreground">Shoppable product tags</p>
+                </Card>
+            </div>
+
+            {/* Folder Tab Strip */}
+            <Tabs
+                value={activeTab}
+                onValueChange={(val) => setActiveTab(val as typeof activeTab)}
+                className="space-y-4"
+            >
+                <TabsList className="bg-muted/50 p-1 rounded-2xl border border-border/80">
+                    <TabsTrigger value="list" className="rounded-xl text-xs font-bold px-4 py-2">
+                        Danh sách video ({videos.length})
                     </TabsTrigger>
-                    <TabsTrigger value="create" className="rounded-lg text-xs font-semibold px-4">
+
+                    <TabsTrigger value="create" className="rounded-xl text-xs font-bold px-4 py-2">
                         Tạo bài đăng video mới
                     </TabsTrigger>
+
+                    {selectedVideo && (
+                        <TabsTrigger
+                            value="detail"
+                            className="rounded-xl text-xs font-bold px-4 py-2 flex items-center gap-2 max-w-xs"
+                        >
+                            <span className="truncate">Chi tiết: {selectedVideo.title}</span>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleCloseDetailTab}
+                                className="size-4 p-0 h-auto rounded-full hover:bg-black/20 text-muted-foreground"
+                            >
+                                <X className="size-3" />
+                            </Button>
+                        </TabsTrigger>
+                    )}
                 </TabsList>
 
-                {/* Tab: Danh sách video đã đăng */}
-                <TabsContent value="list" className="mt-6 space-y-4">
+                {/* Tab 1: Danh sách video dạng Table chuẩn */}
+                <TabsContent value="list" className="mt-4">
                     {isLoading ? (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                            {[1, 2, 3].map((i) => (
-                                <Card key={i} className="rounded-2xl p-0 overflow-hidden">
-                                    <Skeleton className="h-44 w-full" />
-                                    <div className="p-4 space-y-3">
-                                        <Skeleton className="h-4 w-3/4" />
-                                        <Skeleton className="h-3 w-full" />
-                                    </div>
-                                </Card>
-                            ))}
+                        <div className="space-y-3">
+                            <Skeleton className="h-10 w-full rounded-2xl" />
+                            <Skeleton className="h-64 w-full rounded-2xl" />
                         </div>
-                    ) : videos.length === 0 ? (
-                        <Card className="p-12 text-center border-dashed rounded-2xl space-y-4">
-                            <div className="flex size-14 mx-auto items-center justify-center rounded-full bg-primary/10 text-primary">
-                                <Film className="size-7" />
-                            </div>
-                            <div className="space-y-1">
-                                <h3 className="text-base font-bold text-foreground">Shop chưa có video bán hàng nào</h3>
-                                <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                                    Hãy đăng tải video đầu tiên để tiếp cận hàng triệu khách hàng tiềm năng trên trang
-                                    chủ TimmyHub.
-                                </p>
-                            </div>
-                            <Button
-                                onClick={() => setActiveTab('create')}
-                                className="rounded-xl text-xs font-bold px-5"
-                            >
-                                <Plus className="size-4 mr-1.5" />
-                                Tạo video ngay
-                            </Button>
-                        </Card>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                            {videos.map((video) => (
-                                <Card
-                                    key={video.id}
-                                    className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm hover:shadow-md transition-all p-0 flex flex-col"
-                                >
-                                    {/* Thumbnail Preview */}
-                                    <div className="relative h-44 w-full bg-neutral-900 overflow-hidden border-b border-border">
-                                        {video.thumbnailUrl ? (
-                                            <Image
-                                                src={video.thumbnailUrl}
-                                                alt={video.title}
-                                                fill
-                                                sizes="(max-width: 768px) 100vw, 33vw"
-                                                className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                                unoptimized
-                                            />
-                                        ) : (
-                                            <video
-                                                src={`${video.videoUrl}#t=0.0001`}
-                                                preload="metadata"
-                                                playsInline
-                                                muted
-                                                className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                            />
-                                        )}
-
-                                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                                            <Button
-                                                size="icon"
-                                                variant="secondary"
-                                                onClick={() => handlePreview(video.id)}
-                                                className="size-11 rounded-full bg-primary text-primary-foreground shadow-lg group-hover:scale-110 transition-transform"
-                                            >
-                                                <Play className="size-5 fill-current ml-0.5" />
-                                            </Button>
-                                        </div>
-
-                                        <Badge
-                                            variant="secondary"
-                                            className="absolute top-2.5 left-2.5 bg-black/60 text-white text-[10px] border-0 backdrop-blur-sm"
-                                        >
-                                            {video.status}
-                                        </Badge>
-                                    </div>
-
-                                    {/* Content */}
-                                    <div className="p-4 flex flex-1 flex-col space-y-3">
-                                        <h3 className="font-bold text-sm text-foreground line-clamp-2">
-                                            {video.title}
-                                        </h3>
-                                        {video.content && (
-                                            <p className="text-xs text-muted-foreground line-clamp-2">
-                                                {video.content}
-                                            </p>
-                                        )}
-
-                                        {/* Products Tagged */}
-                                        <div className="mt-auto pt-2 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-                                            <span className="flex items-center gap-1 font-medium">
-                                                <ShoppingBag className="size-3.5 text-primary" />
-                                                {video.productTags.length} sản phẩm gắn
-                                            </span>
-
-                                            <div className="flex items-center gap-2.5">
-                                                <span className="flex items-center gap-1">
-                                                    <Eye className="size-3" />
-                                                    {video.viewCount}
-                                                </span>
-                                                <span className="flex items-center gap-1">
-                                                    <Heart className="size-3 text-red-500 fill-red-500" />
-                                                    {video.likeCount}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Action buttons */}
-                                        <div className="flex items-center justify-end gap-2 pt-2">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => handlePreview(video.id)}
-                                                className="h-8 text-xs rounded-xl"
-                                            >
-                                                Xem thử
-                                            </Button>
-                                            <Button
-                                                variant="destructive"
-                                                size="sm"
-                                                disabled={isDeleting}
-                                                onClick={() => handleDelete(video.id)}
-                                                className="h-8 text-xs rounded-xl"
-                                            >
-                                                <Trash2 className="size-3.5" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </Card>
-                            ))}
-                        </div>
+                        <SellerVideoTable
+                            videos={videos}
+                            isLoading={isLoading}
+                            onSelectDetail={handleSelectDetail}
+                            onDeleteVideo={handleDelete}
+                            isDeleting={isDeleting}
+                        />
                     )}
                 </TabsContent>
 
-                {/* Tab: Đăng video mới */}
-                <TabsContent value="create" className="mt-6">
-                    <SellerVideoForm onSuccess={() => setActiveTab('list')} />
+                {/* Tab 2: Tạo bài đăng video mới với Draggable upload dropzone */}
+                <TabsContent value="create" className="mt-4">
+                    <SellerVideoForm onSuccess={handleCreateSuccess} />
                 </TabsContent>
-            </Tabs>
 
-            {/* Preview Modal */}
-            <ShoppableVideoModal
-                open={isPreviewOpen}
-                onOpenChange={setIsPreviewOpen}
-                initialPostId={previewVideoId ?? undefined}
-                videos={videos}
-            />
+                {/* Tab 3: Tabs Detail hiển thị đầy đủ thông tin video, player, sản phẩm */}
+                {selectedVideo && (
+                    <TabsContent value="detail" className="mt-4">
+                        <SellerVideoDetailPanel
+                            video={selectedVideo}
+                            onBackToList={handleBackToList}
+                            onDeleteVideo={handleDelete}
+                            isDeleting={isDeleting}
+                        />
+                    </TabsContent>
+                )}
+            </Tabs>
         </div>
     )
 }
