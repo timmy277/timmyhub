@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // 1. IMPORTS
 // ═══════════════════════════════════════════════════════════════════════════
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { VideoPostDto } from '@timmyhub/contracts'
@@ -57,22 +57,30 @@ export function ShoppableVideoModal({
     // 4.1. Props & State (Không dùng setState trong Effect)
     const [activeVideoId, setActiveVideoId] = useState<string | null>(null)
     const [isHeartAnimating, setIsHeartAnimating] = useState(false)
-    const [lastScrollTime, setLastScrollTime] = useState(0)
+    const lastScrollTimeRef = useRef(0)
+    const recordedVideoIdsRef = useRef<Set<string>>(new Set())
+    const onRecordViewRef = useRef(onRecordView)
     const { mutate: addToCart, isPending: isAddingToCart } = useAddToCart()
+
+    // Luôn giữ tham chiếu mới nhất tới hàm onRecordView mà không gây trigger effect
+    useEffect(() => {
+        onRecordViewRef.current = onRecordView
+    })
 
     // Tính toán index hiện tại dựa vào activeVideoId hoặc initialPostId
     const currentTargetId = activeVideoId ?? initialPostId ?? videos[0]?.id
     const targetIdx = videos.findIndex((v) => v.id === currentTargetId)
     const currentIndex = targetIdx !== -1 ? targetIdx : 0
     const currentVideo = videos[currentIndex]
+    const currentVideoId = currentVideo?.id
 
-    // 4.2. Effects
-    // Ghi nhận lượt xem video khi mở modal hoặc chuyển video
+    // 4.2. Effects: Ghi nhận lượt xem video chính xác 1 lần duy nhất cho mỗi video trong phiên xem
     useEffect(() => {
-        if (open && currentVideo) {
-            onRecordView?.(currentVideo.id)
+        if (open && currentVideoId && !recordedVideoIdsRef.current.has(currentVideoId)) {
+            recordedVideoIdsRef.current.add(currentVideoId)
+            onRecordViewRef.current?.(currentVideoId)
         }
-    }, [open, currentVideo, onRecordView])
+    }, [open, currentVideoId])
 
     // Reset activeVideoId khi đóng modal
     const handleModalOpenChange = (newOpen: boolean) => {
@@ -111,13 +119,13 @@ export function ShoppableVideoModal({
 
         const handleWheel = (e: WheelEvent) => {
             const now = Date.now()
-            if (now - lastScrollTime < SCROLL_COOLDOWN_MS) return
+            if (now - lastScrollTimeRef.current < SCROLL_COOLDOWN_MS) return
 
             if (e.deltaY > 50) {
-                setLastScrollTime(now)
+                lastScrollTimeRef.current = now
                 goToNextVideo()
             } else if (e.deltaY < -50) {
-                setLastScrollTime(now)
+                lastScrollTimeRef.current = now
                 goToPrevVideo()
             }
         }
@@ -129,7 +137,7 @@ export function ShoppableVideoModal({
             window.removeEventListener('keydown', handleKeyDown)
             window.removeEventListener('wheel', handleWheel)
         }
-    }, [open, lastScrollTime, goToNextVideo, goToPrevVideo])
+    }, [open, goToNextVideo, goToPrevVideo])
 
     // 4.4. Action Handlers
     const handleLike = () => {

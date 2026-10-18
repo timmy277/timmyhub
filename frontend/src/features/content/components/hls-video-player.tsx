@@ -81,6 +81,12 @@ export function HlsVideoPlayer({
     const hlsRef = useRef<Hls | null>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const selectedQualityRef = useRef(selectedQuality)
+
+    // Đồng bộ ref của selectedQuality
+    useEffect(() => {
+        selectedQualityRef.current = selectedQuality
+    }, [selectedQuality])
 
     // 4.3. Custom Hooks / Helpers
     const formatTime = (seconds: number) => {
@@ -135,7 +141,7 @@ export function HlsVideoPlayer({
                 const currentLvl = hls.levels[data.level]
                 if (currentLvl) {
                     setActiveQualityLabel(
-                        selectedQuality === -1 ? `Auto (${currentLvl.height}p)` : `${currentLvl.height}p`,
+                        selectedQualityRef.current === -1 ? `Auto (${currentLvl.height}p)` : `${currentLvl.height}p`,
                     )
                 }
             })
@@ -169,7 +175,14 @@ export function HlsVideoPlayer({
                 hlsRef.current = null
             }
         }
-    }, [src, autoPlay, selectedQuality])
+    }, [src, autoPlay])
+
+    // Cập nhật mức phân giải HLS khi người dùng chọn chất lượng khác mà không cần khởi tạo lại Hls instance
+    useEffect(() => {
+        if (hlsRef.current) {
+            hlsRef.current.currentLevel = selectedQuality
+        }
+    }, [selectedQuality])
 
     // Cập nhật trạng thái Fullscreen
     useEffect(() => {

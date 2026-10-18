@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { VideoFeedResponseDto, VideoPostDto } from '@timmyhub/contracts'
 import { toast } from 'sonner'
@@ -76,6 +77,20 @@ export function useVideoFeed(options: UseVideoFeedOptions = {}) {
         },
     })
 
+    const toggleLike = useCallback(
+        (postId: string) => {
+            likeMutation.mutate(postId)
+        },
+        [likeMutation],
+    )
+
+    const recordView = useCallback(
+        (postId: string) => {
+            recordViewMutation.mutate(postId)
+        },
+        [recordViewMutation],
+    )
+
     return {
         videos: query.data?.items ?? [],
         total: query.data?.total ?? 0,
@@ -83,7 +98,7 @@ export function useVideoFeed(options: UseVideoFeedOptions = {}) {
         isLoading: query.isLoading,
         isError: query.isError,
         refetch: query.refetch,
-        toggleLike: (postId: string) => likeMutation.mutate(postId),
-        recordView: (postId: string) => recordViewMutation.mutate(postId),
+        toggleLike,
+        recordView,
     }
 }
