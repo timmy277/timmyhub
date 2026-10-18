@@ -97,32 +97,60 @@ export function HlsVideoPlayer({
         selectedQualityRef.current = selectedQuality
     }, [selectedQuality])
 
+    const onMeasureRef = useRef(onMeasure)
+    useEffect(() => {
+        onMeasureRef.current = onMeasure
+    }, [onMeasure])
+
+    const lastMeasureRef = useRef<VideoMeasureRect | null>(null)
+
     // 4.3. Custom Hooks / Helpers
     const measure = useCallback(() => {
-        const video = videoRef.current
-        const container = containerRef.current
-        if (!video || !container || !onMeasure) return
-        const cW = container.clientWidth
-        const cH = container.clientHeight
-        if (!cW || !cH) return
-        const natW = video.videoWidth || 9
-        const natH = video.videoHeight || 16
-        const scale = Math.min(cW / natW, cH / natH)
-        const renderedW = natW * scale
-        const renderedH = natH * scale
-        onMeasure({
-            left: (cW - renderedW) / 2,
-            top: (cH - renderedH) / 2,
-            width: renderedW,
-            height: renderedH,
+        requestAnimationFrame(() => {
+            const video = videoRef.current
+            const container = containerRef.current
+            if (!video || !container || !onMeasureRef.current) return
+            const cW = container.clientWidth
+            const cH = container.clientHeight
+            if (!cW || !cH) return
+            const natW = video.videoWidth || 9
+            const natH = video.videoHeight || 16
+            const scale = Math.min(cW / natW, cH / natH)
+            const renderedW = Math.round(natW * scale)
+            const renderedH = Math.round(natH * scale)
+            const left = Math.round((cW - renderedW) / 2)
+            const top = Math.round((cH - renderedH) / 2)
+
+            const prev = lastMeasureRef.current
+            if (
+                prev &&
+                prev.left === left &&
+                prev.top === top &&
+                prev.width === renderedW &&
+                prev.height === renderedH
+            ) {
+                return
+            }
+
+            const newRect: VideoMeasureRect = { left, top, width: renderedW, height: renderedH }
+            lastMeasureRef.current = newRect
+            onMeasureRef.current(newRect)
         })
-    }, [onMeasure])
+    }, [])
 
     useEffect(() => {
         if (!onMeasure) return
+        let rId: number | null = null
+        const handleResize = () => {
+            if (rId) cancelAnimationFrame(rId)
+            rId = requestAnimationFrame(measure)
+        }
         measure()
-        window.addEventListener('resize', measure)
-        return () => window.removeEventListener('resize', measure)
+        window.addEventListener('resize', handleResize, { passive: true })
+        return () => {
+            if (rId) cancelAnimationFrame(rId)
+            window.removeEventListener('resize', handleResize)
+        }
     }, [measure, onMeasure])
 
     const formatTime = (seconds: number) => {
@@ -369,6 +397,7 @@ export function HlsVideoPlayer({
                 onLoadedMetadata={() => measure()}
                 onLoadedData={() => measure()}
                 onTimeUpdate={() => {
+                    if (!showCustomControls) return
                     const video = videoRef.current
                     if (video) {
                         setCurrentTime(video.currentTime)

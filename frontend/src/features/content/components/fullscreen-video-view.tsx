@@ -62,13 +62,27 @@ export function FullscreenVideoView() {
     const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1280)
 
     useEffect(() => {
-        const handleResize = () => setWindowWidth(window.innerWidth)
-        window.addEventListener('resize', handleResize)
-        return () => window.removeEventListener('resize', handleResize)
+        let rId: number | null = null
+        const handleResize = () => {
+            if (rId) cancelAnimationFrame(rId)
+            rId = requestAnimationFrame(() => {
+                setWindowWidth(window.innerWidth)
+            })
+        }
+        window.addEventListener('resize', handleResize, { passive: true })
+        return () => {
+            if (rId) cancelAnimationFrame(rId)
+            window.removeEventListener('resize', handleResize)
+        }
     }, [])
 
     const handleMeasure = useCallback((rect: { left: number; width: number }) => {
-        setVideoRect(rect)
+        setVideoRect((prev) => {
+            if (prev && prev.left === rect.left && prev.width === rect.width) {
+                return prev
+            }
+            return rect
+        })
     }, [])
 
     const lastScrollTimeRef = useRef(0)
@@ -77,7 +91,7 @@ export function FullscreenVideoView() {
 
     useEffect(() => {
         recordViewRef.current = recordView
-    })
+    }, [recordView])
 
     // Tính toán index video hiện tại
     const currentTargetId = activeVideoId ?? initialIdFromUrl ?? videos[0]?.id
@@ -86,14 +100,14 @@ export function FullscreenVideoView() {
     const currentVideo = videos[currentIndex]
     const currentVideoId = currentVideo?.id
 
-    // Cập nhật URL query params khi chuyển video mà không làm reload trang
+    // Cập nhật URL bằng replaceState để đổi URL mượt mà 0ms không kích hoạt RSC re-fetch
     useEffect(() => {
-        if (currentVideoId && initialIdFromUrl !== currentVideoId) {
-            const params = new URLSearchParams(searchParams.toString())
+        if (currentVideoId && initialIdFromUrl !== currentVideoId && typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search)
             params.set('id', currentVideoId)
-            router.replace(`${ROUTE.VIDEOS}?${params.toString()}`, { scroll: false })
+            window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`)
         }
-    }, [currentVideoId, initialIdFromUrl, router, searchParams])
+    }, [currentVideoId, initialIdFromUrl])
 
     // Ghi nhận lượt xem video
     useEffect(() => {
@@ -103,20 +117,29 @@ export function FullscreenVideoView() {
         }
     }, [currentVideoId])
 
-    // 3.4. Navigation Handlers
-    const goToNextVideo = useCallback(() => {
-        if (videos.length === 0) return
-        const nextIndex = (currentIndex + 1) % videos.length
-        setActiveVideoId(videos[nextIndex]?.id ?? null)
-        setSelectedProductIndex(0)
+    // 3.4. Navigation Handlers với ref ổn định tránh re-bind listeners
+    const currentIndexRef = useRef(currentIndex)
+    const videosRef = useRef(videos)
+    useEffect(() => {
+        currentIndexRef.current = currentIndex
+        videosRef.current = videos
     }, [currentIndex, videos])
 
-    const goToPrevVideo = useCallback(() => {
-        if (videos.length === 0) return
-        const prevIndex = (currentIndex - 1 + videos.length) % videos.length
-        setActiveVideoId(videos[prevIndex]?.id ?? null)
+    const goToNextVideo = useCallback(() => {
+        const vList = videosRef.current
+        if (vList.length === 0) return
+        const nextIndex = (currentIndexRef.current + 1) % vList.length
+        setActiveVideoId(vList[nextIndex]?.id ?? null)
         setSelectedProductIndex(0)
-    }, [currentIndex, videos])
+    }, [])
+
+    const goToPrevVideo = useCallback(() => {
+        const vList = videosRef.current
+        if (vList.length === 0) return
+        const prevIndex = (currentIndexRef.current - 1 + vList.length) % vList.length
+        setActiveVideoId(vList[prevIndex]?.id ?? null)
+        setSelectedProductIndex(0)
+    }, [])
 
     // Lắng nghe Keyboard (Mũi tên Lên/Xuống) và Wheel (Con lăn chuột)
     useEffect(() => {
@@ -333,7 +356,7 @@ export function FullscreenVideoView() {
                 {/* Ambient Blurred Video Background tạo độ sâu điện ảnh trên màn hình rộng */}
                 {currentVideo.thumbnailUrl && (
                     <div
-                        className="absolute inset-0 bg-cover bg-center filter blur-3xl opacity-20 scale-110 pointer-events-none transition-all duration-700"
+                        className="absolute inset-0 bg-cover bg-center filter blur-2xl opacity-20 scale-105 pointer-events-none transform-gpu will-change-transform transition-opacity duration-500"
                         style={{ backgroundImage: `url(${currentVideo.thumbnailUrl})` }}
                     />
                 )}
