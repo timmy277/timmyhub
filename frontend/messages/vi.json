@@ -2201,5 +2201,28 @@
     "voucherGiftMessage": "Shop tặng bạn mã giảm giá {code} giảm {discount} nha!",
     "uploadMediaFailed": "Không thể tải tệp tin đính kèm. Vui lòng thử lại.",
     "sendMessageFailed": "Gửi tin nhắn thất bại"
+  },
+  "content": {
+    "back": "Quay lại",
+    "backAria": "Quay lại (Phím Esc)",
+    "mute": "Tắt âm thanh",
+    "unmute": "Bật âm thanh",
+    "follow": "Theo dõi",
+    "officialShop": "Shop chính hãng trên TimmyHub",
+    "buyNow": "Mua ngay",
+    "viewProductDetail": "Xem chi tiết sản phẩm",
+    "productIndicator": "Sản phẩm {current}/{total}",
+    "like": "Thích video",
+    "comments": "Bình luận video",
+    "share": "Chia sẻ",
+    "shareCopied": "Đã sao chép liên kết video vào bộ nhớ tạm!",
+    "shareSuccess": "Chia sẻ video!",
+    "prevVideo": "Video trước (Mũi tên lên)",
+    "nextVideo": "Video tiếp theo (Mũi tên xuống)",
+    "loading": "Đang chuẩn bị luồng video chất lượng cao...",
+    "emptyTitle": "Chưa có video bài đăng nào",
+    "backHome": "Quay lại trang chủ",
+    "addedToCart": "Đã thêm \"{name}\" vào giỏ hàng!",
+    "addToCartError": "Không thể thêm vào giỏ hàng. Vui lòng thử lại!"
   }
 }

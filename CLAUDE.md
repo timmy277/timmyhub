@@ -95,6 +95,34 @@ Mục lục đầy đủ và lối đọc theo vai trò: `docs/README.md`.
     component không cùng ngữ nghĩa hoặc làm đổi giao diện. Ô tìm kiếm qua `useDebouncedValue`. Thao tác ghi có toast;
     hành động nhạy cảm có `AlertDialog`. Skeleton dùng `Skeleton` của shadcn. Responsive từ 360 px.
 25. Zustand luôn đọc qua selector (`useStore((s) => s.x)` hoặc `useShallow`), không lấy cả store.
+26. **Phân chia component hợp lý & giới hạn độ dài**:
+    - File component **không vượt quá 200 dòng** (ngưỡng tối đa 250 dòng cho các view container phức tạp).
+    - Mỗi file đảm nhận **đúng một trách nhiệm duy nhất (SRP)**. Khi component vượt quá ~150 dòng hoặc chứa từ 2 khối giao diện/nghiệp vụ độc lập trở lên (như header, floating action bar, drawer/dialog, card con, form section...), **bắt buộc tách thành component con riêng biệt** trong `components/` của feature.
+    - Không khai báo nhiều component lớn trong cùng 1 file. Mỗi file chỉ export 1 component chính. Sub-component phụ trợ chỉ được viết trong cùng file nếu cực kỳ ngắn (< 30 dòng), không có state/handlers phức tạp và chỉ dùng cục bộ tại file đó.
+27. **Đặt file đúng thư mục ước định (File Placement & Folder Conventions)**:
+    - Component của feature: `src/features/<domain>/components/<component-name>.tsx`.
+    - Component dùng chung toàn dự án: `src/components/common/`.
+    - Component UI nguyên bản: `src/components/ui/` (shadcn).
+    - Custom hook dùng chung: `src/hooks/`; hook đặc thù của feature: `src/features/<domain>/hooks/`.
+    - Hằng số vào `constants/`, type vào `types/` hoặc `@timmyhub/contracts`, hàm tiện ích vào `utils/`.
+    - Thư mục component/feature luôn có `index.ts` để re-export sạch qua barrel.
+28. **Kiểm soát SSR/CSR & Render Strategy hợp lý**:
+    - **Server Component (RSC) là mặc định tuyệt đối** cho các trang `page.tsx`, layout và thành phần hiển thị tĩnh/dữ liệu ban đầu (0 KB JS bundle gửi xuống client).
+    - `'use client'` **chỉ được đặt ở component lá (leaf node)** thực sự cần trạng thái tương tác (`useState`, `useEffect`, trình nghe sự kiện DOM, animation client-side). Tuyệt đối **CẤM** biến cả trang `page.tsx` hay layout thành client component.
+    - Phân bổ chiến lược: Static (SSG) cho nội dung marketing; ISR (revalidate) cho catalog/sản phẩm công khai; SSR/Streaming với `<Suspense>` và skeleton loader cho trang cá nhân hóa/dashboard.
+    - Thư viện nặng (hls.js, chart, TipTap, video player) và modal/drawer/dialog chỉ render khi mở **bắt buộc nạp bằng `next/dynamic`** kèm `{ ssr: false }`.
+    - Mọi route segment phải có `loading.tsx`, `error.tsx`; mỗi route group có `not-found.tsx`.
+29. **Đa ngôn ngữ & Bản địa hóa (next-intl) — CẤM hardcode chuỗi text**:
+    - Tuyệt đối **không viết chuỗi trần / hardcode text tiếng Việt hay bất kỳ ngôn ngữ nào** trong JSX, placeholder, toast, aria-label, alt text, tooltip hoặc validation messages.
+    - Toàn bộ text phải khai báo trong `frontend/messages/vi.json` và `frontend/messages/en.json` (cập nhật đồng thời cả hai file).
+    - Client Component dùng `const t = useTranslations('<namespace>')`; Server Component dùng `const t = await getTranslations('<namespace>')`. Ghép biến bằng định dạng ICU (`t('welcome', { name })`), cấm cộng chuỗi thủ công.
+30. **Quy chuẩn Styling — CẤM Style Inline (Tailwind CSS Only)**:
+    - Tuyệt đối **CẤM viết `style={{ ... }}` inline** trong JSX. 100% kiểu dáng phải viết bằng class Tailwind CSS kết hợp hàm `cn(...)`.
+    - Ngoại lệ duy nhất: Các giá trị số thực sự động tính toán tại runtime (ví dụ: toạ độ drag/canvas đo đạc từ DOM bằng `getBoundingClientRect()`, dynamic CSS custom variables). Khi dùng ngoại lệ này, **bắt buộc phải có dòng comment giải thích lý do**.
+31. **Quản lý Form bắt buộc dùng React Hook Form + Zod & Schema hợp lý**:
+    - Mọi form tương tác (nhập liệu, bộ lọc nâng cao, tạo/sửa dữ liệu, upload) **bắt buộc dùng `react-hook-form` tích hợp `@hookform/resolvers/zod`**. Tuyệt đối cấm unmanaged form hoặc dùng `useState` từng field cho form nghiệp vụ.
+    - Schema Zod phải thiết kế hợp lý, chặt chẽ (validation min/max, regex, enum contracts, messages qua i18n), đặt tại `schemas/` hoặc `@timmyhub/contracts` (nếu dùng chung FE/BE).
+    - Mọi trường nhập trong form phải dùng field có label nổi (`FloatInput`, `FloatCombobox`, `FloatMultiSelect`, `FloatDatePicker`...) kết hợp `<Controller>` hoặc `register`.
 
 ## 4. Quy ước tài liệu
 

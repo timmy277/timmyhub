@@ -2201,5 +2201,28 @@
     "voucherGiftMessage": "Shop gifts you voucher code {code} for {discount} off!",
     "uploadMediaFailed": "Failed to upload attachments. Please try again.",
     "sendMessageFailed": "Failed to send message"
+  },
+  "content": {
+    "back": "Back",
+    "backAria": "Go back (Esc key)",
+    "mute": "Mute audio",
+    "unmute": "Unmute audio",
+    "follow": "Follow",
+    "officialShop": "Official shop on TimmyHub",
+    "buyNow": "Buy now",
+    "viewProductDetail": "View product details",
+    "productIndicator": "Product {current}/{total}",
+    "like": "Like video",
+    "comments": "Video comments",
+    "share": "Share",
+    "shareCopied": "Video link copied to clipboard!",
+    "shareSuccess": "Share video!",
+    "prevVideo": "Previous video (Up arrow)",
+    "nextVideo": "Next video (Down arrow)",
+    "loading": "Preparing high-quality video stream...",
+    "emptyTitle": "No video posts yet",
+    "backHome": "Back to Home",
+    "addedToCart": "Added \"{name}\" to cart!",
+    "addToCartError": "Could not add to cart. Please try again!"
   }
 }

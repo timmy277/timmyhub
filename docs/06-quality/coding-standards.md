@@ -319,10 +319,41 @@ export function UserList() {
 }
 ```
 
-Component nên ngắn: quá ~150 dòng hoặc có từ hai khối JSX độc lập (bảng + dialog, form + preview) thì tách thành
-component con cùng feature.
+### 4.2 Giới hạn độ dài file và phân chia component hợp lý (Component Decomposition)
 
-### 4.2 Import
+- **Nguyên tắc trách nhiệm duy nhất (Single Responsibility Principle)**: Mỗi component chỉ quản lý một vùng giao diện hoặc một luồng tương tác cụ thể. Tránh tạo ra các component "monolith" kiêm nhiệm quá nhiều việc (vừa quản lý container scroll, vừa làm player, vừa render card sản phẩm, vừa làm floating action bar...).
+- **Giới hạn số dòng code**:
+  - File component chuẩn: **dưới 150 dòng**.
+  - Ngưỡng tối đa cho phép đối với các view container phức tạp: **200 dòng (tuyệt đối không vượt quá 250 dòng)**.
+  - Khi file chạm mốc ~150 dòng hoặc có từ **hai khối JSX độc lập trở lên** (ví dụ: header, dialog/drawer, thanh công cụ/actions, card chi tiết, preview panel...), **bắt buộc tách thành các component con riêng biệt** trong thư mục `components/` của feature.
+- **Không nhồi nhét nhiều component lớn trong cùng 1 file**:
+  - Mỗi file `.tsx` chỉ nên export **1 component chính duy nhất**.
+  - Chỉ cho phép viết sub-component trong cùng file nếu component đó mang tính phụ trợ đặc thù, cực kỳ ngắn (**dưới 30 dòng**), không có state phức tạp và chỉ dùng cục bộ tại file đó.
+- **Tách Hook và Helper**:
+  - Nếu logic xử lý state/handlers chiếm quá nhiều diện tích trong component, hãy trích xuất ra một custom hook riêng (ví dụ: `use-video-navigation.ts`) đặt tại `hooks/` của feature hoặc `@/hooks`.
+
+❌ **BAD** — Một file monolithic 600–700 dòng chứa cả FeedItem, Header, FloatingCard, ActionButtons, Player:
+
+```tsx
+// fullscreen-video-view.tsx (700 dòng - ôm đồm mọi thứ)
+function FullscreenFeedItem() { /* 300 dòng */ }
+function ShoppableCard() { /* 150 dòng */ }
+export function FullscreenVideoView() { /* 250 dòng */ }
+```
+
+✅ **GOOD** — Phân rã sạch sẽ thành các file con chuyên biệt (< 150 dòng/file):
+
+```
+features/content/components/
+├── fullscreen-header.tsx         # ~40 dòng: nút back, mute
+├── shoppable-product-card.tsx    # ~90 dòng: card sản phẩm, giá, nút mua
+├── video-action-stack.tsx        # ~90 dòng: like, comment, share, view, mũi tên
+├── fullscreen-feed-item.tsx      # ~120 dòng: ghép player + overlay + card + actions
+├── fullscreen-video-view.tsx     # ~130 dòng: container scroll-snap feed, keyboard, drawer
+└── index.ts                      # barrel export
+```
+
+### 4.3 Import
 
 Bốn nhóm, cách nhau **một dòng trống**, theo đúng thứ tự: thư viện ngoài (`react`, `next/*`, npm) → `@timmyhub/*` →
 alias `@/…` → tương đối (`./`, `../`). File CSS side-effect đứng riêng ở cuối. Type import dùng `import type` hoặc
@@ -354,7 +385,7 @@ import { cn, formatDisplayDate } from '@/utils'
 import { UserList } from './user-list'
 ```
 
-### 4.3 Hằng số, enum, type dùng chung
+### 4.4 Hằng số, enum, type dùng chung
 
 - **Không chuỗi/số ma thuật trong component.** Bảng tra (`ROLE_LABEL_KEY`, `ROLE_BADGE_VARIANT`), danh sách option,
   độ rộng cột, chiều cao hàng, thời gian debounce/timeout, key cookie/localStorage → `src/constants/`.
@@ -391,7 +422,7 @@ const isProtected = user.roles.includes(UserRole.SUPER_ADMIN)
 await http.post(API_ROUTE.ADMIN_USERS.LOCK(id))
 ```
 
-### 4.4 Component, tái sử dụng, trải nghiệm
+### 4.5 Component, tái sử dụng, trải nghiệm
 
 - **Ưu tiên component có sẵn**: shadcn (`components/ui`) → component dự án (`components/common`) → cuối cùng mới đến
   thẻ HTML. Không dùng `<button>`, `<input>`, `<select>`, `<table>`, `<img>`, `<a>` nội bộ khi đã có `Button`,
@@ -415,7 +446,7 @@ await http.post(API_ROUTE.ADMIN_USERS.LOCK(id))
 - **Responsive** là bắt buộc, kiểm ở 360 px, 768 px, 1280 px: không đặt chiều rộng/chiều cao cố định cho khối chính,
   bảng có phương án cho di động (bớt cột, bỏ ghim cột, phân trang rút gọn).
 
-### 4.5 State và render lại
+### 4.6 State và render lại
 
 - **Zustand luôn đọc qua selector**, mỗi selector lấy đúng một lát nhỏ; cần nhiều trường thì `useShallow`. Không
   `const store = useStore()` hay destructure cả store.
@@ -439,16 +470,168 @@ const keyword = useUserFilterStore((state) => state.keyword)
 const setKeyword = useUserFilterStore((state) => state.setKeyword)
 ```
 
-### 4.6 Rendering và tốc độ tải
+### 4.7 Kiểm soát SSR/CSR & Chiến lược Render hợp lý
 
-Quy tắc chiến lược (SSG/ISR/SSR/streaming/CSR theo loại trang, `'use cache'`, `next/dynamic`, `Suspense`, font, ảnh,
-bundle) và lộ trình áp dụng nằm ở [performance-campaign.md](performance-campaign.md). Tối thiểu mọi PR giao diện:
+Quy tắc chiến lược render (SSG/ISR/SSR/Streaming/CSR theo loại trang, `'use cache'`, `next/dynamic`, `Suspense`, font, ảnh,
+bundle) và lộ trình áp dụng tuân thủ nghiêm ngặt:
 
-- Server Component là mặc định; `'use client'` chỉ ở lá cần state, sự kiện hoặc API trình duyệt; tách nhỏ phần client.
-- Mỗi route có `loading.tsx` (hoặc `Suspense` quanh phần tải độc lập), `error.tsx`, và `not-found.tsx` theo nhóm route.
-- Thư viện nặng và phần chỉ hiện khi mở (popover, dialog, lịch, grid, biểu đồ, editor) nạp bằng `next/dynamic`.
-- Ảnh qua `next/image` có `sizes`; ảnh LCP dùng `preload`/`fetchPriority="high"` (Next 16 đã bỏ `priority`).
-- Mỗi trang khai `metadata`/`generateMetadata`; trang cá nhân/quản trị `robots: noindex`.
+1. **Server Component (RSC) là mặc định**: Mọi trang (`page.tsx`), layout và khối hiển thị tĩnh/dữ liệu ban đầu phải chạy trên server (0 KB JavaScript gửi xuống trình duyệt).
+2. **`'use client'` ở lá tương tác (Leaf Node)**: Chỉ đặt directive `'use client'` ở component con nhỏ nhất thực sự cần state (`useState`, `useReducer`), event handler DOM hoặc API trình duyệt (`window`, `IntersectionObserver`). Tuyệt đối cấm đánh dấu cả trang `page.tsx` là client chỉ vì vài nút bấm.
+3. **Phân bổ chiến lược**:
+   - **Static (SSG)**: Các trang giới thiệu, chính sách, landing page tiếp thị.
+   - **ISR (Incremental Static Regeneration)**: Chi tiết sản phẩm, danh mục hàng hoá công khai có revalidate time phù hợp.
+   - **Dynamic SSR / Streaming**: Trang quản trị cá nhân, giỏ hàng, bảng điều khiển, video feed thời gian thực. Bọc phần tải dữ liệu độc lập bằng `<Suspense fallback={<Skeleton />}>`.
+4. **Lazy loading với `next/dynamic`**:
+   - Các thư viện nặng (> 30 KB gz: `hls.js`, TipTap editor, Recharts, AG Grid, Uppy...) hoặc các khối UI chỉ xuất hiện khi người dùng kích hoạt (Modal, Drawer, Dialog chi tiết, Color Picker) **bắt buộc nạp qua `next/dynamic`** với tuỳ chọn `{ ssr: false }`.
+5. **Route Segments**: Mọi thư mục route phải cung cấp đủ `loading.tsx`, `error.tsx`; mỗi route group có `not-found.tsx`.
+
+❌ **BAD** — Đánh dấu `'use client'` cả trang, tự fetch dữ liệu bằng `useEffect`:
+
+```tsx
+'use client'
+export default function ProductDetailPage({ params }: { params: { id: string } }) {
+    const [product, setProduct] = useState(null)
+    useEffect(() => {
+        fetch(`/api/products/${params.id}`).then(r => r.json()).then(setProduct)
+    }, [params.id])
+    if (!product) return <ProductSkeleton />
+    return <div><h1>{product.name}</h1><AddToCartButton product={product} /></div>
+}
+```
+
+✅ **GOOD** — Trang là Server Component lấy dữ liệu trước, chỉ `AddToCartButton` là Client Component:
+
+```tsx
+// app/(public)/products/[slug]/page.tsx (Server Component)
+export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params
+    const product = await getProductBySlug(slug)
+    if (!product) notFound()
+
+    return (
+        <article className="container py-8">
+            <h1 className="text-2xl font-bold">{product.name}</h1>
+            <Suspense fallback={<RelatedProductsSkeleton />}>
+                <RelatedProductsSection categoryId={product.categoryId} />
+            </Suspense>
+            <AddToCartButton productId={product.id} defaultVariantId={product.defaultVariantId} />
+        </article>
+    )
+}
+```
+
+### 4.8 Đa ngôn ngữ và bản địa hóa (next-intl — CẤM hardcode chuỗi text)
+
+- **Tuyệt đối không viết chuỗi trần**: Cấm hardcode chuỗi ký tự tiếng Việt hoặc bất kỳ ngôn ngữ nào trong JSX, placeholder, tooltip, thông báo toast (`toast.success`, `toast.error`), tiêu đề modal, nhãn ARIA (`aria-label`), hay alt text của hình ảnh.
+- **Tập trung vào từ điển**: Toàn bộ chuỗi hiển thị phải được khai báo trong `frontend/messages/vi.json` và `frontend/messages/en.json`. Khi thêm một nhãn mới, **bắt buộc cập nhật đồng thời cả hai file**.
+- **Truy xuất thông điệp**:
+  - Client Component: `const t = useTranslations('<domain_namespace>')`.
+  - Server Component: `const t = await getTranslations('<domain_namespace>')`.
+- **Định dạng tham số**: Ghép biến bằng cú pháp ICU MessageFormat (`t('itemCount', { count: 5 })`), không nối chuỗi thủ công (`t('item') + ': ' + 5`).
+
+❌ **BAD** — Viết chữ tiếng Việt trần trong JSX và toast:
+
+```tsx
+<Button onClick={() => toast.success("Đã thêm vào giỏ hàng")}>
+    Mua ngay
+</Button>
+<span aria-label="Đóng cửa sổ">✕</span>
+```
+
+✅ **GOOD** — Gọi qua `useTranslations` với namespace tương ứng:
+
+```tsx
+const t = useTranslations('content')
+<Button onClick={() => toast.success(t('cart.addedSuccess'))}>
+    {t('action.buyNow')}
+</Button>
+<Button aria-label={t('action.close')}>✕</Button>
+```
+
+### 4.9 Quy chuẩn Styling và CẤM Style Inline (Tailwind CSS Only)
+
+- **Cấm Style Inline**: Tuyệt đối **CẤM viết thuộc tính `style={{ ... }}`** trong JSX để định dạng màu sắc, khoảng cách, kích thước, flexbox, font, viền... Mọi kiểu dáng phải sử dụng hệ thống utility classes của Tailwind CSS.
+- **Ghép class linh hoạt**: Sử dụng hàm `cn(...)` từ `@/utils` khi cần điều kiện toggle class động.
+- **Ngoại lệ duy nhất cho thuộc tính `style`**:
+  - Chỉ chấp nhận `style` khi giá trị là các toạ độ/kích thước động thực sự tính toán tại runtime từ DOM (ví dụ: kết quả đo đạc từ `getBoundingClientRect()`, toạ độ kéo thả drag-and-drop `transform: translate3d(x, y, 0)`, hoặc biến CSS tuỳ biến `--brand-color`).
+  - Khi áp dụng ngoại lệ này, **bắt buộc phải có dòng comment nêu rõ lý do đo đạc runtime**.
+
+❌ **BAD** — Dùng inline style thay vì Tailwind:
+
+```tsx
+<div style={{ height: '100dvh', overflowY: 'scroll', backgroundColor: '#000000', display: 'flex' }}>
+    <p style={{ fontSize: '14px', color: 'white', marginTop: '12px' }}>Video</p>
+</div>
+```
+
+✅ **GOOD** — Sử dụng 100% Tailwind CSS classes:
+
+```tsx
+<div className="h-dvh overflow-y-scroll bg-black flex flex-col">
+    <p className="text-sm text-white mt-3">{t('videoTitle')}</p>
+</div>
+```
+
+### 4.10 Quản lý Form với React Hook Form + Zod & Thiết kế Schema hợp lý
+
+Mọi thao tác nhập liệu tương tác (tạo bài viết, chỉnh sửa thông tin, đặt hàng, bộ lọc nâng cao, đăng nhập/đăng ký...) **BẮT BUỘC** tuân thủ:
+
+1. **Thư viện chuẩn**: Sử dụng `react-hook-form` tích hợp `@hookform/resolvers/zod`.
+2. **Cấm form unmanaged hoặc useState lẻ tẻ**: Tuyệt đối không tự viết `useState` cho từng input trong form hay quản lý state form thủ công.
+3. **Thiết kế Schema Zod hợp lý**:
+   - Schema dùng chung giữa Frontend và Backend phải đặt tại package `@timmyhub/contracts`.
+   - Schema đặc thù phía Client đặt tại `src/schemas/<domain>.schema.ts`.
+   - Schema phải có ràng buộc chặt chẽ (`min`, `max`, `email`, `regex`, `trim`), thông điệp lỗi rõ ràng (ưu tiên key translation).
+4. **Input có label nổi**:
+   - Sử dụng các component `FloatInput`, `FloatCombobox`, `FloatMultiSelect`, `FloatDatePicker`, `FloatDateRangePicker` từ `@/components`.
+   - Gắn kết với form qua `register` hoặc `Controller` của `react-hook-form`.
+
+❌ **BAD** — Dùng `useState` rời rạc cho từng ô nhập, validate thủ công:
+
+```tsx
+const [title, setTitle] = useState('')
+const [price, setPrice] = useState(0)
+const [error, setError] = useState('')
+const handleSubmit = () => {
+    if (!title) { setError('Tiêu đề không được trống'); return }
+    api.post('/items', { title, price })
+}
+return <form onSubmit={handleSubmit}><input value={title} onChange={e => setTitle(e.target.value)} /></form>
+```
+
+✅ **GOOD** — React Hook Form + Zod Schema + FloatInput:
+
+```tsx
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { CreateProductSchema, type CreateProductInput } from '@timmyhub/contracts'
+import { FloatInput } from '@/components'
+
+export function CreateProductForm() {
+    const t = useTranslations('productForm')
+    const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<CreateProductInput>({
+        resolver: zodResolver(CreateProductSchema),
+        defaultValues: { name: '', price: 0 }
+    })
+
+    const onSubmit = async (data: CreateProductInput) => {
+        await createProductAction(data)
+    }
+
+    return (
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <FloatInput
+                label={t('nameLabel')}
+                error={errors.name?.message}
+                {...register('name')}
+            />
+            <Button type="submit" disabled={isSubmitting}>
+                {t('submitButton')}
+            </Button>
+        </form>
+    )
+}
+```
 
 ---
 
