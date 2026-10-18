@@ -58,6 +58,18 @@ export function FullscreenVideoView() {
     const [isMuted, setIsMuted] = useState(true)
     const [showComments, setShowComments] = useState(false)
     const [selectedProductIndex, setSelectedProductIndex] = useState(0)
+    const [videoRect, setVideoRect] = useState<{ left: number; width: number } | null>(null)
+    const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1280)
+
+    useEffect(() => {
+        const handleResize = () => setWindowWidth(window.innerWidth)
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
+
+    const handleMeasure = useCallback((rect: { left: number; width: number }) => {
+        setVideoRect(rect)
+    }, [])
 
     const lastScrollTimeRef = useRef(0)
     const recordedVideoIdsRef = useRef<Set<string>>(new Set())
@@ -215,6 +227,38 @@ export function FullscreenVideoView() {
     const taggedProducts = currentVideo.productTags || []
     const currentProduct = taggedProducts[selectedProductIndex]?.product
 
+    const handleBack = () => {
+        if (typeof window !== 'undefined' && window.history.length > 1) {
+            router.back()
+        } else {
+            router.push(ROUTE.HOME)
+        }
+    }
+
+    // Tính toán căn chỉnh content & action buttons bám theo video frame như timmyhub gốc
+    const isWidescreen = windowWidth >= 768
+    const hasCenteredVideo = isWidescreen && !!videoRect && videoRect.width < windowWidth - 100
+
+    const contentStyle: React.CSSProperties =
+        hasCenteredVideo && videoRect
+            ? {
+                  left: Math.max(16, videoRect.left + 16),
+                  maxWidth: Math.max(320, Math.min(videoRect.width - 32, 580)),
+                  right: 'auto',
+              }
+            : {}
+
+    const iconsLeft = videoRect ? videoRect.left + videoRect.width + 16 : undefined
+    const canDockBesideVideo = isWidescreen && iconsLeft !== undefined && iconsLeft + 56 <= windowWidth
+
+    const actionsStyle: React.CSSProperties =
+        canDockBesideVideo && iconsLeft !== undefined
+            ? {
+                  left: iconsLeft,
+                  right: 'auto',
+              }
+            : {}
+
     // 3.7. Render Fullscreen Layout
     return (
         <div className="fixed inset-0 z-50 flex h-dvh w-screen flex-col overflow-hidden bg-black select-none">
@@ -226,9 +270,9 @@ export function FullscreenVideoView() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => router.push(ROUTE.HOME)}
+                        onClick={handleBack}
                         className="size-10 rounded-full bg-white/10 text-white backdrop-blur-md hover:bg-white/20 hover:scale-105 transition-transform"
-                        title="Quay lại trang chủ (Phím Esc)"
+                        title="Quay lại (Phím Esc)"
                     >
                         <ArrowLeft className="size-5" />
                     </Button>
@@ -283,11 +327,19 @@ export function FullscreenVideoView() {
             </header>
 
             {/* ═══════════════════════════════════════════════════════════════
-             * MAIN VIDEO CANVAS: Căn giữa màn hình chuẩn tỉ lệ dọc TikTok/Reels
+             * MAIN VIDEO CANVAS: Full màn hình toàn diện như timmyhub gốc
              * ═══════════════════════════════════════════════════════════════ */}
-            <main className="relative flex flex-1 items-center justify-center w-full h-full overflow-hidden">
-                <div className="relative h-full w-full max-w-[480px] md:max-w-[420px] lg:max-w-[440px] flex items-center justify-center bg-neutral-950 md:rounded-3xl overflow-hidden shadow-2xl md:border md:border-white/10">
-                    {/* Trình phát HLS Video Player thích ứng */}
+            <main className="relative flex flex-1 w-full h-full overflow-hidden bg-black items-center justify-center">
+                {/* Ambient Blurred Video Background tạo độ sâu điện ảnh trên màn hình rộng */}
+                {currentVideo.thumbnailUrl && (
+                    <div
+                        className="absolute inset-0 bg-cover bg-center filter blur-3xl opacity-20 scale-110 pointer-events-none transition-all duration-700"
+                        style={{ backgroundImage: `url(${currentVideo.thumbnailUrl})` }}
+                    />
+                )}
+
+                {/* Video Container full màn hình */}
+                <div className="relative size-full flex items-center justify-center">
                     <HlsVideoPlayer
                         key={currentVideo.id}
                         src={currentVideo.videoUrl}
@@ -295,10 +347,13 @@ export function FullscreenVideoView() {
                         muted={isMuted}
                         onEnded={goToNextVideo}
                         autoPlay
+                        onMeasure={handleMeasure}
+                        showCustomControls={false}
+                        className="size-full"
                     />
 
-                    {/* Gradient shadow overlay phía dưới */}
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10" />
+                    {/* Gradient shadow overlay mượt mà phía dưới phủ toàn màn hình */}
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-96 bg-gradient-to-t from-black/95 via-black/50 to-transparent z-10" />
 
                     {/* Heart splash animation khi bấm Like */}
                     {isHeartAnimating && (
@@ -306,162 +361,175 @@ export function FullscreenVideoView() {
                             <Heart className="size-28 fill-red-500 text-red-500 drop-shadow-2xl animate-ping" />
                         </div>
                     )}
+                </div>
 
-                    {/* ═══════════════════════════════════════════════════════════
-                     * BOTTOM LEFT: SHOPPABLE PRODUCT TAG & CAPTION METADATA
-                     * ═══════════════════════════════════════════════════════════ */}
-                    <div className="absolute bottom-5 inset-x-4 z-20 space-y-3 pointer-events-auto">
-                        {/* Thông tin Shop & Creator */}
-                        <div className="flex items-center gap-2.5">
-                            <Avatar className="size-10 ring-2 ring-emerald-500 shadow-md">
-                                {currentVideo.shopLogo && (
-                                    <AvatarImage src={currentVideo.shopLogo} alt={currentVideo.shopName} />
-                                )}
-                                <AvatarFallback className="bg-emerald-950 text-emerald-300 font-bold text-xs">
-                                    {currentVideo.shopName.slice(0, 2).toUpperCase()}
-                                </AvatarFallback>
-                            </Avatar>
-                            <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5">
-                                    <span className="font-bold text-sm text-white drop-shadow truncate">
-                                        {currentVideo.shopName}
-                                    </span>
-                                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
-                                </div>
-                                <span className="text-[11px] text-white/70">Shop chính hãng trên TimmyHub</span>
+                {/* ═══════════════════════════════════════════════════════════
+                 * BOTTOM LEFT: SHOPPABLE PRODUCT TAG & CAPTION METADATA FULL SCREEN
+                 * ═══════════════════════════════════════════════════════════ */}
+                <div
+                    className="absolute bottom-6 left-4 sm:bottom-8 sm:left-8 md:left-12 z-20 max-w-lg sm:max-w-xl md:max-w-2xl space-y-3 pointer-events-auto transition-all duration-300"
+                    style={contentStyle}
+                >
+                    {/* Thông tin Shop & Creator */}
+                    <div className="flex items-center gap-2.5">
+                        <Avatar className="size-10 ring-2 ring-emerald-500 shadow-md">
+                            {currentVideo.shopLogo && (
+                                <AvatarImage src={currentVideo.shopLogo} alt={currentVideo.shopName} />
+                            )}
+                            <AvatarFallback className="bg-emerald-950 text-emerald-300 font-bold text-xs">
+                                {currentVideo.shopName.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-sm sm:text-base text-white drop-shadow truncate">
+                                    {currentVideo.shopName}
+                                </span>
+                                <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 rounded-full border-white/60 bg-white/10 text-white text-[11px] px-2.5 hover:bg-white/20 font-bold backdrop-blur-sm"
+                                >
+                                    Theo dõi
+                                </Button>
                             </div>
+                            <span className="text-[11px] text-white/75 drop-shadow">Shop chính hãng trên TimmyHub</span>
                         </div>
+                    </div>
 
-                        {/* Tiêu đề & Caption */}
-                        <div className="space-y-1">
-                            <h1 className="font-bold text-sm sm:text-base text-white leading-snug drop-shadow line-clamp-2">
-                                {currentVideo.title}
-                            </h1>
-                            {currentVideo.content && (
-                                <p className="text-xs text-white/80 line-clamp-2 leading-relaxed drop-shadow">
-                                    {currentVideo.content}
-                                </p>
-                            )}
-                            {currentVideo.hashtags && currentVideo.hashtags.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 pt-0.5">
-                                    {currentVideo.hashtags.map((tag) => (
-                                        <span key={tag} className="text-xs font-semibold text-emerald-400 drop-shadow">
-                                            #{tag}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* ═══════════════════════════════════════════════════════
-                         * SHOPPABLE FLOATING CARD (Sản phẩm gắn kèm)
-                         * ═══════════════════════════════════════════════════════ */}
-                        {currentProduct && (
-                            <Card className="rounded-2xl border border-white/20 bg-black/60 backdrop-blur-md p-2.5 shadow-xl transition-all duration-300">
-                                <div className="flex items-center gap-2.5">
-                                    {/* Ảnh sản phẩm */}
-                                    <div className="relative size-12 shrink-0 rounded-xl overflow-hidden bg-neutral-800 border border-white/10">
-                                        {currentProduct.thumbnailUrl ? (
-                                            <Image
-                                                src={currentProduct.thumbnailUrl}
-                                                alt={currentProduct.name}
-                                                fill
-                                                sizes="48px"
-                                                className="object-cover"
-                                                unoptimized
-                                            />
-                                        ) : (
-                                            <div className="flex size-full items-center justify-center bg-emerald-500/20 text-emerald-400">
-                                                <ShoppingBag className="size-5" />
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Tên & Giá sản phẩm */}
-                                    <div className="min-w-0 flex-1">
-                                        <p className="truncate text-xs font-bold text-white">{currentProduct.name}</p>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <span className="font-extrabold text-sm text-emerald-400 font-mono">
-                                                {currentProduct.price.toLocaleString('vi-VN')} đ
-                                            </span>
-                                            {currentProduct.originalPrice && (
-                                                <span className="text-[11px] text-white/50 line-through">
-                                                    {currentProduct.originalPrice.toLocaleString('vi-VN')} đ
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Nút Xem / Mua ngay */}
-                                    <div className="flex items-center gap-1.5">
-                                        <Button
-                                            size="sm"
-                                            onClick={(e) =>
-                                                handleQuickAddToCart(
-                                                    e,
-                                                    currentProduct.id,
-                                                    currentProduct.name,
-                                                    currentProduct.slug,
-                                                )
-                                            }
-                                            disabled={isAddingToCart}
-                                            className="h-8 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black font-extrabold text-xs px-3 shadow-md transition-all active:scale-95"
-                                        >
-                                            <ShoppingBag className="size-3.5 mr-1" />
-                                            Mua ngay
-                                        </Button>
-
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            asChild
-                                            className="size-8 rounded-xl bg-white/10 text-white hover:bg-white/20"
-                                            title="Xem chi tiết sản phẩm"
-                                        >
-                                            <Link
-                                                href={ROUTE.PRODUCT_DETAIL(currentProduct.slug || currentProduct.id)}
-                                                target="_blank"
-                                            >
-                                                <ExternalLink className="size-3.5" />
-                                            </Link>
-                                        </Button>
-                                    </div>
-                                </div>
-
-                                {/* Indicator nếu video có nhiều hơn 1 sản phẩm */}
-                                {taggedProducts.length > 1 && (
-                                    <div className="flex items-center justify-between pt-2 mt-2 border-t border-white/10 text-[10px] text-white/60">
-                                        <span>
-                                            Sản phẩm {selectedProductIndex + 1}/{taggedProducts.length}
-                                        </span>
-                                        <div className="flex items-center gap-1">
-                                            {taggedProducts.map((_, idx) => (
-                                                <Button
-                                                    key={idx}
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => setSelectedProductIndex(idx)}
-                                                    className={cn(
-                                                        'h-1.5 p-0 rounded-full transition-all hover:bg-transparent',
-                                                        selectedProductIndex === idx
-                                                            ? 'w-4 bg-emerald-400'
-                                                            : 'w-1.5 bg-white/30 hover:bg-white/60',
-                                                    )}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </Card>
+                    {/* Tiêu đề & Caption */}
+                    <div className="space-y-1.5">
+                        <h1 className="font-bold text-sm sm:text-base md:text-lg text-white leading-snug drop-shadow line-clamp-2">
+                            {currentVideo.title}
+                        </h1>
+                        {currentVideo.content && (
+                            <p className="text-xs sm:text-sm text-white/85 line-clamp-2 leading-relaxed drop-shadow">
+                                {currentVideo.content}
+                            </p>
+                        )}
+                        {currentVideo.hashtags && currentVideo.hashtags.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                {currentVideo.hashtags.map((tag) => (
+                                    <span key={tag} className="text-xs font-semibold text-emerald-400 drop-shadow">
+                                        #{tag}
+                                    </span>
+                                ))}
+                            </div>
                         )}
                     </div>
+
+                    {/* ═══════════════════════════════════════════════════════
+                     * SHOPPABLE FLOATING CARD (Sản phẩm gắn kèm)
+                     * ═══════════════════════════════════════════════════════ */}
+                    {currentProduct && (
+                        <Card className="rounded-2xl border border-white/20 bg-black/70 backdrop-blur-md p-3 shadow-2xl transition-all duration-300 max-w-md sm:max-w-lg">
+                            <div className="flex items-center gap-2.5">
+                                {/* Ảnh sản phẩm */}
+                                <div className="relative size-12 shrink-0 rounded-xl overflow-hidden bg-neutral-800 border border-white/10">
+                                    {currentProduct.thumbnailUrl ? (
+                                        <Image
+                                            src={currentProduct.thumbnailUrl}
+                                            alt={currentProduct.name}
+                                            fill
+                                            sizes="48px"
+                                            className="object-cover"
+                                            unoptimized
+                                        />
+                                    ) : (
+                                        <div className="flex size-full items-center justify-center bg-emerald-500/20 text-emerald-400">
+                                            <ShoppingBag className="size-5" />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Tên & Giá sản phẩm */}
+                                <div className="min-w-0 flex-1">
+                                    <p className="truncate text-xs font-bold text-white">{currentProduct.name}</p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <span className="font-extrabold text-sm text-emerald-400 font-mono">
+                                            {currentProduct.price.toLocaleString('vi-VN')} đ
+                                        </span>
+                                        {currentProduct.originalPrice && (
+                                            <span className="text-[11px] text-white/50 line-through">
+                                                {currentProduct.originalPrice.toLocaleString('vi-VN')} đ
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Nút Xem / Mua ngay */}
+                                <div className="flex items-center gap-1.5">
+                                    <Button
+                                        size="sm"
+                                        onClick={(e) =>
+                                            handleQuickAddToCart(
+                                                e,
+                                                currentProduct.id,
+                                                currentProduct.name,
+                                                currentProduct.slug,
+                                            )
+                                        }
+                                        disabled={isAddingToCart}
+                                        className="h-8 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black font-extrabold text-xs px-3 shadow-md transition-all active:scale-95"
+                                    >
+                                        <ShoppingBag className="size-3.5 mr-1" />
+                                        Mua ngay
+                                    </Button>
+
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        asChild
+                                        className="size-8 rounded-xl bg-white/10 text-white hover:bg-white/20"
+                                        title="Xem chi tiết sản phẩm"
+                                    >
+                                        <Link
+                                            href={ROUTE.PRODUCT_DETAIL(currentProduct.slug || currentProduct.id)}
+                                            target="_blank"
+                                        >
+                                            <ExternalLink className="size-3.5" />
+                                        </Link>
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Indicator nếu video có nhiều hơn 1 sản phẩm */}
+                            {taggedProducts.length > 1 && (
+                                <div className="flex items-center justify-between pt-2 mt-2 border-t border-white/10 text-[10px] text-white/60">
+                                    <span>
+                                        Sản phẩm {selectedProductIndex + 1}/{taggedProducts.length}
+                                    </span>
+                                    <div className="flex items-center gap-1">
+                                        {taggedProducts.map((_, idx) => (
+                                            <Button
+                                                key={idx}
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => setSelectedProductIndex(idx)}
+                                                className={cn(
+                                                    'h-1.5 p-0 rounded-full transition-all hover:bg-transparent',
+                                                    selectedProductIndex === idx
+                                                        ? 'w-4 bg-emerald-400'
+                                                        : 'w-1.5 bg-white/30 hover:bg-white/60',
+                                                )}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </Card>
+                    )}
                 </div>
 
                 {/* ═══════════════════════════════════════════════════════════════
                  * RIGHT FLOATING ACTIONS STACK: Tương tác kiểu TikTok / Reels
                  * ═══════════════════════════════════════════════════════════════ */}
-                <aside className="absolute right-3 sm:right-6 md:right-8 lg:right-12 bottom-20 sm:bottom-28 z-30 flex flex-col items-center gap-4 pointer-events-auto">
+                <aside
+                    className="absolute right-3 sm:right-6 md:right-8 lg:right-12 bottom-20 sm:bottom-28 z-30 flex flex-col items-center gap-4 pointer-events-auto transition-all duration-300"
+                    style={actionsStyle}
+                >
                     {/* Like button */}
                     <div className="flex flex-col items-center gap-1">
                         <Button

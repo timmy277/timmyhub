@@ -31,6 +31,13 @@ export interface QualityLevel {
     label: string
 }
 
+export interface VideoMeasureRect {
+    left: number
+    top: number
+    width: number
+    height: number
+}
+
 export interface HlsVideoPlayerProps {
     src: string
     poster?: string | null
@@ -41,6 +48,7 @@ export interface HlsVideoPlayerProps {
     className?: string
     onEnded?: () => void
     onClick?: () => void
+    onMeasure?: (rect: VideoMeasureRect) => void
     showCustomControls?: boolean
 }
 
@@ -62,6 +70,7 @@ export function HlsVideoPlayer({
     className,
     onEnded,
     onClick,
+    onMeasure,
     showCustomControls = true,
 }: HlsVideoPlayerProps) {
     // 4.1. Props & State
@@ -89,6 +98,33 @@ export function HlsVideoPlayer({
     }, [selectedQuality])
 
     // 4.3. Custom Hooks / Helpers
+    const measure = useCallback(() => {
+        const video = videoRef.current
+        const container = containerRef.current
+        if (!video || !container || !onMeasure) return
+        const cW = container.clientWidth
+        const cH = container.clientHeight
+        if (!cW || !cH) return
+        const natW = video.videoWidth || 9
+        const natH = video.videoHeight || 16
+        const scale = Math.min(cW / natW, cH / natH)
+        const renderedW = natW * scale
+        const renderedH = natH * scale
+        onMeasure({
+            left: (cW - renderedW) / 2,
+            top: (cH - renderedH) / 2,
+            width: renderedW,
+            height: renderedH,
+        })
+    }, [onMeasure])
+
+    useEffect(() => {
+        if (!onMeasure) return
+        measure()
+        window.addEventListener('resize', measure)
+        return () => window.removeEventListener('resize', measure)
+    }, [measure, onMeasure])
+
     const formatTime = (seconds: number) => {
         if (!seconds || Number.isNaN(seconds)) return '0:00'
         const mins = Math.floor(seconds / 60)
@@ -330,6 +366,8 @@ export function HlsVideoPlayer({
                 muted={isMuted}
                 playsInline={playsInline}
                 preload="metadata"
+                onLoadedMetadata={() => measure()}
+                onLoadedData={() => measure()}
                 onTimeUpdate={() => {
                     const video = videoRef.current
                     if (video) {
