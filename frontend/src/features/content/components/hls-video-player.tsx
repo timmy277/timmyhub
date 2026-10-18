@@ -42,6 +42,7 @@ export interface HlsVideoPlayerProps {
     src: string
     poster?: string | null
     autoPlay?: boolean
+    isActive?: boolean
     loop?: boolean
     muted?: boolean
     playsInline?: boolean
@@ -64,6 +65,7 @@ export function HlsVideoPlayer({
     src,
     poster,
     autoPlay = false,
+    isActive = true,
     loop = true,
     muted = true,
     playsInline = true,
@@ -74,7 +76,7 @@ export function HlsVideoPlayer({
     showCustomControls = true,
 }: HlsVideoPlayerProps) {
     // 4.1. Props & State
-    const [isPlaying, setIsPlaying] = useState(autoPlay)
+    const [isPlaying, setIsPlaying] = useState(autoPlay && isActive)
     const [isMuted, setIsMuted] = useState(muted)
     const [currentTime, setCurrentTime] = useState(0)
     const [duration, setDuration] = useState(0)
@@ -196,7 +198,7 @@ export function HlsVideoPlayer({
                 mappedLevels.sort((a, b) => b.height - a.height)
                 setQualities(mappedLevels)
 
-                if (autoPlay) {
+                if (autoPlay && isActive) {
                     const playPromise = video.play()
                     if (playPromise !== undefined) {
                         playPromise.catch(() => setIsPlaying(false))
@@ -231,7 +233,7 @@ export function HlsVideoPlayer({
         } else if (isHlsStream && video.canPlayType('application/vnd.apple.mpegurl')) {
             // Native HLS fallback (Safari)
             video.src = src
-            if (autoPlay) {
+            if (autoPlay && isActive) {
                 const playPromise = video.play()
                 if (playPromise !== undefined) {
                     playPromise.catch(() => setIsPlaying(false))
@@ -243,7 +245,7 @@ export function HlsVideoPlayer({
             if (video.src !== cleanSrc) {
                 video.src = cleanSrc
             }
-            if (autoPlay) {
+            if (autoPlay && isActive) {
                 const playPromise = video.play()
                 if (playPromise !== undefined) {
                     playPromise.catch(() => setIsPlaying(false))
@@ -257,7 +259,35 @@ export function HlsVideoPlayer({
                 hlsRef.current = null
             }
         }
-    }, [src, autoPlay])
+    }, [src, autoPlay, isActive])
+
+    // Đồng bộ trạng thái active từ parent (Feed item)
+    useEffect(() => {
+        const video = videoRef.current
+        if (!video) return
+
+        if (isActive) {
+            const playPromise = video.play()
+            if (playPromise !== undefined) {
+                playPromise.catch(() => {
+                    // Trình duyệt có thể chặn autoplay nếu chưa tương tác
+                })
+            }
+        } else {
+            video.pause()
+            if (video.currentTime > 0) {
+                video.currentTime = 0
+            }
+        }
+    }, [isActive])
+
+    // Đồng bộ âm thanh (muted) từ parent
+    useEffect(() => {
+        const video = videoRef.current
+        if (!video) return
+        video.muted = muted
+        setIsMuted(muted)
+    }, [muted])
 
     // Cập nhật mức phân giải HLS khi người dùng chọn chất lượng khác mà không cần khởi tạo lại Hls instance
     useEffect(() => {
