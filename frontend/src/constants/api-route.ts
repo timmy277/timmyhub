@@ -152,8 +152,10 @@ export const API_ROUTE = {
     },
     CONTENT: {
         FEED: 'v1/feed/videos',
+        VIDEO_DETAIL: (id: string) => `v1/feed/videos/${encodeURIComponent(id)}`,
         VIEW: (id: string) => `v1/feed/videos/${encodeURIComponent(id)}/view`,
         LIKE: (id: string) => `v1/feed/videos/${encodeURIComponent(id)}/like`,
+        COMMENTS: (id: string) => `v1/feed/videos/${encodeURIComponent(id)}/comments`,
         SELLER_VIDEOS: 'v1/seller/posts/videos',
         SELLER_VIDEO_DETAIL: (id: string) => `v1/seller/posts/videos/${encodeURIComponent(id)}`,
     },

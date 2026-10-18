@@ -193,7 +193,11 @@ export function SellerVideoTable({ videos, onSelectDetail, onDeleteVideo, isDele
                                                     />
                                                 ) : (
                                                     <video
-                                                        src={video.videoUrl}
+                                                        src={
+                                                            video.videoUrl.includes('#t=')
+                                                                ? video.videoUrl
+                                                                : `${video.videoUrl}#t=0.001`
+                                                        }
                                                         preload="metadata"
                                                         muted
                                                         playsInline

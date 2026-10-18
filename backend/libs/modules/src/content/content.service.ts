@@ -358,6 +358,214 @@ export class ContentService {
     }
 
     /**
+     * Lấy chi tiết một bài đăng video theo ID
+     */
+    async getVideoById(postId: string, currentUserId?: string): Promise<VideoPostDto> {
+        const post = await this.contentRepo.findPostById(postId)
+        if (!post) {
+            throw new NotFoundException('Không tìm thấy bài đăng video')
+        }
+
+        const productIds = post.productTags.map((t) => t.productId).filter(Boolean)
+        const [products, seller] = await Promise.all([
+            this.contentRepo.findProductsByIds(productIds),
+            this.contentRepo.findSellerProfileByUserId(post.sellerId).then(async (s) => {
+                if (s) return s
+                return this.prisma.sellerProfile.findUnique({
+                    where: { id: post.sellerId },
+                    select: {
+                        id: true,
+                        userId: true,
+                        shopName: true,
+                        shopSlug: true,
+                        shopLogo: true,
+                        isVerified: true,
+                    },
+                })
+            }),
+        ])
+
+        const productMap = new Map(products.map((p) => [p.id, p]))
+        const taggedProducts: PostProductDto[] = []
+        for (const pt of post.productTags) {
+            const prod = productMap.get(pt.productId)
+            if (prod) {
+                taggedProducts.push({
+                    id: pt.id,
+                    productId: prod.id,
+                    variantId: pt.variantId,
+                    position: pt.position,
+                    product: {
+                        id: prod.id,
+                        name: prod.name,
+                        slug: prod.slug,
+                        price: prod.minPrice ? Number(prod.minPrice) : 0,
+                        originalPrice: prod.maxPrice ? Number(prod.maxPrice) : null,
+                        thumbnailUrl: prod.images?.[0] ?? null,
+                        inStock: prod.status === 'APPROVED',
+                    },
+                })
+            }
+        }
+
+        let isLiked = false
+        if (currentUserId) {
+            isLiked = await this.contentRepo.hasUserLiked(post.id, currentUserId)
+        }
+
+        return {
+            id: post.id,
+            sellerId: post.sellerId,
+            shopName: seller?.shopName || 'Cửa hàng',
+            shopLogo: seller?.shopLogo ?? null,
+            shopSlug: seller?.shopSlug,
+            title: post.title,
+            content: post.content,
+            videoUrl: post.videoUrl ?? '',
+            thumbnailUrl: post.thumbnailUrl || (post.videoUrl ? `${post.videoUrl}#t=0.001` : null),
+            hashtags: post.hashtags,
+            status: post.status,
+            viewCount: post.viewCount,
+            likeCount: post.likeCount,
+            commentCount: post.commentCount,
+            isLiked,
+            productTags: taggedProducts,
+            createdAt: post.createdAt.toISOString(),
+            updatedAt: post.updatedAt.toISOString(),
+        }
+    }
+
+    /**
+     * Lấy danh sách bình luận của video (kèm thông tin user)
+     */
+    async getComments(postId: string) {
+        const comments = await this.prisma.postComment.findMany({
+            where: { postId, parentId: null },
+            orderBy: { createdAt: 'desc' },
+            take: 50,
+            include: {
+                replies: {
+                    orderBy: { createdAt: 'asc' },
+                    take: 10,
+                },
+            },
+        })
+
+        const userIds = Array.from(new Set(comments.flatMap((c) => [c.userId, ...c.replies.map((r) => r.userId)])))
+        const users = await this.prisma.user.findMany({
+            where: { id: { in: userIds } },
+            select: {
+                id: true,
+                email: true,
+                profile: { select: { firstName: true, lastName: true, displayName: true, avatar: true } },
+            },
+        })
+        const userMap = new Map(users.map((u) => [u.id, u]))
+
+        return comments.map((c) => {
+            const u = userMap.get(c.userId)
+            const fullName =
+                u?.profile?.displayName ||
+                `${u?.profile?.firstName || ''} ${u?.profile?.lastName || ''}`.trim() ||
+                u?.email?.split('@')[0] ||
+                'Người dùng'
+
+            return {
+                id: c.id,
+                postId: c.postId,
+                userId: c.userId,
+                content: c.content,
+                createdAt: c.createdAt.toISOString(),
+                user: {
+                    id: c.userId,
+                    name: fullName,
+                    avatar: u?.profile?.avatar || null,
+                },
+                replies: c.replies.map((r) => {
+                    const ru = userMap.get(r.userId)
+                    const rFullName =
+                        ru?.profile?.displayName ||
+                        `${ru?.profile?.firstName || ''} ${ru?.profile?.lastName || ''}`.trim() ||
+                        ru?.email?.split('@')[0] ||
+                        'Người dùng'
+
+                    return {
+                        id: r.id,
+                        postId: r.postId,
+                        userId: r.userId,
+                        content: r.content,
+                        createdAt: r.createdAt.toISOString(),
+                        user: {
+                            id: r.userId,
+                            name: rFullName,
+                            avatar: ru?.profile?.avatar || null,
+                        },
+                    }
+                }),
+            }
+        })
+    }
+
+    /**
+     * Thêm bình luận mới vào video
+     */
+    async addComment(postId: string, userId: string, content: string, parentId?: string) {
+        if (!content || !content.trim()) {
+            throw new BadRequestException('Nội dung bình luận không được để trống')
+        }
+
+        const post = await this.prisma.post.findUnique({ where: { id: postId } })
+        if (!post) {
+            throw new NotFoundException('Không tìm thấy bài đăng video')
+        }
+
+        const comment = await this.prisma.$transaction(async (tx) => {
+            const created = await tx.postComment.create({
+                data: {
+                    postId,
+                    userId,
+                    content: content.trim(),
+                    parentId: parentId || null,
+                },
+            })
+
+            await tx.post.update({
+                where: { id: postId },
+                data: { commentCount: { increment: 1 } },
+            })
+
+            return created
+        })
+
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                email: true,
+                profile: { select: { firstName: true, lastName: true, displayName: true, avatar: true } },
+            },
+        })
+        const fullName =
+            user?.profile?.displayName ||
+            `${user?.profile?.firstName || ''} ${user?.profile?.lastName || ''}`.trim() ||
+            user?.email?.split('@')[0] ||
+            'Người dùng'
+
+        return {
+            id: comment.id,
+            postId: comment.postId,
+            userId: comment.userId,
+            content: comment.content,
+            createdAt: comment.createdAt.toISOString(),
+            user: {
+                id: userId,
+                name: fullName,
+                avatar: user?.profile?.avatar || null,
+            },
+        }
+    }
+
+    /**
      * Tự động khởi tạo 4 video mẫu shoppable với HLS + MP4 adaptive chất lượng cao
      */
     private async seedInitialVideoPosts(): Promise<void> {

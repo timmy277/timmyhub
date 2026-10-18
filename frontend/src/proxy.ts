@@ -18,6 +18,7 @@ const PUBLIC_PATHS = [
     '/products',
     '/shops',
     '/videos',
+    '/posts',
     '/llms.txt',
     '/robots.txt',
     '/sitemap.xml',

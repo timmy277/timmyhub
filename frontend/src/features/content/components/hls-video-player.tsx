@@ -162,8 +162,9 @@ export function HlsVideoPlayer({
                 }
             })
         } else {
-            // Native video fallback (Safari hoặc file MP4)
-            video.src = src
+            // Native video fallback (Safari hoặc file MP4) — thêm #t=0.001 để trích xuất frame đầu tiên nếu không có poster (giống timmyhub gốc)
+            const fallbackSrc = !isHlsStream && !src.includes('#t=') ? `${src}#t=0.001` : src
+            video.src = fallbackSrc
             if (autoPlay) {
                 void video.play().catch(() => setIsPlaying(false))
             }

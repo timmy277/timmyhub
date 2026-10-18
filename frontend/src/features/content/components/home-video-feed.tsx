@@ -175,11 +175,11 @@ export function HomeVideoFeed() {
                                     />
                                 ) : (
                                     <video
-                                        src={post.videoUrl}
+                                        src={post.videoUrl.includes('#t=') ? post.videoUrl : `${post.videoUrl}#t=0.001`}
                                         preload="metadata"
                                         playsInline
                                         muted
-                                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 pointer-events-none"
                                     />
                                 )}
 

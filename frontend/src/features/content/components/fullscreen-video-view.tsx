@@ -32,6 +32,7 @@ import { cn } from '@/utils'
 
 import { useVideoFeed } from '../hooks/use-video-feed'
 import { HlsVideoPlayer } from './hls-video-player'
+import { VideoCommentDrawer } from './video-comment-drawer'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 2. CONSTANTS
@@ -55,6 +56,7 @@ export function FullscreenVideoView() {
     const [activeVideoId, setActiveVideoId] = useState<string | null>(null)
     const [isHeartAnimating, setIsHeartAnimating] = useState(false)
     const [isMuted, setIsMuted] = useState(true)
+    const [showComments, setShowComments] = useState(false)
     const [selectedProductIndex, setSelectedProductIndex] = useState(0)
 
     const lastScrollTimeRef = useRef(0)
@@ -489,9 +491,12 @@ export function FullscreenVideoView() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => toast.info('Bình luận video sẽ có trong bản cập nhật tới!')}
-                            className="size-12 rounded-full bg-black/50 text-white backdrop-blur-md border border-white/10 hover:bg-black/70 hover:scale-110 transition-all shadow-lg"
-                            title="Bình luận"
+                            onClick={() => setShowComments((prev) => !prev)}
+                            className={cn(
+                                'size-12 rounded-full bg-black/50 text-white backdrop-blur-md border border-white/10 hover:bg-black/70 hover:scale-110 active:scale-95 transition-all shadow-lg',
+                                showComments && 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40',
+                            )}
+                            title="Bình luận video"
                         >
                             <MessageCircle className="size-6" />
                         </Button>
@@ -546,6 +551,11 @@ export function FullscreenVideoView() {
                         </Button>
                     </div>
                 </aside>
+
+                {/* ═══════════════════════════════════════════════════════════
+                 * COMMENT DRAWER (Bình luận trượt vào từ cạnh phải giống timmyhub gốc)
+                 * ═══════════════════════════════════════════════════════════ */}
+                <VideoCommentDrawer video={currentVideo} isOpen={showComments} onClose={() => setShowComments(false)} />
             </main>
         </div>
     )

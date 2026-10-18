@@ -53,6 +53,37 @@ export class ContentFeedController {
     toggleLike(@Param('id') id: string, @CurrentUser() user: AuthUser): Promise<{ liked: boolean; likeCount: number }> {
         return this.contentService.toggleLike(id, user.id)
     }
+
+    /**
+     * Lấy chi tiết một video bài đăng
+     */
+    @Public()
+    @Get('videos/:id')
+    getVideoById(@Param('id') id: string, @CurrentUser() user?: AuthUser): Promise<VideoPostDto> {
+        return this.contentService.getVideoById(id, user?.id)
+    }
+
+    /**
+     * Lấy danh sách bình luận của video
+     */
+    @Public()
+    @Get('videos/:id/comments')
+    getComments(@Param('id') id: string) {
+        return this.contentService.getComments(id)
+    }
+
+    /**
+     * Thêm bình luận vào video (yêu cầu đăng nhập)
+     */
+    @AuthenticatedOnly()
+    @Post('videos/:id/comments')
+    addComment(
+        @Param('id') id: string,
+        @CurrentUser() user: AuthUser,
+        @Body() body: { content: string; parentId?: string },
+    ) {
+        return this.contentService.addComment(id, user.id, body.content, body.parentId)
+    }
 }
 
 /**

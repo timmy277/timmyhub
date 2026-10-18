@@ -23,7 +23,8 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
         pathname === ROUTE.HOME ||
         pathname.startsWith('/products') ||
         pathname.startsWith('/shops') ||
-        pathname.startsWith('/videos')
+        pathname.startsWith('/videos') ||
+        pathname.startsWith('/posts')
 
     // Cho phép khách và bot tìm kiếm xem catalog công khai (home, chi tiết sản phẩm, gian hàng) mà không bị ép đăng nhập
     if (!isPublicStorefront) {
