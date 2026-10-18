@@ -148,11 +148,16 @@ export default function SellerChatPage() {
         }
     }, [effectiveSelectedConvId])
 
+    const hasMarkedReadRef = useRef<string | null>(null)
+
     useEffect(() => {
-        if (activeConversation && activeConversation.unreadCount > 0) {
-            markConversationRead(activeConversation.id)
+        const convId = activeConversation?.id
+        const unread = activeConversation?.unreadCount ?? 0
+        if (convId && unread > 0 && hasMarkedReadRef.current !== convId) {
+            hasMarkedReadRef.current = convId
+            markConversationRead(convId)
         }
-    }, [activeConversation, markConversationRead])
+    }, [activeConversation?.id, activeConversation?.unreadCount, markConversationRead])
 
     // Lọc danh sách hội thoại
     const filteredConversations = useMemo(() => {

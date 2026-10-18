@@ -126,14 +126,17 @@ function SingleFloatingChatBox({
     }
 
     // 5. Effects
+    const hasMarkedReadRef = useRef<string | null>(null)
+
     // Tự động cuộn xuống cuối khi có tin nhắn mới hoặc đối tác đang soạn tin
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [messages, mediaPreviews, isPeerTyping])
 
-    // Đánh dấu đã đọc khi mở khung chat
+    // Đánh dấu đã đọc khi mở khung chat (chỉ gọi 1 lần duy nhất cho mỗi cuộc hội thoại)
     useEffect(() => {
-        if (conversation.unreadCount > 0) {
+        if (conversation.id && conversation.unreadCount > 0 && hasMarkedReadRef.current !== conversation.id) {
+            hasMarkedReadRef.current = conversation.id
             markConversationRead(conversation.id)
         }
     }, [conversation.id, conversation.unreadCount, markConversationRead])

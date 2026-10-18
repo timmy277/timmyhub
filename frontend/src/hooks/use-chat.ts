@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { io, type Socket } from 'socket.io-client'
@@ -344,33 +344,49 @@ export function useChat() {
         },
     })
 
-    const openChatWithUser = async (targetUserId: string, initialMessage?: string) => {
-        const conversations = conversationsQuery.data?.items ?? []
-        const existing = conversations.find(
-            (c) => c.peer.id === targetUserId || c.buyerId === targetUserId || c.sellerId === targetUserId,
-        )
-        if (existing) {
-            useChatStore.getState().openChat(existing)
-            return existing
-        }
+    const markConversationRead = useCallback(
+        (conversationId: string) => {
+            markReadMutation.mutate(conversationId)
+        },
+        [markReadMutation],
+    )
 
-        const newConv = await createConversationMutation.mutateAsync({
-            targetUserId,
-            ...(initialMessage ? { initialMessage } : {}),
-        })
-        useChatStore.getState().openChat(newConv)
-        return newConv
-    }
+    const openChatWithUser = useCallback(
+        async (targetUserId: string, initialMessage?: string) => {
+            const conversations = conversationsQuery.data?.items ?? []
+            const existing = conversations.find(
+                (c) => c.peer.id === targetUserId || c.buyerId === targetUserId || c.sellerId === targetUserId,
+            )
+            if (existing) {
+                useChatStore.getState().openChat(existing)
+                return existing
+            }
 
-    const isUserOnline = (targetUserId?: string | null) => {
-        if (!targetUserId) return false
-        return Boolean(onlineUsers[targetUserId]?.isOnline)
-    }
+            const newConv = await createConversationMutation.mutateAsync({
+                targetUserId,
+                ...(initialMessage ? { initialMessage } : {}),
+            })
+            useChatStore.getState().openChat(newConv)
+            return newConv
+        },
+        [conversationsQuery.data?.items, createConversationMutation],
+    )
 
-    const getUserLastSeen = (targetUserId?: string | null) => {
-        if (!targetUserId) return undefined
-        return onlineUsers[targetUserId]?.lastSeenAt
-    }
+    const isUserOnline = useCallback(
+        (targetUserId?: string | null) => {
+            if (!targetUserId) return false
+            return Boolean(onlineUsers[targetUserId]?.isOnline)
+        },
+        [onlineUsers],
+    )
+
+    const getUserLastSeen = useCallback(
+        (targetUserId?: string | null) => {
+            if (!targetUserId) return undefined
+            return onlineUsers[targetUserId]?.lastSeenAt
+        },
+        [onlineUsers],
+    )
 
     return {
         isAuthenticated,
@@ -378,7 +394,7 @@ export function useChat() {
         conversations: conversationsQuery.data?.items ?? [],
         totalUnreadCount: conversationsQuery.data?.totalUnreadCount ?? 0,
         isLoading: conversationsQuery.isLoading,
-        markConversationRead: markReadMutation.mutate,
+        markConversationRead,
         sendMessage: sendMessageMutation.mutateAsync,
         isSending: sendMessageMutation.isPending,
         openChatWithUser,

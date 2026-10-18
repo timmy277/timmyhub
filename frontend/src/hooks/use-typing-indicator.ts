@@ -63,6 +63,11 @@ export function useTypingIndicator(conversationId: string | null | undefined) {
         }, 2500)
     }, [conversationId, stopTyping, userId])
 
+    const stopTypingRef = useRef(stopTyping)
+    useEffect(() => {
+        stopTypingRef.current = stopTyping
+    })
+
     // ===== Effects =====
     useEffect(() => {
         if (!conversationId || !isAuthenticated || !userId) return
@@ -93,11 +98,11 @@ export function useTypingIndicator(conversationId: string | null | undefined) {
             socket.off(CHAT_REALTIME_EVENT.TYPING_CHANGED, handleTypingChanged)
             if (safetyTimeoutRef.current) {
                 clearTimeout(safetyTimeoutRef.current)
+                safetyTimeoutRef.current = null
             }
-            stopTyping()
-            setIsPeerTyping(false)
+            stopTypingRef.current()
         }
-    }, [conversationId, isAuthenticated, stopTyping, userId])
+    }, [conversationId, isAuthenticated, userId])
 
     return {
         isPeerTyping,
