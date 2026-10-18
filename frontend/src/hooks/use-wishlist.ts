@@ -13,52 +13,44 @@ import { API_ROUTE, QUERY_KEY, ROUTE } from '@/constants'
 import { apiClient } from '@/services'
 
 export function useWishlist() {
+    // ===== Hooks =====
     const t = useTranslations('productDetail')
     const tCommon = useTranslations('common')
     const queryClient = useQueryClient()
     const router = useRouter()
     const { data: session } = useSession()
-    const isAuthenticated = Boolean(session?.user?.id)
 
-    // ===== 1. Query danh sách Product IDs đã thích (nhẹ, dùng để hiển thị icon tim) =====
     const idsQuery = useQuery({
         queryKey: QUERY_KEY.WISHLIST.IDS,
         queryFn: async () => {
             const res = await apiClient.get<string[]>(API_ROUTE.WISHLIST.IDS)
             return res.data
         },
-        enabled: isAuthenticated,
+        enabled: Boolean(session?.user?.id),
         staleTime: 60_000,
     })
 
-    const wishlistIds = useMemo(() => new Set<string>(idsQuery.data ?? []), [idsQuery.data])
-
-    // ===== 2. Query danh sách chi tiết các sản phẩm trong Wishlist (dành cho Tab Wishlist) =====
     const itemsQuery = useQuery({
         queryKey: QUERY_KEY.WISHLIST.LIST,
         queryFn: async () => {
             const res = await apiClient.get<WishlistListResponseDto>(API_ROUTE.WISHLIST.LIST)
             return res.data
         },
-        enabled: isAuthenticated,
+        enabled: Boolean(session?.user?.id),
         staleTime: 30_000,
     })
 
-    // ===== 3. Mutation Toggle Wishlist (Thêm / Bỏ yêu thích) với Optimistic Update =====
     const toggleMutation = useMutation({
         mutationFn: async ({ productId }: { productId: string; productName?: string }) => {
             const res = await apiClient.post<ToggleWishlistResponseDto>(API_ROUTE.WISHLIST.TOGGLE(productId))
             return res.data
         },
         onMutate: async ({ productId }) => {
-            // Cancel outgoing queries
             await queryClient.cancelQueries({ queryKey: QUERY_KEY.WISHLIST.IDS })
 
             const previousIds = queryClient.getQueryData<string[]>(QUERY_KEY.WISHLIST.IDS) ?? []
             const isCurrentlyIn = previousIds.includes(productId)
-            const nextIds = isCurrentlyIn
-                ? previousIds.filter((id) => id !== productId)
-                : [...previousIds, productId]
+            const nextIds = isCurrentlyIn ? previousIds.filter((id) => id !== productId) : [...previousIds, productId]
 
             queryClient.setQueryData<string[]>(QUERY_KEY.WISHLIST.IDS, nextIds)
 
@@ -67,7 +59,7 @@ export function useWishlist() {
         onSuccess: (data, variables) => {
             void queryClient.invalidateQueries({ queryKey: QUERY_KEY.WISHLIST.ALL })
 
-            const name = variables.productName || 'Sản phẩm'
+            const name = variables.productName || t('products')
             if (data.inWishlist) {
                 toast.success(t('wishlistAdd', { name }))
             } else {
@@ -83,13 +75,11 @@ export function useWishlist() {
                 errAny?.response?.data?.details ||
                 errAny?.response?.data?.message ||
                 errAny?.message ||
-                tCommon('errorGeneric') ||
-                'Có lỗi xảy ra, vui lòng thử lại sau.'
+                tCommon('errorGeneric')
             toast.error(message)
         },
     })
 
-    // ===== 4. Mutation Remove from Wishlist =====
     const removeMutation = useMutation({
         mutationFn: async ({ productId }: { productId: string; productName?: string }) => {
             const res = await apiClient.delete<{ success: boolean }>(API_ROUTE.WISHLIST.REMOVE(productId))
@@ -118,7 +108,7 @@ export function useWishlist() {
         },
         onSuccess: (_data, variables) => {
             void queryClient.invalidateQueries({ queryKey: QUERY_KEY.WISHLIST.ALL })
-            const name = variables.productName || 'Sản phẩm'
+            const name = variables.productName || t('products')
             toast.info(t('wishlistRemove', { name }))
         },
         onError: (err: unknown, _variables, context) => {
@@ -133,15 +123,19 @@ export function useWishlist() {
                 errAny?.response?.data?.details ||
                 errAny?.response?.data?.message ||
                 errAny?.message ||
-                tCommon('errorGeneric') ||
-                'Có lỗi xảy ra, vui lòng thử lại sau.'
+                tCommon('errorGeneric')
             toast.error(message)
         },
     })
 
+    // ===== Derived =====
+    const isAuthenticated = Boolean(session?.user?.id)
+    const wishlistIds = useMemo(() => new Set<string>(idsQuery.data ?? []), [idsQuery.data])
+
+    // ===== Handlers =====
     const toggleWishlist = (productId: string, productName?: string) => {
         if (!isAuthenticated) {
-            toast.info(t('wishlistLoginRequired') || 'Vui lòng đăng nhập để lưu sản phẩm yêu thích.')
+            toast.info(t('wishlistLoginRequired'))
             router.push(ROUTE.LOGIN)
             return
         }

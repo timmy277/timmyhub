@@ -12,6 +12,9 @@ interface ChatStoreState {
     minimizedIds: string[]
     activeConversationId: string | null
 
+    // Realtime Online Presence: userId -> { isOnline: boolean; lastSeenAt?: string }
+    onlineUsers: Record<string, { isOnline: boolean; lastSeenAt?: string }>
+
     // Actions
     openChat: (conversation: ConversationDto) => void
     closeChat: (conversationId: string) => void
@@ -21,6 +24,10 @@ interface ChatStoreState {
     closeAllChats: () => void
     setActiveConversationId: (id: string | null) => void
     isChatOpenAndActive: (conversationId: string) => boolean
+    setUserPresence: (userId: string, isOnline: boolean, lastSeenAt?: string) => void
+    setPresenceState: (state: Record<string, { isOnline: boolean; lastSeenAt?: string }>) => void
+    isUserOnline: (userId?: string | null) => boolean
+    getUserLastSeen: (userId?: string | null) => string | undefined
 }
 
 export const useChatStore = create<ChatStoreState>((set, get) => ({
@@ -39,10 +46,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
 
             if (exists) {
                 // Đã mở: chỉ cần bỏ minimize và đưa lên đầu
-                const reordered = [
-                    conversation,
-                    ...state.openConversations.filter((c) => c.id !== conversation.id),
-                ]
+                const reordered = [conversation, ...state.openConversations.filter((c) => c.id !== conversation.id)]
                 return {
                     openConversations: reordered,
                     minimizedIds: newMinimized,
@@ -65,8 +69,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         set((state) => ({
             openConversations: state.openConversations.filter((c) => c.id !== conversationId),
             minimizedIds: state.minimizedIds.filter((id) => id !== conversationId),
-            activeConversationId:
-                state.activeConversationId === conversationId ? null : state.activeConversationId,
+            activeConversationId: state.activeConversationId === conversationId ? null : state.activeConversationId,
         })),
 
     minimizeChat: (conversationId) =>
@@ -74,8 +77,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
             minimizedIds: state.minimizedIds.includes(conversationId)
                 ? state.minimizedIds
                 : [...state.minimizedIds, conversationId],
-            activeConversationId:
-                state.activeConversationId === conversationId ? null : state.activeConversationId,
+            activeConversationId: state.activeConversationId === conversationId ? null : state.activeConversationId,
         })),
 
     restoreChat: (conversationId) =>
@@ -96,6 +98,8 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
             }
         }),
 
+    onlineUsers: {},
+
     closeAllChats: () => set({ openConversations: [], minimizedIds: [], activeConversationId: null }),
 
     setActiveConversationId: (id) => set({ activeConversationId: id }),
@@ -110,5 +114,31 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
             (c) => c.id === conversationId && !state.minimizedIds.includes(conversationId),
         )
         return isFloatingOpen
+    },
+
+    setUserPresence: (userId, isOnline, lastSeenAt) =>
+        set((state) => ({
+            onlineUsers: {
+                ...state.onlineUsers,
+                [userId]: { isOnline, lastSeenAt },
+            },
+        })),
+
+    setPresenceState: (newState) =>
+        set((state) => ({
+            onlineUsers: {
+                ...state.onlineUsers,
+                ...newState,
+            },
+        })),
+
+    isUserOnline: (userId) => {
+        if (!userId) return false
+        return Boolean(get().onlineUsers[userId]?.isOnline)
+    },
+
+    getUserLastSeen: (userId) => {
+        if (!userId) return undefined
+        return get().onlineUsers[userId]?.lastSeenAt
     },
 }))

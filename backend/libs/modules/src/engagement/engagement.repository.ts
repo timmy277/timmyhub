@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+
 import { PrismaService } from '@timmyhub/prisma'
 import type { Prisma } from '@timmyhub/prisma'
 import type { CreateReviewInput, ProductRatingSummary } from '@timmyhub/contracts'
@@ -225,6 +226,53 @@ export class EngagementRepository {
         }))
     }
 
+    async findWishlistByUserId(userId: string) {
+        return this.prisma.wishlistItem.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+        })
+    }
+
+    async findWishlistProductIds(userId: string): Promise<string[]> {
+        const items = await this.prisma.wishlistItem.findMany({
+            where: { userId },
+            select: { productId: true },
+        })
+        return items.map((i) => i.productId)
+    }
+
+    async findWishlistItem(userId: string, productId: string) {
+        return this.prisma.wishlistItem.findUnique({
+            where: {
+                userId_productId: {
+                    userId,
+                    productId,
+                },
+            },
+        })
+    }
+
+    async findProductsByIds(productIds: string[]) {
+        if (!productIds.length) return []
+        return this.prisma.product.findMany({
+            where: {
+                OR: [{ id: { in: productIds } }, { slug: { in: productIds } }],
+            },
+            select: {
+                id: true,
+                name: true,
+                slug: true,
+                description: true,
+                images: true,
+                minPrice: true,
+                maxPrice: true,
+                ratingAvg: true,
+                ratingCount: true,
+                totalStock: true,
+            },
+        })
+    }
+
     // ===== Commands =====
 
     async createReview(userId: string, input: CreateReviewInput, _variantLabel?: string) {
@@ -318,34 +366,6 @@ export class EngagementRepository {
         })
     }
 
-    // ===== Wishlist =====
-
-    async findWishlistByUserId(userId: string) {
-        return this.prisma.wishlistItem.findMany({
-            where: { userId },
-            orderBy: { createdAt: 'desc' },
-        })
-    }
-
-    async findWishlistProductIds(userId: string): Promise<string[]> {
-        const items = await this.prisma.wishlistItem.findMany({
-            where: { userId },
-            select: { productId: true },
-        })
-        return items.map((i) => i.productId)
-    }
-
-    async findWishlistItem(userId: string, productId: string) {
-        return this.prisma.wishlistItem.findUnique({
-            where: {
-                userId_productId: {
-                    userId,
-                    productId,
-                },
-            },
-        })
-    }
-
     async addWishlistItem(userId: string, productId: string) {
         return this.prisma.wishlistItem.create({
             data: {
@@ -360,18 +380,6 @@ export class EngagementRepository {
             where: {
                 userId,
                 productId,
-            },
-        })
-    }
-
-    async findProductsByIds(productIds: string[]) {
-        if (!productIds.length) return []
-        return this.prisma.product.findMany({
-            where: {
-                OR: [
-                    { id: { in: productIds } },
-                    { slug: { in: productIds } },
-                ],
             },
         })
     }

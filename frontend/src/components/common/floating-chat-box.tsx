@@ -18,22 +18,11 @@ import {
 import { useLocale, useTranslations } from 'next-intl'
 import type { ConversationDto } from '@timmyhub/contracts'
 
-import {
-    Avatar,
-    AvatarFallback,
-    AvatarImage,
-    Button,
-    Input,
-    ScrollArea,
-} from '@/components'
+import { Avatar, AvatarFallback, AvatarImage, Button, Input, ScrollArea, TypingIndicator } from '@/components'
 import { CHAT_CONFIG, ROUTE } from '@/constants'
-import { useChat, useConversationMessages, useIsSeller, useUploadMedia } from '@/hooks'
+import { useChat, useConversationMessages, useIsSeller, useTypingIndicator, useUploadMedia } from '@/hooks'
 import { useChatStore } from '@/stores'
-import {
-    formatCurrencyVND,
-    formatMessengerTimestamp,
-    shouldShowMessageDivider,
-} from '@/utils'
+import { formatCurrencyVND, formatMessengerTimestamp, formatRelativeTime, shouldShowMessageDivider } from '@/utils'
 
 // Khung chat nổi đơn lẻ (Floating Chat Box)
 function SingleFloatingChatBox({
@@ -45,31 +34,27 @@ function SingleFloatingChatBox({
     onClose: () => void
     onMinimize: () => void
 }) {
-    const t = useTranslations('chat')
-    const locale = useLocale() as 'vi' | 'en'
-    const { isSeller } = useIsSeller()
-    const { userId, sendMessage, isSending, markConversationRead } = useChat()
-    const { messages, isLoading } = useConversationMessages(conversation.id)
-    const { mutateAsync: uploadMedia, isPending: isUploading } = useUploadMedia()
-
+    // 1. State
     const [inputText, setInputText] = useState('')
     const [selectedFiles, setSelectedFiles] = useState<File[]>([])
     const [mediaPreviews, setMediaPreviews] = useState<Array<{ url: string; type: 'image' | 'video' }>>([])
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    // Tự động cuộn xuống cuối khi có tin nhắn mới
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }, [messages, mediaPreviews])
+    // 2. Hooks
+    const t = useTranslations('chat')
+    const locale = useLocale() as 'vi' | 'en'
+    const { isSeller } = useIsSeller()
+    const { userId, sendMessage, isSending, markConversationRead, isUserOnline, getUserLastSeen } = useChat()
+    const { messages, isLoading } = useConversationMessages(conversation.id)
+    const { mutateAsync: uploadMedia, isPending: isUploading } = useUploadMedia()
+    const { isPeerTyping, startTyping, stopTyping } = useTypingIndicator(conversation.id)
 
-    // Đánh dấu đã đọc khi mở khung chat
-    useEffect(() => {
-        if (conversation.unreadCount > 0) {
-            markConversationRead(conversation.id)
-        }
-    }, [conversation.id, conversation.unreadCount, markConversationRead])
+    // 3. Derived
+    const isPeerOnline = isUserOnline(conversation.peer.id) || Boolean(conversation.peer.isOnline)
+    const peerLastSeen = getUserLastSeen(conversation.peer.id)
 
+    // 4. Handlers
     // Xử lý chọn ảnh/video đính kèm
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files ?? [])
@@ -90,6 +75,7 @@ function SingleFloatingChatBox({
 
     // Gửi tin nhắn
     const handleSend = async () => {
+        stopTyping()
         const text = inputText.trim()
         if (!text && selectedFiles.length === 0) return
 
@@ -139,6 +125,19 @@ function SingleFloatingChatBox({
         }
     }
 
+    // 5. Effects
+    // Tự động cuộn xuống cuối khi có tin nhắn mới hoặc đối tác đang soạn tin
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, [messages, mediaPreviews, isPeerTyping])
+
+    // Đánh dấu đã đọc khi mở khung chat
+    useEffect(() => {
+        if (conversation.unreadCount > 0) {
+            markConversationRead(conversation.id)
+        }
+    }, [conversation.id, conversation.unreadCount, markConversationRead])
+
     return (
         <div className="w-[340px] sm:w-[360px] h-[480px] bg-background border border-border/80 shadow-2xl rounded-t-2xl flex flex-col pointer-events-auto overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
             {/* Header */}
@@ -158,7 +157,12 @@ function SingleFloatingChatBox({
                                 )}
                             </AvatarFallback>
                         </Avatar>
-                        <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
+                        <span
+                            className={`absolute bottom-0 right-0 size-2.5 rounded-full ring-2 ring-background transition-colors ${
+                                isPeerOnline ? 'bg-emerald-500' : 'bg-muted-foreground/30'
+                            }`}
+                            title={isPeerOnline ? t('online') : t('offline')}
+                        />
                     </div>
 
                     <div className="min-w-0">
@@ -173,8 +177,18 @@ function SingleFloatingChatBox({
                             )}
                         </div>
                         <p className="text-[10px] text-muted-foreground flex items-center gap-1 truncate">
-                            <span className="size-1.5 rounded-full bg-emerald-500 inline-block shrink-0" />
-                            <span>{t('active')}</span>
+                            <span
+                                className={`size-1.5 rounded-full inline-block shrink-0 ${
+                                    isPeerOnline ? 'bg-emerald-500' : 'bg-muted-foreground/40'
+                                }`}
+                            />
+                            <span>
+                                {isPeerOnline
+                                    ? t('active')
+                                    : peerLastSeen
+                                      ? t('activeAgo', { time: formatRelativeTime(peerLastSeen, locale) })
+                                      : t('offline')}
+                            </span>
                         </p>
                     </div>
                 </div>
@@ -230,9 +244,7 @@ function SingleFloatingChatBox({
                         <p className="text-xs font-semibold text-foreground">
                             {t('startChatWith', { name: conversation.peer.name })}
                         </p>
-                        <p className="text-[11px] text-muted-foreground max-w-[220px]">
-                            {t('startChatSubtitle')}
-                        </p>
+                        <p className="text-[11px] text-muted-foreground max-w-[220px]">{t('startChatSubtitle')}</p>
                     </div>
                 ) : (
                     <div className="space-y-1 pb-1">
@@ -320,10 +332,13 @@ function SingleFloatingChatBox({
                                                     </div>
                                                     <div className="min-w-0">
                                                         <p className="text-[11px] font-semibold text-foreground">
-                                                            {t('orderNumber', { number: msg.attachedOrder.orderNumber })}
+                                                            {t('orderNumber', {
+                                                                number: msg.attachedOrder.orderNumber,
+                                                            })}
                                                         </p>
                                                         <p className="text-[10px] text-muted-foreground">
-                                                            {formatCurrencyVND(msg.attachedOrder.totalAmount)} • {msg.attachedOrder.status}
+                                                            {formatCurrencyVND(msg.attachedOrder.totalAmount)} •{' '}
+                                                            {msg.attachedOrder.status}
                                                         </p>
                                                     </div>
                                                 </Link>
@@ -386,7 +401,10 @@ function SingleFloatingChatBox({
                                             {msg.videoUrls?.length > 0 && (
                                                 <div className="mt-1 space-y-1 w-full">
                                                     {msg.videoUrls.map((url, i) => (
-                                                        <div key={i} className="rounded-xl overflow-hidden border border-border/50 bg-black/60 shadow-xs">
+                                                        <div
+                                                            key={i}
+                                                            className="rounded-xl overflow-hidden border border-border/50 bg-black/60 shadow-xs"
+                                                        >
                                                             <video
                                                                 src={url}
                                                                 controls
@@ -398,18 +416,47 @@ function SingleFloatingChatBox({
                                                 </div>
                                             )}
 
-                                            {/* Trạng thái gửi cho tin nhắn cuối cùng của Me */}
+                                            {/* Trạng thái gửi / đã xem cho tin nhắn cuối cùng của Me */}
                                             {isMe && index === messages.length - 1 && (
-                                                <span className="text-[9px] text-muted-foreground/75 flex items-center gap-1 justify-end mt-0.5 pr-0.5 select-none">
-                                                    <CheckCheckIcon className="size-2.5 text-primary" />
-                                                    <span>{t('delivered')}</span>
-                                                </span>
+                                                <div className="flex items-center gap-1 justify-end mt-0.5 pr-0.5 select-none">
+                                                    {msg.isRead ? (
+                                                        <span className="text-[9px] text-muted-foreground/75 flex items-center gap-1">
+                                                            <span>{t('seen')}</span>
+                                                            {conversation.peer.avatar ? (
+                                                                <Avatar className="size-3 border border-background">
+                                                                    <AvatarImage
+                                                                        src={conversation.peer.avatar}
+                                                                        alt={conversation.peer.name}
+                                                                    />
+                                                                    <AvatarFallback className="text-[6px]">
+                                                                        {conversation.peer.name.slice(0, 1)}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                            ) : (
+                                                                <CheckCheckIcon className="size-2.5 text-primary" />
+                                                            )}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[9px] text-muted-foreground/75 flex items-center gap-1">
+                                                            <CheckCheckIcon className="size-2.5 text-primary" />
+                                                            <span>{t('delivered')}</span>
+                                                        </span>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
                                     </div>
                                 </div>
                             )
                         })}
+                        {isPeerTyping && (
+                            <div className="pt-1">
+                                <TypingIndicator
+                                    peerName={conversation.peer.name}
+                                    peerAvatar={conversation.peer.avatar}
+                                />
+                            </div>
+                        )}
                         <div ref={messagesEndRef} />
                     </div>
                 )}
@@ -419,17 +466,14 @@ function SingleFloatingChatBox({
             {mediaPreviews.length > 0 && (
                 <div className="px-3 py-2 border-t border-border/50 bg-muted/40 flex items-center gap-2 overflow-x-auto">
                     {mediaPreviews.map((preview, i) => (
-                        <div key={i} className="relative size-12 rounded-lg border border-border/80 overflow-hidden shrink-0 group">
+                        <div
+                            key={i}
+                            className="relative size-12 rounded-lg border border-border/80 overflow-hidden shrink-0 group"
+                        >
                             {preview.type === 'video' ? (
                                 <video src={preview.url} className="size-full object-cover" />
                             ) : (
-                                <Image
-                                    src={preview.url}
-                                    alt="Staged"
-                                    fill
-                                    sizes="48px"
-                                    className="object-cover"
-                                />
+                                <Image src={preview.url} alt="Staged" fill sizes="48px" className="object-cover" />
                             )}
                             <Button
                                 type="button"
@@ -470,7 +514,11 @@ function SingleFloatingChatBox({
                 <Input
                     placeholder={t('inputPlaceholderShort')}
                     value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
+                    onChange={(e) => {
+                        setInputText(e.target.value)
+                        startTyping()
+                    }}
+                    onBlur={() => stopTyping()}
                     onKeyDown={handleKeyDown}
                     disabled={isSending || isUploading}
                     className="h-8 text-xs rounded-xl bg-muted/40 border-border/50 focus-visible:ring-1"
@@ -498,8 +546,11 @@ function SingleFloatingChatBox({
 export function FloatingChatDock() {
     const t = useTranslations('chat')
     const pathname = usePathname()
-    const { conversations, markConversationRead, isAuthenticated } = useChat()
-    const { openConversations, minimizedIds, closeChat, toggleMinimize } = useChatStore()
+    const { conversations, markConversationRead, isAuthenticated, isUserOnline } = useChat()
+    const openConversations = useChatStore((s) => s.openConversations)
+    const minimizedIds = useChatStore((s) => s.minimizedIds)
+    const toggleMinimize = useChatStore((s) => s.toggleMinimize)
+    const closeChat = useChatStore((s) => s.closeChat)
 
     // Ẩn hoàn toàn nếu chưa đăng nhập, hoặc không có hội thoại mở, hoặc đang ở trang đăng nhập / đăng ký
     if (
@@ -570,63 +621,71 @@ export function FloatingChatDock() {
                     )}
 
                     {/* Danh sách các Chat Head avatar (tối đa 5 item) xếp theo hàng dọc */}
-                    {visibleHeads.map((liveConv) => (
-                        <div
-                            key={liveConv.id}
-                            className="relative group cursor-pointer select-none transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-75 duration-200"
-                            onClick={() => {
-                                toggleMinimize(liveConv.id)
-                                if (liveConv.unreadCount > 0) {
-                                    markConversationRead(liveConv.id)
-                                }
-                            }}
-                            title={liveConv.peer.name}
-                        >
-                            {/* Avatar Bubble */}
-                            <div className="size-12 sm:size-13 rounded-full border-2 border-primary/20 bg-card shadow-2xl p-0.5 ring-2 ring-background hover:ring-primary/50 transition-all flex items-center justify-center">
-                                <Avatar className="size-full rounded-full">
-                                    <AvatarImage src={liveConv.peer.avatar ?? undefined} alt={liveConv.peer.name} />
-                                    <AvatarFallback className="text-xs bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-bold">
-                                        {liveConv.peer.isSeller ? (
-                                            <StoreIcon className="size-5" />
-                                        ) : (
-                                            liveConv.peer.name.slice(0, 2).toUpperCase()
-                                        )}
-                                    </AvatarFallback>
-                                </Avatar>
-                            </div>
-
-                            {/* Online Indicator */}
-                            <span className="absolute bottom-0 right-0 size-3.5 rounded-full bg-emerald-500 ring-2 ring-background shadow-xs" />
-
-                            {/* Unread Count Badge (ẩn khi hover để ưu tiên nút X đóng chat) */}
-                            {liveConv.unreadCount > 0 && (
-                                <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] text-white font-extrabold shadow-md ring-2 ring-background group-hover:opacity-0 transition-opacity">
-                                    {liveConv.unreadCount > 99 ? '99+' : liveConv.unreadCount}
-                                </span>
-                            )}
-
-                            {/* Hover close 'X' button ở góc trên bên phải bằng shadcn Button */}
-                            <Button
-                                type="button"
-                                size="icon"
-                                variant="secondary"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    closeChat(liveConv.id)
+                    {visibleHeads.map((liveConv) => {
+                        const isHeadOnline = isUserOnline(liveConv.peer.id) || Boolean(liveConv.peer.isOnline)
+                        return (
+                            <div
+                                key={liveConv.id}
+                                className="relative group cursor-pointer select-none transition-transform hover:scale-105 active:scale-95 animate-in zoom-in-75 duration-200"
+                                onClick={() => {
+                                    toggleMinimize(liveConv.id)
+                                    if (liveConv.unreadCount > 0) {
+                                        markConversationRead(liveConv.id)
+                                    }
                                 }}
-                                className="absolute -top-1 -right-1 size-5 rounded-full bg-muted-foreground/90 hover:bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md ring-2 ring-background z-10 hover:scale-110 active:scale-95 p-0"
-                                title={t('closeChatHead')}
+                                title={liveConv.peer.name}
                             >
-                                <XIcon className="size-3" />
-                            </Button>
+                                {/* Avatar Bubble */}
+                                <div className="size-12 sm:size-13 rounded-full border-2 border-primary/20 bg-card shadow-2xl p-0.5 ring-2 ring-background hover:ring-primary/50 transition-all flex items-center justify-center">
+                                    <Avatar className="size-full rounded-full">
+                                        <AvatarImage src={liveConv.peer.avatar ?? undefined} alt={liveConv.peer.name} />
+                                        <AvatarFallback className="text-xs bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-bold">
+                                            {liveConv.peer.isSeller ? (
+                                                <StoreIcon className="size-5" />
+                                            ) : (
+                                                liveConv.peer.name.slice(0, 2).toUpperCase()
+                                            )}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                </div>
 
-                            {/* Hover tooltip with peer name */}
-                            <div className="absolute right-full mr-2.5 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-popover text-popover-foreground text-xs font-semibold shadow-lg border border-border/80 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none hidden sm:block">
-                                {liveConv.peer.name}
+                                {/* Online Indicator */}
+                                <span
+                                    className={`absolute bottom-0 right-0 size-3.5 rounded-full ring-2 ring-background shadow-xs transition-colors ${
+                                        isHeadOnline ? 'bg-emerald-500' : 'bg-muted-foreground/30'
+                                    }`}
+                                    title={isHeadOnline ? t('online') : t('offline')}
+                                />
+
+                                {/* Unread Count Badge (ẩn khi hover để ưu tiên nút X đóng chat) */}
+                                {liveConv.unreadCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] text-white font-extrabold shadow-md ring-2 ring-background group-hover:opacity-0 transition-opacity">
+                                        {liveConv.unreadCount > 99 ? '99+' : liveConv.unreadCount}
+                                    </span>
+                                )}
+
+                                {/* Hover close 'X' button ở góc trên bên phải bằng shadcn Button */}
+                                <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="secondary"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        closeChat(liveConv.id)
+                                    }}
+                                    className="absolute -top-1 -right-1 size-5 rounded-full bg-muted-foreground/90 hover:bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md ring-2 ring-background z-10 hover:scale-110 active:scale-95 p-0"
+                                    title={t('closeChatHead')}
+                                >
+                                    <XIcon className="size-3" />
+                                </Button>
+
+                                {/* Hover tooltip with peer name */}
+                                <div className="absolute right-full mr-2.5 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-popover text-popover-foreground text-xs font-semibold shadow-lg border border-border/80 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none hidden sm:block">
+                                    {liveConv.peer.name}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        )
+                    })}
                 </div>
             )}
         </div>

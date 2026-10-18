@@ -135,6 +135,50 @@ export class EngagementService {
         return this.repository.findPendingReviews(userId)
     }
 
+    async getWishlist(userId: string): Promise<WishlistListResponseDto> {
+        const wishlistItems = await this.repository.findWishlistByUserId(userId)
+        if (!wishlistItems.length) {
+            return { items: [], total: 0 }
+        }
+
+        const productIds = wishlistItems.map((item) => item.productId)
+        const products = await this.repository.findProductsByIds(productIds)
+        const productMap = new Map(products.map((p) => [p.id, p]))
+
+        const items: WishlistItemDto[] = []
+        for (const item of wishlistItems) {
+            const product = productMap.get(item.productId)
+            if (!product) continue
+
+            const minPrice = product.minPrice ? Number(product.minPrice) : 0
+            const maxPrice = product.maxPrice ? Number(product.maxPrice) : minPrice
+
+            items.push({
+                id: item.id,
+                productId: product.id,
+                name: product.name,
+                slug: product.slug,
+                description: product.description,
+                images: product.images ?? [],
+                minPrice,
+                maxPrice,
+                ratingAvg: product.ratingAvg ?? 0,
+                ratingCount: product.ratingCount ?? 0,
+                inStock: (product.totalStock ?? 0) > 0,
+                createdAt: item.createdAt.toISOString(),
+            })
+        }
+
+        return {
+            items,
+            total: items.length,
+        }
+    }
+
+    async getWishlistProductIds(userId: string): Promise<string[]> {
+        return this.repository.findWishlistProductIds(userId)
+    }
+
     // ===== Commands =====
 
     async createReview(userId: string, input: CreateReviewInput): Promise<ReviewItem> {
@@ -262,52 +306,6 @@ export class EngagementService {
         }
 
         return this.repository.toggleHelpfulVote(reviewId, userId)
-    }
-
-    // ===== Wishlist =====
-
-    async getWishlist(userId: string): Promise<WishlistListResponseDto> {
-        const wishlistItems = await this.repository.findWishlistByUserId(userId)
-        if (!wishlistItems.length) {
-            return { items: [], total: 0 }
-        }
-
-        const productIds = wishlistItems.map((item) => item.productId)
-        const products = await this.repository.findProductsByIds(productIds)
-        const productMap = new Map(products.map((p) => [p.id, p]))
-
-        const items: WishlistItemDto[] = []
-        for (const item of wishlistItems) {
-            const product = productMap.get(item.productId)
-            if (!product) continue
-
-            const minPrice = product.minPrice ? Number(product.minPrice) : 0
-            const maxPrice = product.maxPrice ? Number(product.maxPrice) : minPrice
-
-            items.push({
-                id: item.id,
-                productId: product.id,
-                name: product.name,
-                slug: product.slug,
-                description: product.description,
-                images: product.images ?? [],
-                minPrice,
-                maxPrice,
-                ratingAvg: product.ratingAvg ?? 0,
-                ratingCount: product.ratingCount ?? 0,
-                inStock: (product.totalStock ?? 0) > 0,
-                createdAt: item.createdAt.toISOString(),
-            })
-        }
-
-        return {
-            items,
-            total: items.length,
-        }
-    }
-
-    async getWishlistProductIds(userId: string): Promise<string[]> {
-        return this.repository.findWishlistProductIds(userId)
     }
 
     async toggleWishlist(userId: string, productId: string): Promise<ToggleWishlistResponseDto> {

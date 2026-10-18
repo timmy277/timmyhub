@@ -2124,7 +2124,9 @@
     "customer": "Customer",
     "shop": "Shop",
     "online": "Online",
+    "offline": "Offline",
     "active": "Active now",
+    "activeAgo": "Active {time}",
     "refresh": "Refresh",
     "customerInfo": "Customer Info",
     "showCustomerInfo": "Show customer info",
@@ -2166,6 +2168,8 @@
     "quickReplyTip": "Quick replies suggestions:",
     "delivered": "Delivered",
     "seen": "Seen",
+    "peerUser": "User",
+    "typing": "{name} is typing...",
     "moreChatHeads": "+{count} other chats",
     "dropdownTitle": "Chats",
     "newBadge": "{count} new",
@@ -2198,4 +2202,3 @@
     "sendMessageFailed": "Failed to send message"
   }
 }
-

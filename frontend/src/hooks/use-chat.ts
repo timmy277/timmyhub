@@ -17,14 +17,14 @@ import {
 
 import { API_ROUTE, QUERY_KEY, WS_BASE_URL } from '@/constants'
 import { apiClient } from '@/services'
-import { useChatStore } from '@/stores/use-chat-store'
+import { useChatStore } from '@/stores'
 
 // Singleton socket instance để tái sử dụng xuyên suốt toàn bộ ứng dụng, tránh mở nhiều socket song song
 let sharedChatSocket: Socket | null = null
 let sharedSocketUserId: string | null = null
 let socketSubscribersCount = 0
 
-function getOrCreateChatSocket(userId: string): Socket {
+export function getOrCreateChatSocket(userId: string): Socket {
     if (sharedChatSocket && sharedSocketUserId === userId && sharedChatSocket.connected) {
         return sharedChatSocket
     }
@@ -55,6 +55,7 @@ export function useChat() {
     const userId = session?.user?.id
     const isAuthenticated = Boolean(userId)
     const socketRef = useRef<Socket | null>(null)
+    const onlineUsers = useChatStore((s) => s.onlineUsers)
 
     // Đăng ký và quản lý WebSocket realtime
     useEffect(() => {
@@ -72,44 +73,41 @@ export function useChat() {
             const isCurrentlyActive = isChatOpenAndActive(message.conversationId)
 
             // Cập nhật cache hội thoại ngay lập tức trong 0ms (Optimistic Cache Update)
-            queryClient.setQueryData<ConversationListResponseDto>(
-                QUERY_KEY.CHAT.CONVERSATIONS,
-                (old) => {
-                    if (!old) return old
+            queryClient.setQueryData<ConversationListResponseDto>(QUERY_KEY.CHAT.CONVERSATIONS, (old) => {
+                if (!old) return old
 
-                    let totalDelta = 0
-                    const items = old.items.map((conv) => {
-                        if (conv.id !== message.conversationId) return conv
+                let totalDelta = 0
+                const items = old.items.map((conv) => {
+                    if (conv.id !== message.conversationId) return conv
 
-                        // Nếu tin do người khác gửi và hội thoại không đang mở trước mắt -> unread + 1
-                        const isFromPeer = message.senderId !== userId
-                        const shouldIncreaseUnread = isFromPeer && !isCurrentlyActive
-                        if (shouldIncreaseUnread) {
-                            totalDelta += 1
-                        }
-
-                        return {
-                            ...conv,
-                            lastMessage: message.content ?? (message.imageUrls?.length ? '[Hình ảnh/Video]' : null),
-                            lastMessageAt: message.createdAt,
-                            lastSenderId: message.senderId,
-                            unreadCount: shouldIncreaseUnread ? conv.unreadCount + 1 : conv.unreadCount,
-                        }
-                    })
-
-                    // Đưa hội thoại có tin mới nhất lên đầu danh sách
-                    items.sort(
-                        (a, b) =>
-                            new Date(b.lastMessageAt || b.createdAt).getTime() -
-                            new Date(a.lastMessageAt || a.createdAt).getTime(),
-                    )
+                    // Nếu tin do người khác gửi và hội thoại không đang mở trước mắt -> unread + 1
+                    const isFromPeer = message.senderId !== userId
+                    const shouldIncreaseUnread = isFromPeer && !isCurrentlyActive
+                    if (shouldIncreaseUnread) {
+                        totalDelta += 1
+                    }
 
                     return {
-                        items,
-                        totalUnreadCount: Math.max(0, old.totalUnreadCount + totalDelta),
+                        ...conv,
+                        lastMessage: message.content ?? (message.imageUrls?.length ? '[Hình ảnh/Video]' : null),
+                        lastMessageAt: message.createdAt,
+                        lastSenderId: message.senderId,
+                        unreadCount: shouldIncreaseUnread ? conv.unreadCount + 1 : conv.unreadCount,
                     }
-                },
-            )
+                })
+
+                // Đưa hội thoại có tin mới nhất lên đầu danh sách
+                items.sort(
+                    (a, b) =>
+                        new Date(b.lastMessageAt || b.createdAt).getTime() -
+                        new Date(a.lastMessageAt || a.createdAt).getTime(),
+                )
+
+                return {
+                    items,
+                    totalUnreadCount: Math.max(0, old.totalUnreadCount + totalDelta),
+                }
+            })
 
             // Cập nhật cache danh sách tin nhắn của hội thoại đó nếu đã có trong React Query cache
             queryClient.setQueryData<ChatMessageListResponseDto>(
@@ -151,22 +149,17 @@ export function useChat() {
             if (isSelf) {
                 // Người đọc là chính mình (đọc trên tab khác hoặc trên thiết bị khác)
                 // -> Xoá unread count của hội thoại đó trên tab này về 0 ngay lập tức!
-                queryClient.setQueryData<ConversationListResponseDto>(
-                    QUERY_KEY.CHAT.CONVERSATIONS,
-                    (old) => {
-                        if (!old) return old
-                        const conv = old.items.find((c) => c.id === payload.conversationId)
-                        const unreadToSubtract = conv?.unreadCount ?? 0
-                        if (unreadToSubtract === 0) return old
+                queryClient.setQueryData<ConversationListResponseDto>(QUERY_KEY.CHAT.CONVERSATIONS, (old) => {
+                    if (!old) return old
+                    const conv = old.items.find((c) => c.id === payload.conversationId)
+                    const unreadToSubtract = conv?.unreadCount ?? 0
+                    if (unreadToSubtract === 0) return old
 
-                        return {
-                            items: old.items.map((c) =>
-                                c.id === payload.conversationId ? { ...c, unreadCount: 0 } : c,
-                            ),
-                            totalUnreadCount: Math.max(0, old.totalUnreadCount - unreadToSubtract),
-                        }
-                    },
-                )
+                    return {
+                        items: old.items.map((c) => (c.id === payload.conversationId ? { ...c, unreadCount: 0 } : c)),
+                        totalUnreadCount: Math.max(0, old.totalUnreadCount - unreadToSubtract),
+                    }
+                })
             } else {
                 // Người đọc là đối tác -> Cập nhật trạng thái "Đã xem" (isRead = true) cho các tin nhắn của mình
                 queryClient.setQueryData<ChatMessageListResponseDto>(
@@ -175,23 +168,61 @@ export function useChat() {
                         if (!old) return old
                         return {
                             ...old,
-                            items: old.items.map((m) =>
-                                m.senderId === userId ? { ...m, isRead: true } : m,
-                            ),
+                            items: old.items.map((m) => (m.senderId === userId ? { ...m, isRead: true } : m)),
                         }
                     },
                 )
             }
         }
 
+        // 4. Khi trạng thái online của một user thay đổi (PRESENCE_CHANGED)
+        const handlePresenceChanged = (payload: { userId: string; isOnline: boolean; lastSeenAt?: string }) => {
+            if (!payload?.userId) return
+            useChatStore.getState().setUserPresence(payload.userId, payload.isOnline, payload.lastSeenAt)
+
+            queryClient.setQueryData<ConversationListResponseDto>(QUERY_KEY.CHAT.CONVERSATIONS, (old) => {
+                if (!old) return old
+                return {
+                    ...old,
+                    items: old.items.map((c) =>
+                        c.peer.id === payload.userId ? { ...c, peer: { ...c.peer, isOnline: payload.isOnline } } : c,
+                    ),
+                }
+            })
+        }
+
+        // 5. Khi nhận toàn bộ danh sách snapshot online (PRESENCE_STATE)
+        const handlePresenceState = (state: Record<string, { isOnline: boolean; lastSeenAt?: string }>) => {
+            if (!state) return
+            useChatStore.getState().setPresenceState(state)
+
+            queryClient.setQueryData<ConversationListResponseDto>(QUERY_KEY.CHAT.CONVERSATIONS, (old) => {
+                if (!old) return old
+                return {
+                    ...old,
+                    items: old.items.map((c) => {
+                        const presence = state[c.peer.id]
+                        return presence ? { ...c, peer: { ...c.peer, isOnline: presence.isOnline } } : c
+                    }),
+                }
+            })
+        }
+
         socket.on(CHAT_REALTIME_EVENT.MESSAGE_CREATED, handleMessageCreated)
         socket.on(CHAT_REALTIME_EVENT.CONVERSATION_UPDATED, handleConversationUpdated)
         socket.on(CHAT_REALTIME_EVENT.READ_CHANGED, handleReadChanged)
+        socket.on(CHAT_REALTIME_EVENT.PRESENCE_CHANGED, handlePresenceChanged)
+        socket.on(CHAT_REALTIME_EVENT.PRESENCE_STATE, handlePresenceState)
+
+        // Gửi yêu cầu lấy trạng thái online ban đầu
+        socket.emit(CHAT_REALTIME_EVENT.PRESENCE_QUERY, {})
 
         return () => {
             socket.off(CHAT_REALTIME_EVENT.MESSAGE_CREATED, handleMessageCreated)
             socket.off(CHAT_REALTIME_EVENT.CONVERSATION_UPDATED, handleConversationUpdated)
             socket.off(CHAT_REALTIME_EVENT.READ_CHANGED, handleReadChanged)
+            socket.off(CHAT_REALTIME_EVENT.PRESENCE_CHANGED, handlePresenceChanged)
+            socket.off(CHAT_REALTIME_EVENT.PRESENCE_STATE, handlePresenceState)
 
             socketSubscribersCount = Math.max(0, socketSubscribersCount - 1)
             if (socketSubscribersCount === 0 && sharedChatSocket) {
@@ -230,22 +261,17 @@ export function useChat() {
             )
 
             // Optimistic update: đặt unreadCount = 0 và trừ totalUnreadCount ngay lập tức
-            queryClient.setQueryData<ConversationListResponseDto>(
-                QUERY_KEY.CHAT.CONVERSATIONS,
-                (old) => {
-                    if (!old) return old
-                    const targetConv = old.items.find((c) => c.id === conversationId)
-                    const countToRemove = targetConv?.unreadCount ?? 0
-                    if (countToRemove === 0) return old
+            queryClient.setQueryData<ConversationListResponseDto>(QUERY_KEY.CHAT.CONVERSATIONS, (old) => {
+                if (!old) return old
+                const targetConv = old.items.find((c) => c.id === conversationId)
+                const countToRemove = targetConv?.unreadCount ?? 0
+                if (countToRemove === 0) return old
 
-                    return {
-                        items: old.items.map((c) =>
-                            c.id === conversationId ? { ...c, unreadCount: 0 } : c,
-                        ),
-                        totalUnreadCount: Math.max(0, old.totalUnreadCount - countToRemove),
-                    }
-                },
-            )
+                return {
+                    items: old.items.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)),
+                    totalUnreadCount: Math.max(0, old.totalUnreadCount - countToRemove),
+                }
+            })
 
             return { previousConversations }
         },
@@ -281,28 +307,25 @@ export function useChat() {
                     },
                 )
                 // Cập nhật lastMessage trong danh sách hội thoại
-                queryClient.setQueryData<ConversationListResponseDto>(
-                    QUERY_KEY.CHAT.CONVERSATIONS,
-                    (old) => {
-                        if (!old) return old
-                        const items = old.items.map((conv) =>
-                            conv.id === data.conversationId
-                                ? {
-                                      ...conv,
-                                      lastMessage: data.content ?? (data.imageUrls?.length ? '[Hình ảnh/Video]' : null),
-                                      lastMessageAt: data.createdAt,
-                                      lastSenderId: data.senderId,
-                                  }
-                                : conv,
-                        )
-                        items.sort(
-                            (a, b) =>
-                                new Date(b.lastMessageAt || b.createdAt).getTime() -
-                                new Date(a.lastMessageAt || a.createdAt).getTime(),
-                        )
-                        return { ...old, items }
-                    },
-                )
+                queryClient.setQueryData<ConversationListResponseDto>(QUERY_KEY.CHAT.CONVERSATIONS, (old) => {
+                    if (!old) return old
+                    const items = old.items.map((conv) =>
+                        conv.id === data.conversationId
+                            ? {
+                                  ...conv,
+                                  lastMessage: data.content ?? (data.imageUrls?.length ? '[Hình ảnh/Video]' : null),
+                                  lastMessageAt: data.createdAt,
+                                  lastSenderId: data.senderId,
+                              }
+                            : conv,
+                    )
+                    items.sort(
+                        (a, b) =>
+                            new Date(b.lastMessageAt || b.createdAt).getTime() -
+                            new Date(a.lastMessageAt || a.createdAt).getTime(),
+                    )
+                    return { ...old, items }
+                })
             }
         },
     })
@@ -339,10 +362,19 @@ export function useChat() {
         return newConv
     }
 
+    const isUserOnline = (targetUserId?: string | null) => {
+        if (!targetUserId) return false
+        return Boolean(onlineUsers[targetUserId]?.isOnline)
+    }
+
+    const getUserLastSeen = (targetUserId?: string | null) => {
+        if (!targetUserId) return undefined
+        return onlineUsers[targetUserId]?.lastSeenAt
+    }
+
     return {
         isAuthenticated,
         userId,
-        socket: socketRef.current,
         conversations: conversationsQuery.data?.items ?? [],
         totalUnreadCount: conversationsQuery.data?.totalUnreadCount ?? 0,
         isLoading: conversationsQuery.isLoading,
@@ -352,6 +384,9 @@ export function useChat() {
         openChatWithUser,
         isCreatingConversation: createConversationMutation.isPending,
         refetchConversations: conversationsQuery.refetch,
+        isUserOnline,
+        getUserLastSeen,
+        onlineUsers,
     }
 }
 
@@ -365,10 +400,9 @@ export function useConversationMessages(conversationId: string | null | undefine
         queryKey: QUERY_KEY.CHAT.MESSAGES(conversationId ?? ''),
         queryFn: async () => {
             if (!conversationId) return { items: [], hasMore: false }
-            const res = await apiClient.get<ChatMessageListResponseDto>(
-                API_ROUTE.CHAT.MESSAGES(conversationId),
-                { params: { limit: 50 } },
-            )
+            const res = await apiClient.get<ChatMessageListResponseDto>(API_ROUTE.CHAT.MESSAGES(conversationId), {
+                params: { limit: 50 },
+            })
             return res.data
         },
         enabled: isAuthenticated && Boolean(conversationId),

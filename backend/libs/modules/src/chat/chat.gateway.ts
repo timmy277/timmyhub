@@ -20,8 +20,13 @@ import { CHAT_REALTIME_EVENT, REALTIME_NAMESPACE, roomFor } from '@timmyhub/cont
     },
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
-    // ===== Dependencies =====
+    // ===== Dependencies & State =====
     private readonly logger = new Logger(ChatGateway.name)
+
+    // Quản lý active socket theo từng userId: Map<userId, Set<socketId>>
+    private readonly onlineUsers = new Map<string, Set<string>>()
+    // Lưu thời điểm offline gần nhất: Map<userId, ISOString>
+    private readonly lastSeenMap = new Map<string, string>()
 
     @WebSocketServer()
     server!: Server
@@ -37,6 +42,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             const userRoom = roomFor.user(userId)
             void client.join(userRoom)
             this.logger.debug(`Client ${client.id} joined user room ${userRoom}`)
+
+            let sockets = this.onlineUsers.get(userId)
+            if (!sockets) {
+                sockets = new Set<string>()
+                this.onlineUsers.set(userId, sockets)
+            }
+            sockets.add(client.id)
+
+            // Thiết bị đầu tiên của user online -> Bắn thông báo toàn mạng
+            if (sockets.size === 1) {
+                this.server.emit(CHAT_REALTIME_EVENT.PRESENCE_CHANGED, {
+                    userId,
+                    isOnline: true,
+                })
+                this.logger.debug(`User ${userId} is now ONLINE (sockets: 1)`)
+            }
         }
 
         client.emit('connection:ready', {
@@ -46,10 +67,73 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     handleDisconnect(client: Socket): void {
+        const userId =
+            (client.handshake.auth?.userId as string | undefined) ||
+            (client.handshake.query?.userId as string | undefined)
+
+        if (userId && this.onlineUsers.has(userId)) {
+            const sockets = this.onlineUsers.get(userId)
+            if (sockets) {
+                sockets.delete(client.id)
+                if (sockets.size === 0) {
+                    this.onlineUsers.delete(userId)
+                    const lastSeenAt = new Date().toISOString()
+                    this.lastSeenMap.set(userId, lastSeenAt)
+
+                    this.server.emit(CHAT_REALTIME_EVENT.PRESENCE_CHANGED, {
+                        userId,
+                        isOnline: false,
+                        lastSeenAt,
+                    })
+                    this.logger.debug(`User ${userId} is now OFFLINE (lastSeen: ${lastSeenAt})`)
+                }
+            }
+        }
+
         this.logger.debug(`Client ${client.id} disconnected from ${REALTIME_NAMESPACE.CHAT}`)
     }
 
+    // ===== Queries =====
+
+    isUserOnline(userId?: string | null): boolean {
+        if (!userId) return false
+        return (this.onlineUsers.get(userId)?.size ?? 0) > 0
+    }
+
+    getUserLastSeen(userId?: string | null): string | undefined {
+        if (!userId) return undefined
+        return this.lastSeenMap.get(userId)
+    }
+
+    getOnlineUserIds(): string[] {
+        return Array.from(this.onlineUsers.keys())
+    }
+
     // ===== Client Handlers =====
+
+    @SubscribeMessage(CHAT_REALTIME_EVENT.PRESENCE_QUERY)
+    handlePresenceQuery(@ConnectedSocket() client: Socket, @MessageBody() data?: { userIds?: string[] }): void {
+        const requestedIds = data?.userIds
+        const result: Record<string, { isOnline: boolean; lastSeenAt?: string }> = {}
+
+        if (requestedIds && requestedIds.length > 0) {
+            for (const id of requestedIds) {
+                const lastSeen = this.lastSeenMap.get(id)
+                result[id] = {
+                    isOnline: this.isUserOnline(id),
+                    ...(lastSeen ? { lastSeenAt: lastSeen } : {}),
+                }
+            }
+        } else {
+            for (const onlineId of this.onlineUsers.keys()) {
+                result[onlineId] = {
+                    isOnline: true,
+                }
+            }
+        }
+
+        client.emit(CHAT_REALTIME_EVENT.PRESENCE_STATE, result)
+    }
 
     @SubscribeMessage(CHAT_REALTIME_EVENT.CONVERSATION_SUBSCRIBE)
     handleSubscribeConversation(
@@ -76,14 +160,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @SubscribeMessage(CHAT_REALTIME_EVENT.TYPING)
     handleTyping(
         @ConnectedSocket() client: Socket,
-        @MessageBody() data: { conversationId: string; userId: string; isTyping: boolean },
+        @MessageBody() data: { conversationId: string; userId?: string; isTyping: boolean },
     ): void {
         if (!data?.conversationId) return
+        const senderUserId =
+            data.userId ||
+            (client.handshake.auth?.userId as string | undefined) ||
+            (client.handshake.query?.userId as string | undefined)
         const room = roomFor.conversation(data.conversationId)
         client.to(room).emit(CHAT_REALTIME_EVENT.TYPING_CHANGED, {
             conversationId: data.conversationId,
-            userId: data.userId,
-            isTyping: data.isTyping,
+            userId: senderUserId,
+            isTyping: Boolean(data.isTyping),
         })
     }
 

@@ -8,15 +8,35 @@ export const CHAT_REALTIME_EVENT = {
     MESSAGE_SEND: 'chat:message:send',
     TYPING: 'chat:typing',
     READ: 'chat:read',
+    PRESENCE_QUERY: 'chat:presence:query',
     // Server -> Client
     MESSAGE_CREATED: 'chat:message:created',
     MESSAGE_DELIVERED: 'chat:message:delivered',
     TYPING_CHANGED: 'chat:typing:changed',
     READ_CHANGED: 'chat:read:changed',
     CONVERSATION_UPDATED: 'chat:conversation:updated',
+    PRESENCE_CHANGED: 'chat:presence:changed',
+    PRESENCE_STATE: 'chat:presence:state',
 } as const
 
 export type ChatRealtimeEvent = (typeof CHAT_REALTIME_EVENT)[keyof typeof CHAT_REALTIME_EVENT]
+
+// Schema trạng thái trực tuyến của người dùng (Online Presence)
+export const UserPresenceSchema = z.object({
+    userId: z.string(),
+    isOnline: z.boolean(),
+    lastSeenAt: z.string().optional(),
+})
+export type UserPresenceDto = z.infer<typeof UserPresenceSchema>
+
+export const PresenceStateSchema = z.record(
+    z.string(),
+    z.object({
+        isOnline: z.boolean(),
+        lastSeenAt: z.string().optional(),
+    }),
+)
+export type PresenceStateDto = z.infer<typeof PresenceStateSchema>
 
 // Schema đối tác hội thoại (Người mua, người bán hoặc người dùng khác)
 export const ConversationPeerSchema = z.object({

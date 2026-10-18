@@ -36,16 +36,12 @@ import {
     Input,
     ScrollArea,
     Textarea,
+    TypingIndicator,
 } from '@/components'
 import { ROUTE } from '@/constants'
-import { useChat, useConversationMessages, useUploadMedia } from '@/hooks'
+import { useChat, useConversationMessages, useTypingIndicator, useUploadMedia } from '@/hooks'
 import { useChatStore } from '@/stores'
-import {
-    formatCurrencyVND,
-    formatMessengerTimestamp,
-    formatRelativeTime,
-    shouldShowMessageDivider,
-} from '@/utils'
+import { formatCurrencyVND, formatMessengerTimestamp, formatRelativeTime, shouldShowMessageDivider } from '@/utils'
 
 export default function SellerChatPage() {
     const t = useTranslations('chat')
@@ -53,13 +49,7 @@ export default function SellerChatPage() {
 
     // Các mẫu câu trả lời nhanh (Canned Replies) đa ngôn ngữ cho Seller
     const quickReplies = useMemo(
-        () => [
-            t('quickReply1'),
-            t('quickReply2'),
-            t('quickReply3'),
-            t('quickReply4'),
-            t('quickReply5'),
-        ],
+        () => [t('quickReply1'), t('quickReply2'), t('quickReply3'), t('quickReply4'), t('quickReply5')],
         [t],
     )
 
@@ -67,8 +57,18 @@ export default function SellerChatPage() {
     const router = useRouter()
     const routeId = (params?.id as string) || null
 
-    const { userId, conversations, totalUnreadCount, isLoading, markConversationRead, sendMessage, isSending, refetchConversations } =
-        useChat()
+    const {
+        userId,
+        conversations,
+        totalUnreadCount,
+        isLoading,
+        markConversationRead,
+        sendMessage,
+        isSending,
+        refetchConversations,
+        isUserOnline,
+        getUserLastSeen,
+    } = useChat()
 
     // Tìm cuộc hội thoại theo conv.id hoặc peer.id trong URL param
     const matchedRouteConv = useMemo(() => {
@@ -100,10 +100,14 @@ export default function SellerChatPage() {
     // Lấy thông tin cuộc hội thoại đang chọn
     const activeConversation = useMemo(() => {
         return (
-            conversations.find((c) => c.id === effectiveSelectedConvId || c.peer.id === effectiveSelectedConvId) ??
-            null
+            conversations.find((c) => c.id === effectiveSelectedConvId || c.peer.id === effectiveSelectedConvId) ?? null
         )
     }, [conversations, effectiveSelectedConvId])
+
+    const isActivePeerOnline = activeConversation
+        ? isUserOnline(activeConversation.peer.id) || Boolean(activeConversation.peer.isOnline)
+        : false
+    const activePeerLastSeen = activeConversation ? getUserLastSeen(activeConversation.peer.id) : undefined
 
     // Điều hướng route /seller/chat/[id] khi chọn cuộc trò chuyện
     const handleSelectConversation = (convId: string) => {
@@ -122,12 +126,17 @@ export default function SellerChatPage() {
     }, [routeId, conversations.length, effectiveSelectedConvId, router])
 
     // Lấy tin nhắn của cuộc hội thoại đang chọn
-    const { messages, isLoading: isLoadingMessages, refetch: refetchMessages } = useConversationMessages(effectiveSelectedConvId)
+    const {
+        messages,
+        isLoading: isLoadingMessages,
+        refetch: refetchMessages,
+    } = useConversationMessages(effectiveSelectedConvId)
+    const { isPeerTyping, startTyping, stopTyping } = useTypingIndicator(effectiveSelectedConvId)
 
-    // Tự động cuộn xuống cuối khi có tin nhắn mới
+    // Tự động cuộn xuống cuối khi có tin nhắn mới hoặc khách hàng đang soạn tin
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }, [messages, mediaPreviews])
+    }, [messages, mediaPreviews, isPeerTyping])
 
     // Đánh dấu đã đọc và gán activeConversationId khi chọn hội thoại
     useEffect(() => {
@@ -183,6 +192,7 @@ export default function SellerChatPage() {
 
     // Gửi tin nhắn
     const handleSend = async () => {
+        stopTyping()
         if (!effectiveSelectedConvId) return
         const text = inputText.trim()
         if (!text && selectedFiles.length === 0) return
@@ -237,6 +247,7 @@ export default function SellerChatPage() {
 
     const insertQuickReply = (text: string) => {
         setInputText(text)
+        startTyping()
     }
 
     return (
@@ -361,8 +372,8 @@ export default function SellerChatPage() {
                                             isSelected
                                                 ? 'bg-primary/10 border-primary/40 shadow-xs ring-1 ring-primary/30'
                                                 : isUnread
-                                                ? 'bg-card border-border/70 hover:bg-accent/40 font-semibold'
-                                                : 'bg-transparent border-transparent hover:bg-accent/40 hover:border-border/40'
+                                                  ? 'bg-card border-border/70 hover:bg-accent/40 font-semibold'
+                                                  : 'bg-transparent border-transparent hover:bg-accent/40 hover:border-border/40'
                                         }`}
                                     >
                                         {/* Avatar & Online Dot */}
@@ -373,13 +384,26 @@ export default function SellerChatPage() {
                                                     {conv.peer.name.slice(0, 2).toUpperCase()}
                                                 </AvatarFallback>
                                             </Avatar>
-                                            <span className="absolute bottom-0 right-0 size-3 rounded-full bg-emerald-500 ring-2 ring-background" />
+                                            <span
+                                                className={`absolute bottom-0 right-0 size-3 rounded-full ring-2 ring-background transition-colors ${
+                                                    isUserOnline(conv.peer.id) || Boolean(conv.peer.isOnline)
+                                                        ? 'bg-emerald-500'
+                                                        : 'bg-muted-foreground/30'
+                                                }`}
+                                                title={
+                                                    isUserOnline(conv.peer.id) || Boolean(conv.peer.isOnline)
+                                                        ? t('online')
+                                                        : t('offline')
+                                                }
+                                            />
                                         </div>
 
                                         {/* Info */}
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between gap-1.5 mb-1 min-w-0">
-                                                <span className={`text-sm truncate min-w-0 ${isUnread ? 'font-bold text-foreground' : 'font-medium text-foreground/90'}`}>
+                                                <span
+                                                    className={`text-sm truncate min-w-0 ${isUnread ? 'font-bold text-foreground' : 'font-medium text-foreground/90'}`}
+                                                >
                                                     {conv.peer.name}
                                                 </span>
                                                 <span className="text-[11px] text-muted-foreground font-normal shrink-0">
@@ -392,14 +416,24 @@ export default function SellerChatPage() {
                                                 <div className="mb-1 min-w-0 truncate">
                                                     <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.2 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 truncate max-w-full">
                                                         <PackageIcon className="size-2.5 shrink-0" />
-                                                        <span className="truncate">{t('orderNumber', { number: conv.orderId.slice(-8).toUpperCase() })}</span>
+                                                        <span className="truncate">
+                                                            {t('orderNumber', {
+                                                                number: conv.orderId.slice(-8).toUpperCase(),
+                                                            })}
+                                                        </span>
                                                     </span>
                                                 </div>
                                             )}
 
                                             <div className="flex items-center justify-between gap-2 min-w-0">
-                                                <p className={`text-xs truncate min-w-0 flex-1 ${isUnread ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>
-                                                    {isSelfLast && <span className="text-muted-foreground font-normal">{t('you')}: </span>}
+                                                <p
+                                                    className={`text-xs truncate min-w-0 flex-1 ${isUnread ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}
+                                                >
+                                                    {isSelfLast && (
+                                                        <span className="text-muted-foreground font-normal">
+                                                            {t('you')}:{' '}
+                                                        </span>
+                                                    )}
                                                     {conv.lastMessage || t('startAdvising')}
                                                 </p>
                                                 {isUnread && (
@@ -428,12 +462,20 @@ export default function SellerChatPage() {
                             <div className="flex items-center gap-3.5 min-w-0">
                                 <div className="relative shrink-0">
                                     <Avatar className="size-10 border border-border/60 shadow-xs">
-                                        <AvatarImage src={activeConversation.peer.avatar ?? undefined} alt={activeConversation.peer.name} />
+                                        <AvatarImage
+                                            src={activeConversation.peer.avatar ?? undefined}
+                                            alt={activeConversation.peer.name}
+                                        />
                                         <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
                                             {activeConversation.peer.name.slice(0, 2).toUpperCase()}
                                         </AvatarFallback>
                                     </Avatar>
-                                    <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
+                                    <span
+                                        className={`absolute bottom-0 right-0 size-2.5 rounded-full ring-2 ring-background transition-colors ${
+                                            isActivePeerOnline ? 'bg-emerald-500' : 'bg-muted-foreground/30'
+                                        }`}
+                                        title={isActivePeerOnline ? t('online') : t('offline')}
+                                    />
                                 </div>
 
                                 <div className="min-w-0">
@@ -447,7 +489,22 @@ export default function SellerChatPage() {
                                         </span>
                                     </div>
                                     <p className="text-xs text-muted-foreground flex items-center gap-2 truncate">
-                                        <span className="shrink-0">{t('online')}</span>
+                                        <span className="flex items-center gap-1.5 shrink-0">
+                                            <span
+                                                className={`size-1.5 rounded-full inline-block shrink-0 ${
+                                                    isActivePeerOnline ? 'bg-emerald-500' : 'bg-muted-foreground/40'
+                                                }`}
+                                            />
+                                            <span>
+                                                {isActivePeerOnline
+                                                    ? t('online')
+                                                    : activePeerLastSeen
+                                                      ? t('activeAgo', {
+                                                            time: formatRelativeTime(activePeerLastSeen, locale),
+                                                        })
+                                                      : t('offline')}
+                                            </span>
+                                        </span>
                                         {activeConversation.orderId && (
                                             <>
                                                 <span className="shrink-0">•</span>
@@ -455,7 +512,11 @@ export default function SellerChatPage() {
                                                     href={ROUTE.ORDER_DETAIL(activeConversation.orderId)}
                                                     className="text-primary hover:underline font-medium inline-flex items-center gap-0.5 truncate"
                                                 >
-                                                    <span className="truncate">{t('orderNumber', { number: activeConversation.orderId.slice(-8).toUpperCase() })}</span>
+                                                    <span className="truncate">
+                                                        {t('orderNumber', {
+                                                            number: activeConversation.orderId.slice(-8).toUpperCase(),
+                                                        })}
+                                                    </span>
                                                     <ExternalLinkIcon className="size-2.5 shrink-0" />
                                                 </Link>
                                             </>
@@ -483,7 +544,11 @@ export default function SellerChatPage() {
                                     className={`size-8 rounded-xl transition-colors shrink-0 ${showCustomerCrm ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}
                                     title={showCustomerCrm ? t('hideCustomerInfo') : t('showCustomerInfo')}
                                 >
-                                    {showCustomerCrm ? <PanelRightCloseIcon className="size-4" /> : <PanelRightOpenIcon className="size-4" />}
+                                    {showCustomerCrm ? (
+                                        <PanelRightCloseIcon className="size-4" />
+                                    ) : (
+                                        <PanelRightOpenIcon className="size-4" />
+                                    )}
                                 </Button>
                             </div>
                         </div>
@@ -500,12 +565,8 @@ export default function SellerChatPage() {
                                     <div className="size-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-inner">
                                         <MessageSquareIcon className="size-8" />
                                     </div>
-                                    <h3 className="font-bold text-base text-foreground">
-                                        {t('startAdvising')}
-                                    </h3>
-                                    <p className="text-xs text-muted-foreground max-w-sm">
-                                        {t('startAdvisingDesc')}
-                                    </p>
+                                    <h3 className="font-bold text-base text-foreground">{t('startAdvising')}</h3>
+                                    <p className="text-xs text-muted-foreground max-w-sm">{t('startAdvisingDesc')}</p>
                                 </div>
                             ) : (
                                 <div className="space-y-1 max-w-4xl mx-auto pb-2">
@@ -542,7 +603,8 @@ export default function SellerChatPage() {
                                                                 <Avatar className="size-8 border border-border/60 shadow-xs">
                                                                     <AvatarImage src={msg.senderAvatar ?? undefined} />
                                                                     <AvatarFallback className="text-[10px] bg-muted font-bold">
-                                                                        {msg.senderName?.slice(0, 2).toUpperCase() || 'KH'}
+                                                                        {msg.senderName?.slice(0, 2).toUpperCase() ||
+                                                                            'KH'}
                                                                     </AvatarFallback>
                                                                 </Avatar>
                                                             ) : null}
@@ -593,10 +655,15 @@ export default function SellerChatPage() {
                                                                 </div>
                                                                 <div className="min-w-0">
                                                                     <p className="text-xs font-bold text-foreground">
-                                                                        {t('orderNumber', { number: msg.attachedOrder.orderNumber })}
+                                                                        {t('orderNumber', {
+                                                                            number: msg.attachedOrder.orderNumber,
+                                                                        })}
                                                                     </p>
                                                                     <p className="text-[11px] text-muted-foreground">
-                                                                        {formatCurrencyVND(msg.attachedOrder.totalAmount)} • {msg.attachedOrder.status}
+                                                                        {formatCurrencyVND(
+                                                                            msg.attachedOrder.totalAmount,
+                                                                        )}{' '}
+                                                                        • {msg.attachedOrder.status}
                                                                     </p>
                                                                 </div>
                                                             </Link>
@@ -620,7 +687,10 @@ export default function SellerChatPage() {
                                                                             ? 'bg-gradient-to-r from-primary to-primary/95 text-primary-foreground rounded-br-xs'
                                                                             : 'bg-card text-foreground border border-border/80 rounded-bl-xs shadow-xs'
                                                                     }`}
-                                                                    title={format(new Date(msg.createdAt), 'HH:mm, dd/MM/yyyy')}
+                                                                    title={format(
+                                                                        new Date(msg.createdAt),
+                                                                        'HH:mm, dd/MM/yyyy',
+                                                                    )}
                                                                 >
                                                                     {msg.content}
                                                                 </div>
@@ -659,7 +729,10 @@ export default function SellerChatPage() {
                                                         {msg.videoUrls?.length > 0 && (
                                                             <div className="mt-1.5 space-y-2 w-full max-w-md">
                                                                 {msg.videoUrls.map((url, i) => (
-                                                                    <div key={i} className="rounded-2xl overflow-hidden border border-border/60 bg-black/80 shadow-md">
+                                                                    <div
+                                                                        key={i}
+                                                                        className="rounded-2xl overflow-hidden border border-border/60 bg-black/80 shadow-md"
+                                                                    >
                                                                         <video
                                                                             src={url}
                                                                             controls
@@ -671,18 +744,50 @@ export default function SellerChatPage() {
                                                             </div>
                                                         )}
 
-                                                        {/* Trạng thái gửi cho tin nhắn cuối cùng của Me */}
+                                                        {/* Trạng thái gửi / đã xem cho tin nhắn cuối cùng của Me */}
                                                         {isMe && index === messages.length - 1 && (
-                                                            <span className="text-[10px] text-muted-foreground/75 flex items-center gap-1 justify-end mt-1 pr-1 select-none">
-                                                                <CheckCheckIcon className="size-3 text-primary" />
-                                                                <span>{t('delivered')}</span>
-                                                            </span>
+                                                            <div className="flex items-center gap-1 justify-end mt-1 pr-1 select-none">
+                                                                {msg.isRead ? (
+                                                                    <span className="text-[10px] text-muted-foreground/75 flex items-center gap-1">
+                                                                        <span>{t('seen')}</span>
+                                                                        {activeConversation?.peer.avatar ? (
+                                                                            <Avatar className="size-3.5 border border-background">
+                                                                                <AvatarImage
+                                                                                    src={activeConversation.peer.avatar}
+                                                                                    alt={activeConversation.peer.name}
+                                                                                />
+                                                                                <AvatarFallback className="text-[7px]">
+                                                                                    {activeConversation.peer.name.slice(
+                                                                                        0,
+                                                                                        1,
+                                                                                    )}
+                                                                                </AvatarFallback>
+                                                                            </Avatar>
+                                                                        ) : (
+                                                                            <CheckCheckIcon className="size-3 text-primary" />
+                                                                        )}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-[10px] text-muted-foreground/75 flex items-center gap-1">
+                                                                        <CheckCheckIcon className="size-3 text-primary" />
+                                                                        <span>{t('delivered')}</span>
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>
                                             </div>
                                         )
                                     })}
+                                    {isPeerTyping && activeConversation && (
+                                        <div className="pt-2 pb-1">
+                                            <TypingIndicator
+                                                peerName={activeConversation.peer.name}
+                                                peerAvatar={activeConversation.peer.avatar}
+                                            />
+                                        </div>
+                                    )}
                                     <div ref={messagesEndRef} />
                                 </div>
                             )}
@@ -712,7 +817,10 @@ export default function SellerChatPage() {
                         {mediaPreviews.length > 0 && (
                             <div className="px-6 py-2.5 border-t border-border/50 bg-muted/40 flex items-center gap-3 overflow-x-auto">
                                 {mediaPreviews.map((preview, i) => (
-                                    <div key={i} className="relative size-16 rounded-xl border border-border/80 overflow-hidden shrink-0 group">
+                                    <div
+                                        key={i}
+                                        className="relative size-16 rounded-xl border border-border/80 overflow-hidden shrink-0 group"
+                                    >
                                         {preview.type === 'video' ? (
                                             <video src={preview.url} className="size-full object-cover" />
                                         ) : (
@@ -763,7 +871,11 @@ export default function SellerChatPage() {
                             <Textarea
                                 placeholder={t('inputPlaceholder')}
                                 value={inputText}
-                                onChange={(e) => setInputText(e.target.value)}
+                                onChange={(e) => {
+                                    setInputText(e.target.value)
+                                    startTyping()
+                                }}
+                                onBlur={() => stopTyping()}
                                 onKeyDown={handleKeyDown}
                                 disabled={isSending || isUploading}
                                 rows={1}
@@ -773,7 +885,11 @@ export default function SellerChatPage() {
                             <Button
                                 type="button"
                                 onClick={() => void handleSend()}
-                                disabled={(inputText.trim().length === 0 && selectedFiles.length === 0) || isSending || isUploading}
+                                disabled={
+                                    (inputText.trim().length === 0 && selectedFiles.length === 0) ||
+                                    isSending ||
+                                    isUploading
+                                }
                                 className="h-11 px-5 rounded-xl bg-primary text-primary-foreground font-semibold shadow-sm hover:bg-primary/90 transition-all active:scale-95 shrink-0 flex items-center justify-center gap-1.5"
                             >
                                 {isSending || isUploading ? (
@@ -795,12 +911,8 @@ export default function SellerChatPage() {
                         <div className="size-20 rounded-3xl bg-muted/60 flex items-center justify-center text-muted-foreground">
                             <MessageCircleIcon className="size-10" />
                         </div>
-                        <h2 className="font-bold text-lg text-foreground">
-                            {t('selectCustomerPrompt')}
-                        </h2>
-                        <p className="text-xs text-muted-foreground max-w-sm">
-                            {t('selectCustomerDesc')}
-                        </p>
+                        <h2 className="font-bold text-lg text-foreground">{t('selectCustomerPrompt')}</h2>
+                        <p className="text-xs text-muted-foreground max-w-sm">{t('selectCustomerDesc')}</p>
                     </div>
                 )}
             </div>
@@ -830,24 +942,48 @@ export default function SellerChatPage() {
                     <ScrollArea className="flex-1 p-4 space-y-5">
                         {/* Hồ sơ cá nhân */}
                         <div className="flex flex-col items-center text-center p-4 rounded-2xl bg-muted/30 border border-border/60">
-                            <Avatar className="size-16 border-2 border-primary/20 shadow-sm mb-2.5">
-                                <AvatarImage src={activeConversation.peer.avatar ?? undefined} alt={activeConversation.peer.name} />
-                                <AvatarFallback className="text-base font-bold bg-primary/10 text-primary">
-                                    {activeConversation.peer.name.slice(0, 2).toUpperCase()}
-                                </AvatarFallback>
-                            </Avatar>
+                            <div className="relative mb-2.5">
+                                <Avatar className="size-16 border-2 border-primary/20 shadow-sm">
+                                    <AvatarImage
+                                        src={activeConversation.peer.avatar ?? undefined}
+                                        alt={activeConversation.peer.name}
+                                    />
+                                    <AvatarFallback className="text-base font-bold bg-primary/10 text-primary">
+                                        {activeConversation.peer.name.slice(0, 2).toUpperCase()}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <span
+                                    className={`absolute bottom-0.5 right-0.5 size-3.5 rounded-full ring-2 ring-background transition-colors ${
+                                        isActivePeerOnline ? 'bg-emerald-500' : 'bg-muted-foreground/30'
+                                    }`}
+                                    title={isActivePeerOnline ? t('online') : t('offline')}
+                                />
+                            </div>
 
                             <h4 className="font-bold text-sm text-foreground truncate max-w-full">
                                 {activeConversation.peer.name}
                             </h4>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                                {t('verifiedCustomer')}
+                            <p className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center gap-1.5">
+                                <span
+                                    className={`size-1.5 rounded-full inline-block shrink-0 ${
+                                        isActivePeerOnline ? 'bg-emerald-500' : 'bg-muted-foreground/40'
+                                    }`}
+                                />
+                                <span>
+                                    {isActivePeerOnline
+                                        ? t('online')
+                                        : activePeerLastSeen
+                                          ? t('activeAgo', { time: formatRelativeTime(activePeerLastSeen, locale) })
+                                          : t('offline')}
+                                </span>
                             </p>
 
                             <div className="grid grid-cols-2 gap-2 w-full mt-4 pt-3 border-t border-border/50 text-left">
                                 <div className="p-2 rounded-xl bg-background/80 border border-border/40">
                                     <p className="text-[10px] text-muted-foreground">{t('totalOrders')}</p>
-                                    <p className="text-xs font-bold text-foreground">{t('ordersCount', { count: 3 })}</p>
+                                    <p className="text-xs font-bold text-foreground">
+                                        {t('ordersCount', { count: 3 })}
+                                    </p>
                                 </div>
                                 <div className="p-2 rounded-xl bg-background/80 border border-border/40">
                                     <p className="text-[10px] text-muted-foreground">{t('totalSpent')}</p>
@@ -874,7 +1010,10 @@ export default function SellerChatPage() {
                                         <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
                                             #{activeConversation.orderId.slice(-8).toUpperCase()}
                                         </span>
-                                        <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                                        <Badge
+                                            variant="outline"
+                                            className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                        >
                                             {t('orderConfirmed')}
                                         </Badge>
                                     </div>
@@ -900,13 +1039,18 @@ export default function SellerChatPage() {
                             <div className="p-3 rounded-xl border border-border/60 bg-card space-y-2">
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-bold text-primary">GIAM20K</span>
-                                    <span className="text-[10px] text-muted-foreground">{t('voucherMinOrder', { min: '200k' })}</span>
+                                    <span className="text-[10px] text-muted-foreground">
+                                        {t('voucherMinOrder', { min: '200k' })}
+                                    </span>
                                 </div>
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => {
-                                        setInputText((prev) => `${prev} ${t('voucherGiftMessage', { code: 'GIAM20K', discount: '20.000₫' })}`)
+                                        setInputText(
+                                            (prev) =>
+                                                `${prev} ${t('voucherGiftMessage', { code: 'GIAM20K', discount: '20.000₫' })}`,
+                                        )
                                         toast.success(t('voucherInserted'))
                                     }}
                                     className="w-full h-7 text-xs rounded-lg border-border/60 hover:bg-primary hover:text-primary-foreground"

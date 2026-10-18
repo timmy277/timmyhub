@@ -51,8 +51,9 @@ import {
 import { ErrorState, UserAvatar } from '@/components/common'
 import { MediaLightbox, type MediaLightboxItem } from '@/features/media'
 import { QUERY_KEY } from '@/constants'
+import { useChat } from '@/hooks'
 import { cn } from '@/utils'
-import { useChat } from '@/hooks/use-chat'
+
 import { createCommentAction, getProductReviewsAction, toggleHelpfulAction } from '../actions'
 import { useProductRealtime } from '../hooks/use-product-realtime'
 

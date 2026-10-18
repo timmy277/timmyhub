@@ -2124,7 +2124,9 @@
     "customer": "Khách hàng",
     "shop": "Shop",
     "online": "Đang trực tuyến",
+    "offline": "Ngoại tuyến",
     "active": "Đang hoạt động",
+    "activeAgo": "Hoạt động {time}",
     "refresh": "Làm mới",
     "customerInfo": "Thông tin khách hàng",
     "showCustomerInfo": "Xem thông tin khách hàng",
@@ -2166,6 +2168,8 @@
     "quickReplyTip": "Gợi ý câu trả lời nhanh:",
     "delivered": "Đã gửi",
     "seen": "Đã xem",
+    "peerUser": "Người dùng",
+    "typing": "{name} đang soạn tin...",
     "moreChatHeads": "+{count} đoạn chat khác",
     "dropdownTitle": "Đoạn chat",
     "newBadge": "{count} mới",
@@ -2198,4 +2202,3 @@
     "sendMessageFailed": "Gửi tin nhắn thất bại"
   }
 }
-

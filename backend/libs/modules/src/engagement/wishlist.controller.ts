@@ -1,4 +1,5 @@
 import { Controller, Delete, Get, Param, Post } from '@nestjs/common'
+
 import type { ToggleWishlistResponseDto, WishlistListResponseDto } from '@timmyhub/contracts'
 import type { AuthUser } from '@timmyhub/modules/platform/auth'
 import { AuthenticatedOnly, CurrentUser } from '@timmyhub/modules/platform/auth'
@@ -7,7 +8,10 @@ import { EngagementService } from './engagement.service'
 
 @Controller('v1/wishlist')
 export class WishlistController {
+    // ===== Dependencies =====
     constructor(private readonly service: EngagementService) {}
+
+    // ===== Queries =====
 
     @AuthenticatedOnly()
     @Get()
@@ -20,6 +24,8 @@ export class WishlistController {
     getWishlistProductIds(@CurrentUser() actor: AuthUser): Promise<string[]> {
         return this.service.getWishlistProductIds(actor.id)
     }
+
+    // ===== Commands =====
 
     @AuthenticatedOnly()
     @Post(':productId/toggle')

@@ -43,6 +43,7 @@ export class ChatService {
                 avatar: sellerProfile.shopLogo,
                 isSeller: true,
                 shopSlug: sellerProfile.shopSlug,
+                isOnline: this.chatGateway.isUserOnline(sellerProfile.userId),
             }
         }
 
@@ -64,6 +65,7 @@ export class ChatService {
                 name: displayName,
                 avatar: user.profile?.avatar,
                 isSeller: false,
+                isOnline: this.chatGateway.isUserOnline(user.id),
             }
         }
 
@@ -72,6 +74,7 @@ export class ChatService {
             name: 'Người dùng TimmyHub',
             avatar: null,
             isSeller: false,
+            isOnline: this.chatGateway.isUserOnline(peerId),
         }
     }
 
@@ -205,6 +208,7 @@ export class ChatService {
                     avatar: seller.shopLogo,
                     isSeller: true,
                     shopSlug: seller.shopSlug,
+                    isOnline: this.chatGateway.isUserOnline(seller.userId),
                 }
             } else {
                 const user = userByPeerId.get(peerId)
@@ -219,6 +223,7 @@ export class ChatService {
                         name: displayName,
                         avatar: user.profile?.avatar,
                         isSeller: false,
+                        isOnline: this.chatGateway.isUserOnline(user.id),
                     }
                 } else {
                     peer = {
@@ -226,6 +231,7 @@ export class ChatService {
                         name: 'Người dùng TimmyHub',
                         avatar: null,
                         isSeller: false,
+                        isOnline: this.chatGateway.isUserOnline(peerId),
                     }
                 }
             }

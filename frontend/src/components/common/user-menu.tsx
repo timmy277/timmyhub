@@ -33,6 +33,9 @@ export function UserMenu() {
     // ===== Hooks =====
     const t = useTranslations('nav')
     const isMounted = useMounted()
+    const router = useRouter()
+    const pathname = usePathname()
+    const searchParams = useSearchParams()
 
     const { data: session } = useSession()
     const { mutate: logout, isPending } = useLogout()
@@ -65,14 +68,12 @@ export function UserMenu() {
               ? backendProfile.avatar
               : session?.user?.image
         : undefined
-
-    // ===== Handlers =====
-    const router = useRouter()
-    const pathname = usePathname()
-    const searchParams = useSearchParams()
     const isAccountOpen = searchParams.get('modal') === 'account'
     const accountTab = (searchParams.get('tab') as AccountTabKey) || 'profile'
+    const initials = isMounted && username ? getInitials(username) : ''
+    const accountLabel = initials ? `${initials} - ${t('account')}` : t('account')
 
+    // ===== Handlers =====
     const handleOpenAccount = useCallback(
         (tab: AccountTabKey = 'profile') => {
             if (pathname === ROUTE.ACCOUNT) {
@@ -115,9 +116,6 @@ export function UserMenu() {
         logout()
         toast.success(t('loggedOut'))
     }
-
-    const initials = isMounted && username ? getInitials(username) : ''
-    const accountLabel = initials ? `${initials} - ${t('account')}` : t('account')
 
     return (
         <>

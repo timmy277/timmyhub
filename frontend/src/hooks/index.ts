@@ -26,4 +26,4 @@ export * from './use-notifications'
 export * from './use-chat'
 export * from './use-is-seller'
 export * from './use-wishlist'
-
+export * from './use-typing-indicator'
