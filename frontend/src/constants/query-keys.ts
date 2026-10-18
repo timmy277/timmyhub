@@ -96,4 +96,9 @@ export const QUERY_KEY = {
         LIST: ['wishlist', 'list'] as const,
         IDS: ['wishlist', 'ids'] as const,
     },
+    CONTENT: {
+        ALL: ['content'] as const,
+        FEED: (limit?: number) => ['content', 'feed', limit] as const,
+        SELLER_VIDEOS: (filters?: Record<string, unknown>) => ['content', 'seller-videos', filters] as const,
+    },
 } as const

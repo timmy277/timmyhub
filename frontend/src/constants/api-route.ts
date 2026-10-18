@@ -150,5 +150,11 @@ export const API_ROUTE = {
         TOGGLE: (productId: string) => `v1/wishlist/${encodeURIComponent(productId)}/toggle`,
         REMOVE: (productId: string) => `v1/wishlist/${encodeURIComponent(productId)}`,
     },
+    CONTENT: {
+        FEED: 'v1/feed/videos',
+        VIEW: (id: string) => `v1/feed/videos/${encodeURIComponent(id)}/view`,
+        LIKE: (id: string) => `v1/feed/videos/${encodeURIComponent(id)}/like`,
+        SELLER_VIDEOS: 'v1/seller/posts/videos',
+        SELLER_VIDEO_DETAIL: (id: string) => `v1/seller/posts/videos/${encodeURIComponent(id)}`,
+    },
 } as const
-

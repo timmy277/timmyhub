@@ -14,7 +14,6 @@ import {
     ChevronLeftIcon,
     ChevronRightIcon,
     ClockIcon,
-    EyeIcon,
     FlameIcon,
     Gamepad2Icon,
     HeadphonesIcon,
@@ -23,16 +22,13 @@ import {
     LaptopIcon,
     LayoutGridIcon,
     ListIcon,
-    MessageCircleIcon,
     PlayIcon,
-    Share2Icon,
     ShieldCheckIcon,
     ShoppingBagIcon,
     SmartphoneIcon,
     SparklesIcon,
     StarIcon,
     StoreIcon,
-    ThumbsUpIcon,
     TrophyIcon,
     TruckIcon,
     WatchIcon,
@@ -44,6 +40,7 @@ import { toast } from 'sonner'
 import { IconPath } from '@/components/icons'
 import { Badge, Button } from '@/components/ui'
 import { ROUTE, SELLER_SHOP_ANY_PERMISSION, SELLER_SHOP_PERMISSION } from '@/constants'
+import { HomeVideoFeed } from '@/features/content'
 import {
     useMyShop,
     useMySavedVoucherIds,
@@ -256,55 +253,6 @@ const FLASH_SALE_PRODUCTS = [
         rating: 4.9,
         reviews: 432,
         emoji: '⌨️',
-    },
-]
-
-/* 6. Post & Video Community Feed */
-const COMMUNITY_POSTS = [
-    {
-        id: 'post-1',
-        creator: 'Hoàng Minh Tech',
-        avatar: 'HM',
-        role: 'KOL Đánh giá',
-        title: 'Trên tay iPhone 15 Pro Max sau 6 tháng sử dụng thực tế',
-        desc: 'Pin có còn trâu? Khung titan liệu có xước? Đánh giá chi tiết cho anh em đang phân vân!',
-        videoDuration: '04:15',
-        views: '48.2K',
-        likes: 3820,
-        comments: 428,
-        taggedProduct: 'iPhone 15 Pro Max 256GB',
-        productPrice: '28.990.000₫',
-        accent: 'from-emerald-500/20 to-teal-500/10',
-    },
-    {
-        id: 'post-2',
-        creator: 'Linh Trang Lifestyle',
-        avatar: 'LT',
-        role: 'Sáng tạo nội dung',
-        title: 'Decor góc làm việc tối giản công nghệ chỉ với 5 món đồ',
-        desc: 'Chia sẻ set đồ setup bàn làm việc vừa thẩm mỹ vừa tăng năng suất làm việc tại nhà.',
-        videoDuration: '02:40',
-        views: '32.1K',
-        likes: 2410,
-        comments: 186,
-        taggedProduct: 'Bàn nâng hạ thông minh TimmyDesk',
-        productPrice: '4.250.000₫',
-        accent: 'from-purple-500/20 to-pink-500/10',
-    },
-    {
-        id: 'post-3',
-        creator: 'Đức Anh Audio',
-        avatar: 'DA',
-        role: 'Chuyên gia âm thanh',
-        title: 'So sánh chất âm Sony WH-1000XM5 vs AirPods Max 2026',
-        desc: 'Bài test âm trầm, độ trong trẻo và khả năng chống ồn chủ động trên chuyến bay dài.',
-        videoDuration: '06:10',
-        views: '61.5K',
-        likes: 5120,
-        comments: 630,
-        taggedProduct: 'Tai nghe Sony WH-1000XM5',
-        productPrice: '6.490.000₫',
-        accent: 'from-blue-500/20 to-indigo-500/10',
     },
 ]
 
@@ -845,9 +793,12 @@ export function HomePage() {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
     const { isInWishlist, toggleWishlist } = useWishlist()
 
-    const handleToggleWishlist = useCallback((productId: string, name: string) => {
-        toggleWishlist(productId, name)
-    }, [toggleWishlist])
+    const handleToggleWishlist = useCallback(
+        (productId: string, name: string) => {
+            toggleWishlist(productId, name)
+        },
+        [toggleWishlist],
+    )
 
     // Lấy danh sách sản phẩm thật đã được duyệt từ backend
     const { data: publicProductsData } = usePublicProducts({ pageSize: 30 })
@@ -1400,117 +1351,7 @@ export function HomePage() {
                 {/* ═══════════════════════════════════════════════════════════════════
                  * 6. POST FEED SECTION: VIDEO & BÀI VIẾT CỘNG ĐỒNG SÁNG TẠO
                  * ═══════════════════════════════════════════════════════════════════ */}
-                <section aria-labelledby="posts-heading" className="space-y-4">
-                    <div className="flex items-center justify-between border-b border-border/60 pb-3">
-                        <div className="flex items-center gap-2">
-                            <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                <PlayIcon className="size-4 fill-primary" />
-                            </div>
-                            <div>
-                                <h2
-                                    id="posts-heading"
-                                    className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2"
-                                >
-                                    <span>Video & Bài viết cộng đồng</span>
-                                    <IconPath name="gemini-star" className="size-4 text-primary animate-pulse" />
-                                </h2>
-                            </div>
-                        </div>
-                        <Button
-                            onClick={() => toast.info('Xem thêm video cộng đồng')}
-                            className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1"
-                            variant="ghost"
-                        >
-                            Xem tất cả
-                            <ChevronRightIcon className="size-3.5" />
-                        </Button>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                        {COMMUNITY_POSTS.map((post) => (
-                            <article
-                                key={post.id}
-                                className="group flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-primary/40"
-                            >
-                                {/* Video Simulated Thumbnail */}
-                                <div
-                                    className={`relative h-44 w-full bg-gradient-to-br ${post.accent} flex items-center justify-center overflow-hidden border-b border-border/50`}
-                                >
-                                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-                                    <div className="relative flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform duration-200 group-hover:scale-110">
-                                        <PlayIcon className="size-5 fill-current ml-0.5 text-primary-foreground" />
-                                    </div>
-                                    <span className="absolute bottom-2.5 right-2.5 rounded-md bg-black/70 px-2 py-0.5 font-mono text-[10px] font-bold text-white">
-                                        {post.videoDuration}
-                                    </span>
-                                    <span className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/90">
-                                        <EyeIcon className="size-3" />
-                                        {post.views} lượt xem
-                                    </span>
-                                </div>
-
-                                {/* Post Meta */}
-                                <div className="flex flex-1 flex-col p-4 space-y-3">
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-emerald-800 dark:text-emerald-300 font-bold text-xs ring-1 ring-primary/30">
-                                            {post.avatar}
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex items-center gap-1">
-                                                <p className="font-bold text-xs text-foreground truncate">
-                                                    {post.creator}
-                                                </p>
-                                                <CheckCircle2Icon className="size-3 text-primary shrink-0" />
-                                            </div>
-                                            <p className="text-[10px] text-muted-foreground">{post.role}</p>
-                                        </div>
-                                    </div>
-
-                                    <h3 className="line-clamp-2 text-sm font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
-                                        {post.title}
-                                    </h3>
-                                    <p className="line-clamp-2 text-xs text-muted-foreground leading-relaxed">
-                                        {post.desc}
-                                    </p>
-
-                                    {/* Tagged Product Link */}
-                                    <div className="mt-auto rounded-xl bg-muted/50 p-2.5 border border-border/60 flex items-center gap-2.5 text-xs">
-                                        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-emerald-800 dark:text-emerald-300">
-                                            <ShoppingBagIcon className="size-3.5" />
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="truncate font-semibold text-foreground text-[11px]">
-                                                {post.taggedProduct}
-                                            </p>
-                                            <p className="font-extrabold text-emerald-700 dark:text-emerald-400 text-xs">
-                                                {post.productPrice}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Engagement Counters */}
-                                    <div className="flex items-center justify-between pt-2 border-t border-border/40 text-xs text-muted-foreground">
-                                        <span
-                                            suppressHydrationWarning
-                                            className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
-                                        >
-                                            <ThumbsUpIcon className="size-3.5" />
-                                            {formatNumber(post.likes)}
-                                        </span>
-                                        <span className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer">
-                                            <MessageCircleIcon className="size-3.5" />
-                                            {post.comments}
-                                        </span>
-                                        <span className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer">
-                                            <Share2Icon className="size-3.5" />
-                                            Chia sẻ
-                                        </span>
-                                    </div>
-                                </div>
-                            </article>
-                        ))}
-                    </div>
-                </section>
+                <HomeVideoFeed />
 
                 {/* ═══════════════════════════════════════════════════════════════════
                  * 7. PRODUCTS SECTION: GỢI Ý HÔM NAY (TODAY SUGGESTION TABS + GRID)

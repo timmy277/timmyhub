@@ -57,6 +57,10 @@
     "./chat": {
       "types": "./dist/chat/index.d.ts",
       "default": "./dist/chat/index.js"
+    },
+    "./content": {
+      "types": "./dist/content/index.d.ts",
+      "default": "./dist/content/index.js"
     }
   },
   "scripts": {

@@ -12,6 +12,7 @@ import {
     StoreIcon,
     TicketIcon,
     UsersIcon,
+    VideoIcon,
 } from 'lucide-react'
 
 import type { BreadcrumbEntry, NavGroup } from '@/types'
@@ -143,6 +144,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
                 excludePermission: DASHBOARD_PERMISSION,
             },
             {
+                titleKey: 'sellerVideos',
+                url: ROUTE.SELLER_VIDEOS,
+                icon: VideoIcon,
+                requirePermission: SELLER_SHOP_PERMISSION,
+                excludePermission: DASHBOARD_PERMISSION,
+            },
+            {
                 titleKey: 'sellerSettings',
                 url: ROUTE.SELLER_SETTINGS,
                 icon: SettingsIcon,
@@ -198,6 +206,10 @@ export const BREADCRUMB_ROUTES: Readonly<Record<string, readonly BreadcrumbEntry
     [ROUTE.SELLER_VOUCHERS]: [
         { titleKey: 'sellerOverview', url: ROUTE.SELLER_PORTAL },
         { titleKey: 'sellerVouchers', url: ROUTE.SELLER_VOUCHERS },
+    ],
+    [ROUTE.SELLER_VIDEOS]: [
+        { titleKey: 'sellerOverview', url: ROUTE.SELLER_PORTAL },
+        { titleKey: 'sellerVideos', url: ROUTE.SELLER_VIDEOS },
     ],
     [ROUTE.SELLER_SETTINGS]: [
         { titleKey: 'sellerOverview', url: ROUTE.SELLER_PORTAL },

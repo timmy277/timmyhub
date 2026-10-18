@@ -13,6 +13,7 @@ import { PromotionModule } from '@timmyhub/modules/promotion'
 import { EngagementModule } from '@timmyhub/modules/engagement'
 import { NotificationModule } from '@timmyhub/modules/notification'
 import { ChatModule } from '@timmyhub/modules/chat'
+import { ContentModule } from '@timmyhub/modules/content'
 import { PrismaModule } from '@timmyhub/prisma'
 
 @Module({
@@ -31,6 +32,8 @@ import { PrismaModule } from '@timmyhub/prisma'
         EngagementModule, // Bao gồm reviews và wishlist
         NotificationModule,
         ChatModule,
+        ContentModule,
     ],
 })
+// Trigger dev reload for ContentModule - updated
 export class AppModule {}

@@ -15,6 +15,7 @@ export const ROUTE = {
     SELLER_CHAT: '/seller/chat',
     SELLER_CHAT_CONVERSATION: (id: string) => `/seller/chat/${encodeURIComponent(id)}`,
     SELLER_VOUCHERS: '/seller/vouchers',
+    SELLER_VIDEOS: '/seller/portal/videos',
     SELLER_SETTINGS: '/seller/settings',
     ADMIN_SELLER_APPLICATIONS: '/seller-applications',
     PRODUCT_DETAIL: (idOrSlug: string) => `/products/${idOrSlug}`,
