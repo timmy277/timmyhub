@@ -4,7 +4,7 @@
 // 1. IMPORTS
 // ═══════════════════════════════════════════════════════════════════════════
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import Hls from 'hls.js'
+import type Hls from 'hls.js'
 import { Check, Maximize, Minimize, Pause, Play, Settings, Volume2, VolumeX } from 'lucide-react'
 
 import {
@@ -176,67 +176,83 @@ export function HlsVideoPlayer({
 
         const isHlsStream = HLS_REGEX.test(src)
 
-        if (isHlsStream && Hls.isSupported()) {
-            const hls = new Hls({
-                enableWorker: true,
-                lowLatencyMode: true,
-                backBufferLength: 90,
-            })
-            hlsRef.current = hls
+        if (isHlsStream) {
+            let isCancelled = false
+            void import('hls.js').then(({ default: HlsConstructor }) => {
+                if (isCancelled || !videoRef.current) return
 
-            hls.loadSource(src)
-            hls.attachMedia(video)
+                if (HlsConstructor.isSupported()) {
+                    const hls = new HlsConstructor({
+                        enableWorker: true,
+                        lowLatencyMode: true,
+                        backBufferLength: 90,
+                    })
+                    hlsRef.current = hls
 
-            hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
-                const mappedLevels: QualityLevel[] = data.levels.map((lvl, idx) => ({
-                    index: idx,
-                    height: lvl.height,
-                    bitrate: lvl.bitrate,
-                    label: lvl.height ? `${lvl.height}p` : `Level ${idx + 1}`,
-                }))
-                // Sắp xếp độ phân giải từ cao đến thấp
-                mappedLevels.sort((a, b) => b.height - a.height)
-                setQualities(mappedLevels)
+                    hls.loadSource(src)
+                    hls.attachMedia(video)
 
-                if (autoPlay && isActive) {
-                    const playPromise = video.play()
-                    if (playPromise !== undefined) {
-                        playPromise.catch(() => setIsPlaying(false))
+                    hls.on(HlsConstructor.Events.MANIFEST_PARSED, (_event, data) => {
+                        const mappedLevels: QualityLevel[] = data.levels.map((lvl, idx) => ({
+                            index: idx,
+                            height: lvl.height,
+                            bitrate: lvl.bitrate,
+                            label: lvl.height ? `${lvl.height}p` : `Level ${idx + 1}`,
+                        }))
+                        mappedLevels.sort((a, b) => b.height - a.height)
+                        setQualities(mappedLevels)
+
+                        if (autoPlay && isActive) {
+                            const playPromise = video.play()
+                            if (playPromise !== undefined) {
+                                playPromise.catch(() => setIsPlaying(false))
+                            }
+                        }
+                    })
+
+                    hls.on(HlsConstructor.Events.LEVEL_SWITCHED, (_event, data) => {
+                        const currentLvl = hls.levels[data.level]
+                        if (currentLvl) {
+                            setActiveQualityLabel(
+                                selectedQualityRef.current === -1
+                                    ? `Auto (${currentLvl.height}p)`
+                                    : `${currentLvl.height}p`,
+                            )
+                        }
+                    })
+
+                    hls.on(HlsConstructor.Events.ERROR, (_event, data) => {
+                        if (data.fatal) {
+                            switch (data.type) {
+                                case HlsConstructor.ErrorTypes.NETWORK_ERROR:
+                                    hls.startLoad()
+                                    break
+                                case HlsConstructor.ErrorTypes.MEDIA_ERROR:
+                                    hls.recoverMediaError()
+                                    break
+                                default:
+                                    hls.destroy()
+                                    break
+                            }
+                        }
+                    })
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    // Native HLS fallback (Safari)
+                    video.src = src
+                    if (autoPlay && isActive) {
+                        const playPromise = video.play()
+                        if (playPromise !== undefined) {
+                            playPromise.catch(() => setIsPlaying(false))
+                        }
                     }
                 }
             })
 
-            hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
-                const currentLvl = hls.levels[data.level]
-                if (currentLvl) {
-                    setActiveQualityLabel(
-                        selectedQualityRef.current === -1 ? `Auto (${currentLvl.height}p)` : `${currentLvl.height}p`,
-                    )
-                }
-            })
-
-            hls.on(Hls.Events.ERROR, (_event, data) => {
-                if (data.fatal) {
-                    switch (data.type) {
-                        case Hls.ErrorTypes.NETWORK_ERROR:
-                            hls.startLoad()
-                            break
-                        case Hls.ErrorTypes.MEDIA_ERROR:
-                            hls.recoverMediaError()
-                            break
-                        default:
-                            hls.destroy()
-                            break
-                    }
-                }
-            })
-        } else if (isHlsStream && video.canPlayType('application/vnd.apple.mpegurl')) {
-            // Native HLS fallback (Safari)
-            video.src = src
-            if (autoPlay && isActive) {
-                const playPromise = video.play()
-                if (playPromise !== undefined) {
-                    playPromise.catch(() => setIsPlaying(false))
+            return () => {
+                isCancelled = true
+                if (hlsRef.current) {
+                    hlsRef.current.destroy()
+                    hlsRef.current = null
                 }
             }
         } else if (!isHlsStream) {

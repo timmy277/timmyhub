@@ -1,13 +1,13 @@
 'use client'
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 1. IMPORTS
+// 1. IMPORTS (Rule 21: ngoài → @timmyhub/* → @/… → tương đối)
 // ═══════════════════════════════════════════════════════════════════════════
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import type { VideoPostDto } from '@timmyhub/contracts'
 import {
     ArrowLeft,
     CheckCircle2,
@@ -26,14 +26,21 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
+import type { VideoPostDto } from '@timmyhub/contracts'
+
 import { Avatar, AvatarFallback, AvatarImage, Button, Card } from '@/components/ui'
 import { ROUTE } from '@/constants'
 import { useAddToCart } from '@/hooks'
 import { cn } from '@/utils'
 
 import { useVideoFeed } from '../hooks/use-video-feed'
-import { HlsVideoPlayer } from './hls-video-player'
 import { VideoCommentDrawer } from './video-comment-drawer'
+
+// Rule 12: Thư viện nặng (hls.js / Video Player) phải next/dynamic — 0 KB vào gói chung
+const HlsVideoPlayer = dynamic(() => import('./hls-video-player').then((mod) => mod.HlsVideoPlayer), {
+    ssr: false,
+    loading: () => <div className="size-full bg-black flex items-center justify-center" />,
+})
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 2. SUB-COMPONENT: FullscreenFeedItem (Mỗi video item trong scroll-snap feed)
@@ -75,32 +82,13 @@ function FullscreenFeedItem({
     onAddToCart,
     isAddingToCart,
 }: FullscreenFeedItemProps) {
+    // ===== State =====
     const [selectedProductIndex, setSelectedProductIndex] = useState(0)
     const [videoRect, setVideoRect] = useState<{ left: number; width: number } | null>(null)
     const [isHeartAnimating, setIsHeartAnimating] = useState(false)
     const [showPlayPauseIcon, setShowPlayPauseIcon] = useState<boolean | null>(null)
 
-    const handleMeasure = useCallback((rect: { left: number; width: number }) => {
-        setVideoRect((prev) => {
-            if (prev && prev.left === rect.left && prev.width === rect.width) {
-                return prev
-            }
-            return rect
-        })
-    }, [])
-
-    const handleItemLike = () => {
-        setIsHeartAnimating(true)
-        setTimeout(() => setIsHeartAnimating(false), 600)
-        onLike()
-    }
-
-    const handleVideoClick = () => {
-        // Flash play/pause icon in center
-        setShowPlayPauseIcon((prev) => (prev === null ? false : !prev))
-        setTimeout(() => setShowPlayPauseIcon(null), 600)
-    }
-
+    // ===== Derived =====
     const taggedProducts = video.productTags || []
     const currentProduct = taggedProducts[selectedProductIndex]?.product
     const currentVariantId = taggedProducts[selectedProductIndex]?.variantId
@@ -128,6 +116,27 @@ function FullscreenFeedItem({
                   right: 'auto',
               }
             : {}
+
+    // ===== Handlers =====
+    const handleMeasure = useCallback((rect: { left: number; width: number }) => {
+        setVideoRect((prev) => {
+            if (prev && prev.left === rect.left && prev.width === rect.width) {
+                return prev
+            }
+            return rect
+        })
+    }, [])
+
+    const handleItemLike = () => {
+        setIsHeartAnimating(true)
+        setTimeout(() => setIsHeartAnimating(false), 600)
+        onLike()
+    }
+
+    const handleVideoClick = () => {
+        setShowPlayPauseIcon((prev) => (prev === null ? false : !prev))
+        setTimeout(() => setShowPlayPauseIcon(null), 600)
+    }
 
     return (
         <div className="relative size-full flex items-center justify-center bg-black overflow-hidden select-none">
@@ -425,19 +434,10 @@ function FullscreenFeedItem({
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 3. MAIN COMPONENT: FullscreenVideoView
+// 3. MAIN COMPONENT: FullscreenVideoView (Rule 20 Lifecycle Structure)
 // ═══════════════════════════════════════════════════════════════════════════
 export function FullscreenVideoView() {
-    // 3.1. Routing & Query Params
-    const router = useRouter()
-    const searchParams = useSearchParams()
-    const initialIdFromUrl = searchParams.get('id')
-
-    // 3.2. Data Hooks
-    const { videos, isLoading, toggleLike, recordView } = useVideoFeed({ limit: 12 })
-    const { mutate: addToCart, isPending: isAddingToCart } = useAddToCart()
-
-    // 3.3. State
+    // ===== State =====
     const [activeIndex, setActiveIndex] = useState(0)
     const [isMuted, setIsMuted] = useState(true)
     const [showComments, setShowComments] = useState(false)
@@ -448,6 +448,69 @@ export function FullscreenVideoView() {
     const recordedVideoIdsRef = useRef<Set<string>>(new Set())
     const scrolledToTargetRef = useRef(false)
 
+    // ===== Hooks =====
+    const router = useRouter()
+    const searchParams = useSearchParams()
+    const initialIdFromUrl = searchParams.get('id')
+
+    const { videos, isLoading, toggleLike, recordView } = useVideoFeed({ limit: 12 })
+    const { mutate: addToCart, isPending: isAddingToCart } = useAddToCart()
+
+    // ===== Derived =====
+    const activeVideoForDrawer = commentVideo ?? videos[activeIndex] ?? null
+
+    // ===== Handlers =====
+    const handleBack = useCallback(() => {
+        if (typeof window !== 'undefined' && window.history.length > 1) {
+            router.back()
+        } else {
+            router.push(ROUTE.HOME)
+        }
+    }, [router])
+
+    const scrollToIndex = useCallback((idx: number) => {
+        const container = containerRef.current
+        if (!container) return
+        const item = container.querySelector(`[data-post-index="${idx}"]`) as HTMLElement
+        item?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, [])
+
+    const handleShare = useCallback((video: VideoPostDto) => {
+        if (typeof window === 'undefined') return
+        const shareUrl = `${window.location.origin}${ROUTE.VIDEOS}?id=${encodeURIComponent(video.id)}`
+        navigator.clipboard
+            ?.writeText(shareUrl)
+            .then(() => {
+                toast.success('Đã sao chép liên kết video vào bộ nhớ tạm!')
+            })
+            .catch(() => {
+                toast.info('Chia sẻ video!')
+            })
+    }, [])
+
+    const handleQuickAddToCart = useCallback(
+        (e: React.MouseEvent, productId: string, productName: string, slug?: string, variantId?: string) => {
+            e.stopPropagation()
+            if (variantId) {
+                addToCart(
+                    { variantId, quantity: 1 },
+                    {
+                        onSuccess: () => {
+                            toast.success(`Đã thêm "${productName}" vào giỏ hàng!`)
+                        },
+                        onError: () => {
+                            toast.error('Không thể thêm vào giỏ hàng. Vui lòng thử lại!')
+                        },
+                    },
+                )
+            } else {
+                router.push(ROUTE.PRODUCT_DETAIL(slug || productId))
+            }
+        },
+        [addToCart, router],
+    )
+
+    // ===== Effects =====
     // Window resize tracking
     useEffect(() => {
         let rId: number | null = null
@@ -462,14 +525,6 @@ export function FullscreenVideoView() {
             if (rId) cancelAnimationFrame(rId)
             window.removeEventListener('resize', handleResize)
         }
-    }, [])
-
-    // Smooth scroll to video index
-    const scrollToIndex = useCallback((idx: number) => {
-        const container = containerRef.current
-        if (!container) return
-        const item = container.querySelector(`[data-post-index="${idx}"]`) as HTMLElement
-        item?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, [])
 
     // IntersectionObserver để theo dõi video nào đang hiển thị trong viewport (chuẩn timmyhub gốc)
@@ -540,66 +595,15 @@ export function FullscreenVideoView() {
                 scrollToIndex(Math.max(activeIndex - 1, 0))
             } else if (e.key === 'Escape') {
                 e.preventDefault()
-                if (typeof window !== 'undefined' && window.history.length > 1) {
-                    router.back()
-                } else {
-                    router.push(ROUTE.HOME)
-                }
+                handleBack()
             }
         }
 
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [activeIndex, videos.length, scrollToIndex, router])
+    }, [activeIndex, videos.length, scrollToIndex, handleBack])
 
-    // 3.4. Action Handlers
-    const handleBack = () => {
-        if (typeof window !== 'undefined' && window.history.length > 1) {
-            router.back()
-        } else {
-            router.push(ROUTE.HOME)
-        }
-    }
-
-    const handleShare = (video: VideoPostDto) => {
-        if (typeof window === 'undefined') return
-        const shareUrl = `${window.location.origin}${ROUTE.VIDEOS}?id=${encodeURIComponent(video.id)}`
-        navigator.clipboard
-            ?.writeText(shareUrl)
-            .then(() => {
-                toast.success('Đã sao chép liên kết video vào bộ nhớ tạm!')
-            })
-            .catch(() => {
-                toast.info('Chia sẻ video!')
-            })
-    }
-
-    const handleQuickAddToCart = (
-        e: React.MouseEvent,
-        productId: string,
-        productName: string,
-        slug?: string,
-        variantId?: string,
-    ) => {
-        e.stopPropagation()
-        if (variantId) {
-            addToCart(
-                { variantId, quantity: 1 },
-                {
-                    onSuccess: () => {
-                        toast.success(`Đã thêm "${productName}" vào giỏ hàng!`)
-                    },
-                    onError: () => {
-                        toast.error('Không thể thêm vào giỏ hàng. Vui lòng thử lại!')
-                    },
-                },
-            )
-        } else {
-            router.push(ROUTE.PRODUCT_DETAIL(slug || productId))
-        }
-    }
-
-    // 3.5. Loading & Empty States
+    // Loading & Empty States
     if (isLoading && videos.length === 0) {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black">
@@ -622,9 +626,7 @@ export function FullscreenVideoView() {
         )
     }
 
-    const activeVideoForDrawer = commentVideo ?? videos[activeIndex] ?? null
-
-    // 3.6. Render Fullscreen Layout
+    // Render Fullscreen Layout
     return (
         <div className="fixed inset-0 z-50 flex h-dvh w-screen flex-col overflow-hidden bg-black select-none">
             {/* ═══════════════════════════════════════════════════════════════

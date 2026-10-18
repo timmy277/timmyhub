@@ -90,7 +90,24 @@ export const VideoFeedResponseSchema = z.object({
 export type VideoFeedResponseDto = z.infer<typeof VideoFeedResponseSchema>
 
 // Schema bình luận bài đăng / video (tương thích timmyhub gốc)
-export const PostCommentSchema: z.ZodType<any> = z.lazy(() =>
+export type PostCommentDto = {
+    id: string
+    postId: string
+    userId: string
+    content: string
+    parentId?: string | null | undefined
+    createdAt: string
+    user?:
+        | {
+              id: string
+              name: string
+              avatar?: string | null | undefined
+          }
+        | undefined
+    replies: PostCommentDto[]
+}
+
+export const PostCommentSchema: z.ZodType<PostCommentDto> = z.lazy(() =>
     z.object({
         id: z.string(),
         postId: z.string(),
@@ -108,20 +125,6 @@ export const PostCommentSchema: z.ZodType<any> = z.lazy(() =>
         replies: z.array(PostCommentSchema).default([]),
     }),
 )
-export type PostCommentDto = {
-    id: string
-    postId: string
-    userId: string
-    content: string
-    parentId?: string | null
-    createdAt: string
-    user?: {
-        id: string
-        name: string
-        avatar?: string | null
-    }
-    replies?: PostCommentDto[]
-}
 
 export const CreatePostCommentSchema = z.object({
     content: z.string().min(1, { message: 'Bình luận không được để trống' }).max(1000),
