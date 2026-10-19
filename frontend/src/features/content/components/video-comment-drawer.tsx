@@ -1,32 +1,24 @@
 'use client'
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 1. IMPORTS
-// ═══════════════════════════════════════════════════════════════════════════
 import React, { useEffect, useRef, useState } from 'react'
 import type { VideoPostDto } from '@timmyhub/contracts'
-import { MessageCircle, Send, X } from 'lucide-react'
+import { MessageCircle, Send, Sparkles, X } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 import { Avatar, AvatarFallback, AvatarImage, Button, Input, ScrollArea } from '@/components/ui'
 import { cn } from '@/utils'
-import { useSession } from 'next-auth/react'
 
 import { useVideoComments } from '../hooks/use-video-comments'
+import { CommentItemCard } from './comment-item-card'
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 2. TYPES / PROPS
-// ═══════════════════════════════════════════════════════════════════════════
 interface VideoCommentDrawerProps {
     video: VideoPostDto
     isOpen: boolean
     onClose: () => void
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 3. COMPONENT DEFINITION (Rule 20 Lifecycle Structure)
-// ═══════════════════════════════════════════════════════════════════════════
 export function VideoCommentDrawer({ video, isOpen, onClose }: VideoCommentDrawerProps) {
-    // 3.1. Auth & Data Hooks
+    // 1. Auth & Data Hooks
     const { data: session } = useSession()
     const user = session?.user
     const isAuthenticated = Boolean(user?.id)
@@ -35,21 +27,29 @@ export function VideoCommentDrawer({ video, isOpen, onClose }: VideoCommentDrawe
         enabled: isOpen,
     })
 
-    // 3.2. State
+    // 2. State & Refs
     const [inputValue, setInputValue] = useState('')
     const inputRef = useRef<HTMLInputElement>(null)
     const scrollBottomRef = useRef<HTMLDivElement>(null)
 
-    // Tự động focus input khi mở
+    // Focus input khi mở
     useEffect(() => {
         if (isOpen) {
-            setTimeout(() => {
+            const timer = setTimeout(() => {
                 inputRef.current?.focus()
             }, 300)
+            return () => clearTimeout(timer)
         }
     }, [isOpen])
 
-    // 3.3. Handlers
+    // Cuộn xuống comment mới nhất khi danh sách thay đổi
+    useEffect(() => {
+        if (comments.length > 0) {
+            scrollBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+        }
+    }, [comments.length])
+
+    // 3. Handlers
     const handleSubmit = (e?: React.FormEvent) => {
         if (e) e.preventDefault()
         if (!inputValue.trim() || isAddingComment) return
@@ -66,23 +66,21 @@ export function VideoCommentDrawer({ video, isOpen, onClose }: VideoCommentDrawe
 
     const totalComments = comments.length > 0 ? comments.length : video.commentCount
 
-    // 3.4. JSX
     return (
         <aside
             aria-label="Khung bình luận video"
             className={cn(
-                'absolute inset-y-0 right-0 z-50 flex flex-col w-full sm:w-[380px] md:w-[400px] bg-background/95 backdrop-blur-xl border-l border-border/80 shadow-2xl transition-transform duration-300 ease-out select-text pointer-events-auto',
+                'absolute inset-y-0 right-0 z-50 flex flex-col w-full sm:w-[380px] md:w-[420px] bg-background/95 backdrop-blur-2xl border-l border-border/80 shadow-2xl transition-transform duration-300 ease-out select-text pointer-events-auto',
                 isOpen ? 'translate-x-0' : 'translate-x-full',
             )}
         >
-            {/* ═══════════════════════════════════════════════════════════════
-             * HEADER
-             * ═══════════════════════════════════════════════════════════════ */}
+            {/* Header */}
             <div className="flex items-center justify-between px-4 py-3.5 border-b border-border/70">
                 <div className="flex items-center gap-2">
                     <MessageCircle className="size-4 text-emerald-500" />
-                    <h2 className="font-bold text-sm text-foreground">
-                        Bình luận <span className="text-muted-foreground font-mono">({totalComments})</span>
+                    <h2 className="font-bold text-sm text-foreground flex items-center gap-1.5">
+                        <span>Bình luận</span>
+                        <span className="text-muted-foreground font-mono text-xs">({totalComments})</span>
                     </h2>
                 </div>
                 <Button
@@ -97,9 +95,7 @@ export function VideoCommentDrawer({ video, isOpen, onClose }: VideoCommentDrawe
                 </Button>
             </div>
 
-            {/* ═══════════════════════════════════════════════════════════════
-             * SHOP & VIDEO PREVIEW BANNER
-             * ═══════════════════════════════════════════════════════════════ */}
+            {/* Shop & Video Header Banner */}
             <div className="flex items-center gap-3 px-4 py-2.5 bg-muted/40 border-b border-border/60">
                 <Avatar className="size-8 ring-1 ring-border shrink-0">
                     {video.shopLogo && <AvatarImage src={video.shopLogo} alt={video.shopName} />}
@@ -113,75 +109,42 @@ export function VideoCommentDrawer({ video, isOpen, onClose }: VideoCommentDrawe
                 </div>
             </div>
 
-            {/* ═══════════════════════════════════════════════════════════════
-             * COMMENTS SCROLL AREA
-             * ═══════════════════════════════════════════════════════════════ */}
+            {/* Comments List */}
             <ScrollArea className="flex-1 p-4">
                 {isLoading && comments.length === 0 ? (
-                    <div className="space-y-4 py-6 text-center text-xs text-muted-foreground">
+                    <div className="space-y-4 py-12 text-center text-xs text-muted-foreground">
                         <div className="size-6 mx-auto rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
                         <p>Đang tải bình luận...</p>
                     </div>
                 ) : comments.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-center space-y-2 text-muted-foreground">
-                        <div className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground/60">
-                            <MessageCircle className="size-6" />
+                    <div className="flex flex-col items-center justify-center py-20 text-center space-y-3 text-muted-foreground">
+                        <div className="flex size-14 items-center justify-center rounded-2xl bg-muted/60 border border-border/60 text-muted-foreground">
+                            <Sparkles className="size-6 text-emerald-500/80 animate-pulse" />
                         </div>
-                        <p className="text-sm font-semibold text-foreground">Chưa có bình luận nào</p>
-                        <p className="text-xs max-w-xs">Hãy là người đầu tiên để lại cảm nghĩ về video này!</p>
+                        <div className="space-y-1">
+                            <p className="text-sm font-semibold text-foreground">Chưa có bình luận nào</p>
+                            <p className="text-xs max-w-xs text-muted-foreground">
+                                Hãy là người đầu tiên để lại cảm nghĩ về video này!
+                            </p>
+                        </div>
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {comments.map((comment) => {
-                            const initial = comment.user?.name?.slice(0, 2).toUpperCase() || 'U'
-                            const dateStr = new Date(comment.createdAt).toLocaleDateString('vi-VN', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                day: '2-digit',
-                                month: '2-digit',
-                            })
-
-                            return (
-                                <div key={comment.id} className="flex gap-2.5 items-start text-xs group">
-                                    <Avatar className="size-7 ring-1 ring-border shrink-0 mt-0.5">
-                                        {comment.user?.avatar && (
-                                            <AvatarImage src={comment.user.avatar} alt={comment.user.name} />
-                                        )}
-                                        <AvatarFallback className="text-[10px] font-bold bg-muted text-foreground">
-                                            {initial}
-                                        </AvatarFallback>
-                                    </Avatar>
-
-                                    <div className="flex-1 space-y-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-semibold text-foreground text-xs">
-                                                {comment.user?.name || 'Người dùng'}
-                                            </span>
-                                            <span className="text-[10px] text-muted-foreground font-mono">
-                                                {dateStr}
-                                            </span>
-                                        </div>
-                                        <p className="text-xs text-foreground/90 leading-relaxed break-words bg-muted/30 p-2 rounded-xl border border-border/40">
-                                            {comment.content}
-                                        </p>
-                                    </div>
-                                </div>
-                            )
-                        })}
+                        {comments.map((comment) => (
+                            <CommentItemCard key={comment.id} comment={comment} />
+                        ))}
                         <div ref={scrollBottomRef} />
                     </div>
                 )}
             </ScrollArea>
 
-            {/* ═══════════════════════════════════════════════════════════════
-             * INPUT BAR (CHÂN TRANG)
-             * ═══════════════════════════════════════════════════════════════ */}
-            <div className="p-3 border-t border-border/80 bg-background/90">
+            {/* Input Bar */}
+            <div className="p-3 border-t border-border/80 bg-background/90 backdrop-blur-md">
                 {isAuthenticated ? (
                     <form onSubmit={handleSubmit} className="flex items-center gap-2">
-                        <Avatar className="size-8 shrink-0">
+                        <Avatar className="size-8 shrink-0 ring-1 ring-border">
                             {user?.image && <AvatarImage src={user.image} alt="Avatar" />}
-                            <AvatarFallback className="text-xs font-bold bg-emerald-500/20 text-emerald-600">
+                            <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
                                 {user?.name?.slice(0, 2).toUpperCase() || 'U'}
                             </AvatarFallback>
                         </Avatar>
@@ -210,7 +173,7 @@ export function VideoCommentDrawer({ video, isOpen, onClose }: VideoCommentDrawe
                         </div>
                     </form>
                 ) : (
-                    <div className="py-1 text-center">
+                    <div className="py-2 text-center bg-muted/30 rounded-xl border border-border/50">
                         <p className="text-xs text-muted-foreground">Vui lòng đăng nhập để tham gia bình luận video.</p>
                     </div>
                 )}

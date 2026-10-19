@@ -23,8 +23,12 @@ import {
 } from '@/components/ui'
 import { useAddToCart } from '@/hooks'
 import { cn } from '@/utils'
+import dynamic from 'next/dynamic'
 
-import { HlsVideoPlayer } from './hls-video-player'
+const HlsVideoPlayer = dynamic(() => import('./hls-video-player').then((mod) => mod.HlsVideoPlayer), {
+    ssr: false,
+    loading: () => <div className="size-full bg-black flex items-center justify-center" />,
+})
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 2. TYPES / INTERFACES

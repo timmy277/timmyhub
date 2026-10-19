@@ -1,35 +1,18 @@
 'use client'
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 1. IMPORTS
-// ═══════════════════════════════════════════════════════════════════════════
-import React, { useEffect, useRef, useState, useCallback } from 'react'
-import type Hls from 'hls.js'
-import { Check, Maximize, Minimize, Pause, Play, Settings, Volume2, VolumeX } from 'lucide-react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { Play } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
-import {
-    Badge,
-    Button,
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-    Input,
-    Spinner,
-} from '@/components/ui'
 import { cn } from '@/utils'
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 2. TYPES / INTERFACES
-// ═══════════════════════════════════════════════════════════════════════════
-export interface QualityLevel {
-    index: number
-    height: number
-    bitrate: number
-    label: string
-}
+import { HlsPlayerControls } from './hls-player-controls'
+import { HlsPlayerOverlays } from './hls-player-overlays'
+import type { QualityLevel } from './hls-quality-menu'
+import { VideoProgressBar } from './video-progress-bar'
+import { useHlsSource } from '../hooks/use-hls-source'
+
+// ===== 1. Types & Interfaces =====
 
 export interface VideoMeasureRect {
     left: number
@@ -49,18 +32,19 @@ export interface HlsVideoPlayerProps {
     className?: string
     onEnded?: () => void
     onClick?: () => void
+    onPlayPauseChange?: (isPlaying: boolean) => void
     onMeasure?: (rect: VideoMeasureRect) => void
     showCustomControls?: boolean
+    showProgressBar?: boolean
+    onQualitiesLoaded?: (qualities: QualityLevel[], selectQuality: (index: number) => void) => void
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 3. CONSTANTS
-// ═══════════════════════════════════════════════════════════════════════════
+// ===== 2. Constants =====
+
 const HLS_REGEX = /\.m3u8($|\?)/i
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 4. COMPONENT DEFINITION (Rule 20 Lifecycle Structure)
-// ═══════════════════════════════════════════════════════════════════════════
+// ===== 3. Component =====
+
 export function HlsVideoPlayer({
     src,
     poster,
@@ -72,41 +56,42 @@ export function HlsVideoPlayer({
     className,
     onEnded,
     onClick,
+    onPlayPauseChange,
     onMeasure,
     showCustomControls = true,
+    showProgressBar = true,
+    onQualitiesLoaded,
 }: HlsVideoPlayerProps) {
-    // 4.1. Props & State
+    // ===== 4. Hooks & Translations =====
+    const t = useTranslations('content.player')
+
+    // ===== 5. State & Refs =====
     const [isPlaying, setIsPlaying] = useState(autoPlay && isActive)
-    const [isMuted, setIsMuted] = useState(muted)
+    const [internalMuted, setInternalMuted] = useState(muted)
+    const isMuted = muted !== undefined ? muted : internalMuted
     const [currentTime, setCurrentTime] = useState(0)
     const [duration, setDuration] = useState(0)
-    const [qualities, setQualities] = useState<QualityLevel[]>([])
-    const [selectedQuality, setSelectedQuality] = useState<number>(-1) // -1 là Auto
-    const [activeQualityLabel, setActiveQualityLabel] = useState<string>('Auto')
+    const [selectedQuality, setSelectedQuality] = useState<number>(-1)
     const [isBuffering, setIsBuffering] = useState(false)
     const [isFullscreen, setIsFullscreen] = useState(false)
     const [controlsVisible, setControlsVisible] = useState(true)
 
-    // 4.2. Refs
     const videoRef = useRef<HTMLVideoElement>(null)
-    const hlsRef = useRef<Hls | null>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-    const selectedQualityRef = useRef(selectedQuality)
-
-    // Đồng bộ ref của selectedQuality
-    useEffect(() => {
-        selectedQualityRef.current = selectedQuality
-    }, [selectedQuality])
-
+    const prevActiveRef = useRef(isActive)
     const onMeasureRef = useRef(onMeasure)
-    useEffect(() => {
-        onMeasureRef.current = onMeasure
-    }, [onMeasure])
 
-    const lastMeasureRef = useRef<VideoMeasureRect | null>(null)
+    // ===== 6. HLS Source Hook =====
+    const { hlsRef, qualities, activeQualityLabel, setActiveQualityLabel } = useHlsSource({
+        src,
+        videoRef,
+        autoPlay,
+        isActive,
+        selectedQuality,
+    })
 
-    // 4.3. Custom Hooks / Helpers
+    // ===== 7. Handlers =====
     const measure = useCallback(() => {
         requestAnimationFrame(() => {
             const video = videoRef.current
@@ -115,271 +100,80 @@ export function HlsVideoPlayer({
             const cW = container.clientWidth
             const cH = container.clientHeight
             if (!cW || !cH) return
-            const natW = video.videoWidth || 9
-            const natH = video.videoHeight || 16
-            const scale = Math.min(cW / natW, cH / natH)
-            const renderedW = Math.round(natW * scale)
-            const renderedH = Math.round(natH * scale)
-            const left = Math.round((cW - renderedW) / 2)
-            const top = Math.round((cH - renderedH) / 2)
-
-            const prev = lastMeasureRef.current
-            if (
-                prev &&
-                prev.left === left &&
-                prev.top === top &&
-                prev.width === renderedW &&
-                prev.height === renderedH
-            ) {
-                return
-            }
-
-            const newRect: VideoMeasureRect = { left, top, width: renderedW, height: renderedH }
-            lastMeasureRef.current = newRect
-            onMeasureRef.current(newRect)
+            const scale = Math.min(cW / (video.videoWidth || 9), cH / (video.videoHeight || 16))
+            onMeasureRef.current({
+                left: Math.round((cW - Math.round((video.videoWidth || 9) * scale)) / 2),
+                top: Math.round((cH - Math.round((video.videoHeight || 16) * scale)) / 2),
+                width: Math.round((video.videoWidth || 9) * scale),
+                height: Math.round((video.videoHeight || 16) * scale),
+            })
         })
     }, [])
 
-    useEffect(() => {
-        if (!onMeasure) return
-        let rId: number | null = null
-        const handleResize = () => {
-            if (rId) cancelAnimationFrame(rId)
-            rId = requestAnimationFrame(measure)
-        }
-        measure()
-        window.addEventListener('resize', handleResize, { passive: true })
-        return () => {
-            if (rId) cancelAnimationFrame(rId)
-            window.removeEventListener('resize', handleResize)
-        }
-    }, [measure, onMeasure])
-
-    const formatTime = (seconds: number) => {
-        if (!seconds || Number.isNaN(seconds)) return '0:00'
-        const mins = Math.floor(seconds / 60)
-        const secs = Math.floor(seconds % 60)
-        return `${mins}:${secs < 10 ? '0' : ''}${secs}`
-    }
-
-    // 4.4. Effects
-    // Khởi tạo player (HLS hoặc MP4 trực tiếp kèm fallback thumbnail 0.0001s)
-    useEffect(() => {
-        const video = videoRef.current
-        if (!video || !src) return
-
-        // Dọn dẹp HLS cũ nếu đổi src
-        if (hlsRef.current) {
-            hlsRef.current.destroy()
-            hlsRef.current = null
-        }
-
-        const isHlsStream = HLS_REGEX.test(src)
-
-        if (isHlsStream) {
-            let isCancelled = false
-            void import('hls.js').then(({ default: HlsConstructor }) => {
-                if (isCancelled || !videoRef.current) return
-
-                if (HlsConstructor.isSupported()) {
-                    const hls = new HlsConstructor({
-                        enableWorker: true,
-                        lowLatencyMode: true,
-                        backBufferLength: 90,
+    const togglePlay = useCallback(
+        (e?: React.MouseEvent) => {
+            if (e) e.stopPropagation()
+            const video = videoRef.current
+            if (!video) return
+            if (video.paused) {
+                void video
+                    .play()
+                    .then(() => {
+                        setIsPlaying(true)
+                        onPlayPauseChange?.(true)
                     })
-                    hlsRef.current = hls
-
-                    hls.loadSource(src)
-                    hls.attachMedia(video)
-
-                    hls.on(HlsConstructor.Events.MANIFEST_PARSED, (_event, data) => {
-                        const mappedLevels: QualityLevel[] = data.levels.map((lvl, idx) => ({
-                            index: idx,
-                            height: lvl.height,
-                            bitrate: lvl.bitrate,
-                            label: lvl.height ? `${lvl.height}p` : `Level ${idx + 1}`,
-                        }))
-                        mappedLevels.sort((a, b) => b.height - a.height)
-                        setQualities(mappedLevels)
-
-                        if (autoPlay && isActive) {
-                            const playPromise = video.play()
-                            if (playPromise !== undefined) {
-                                playPromise.catch(() => setIsPlaying(false))
-                            }
-                        }
-                    })
-
-                    hls.on(HlsConstructor.Events.LEVEL_SWITCHED, (_event, data) => {
-                        const currentLvl = hls.levels[data.level]
-                        if (currentLvl) {
-                            setActiveQualityLabel(
-                                selectedQualityRef.current === -1
-                                    ? `Auto (${currentLvl.height}p)`
-                                    : `${currentLvl.height}p`,
-                            )
-                        }
-                    })
-
-                    hls.on(HlsConstructor.Events.ERROR, (_event, data) => {
-                        if (data.fatal) {
-                            switch (data.type) {
-                                case HlsConstructor.ErrorTypes.NETWORK_ERROR:
-                                    hls.startLoad()
-                                    break
-                                case HlsConstructor.ErrorTypes.MEDIA_ERROR:
-                                    hls.recoverMediaError()
-                                    break
-                                default:
-                                    hls.destroy()
-                                    break
-                            }
-                        }
-                    })
-                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                    // Native HLS fallback (Safari)
-                    video.src = src
-                    if (autoPlay && isActive) {
-                        const playPromise = video.play()
-                        if (playPromise !== undefined) {
-                            playPromise.catch(() => setIsPlaying(false))
-                        }
-                    }
-                }
-            })
-
-            return () => {
-                isCancelled = true
-                if (hlsRef.current) {
-                    hlsRef.current.destroy()
-                    hlsRef.current = null
-                }
+                    .catch(() => setIsPlaying(false))
+            } else {
+                video.pause()
+                setIsPlaying(false)
+                onPlayPauseChange?.(false)
             }
-        } else if (!isHlsStream) {
-            // Native video fallback (MP4 / WebM)
-            const cleanSrc = src.replace(/#t=[^&]*/, '')
-            if (video.src !== cleanSrc) {
-                video.src = cleanSrc
-            }
-            if (autoPlay && isActive) {
-                const playPromise = video.play()
-                if (playPromise !== undefined) {
-                    playPromise.catch(() => setIsPlaying(false))
-                }
-            }
-        }
-
-        return () => {
-            if (hlsRef.current) {
-                hlsRef.current.destroy()
-                hlsRef.current = null
-            }
-        }
-    }, [src, autoPlay, isActive])
-
-    // Đồng bộ trạng thái active từ parent (Feed item)
-    useEffect(() => {
-        const video = videoRef.current
-        if (!video) return
-
-        if (isActive) {
-            const playPromise = video.play()
-            if (playPromise !== undefined) {
-                playPromise.catch(() => {
-                    // Trình duyệt có thể chặn autoplay nếu chưa tương tác
-                })
-            }
-        } else {
-            video.pause()
-            if (video.currentTime > 0) {
-                video.currentTime = 0
-            }
-        }
-    }, [isActive])
-
-    // Đồng bộ âm thanh (muted) từ parent
-    useEffect(() => {
-        const video = videoRef.current
-        if (!video) return
-        video.muted = muted
-        setIsMuted(muted)
-    }, [muted])
-
-    // Cập nhật mức phân giải HLS khi người dùng chọn chất lượng khác mà không cần khởi tạo lại Hls instance
-    useEffect(() => {
-        if (hlsRef.current) {
-            hlsRef.current.currentLevel = selectedQuality
-        }
-    }, [selectedQuality])
-
-    // Cập nhật trạng thái Fullscreen
-    useEffect(() => {
-        const handleFullscreenChange = () => {
-            setIsFullscreen(Boolean(document.fullscreenElement))
-        }
-        document.addEventListener('fullscreenchange', handleFullscreenChange)
-        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
-    }, [])
-
-    // 4.5. Handlers
-    const togglePlay = useCallback((e?: React.MouseEvent) => {
-        if (e) e.stopPropagation()
-        const video = videoRef.current
-        if (!video) return
-
-        if (video.paused) {
-            const playPromise = video.play()
-            if (playPromise !== undefined) {
-                playPromise
-                    .then(() => setIsPlaying(true))
-                    .catch((err) => {
-                        console.warn('Playback could not start:', err)
-                        setIsPlaying(false)
-                    })
-            }
-        } else {
-            video.pause()
-            setIsPlaying(false)
-        }
-    }, [])
+        },
+        [onPlayPauseChange],
+    )
 
     const toggleMute = useCallback((e?: React.MouseEvent) => {
         if (e) e.stopPropagation()
         const video = videoRef.current
         if (!video) return
-
         video.muted = !video.muted
-        setIsMuted(video.muted)
+        setInternalMuted(video.muted)
     }, [])
 
     const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
         const video = videoRef.current
         if (!video || !duration) return
-
         const newTime = (Number(e.target.value) / 100) * duration
         video.currentTime = newTime
         setCurrentTime(newTime)
     }
 
-    const handleQualitySelect = (qualityIndex: number) => {
-        const hls = hlsRef.current
-        if (!hls) return
+    const handleDirectSeek = useCallback((targetTime: number) => {
+        const video = videoRef.current
+        if (!video) return
+        video.currentTime = targetTime
+        setCurrentTime(targetTime)
+    }, [])
 
-        setSelectedQuality(qualityIndex)
-        hls.currentLevel = qualityIndex
-
-        if (qualityIndex === -1) {
-            setActiveQualityLabel('Auto')
-        } else {
-            const matched = qualities.find((q) => q.index === qualityIndex)
-            setActiveQualityLabel(matched?.label ?? 'Custom')
-        }
-    }
+    const handleQualitySelect = useCallback(
+        (qualityIndex: number) => {
+            const hls = hlsRef.current
+            if (!hls) return
+            setSelectedQuality(qualityIndex)
+            hls.currentLevel = qualityIndex
+            if (qualityIndex === -1) {
+                setActiveQualityLabel(t('autoQuality'))
+            } else {
+                const matched = qualities.find((q) => q.index === qualityIndex)
+                setActiveQualityLabel(matched?.label ?? t('customQuality'))
+            }
+        },
+        [hlsRef, qualities, t, setActiveQualityLabel],
+    )
 
     const toggleFullscreen = () => {
         const container = containerRef.current
         if (!container) return
-
         if (!document.fullscreenElement) {
             void container.requestFullscreen?.()
         } else {
@@ -387,67 +181,86 @@ export function HlsVideoPlayer({
         }
     }
 
-    const handleMouseMove = () => {
-        setControlsVisible(true)
-        if (controlsTimeoutRef.current) {
-            clearTimeout(controlsTimeoutRef.current)
+    // ===== 8. Effects =====
+    useEffect(() => {
+        onMeasureRef.current = onMeasure
+    }, [onMeasure])
+
+    useEffect(() => {
+        onQualitiesLoaded?.(qualities, handleQualitySelect)
+    }, [qualities, handleQualitySelect, onQualitiesLoaded])
+
+    useEffect(() => {
+        if (videoRef.current) {
+            videoRef.current.muted = muted
         }
-        controlsTimeoutRef.current = setTimeout(() => {
-            if (isPlaying) {
-                setControlsVisible(false)
-            }
-        }, 3000)
-    }
+    }, [muted])
 
-    // Fallback thumbnail nếu poster không được truyền (chỉ áp dụng cho non-HLS)
-    const resolvedPoster =
-        poster || (!HLS_REGEX.test(src) && src ? `${src.replace(/#t=[^&]*/, '')}#t=0.001` : undefined)
+    useEffect(() => {
+        const video = videoRef.current
+        if (!video) return
+        if (isActive && !prevActiveRef.current) {
+            void video.play().catch(() => {})
+        } else if (!isActive) {
+            video.pause()
+            if (video.currentTime > 0) video.currentTime = 0
+        }
+        prevActiveRef.current = isActive
+    }, [isActive])
 
+    useEffect(() => {
+        const handler = () => setIsFullscreen(Boolean(document.fullscreenElement))
+        document.addEventListener('fullscreenchange', handler)
+        return () => document.removeEventListener('fullscreenchange', handler)
+    }, [])
+
+    // ===== 9. Render =====
     if (!src) {
         return (
-            <div
-                className={cn(
-                    'group relative flex items-center justify-center overflow-hidden bg-black select-none text-muted-foreground text-xs',
-                    className,
-                )}
-            >
+            <div className={cn('flex items-center justify-center bg-black text-muted-foreground text-xs', className)}>
                 <div className="flex flex-col items-center gap-2">
                     <Play className="size-8 opacity-40" />
-                    <span>Chưa có nguồn video</span>
+                    <span>{t('noSource')}</span>
                 </div>
             </div>
         )
     }
 
-    // 4.6. JSX Return
     return (
         <div
             ref={containerRef}
-            onMouseMove={handleMouseMove}
+            onMouseMove={() => {
+                setControlsVisible(true)
+                clearTimeout(controlsTimeoutRef.current!)
+                controlsTimeoutRef.current = setTimeout(() => isPlaying && setControlsVisible(false), 3000)
+            }}
             onMouseLeave={() => isPlaying && setControlsVisible(false)}
-            onClick={onClick ?? togglePlay}
+            onClick={(e) => {
+                togglePlay(e)
+                onClick?.()
+            }}
             className={cn(
                 'group relative flex items-center justify-center overflow-hidden bg-black select-none',
                 className,
             )}
         >
-            {/* Video Element */}
             <video
                 ref={videoRef}
-                src={!HLS_REGEX.test(src) && src ? src.replace(/#t=[^&]*/, '') : undefined}
-                poster={resolvedPoster}
+                poster={poster || (!HLS_REGEX.test(src) && src ? `${src.replace(/#t=[^&]*/, '')}#t=0.001` : undefined)}
                 loop={loop}
                 muted={isMuted}
                 playsInline={playsInline}
                 preload="metadata"
-                onLoadedMetadata={() => measure()}
-                onLoadedData={() => measure()}
+                onLoadedMetadata={() => {
+                    measure()
+                    if (videoRef.current) {
+                        setDuration(videoRef.current.duration || 0)
+                    }
+                }}
                 onTimeUpdate={() => {
-                    if (!showCustomControls) return
-                    const video = videoRef.current
-                    if (video) {
-                        setCurrentTime(video.currentTime)
-                        setDuration(video.duration || 0)
+                    if (videoRef.current) {
+                        setCurrentTime(videoRef.current.currentTime)
+                        setDuration(videoRef.current.duration || 0)
                     }
                 }}
                 onWaiting={() => setIsBuffering(true)}
@@ -456,164 +269,38 @@ export function HlsVideoPlayer({
                     setIsPlaying(true)
                 }}
                 onPause={() => setIsPlaying(false)}
-                onError={(e) => {
-                    console.warn('Video source load error:', e)
-                    setIsBuffering(false)
-                    setIsPlaying(false)
-                }}
                 onEnded={onEnded}
-                className="h-full w-full object-contain cursor-pointer"
+                className="size-full object-contain cursor-pointer"
             />
 
-            {/* Spinner khi buffer video */}
-            {isBuffering && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40 pointer-events-none">
-                    <Spinner className="size-10 text-primary animate-spin" />
-                </div>
+            <HlsPlayerOverlays
+                isPlaying={isPlaying}
+                isBuffering={isBuffering}
+                hasQualities={qualities.length > 0}
+                activeQualityLabel={activeQualityLabel}
+                onTogglePlay={togglePlay}
+            />
+
+            {showProgressBar && !showCustomControls && (
+                <VideoProgressBar currentTime={currentTime} duration={duration} onSeek={handleDirectSeek} />
             )}
 
-            {/* Overlay icon Pause/Play to ở giữa khi dừng */}
-            {!isPlaying && !isBuffering && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/25 pointer-events-none transition-opacity">
-                    <div className="flex size-14 items-center justify-center rounded-full bg-primary/90 text-primary-foreground shadow-2xl backdrop-blur-sm transition-transform duration-200 group-hover:scale-110">
-                        <Play className="size-7 fill-current ml-1 text-white" />
-                    </div>
-                </div>
-            )}
-
-            {/* Badge hiển thị chất lượng hiện tại góc trên */}
-            {qualities.length > 0 && (
-                <div className="absolute top-3 left-3 z-20 pointer-events-none">
-                    <Badge
-                        variant="secondary"
-                        className="bg-black/60 backdrop-blur-md text-white border-white/10 text-[10px] font-mono tracking-wider px-2 py-0.5"
-                    >
-                        {activeQualityLabel}
-                    </Badge>
-                </div>
-            )}
-
-            {/* Controls Bar */}
             {showCustomControls && (
-                <div
-                    onClick={(e) => e.stopPropagation()}
-                    className={cn(
-                        'absolute bottom-0 inset-x-0 z-20 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-3 pt-8 transition-opacity duration-300 flex flex-col gap-2',
-                        controlsVisible || !isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none',
-                    )}
-                >
-                    {/* Thanh timeline scrubber */}
-                    <div className="relative flex items-center group/timeline">
-                        <Input
-                            type="range"
-                            min="0"
-                            max="100"
-                            value={duration ? (currentTime / duration) * 100 : 0}
-                            onChange={handleSeek}
-                            className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer accent-primary group-hover/timeline:h-2 transition-all p-0 border-0"
-                        />
-                    </div>
-
-                    {/* Hàng nút bấm điều khiển */}
-                    <div className="flex items-center justify-between text-white text-xs">
-                        <div className="flex items-center gap-2">
-                            {/* Play / Pause */}
-                            <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={togglePlay}
-                                className="size-7 text-white hover:text-white hover:bg-white/20 rounded-full"
-                            >
-                                {isPlaying ? (
-                                    <Pause className="size-4 fill-white" />
-                                ) : (
-                                    <Play className="size-4 fill-white ml-0.5" />
-                                )}
-                            </Button>
-
-                            {/* Mute / Unmute */}
-                            <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={toggleMute}
-                                className="size-7 text-white hover:text-white hover:bg-white/20 rounded-full"
-                            >
-                                {isMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
-                            </Button>
-
-                            {/* Time counter */}
-                            <span className="font-mono text-[11px] text-white/80 select-none">
-                                {formatTime(currentTime)} / {formatTime(duration)}
-                            </span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                            {/* Nút cài đặt chất lượng video HLS */}
-                            {qualities.length > 0 && (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="size-7 text-white hover:text-white hover:bg-white/20 rounded-full"
-                                            title="Chất lượng video"
-                                        >
-                                            <Settings className="size-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent
-                                        align="end"
-                                        className="w-48 bg-neutral-900/95 backdrop-blur-md text-white border-neutral-800"
-                                    >
-                                        <DropdownMenuLabel className="text-xs text-neutral-400">
-                                            Chất lượng video (HLS)
-                                        </DropdownMenuLabel>
-                                        <DropdownMenuSeparator className="bg-neutral-800" />
-
-                                        {/* Tự động Adaptive */}
-                                        <DropdownMenuItem
-                                            onClick={() => handleQualitySelect(-1)}
-                                            className={cn(
-                                                'flex items-center justify-between text-xs cursor-pointer focus:bg-white/10 focus:text-white',
-                                                selectedQuality === -1 && 'font-bold text-primary',
-                                            )}
-                                        >
-                                            <span>Tự động (Adaptive)</span>
-                                            {selectedQuality === -1 && <Check className="size-3.5 text-primary" />}
-                                        </DropdownMenuItem>
-
-                                        {/* Các mức phân giải có sẵn từ HLS */}
-                                        {qualities.map((q) => (
-                                            <DropdownMenuItem
-                                                key={q.index}
-                                                onClick={() => handleQualitySelect(q.index)}
-                                                className={cn(
-                                                    'flex items-center justify-between text-xs cursor-pointer focus:bg-white/10 focus:text-white',
-                                                    selectedQuality === q.index && 'font-bold text-primary',
-                                                )}
-                                            >
-                                                <span>{q.label}</span>
-                                                {selectedQuality === q.index && (
-                                                    <Check className="size-3.5 text-primary" />
-                                                )}
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            )}
-
-                            {/* Nút phóng to / thu nhỏ Fullscreen */}
-                            <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={toggleFullscreen}
-                                className="size-7 text-white hover:text-white hover:bg-white/20 rounded-full"
-                            >
-                                {isFullscreen ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
-                            </Button>
-                        </div>
-                    </div>
-                </div>
+                <HlsPlayerControls
+                    isPlaying={isPlaying}
+                    isMuted={isMuted}
+                    currentTime={currentTime}
+                    duration={duration}
+                    isFullscreen={isFullscreen}
+                    qualities={qualities}
+                    selectedQuality={selectedQuality}
+                    controlsVisible={controlsVisible}
+                    onTogglePlay={togglePlay}
+                    onToggleMute={toggleMute}
+                    onSeek={handleSeek}
+                    onSelectQuality={handleQualitySelect}
+                    onToggleFullscreen={toggleFullscreen}
+                />
             )}
         </div>
     )

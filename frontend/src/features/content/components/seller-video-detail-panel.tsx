@@ -40,17 +40,28 @@ import {
     TabsList,
     TabsTrigger,
 } from '@/components/ui'
+import dynamic from 'next/dynamic'
 import { ROUTE } from '@/constants'
+import { Spinner } from '@/components/ui'
 
-import { HlsVideoPlayer } from './hls-video-player'
+const DynamicHlsPlayer = dynamic(() => import('./hls-video-player').then((mod) => mod.HlsVideoPlayer), {
+    ssr: false,
+    loading: () => (
+        <div className="aspect-video bg-black rounded-2xl flex items-center justify-center text-white">
+            <Spinner className="size-8 animate-spin" />
+        </div>
+    ),
+})
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 2. TYPES / INTERFACES
 // ═══════════════════════════════════════════════════════════════════════════
 export interface SellerVideoDetailPanelProps {
     video: VideoPostDto
-    onBackToList: () => void
-    onDeleteVideo: (videoId: string) => void
+    onBackToList?: () => void
+    onDeleteVideo?: (videoId: string) => void
+    onBack?: () => void
+    onDelete?: (videoId: string) => void
     isDeleting?: boolean
 }
 
@@ -61,8 +72,12 @@ export function SellerVideoDetailPanel({
     video,
     onBackToList,
     onDeleteVideo,
+    onBack,
+    onDelete,
     isDeleting,
 }: SellerVideoDetailPanelProps) {
+    const handleBack = onBack || onBackToList || (() => {})
+    const handleDelete = onDelete || onDeleteVideo || (() => {})
     // 3.1. State
     const [detailTab, setDetailTab] = useState<'player' | 'products' | 'stats' | 'info'>('player')
     const [isMuted, setIsMuted] = useState(false)
@@ -86,7 +101,7 @@ export function SellerVideoDetailPanel({
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={onBackToList}
+                        onClick={handleBack}
                         className="rounded-xl text-xs font-semibold gap-1.5 h-9"
                     >
                         <ArrowLeft className="size-4" />
@@ -135,7 +150,7 @@ export function SellerVideoDetailPanel({
                         variant="ghost"
                         size="icon"
                         disabled={isDeleting}
-                        onClick={() => onDeleteVideo(video.id)}
+                        onClick={() => handleDelete(video.id)}
                         className="size-9 rounded-xl text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
                         title="Xóa video"
                     >
@@ -173,7 +188,7 @@ export function SellerVideoDetailPanel({
                         {/* Khung Player */}
                         <div className="lg:col-span-7 flex justify-center bg-black rounded-3xl p-4 border border-border shadow-xl">
                             <div className="relative aspect-[9/16] w-full max-w-[340px] rounded-2xl overflow-hidden bg-neutral-950 border border-white/10 shadow-2xl">
-                                <HlsVideoPlayer
+                                <DynamicHlsPlayer
                                     src={video.videoUrl}
                                     poster={video.thumbnailUrl ?? undefined}
                                     muted={isMuted}

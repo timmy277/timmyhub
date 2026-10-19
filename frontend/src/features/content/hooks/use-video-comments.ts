@@ -2,7 +2,8 @@
 
 import { useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { PostCommentDto } from '@timmyhub/contracts'
+import type { PostCommentDto, VideoFeedResponseDto, VideoPostDto } from '@timmyhub/contracts'
+import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 
 import { API_ROUTE, QUERY_KEY } from '@/constants'
@@ -15,6 +16,8 @@ interface UseVideoCommentsOptions {
 
 export function useVideoComments({ postId, enabled = true }: UseVideoCommentsOptions) {
     const queryClient = useQueryClient()
+    const { data: session } = useSession()
+    const currentUser = session?.user
 
     const commentsQuery = useQuery<PostCommentDto[]>({
         queryKey: postId ? QUERY_KEY.CONTENT.COMMENTS(postId) : ['content', 'comments', 'none'],
@@ -45,14 +48,14 @@ export function useVideoComments({ postId, enabled = true }: UseVideoCommentsOpt
             const optimisticComment: PostCommentDto = {
                 id: `temp-${Date.now()}`,
                 postId,
-                userId: 'current-user',
+                userId: currentUser?.id || 'current-user',
                 content,
                 parentId: parentId || null,
                 createdAt: new Date().toISOString(),
                 user: {
-                    id: 'current-user',
-                    name: 'Tôi',
-                    avatar: null,
+                    id: currentUser?.id || 'current-user',
+                    name: currentUser?.name || 'Người dùng',
+                    avatar: currentUser?.image || null,
                 },
                 replies: [],
             }
@@ -76,6 +79,21 @@ export function useVideoComments({ postId, enabled = true }: UseVideoCommentsOpt
             queryClient.setQueryData<PostCommentDto[]>(QUERY_KEY.CONTENT.COMMENTS(postId), (old = []) =>
                 old.map((c) => (c.id.startsWith('temp-') ? data : c)),
             )
+
+            // Đồng bộ tăng commentCount trên feed video cache
+            const feedQueries = queryClient.getQueryCache().findAll({ queryKey: ['content', 'feed'] })
+            feedQueries.forEach((q) => {
+                const d = q.state.data as VideoFeedResponseDto | undefined
+                if (d?.items) {
+                    queryClient.setQueryData<VideoFeedResponseDto>(q.queryKey, {
+                        ...d,
+                        items: d.items.map((item: VideoPostDto) =>
+                            item.id === postId ? { ...item, commentCount: item.commentCount + 1 } : item,
+                        ),
+                    })
+                }
+            })
+
             toast.success('Đã gửi bình luận!')
         },
         onSettled: () => {

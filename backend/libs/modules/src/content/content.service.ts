@@ -274,6 +274,9 @@ export class ContentService {
             throw new BadRequestException('Không thể tạo bài đăng video')
         }
 
+        // Kích hoạt pipeline nén & chuyển đổi HLS ngầm (non-blocking) tuân thủ luật cứng #16
+        void this.triggerAsyncVideoTranscode(created.id, input.videoUrl)
+
         const feedResult = await this.getVideoFeed(10, undefined, sellerUserId)
         const matched = feedResult.items.find((item) => item.id === created.id)
         if (matched) return matched
@@ -676,6 +679,27 @@ export class ContentService {
             this.logger.log('Đã khởi tạo thành công 4 video bán hàng mẫu.')
         } catch (error) {
             this.logger.error(`Lỗi khi seed video mẫu: ${(error as Error).message}`)
+        }
+    }
+
+    /**
+     * Kích hoạt pipeline xử lý video (nén, HLS, poster) ở background không chặn request
+     */
+    private async triggerAsyncVideoTranscode(postId: string, videoUrl: string): Promise<void> {
+        try {
+            const res = await this.transcodeService.processVideoForPost(videoUrl, postId)
+            if (res.success && res.hlsUrl) {
+                await this.prisma.post.update({
+                    where: { id: postId },
+                    data: {
+                        videoUrl: res.hlsUrl,
+                        ...(res.thumbnailUrl ? { thumbnailUrl: res.thumbnailUrl } : {}),
+                    },
+                })
+                this.logger.log(`Cập nhật thành công luồng HLS cho bài đăng ${postId}: ${res.hlsUrl}`)
+            }
+        } catch (error) {
+            this.logger.error(`Lỗi khi xử lý background transcode cho ${postId}: ${(error as Error).message}`)
         }
     }
 }

@@ -3,6 +3,7 @@
 import { useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { VideoFeedResponseDto, VideoPostDto } from '@timmyhub/contracts'
+import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 
 import { API_ROUTE, QUERY_KEY } from '@/constants'
@@ -16,6 +17,8 @@ interface UseVideoFeedOptions {
 export function useVideoFeed(options: UseVideoFeedOptions = {}) {
     const { limit = 10, initialData } = options
     const queryClient = useQueryClient()
+    const { data: session } = useSession()
+    const isAuthenticated = Boolean(session?.user?.id)
 
     const query = useQuery<VideoFeedResponseDto>({
         queryKey: QUERY_KEY.CONTENT.FEED(limit),
@@ -35,34 +38,84 @@ export function useVideoFeed(options: UseVideoFeedOptions = {}) {
             return { postId, ...res.data }
         },
         onMutate: async (postId: string) => {
-            // Hủy các query đang fetch để tránh xung đột
-            await queryClient.cancelQueries({ queryKey: QUERY_KEY.CONTENT.FEED(limit) })
+            // Hủy các query feed và detail đang fetch
+            await queryClient.cancelQueries({ queryKey: ['content', 'feed'] })
+            await queryClient.cancelQueries({ queryKey: QUERY_KEY.CONTENT.VIDEO_DETAIL(postId) })
 
-            // Lưu snapshot dữ liệu cũ để rollback nếu lỗi
-            const previousData = queryClient.getQueryData<VideoFeedResponseDto>(QUERY_KEY.CONTENT.FEED(limit))
+            // Snapshot tất cả feed query caches hiện có để đồng bộ & rollback nếu lỗi
+            const feedQueries = queryClient.getQueryCache().findAll({ queryKey: ['content', 'feed'] })
+            const previousQueries = feedQueries.map((q) => ({
+                queryKey: q.queryKey,
+                data: q.state.data as VideoFeedResponseDto | undefined,
+            }))
+            const previousDetail = queryClient.getQueryData<VideoPostDto>(QUERY_KEY.CONTENT.VIDEO_DETAIL(postId))
 
-            if (previousData) {
-                queryClient.setQueryData<VideoFeedResponseDto>(QUERY_KEY.CONTENT.FEED(limit), {
-                    ...previousData,
-                    items: previousData.items.map((item: VideoPostDto) => {
-                        if (item.id === postId) {
-                            const newLiked = !item.isLiked
-                            return {
-                                ...item,
-                                isLiked: newLiked,
-                                likeCount: newLiked ? item.likeCount + 1 : Math.max(0, item.likeCount - 1),
+            // Đồng bộ trạng thái like lạc quan trên TẤT CẢ các danh sách (Home limit 3 & Fullscreen limit 12)
+            feedQueries.forEach((q) => {
+                const d = q.state.data as VideoFeedResponseDto | undefined
+                if (d?.items) {
+                    queryClient.setQueryData<VideoFeedResponseDto>(q.queryKey, {
+                        ...d,
+                        items: d.items.map((item: VideoPostDto) => {
+                            if (item.id === postId) {
+                                const newLiked = !item.isLiked
+                                return {
+                                    ...item,
+                                    isLiked: newLiked,
+                                    likeCount: newLiked ? item.likeCount + 1 : Math.max(0, item.likeCount - 1),
+                                }
                             }
-                        }
-                        return item
-                    }),
+                            return item
+                        }),
+                    })
+                }
+            })
+
+            if (previousDetail) {
+                const newLiked = !previousDetail.isLiked
+                queryClient.setQueryData<VideoPostDto>(QUERY_KEY.CONTENT.VIDEO_DETAIL(postId), {
+                    ...previousDetail,
+                    isLiked: newLiked,
+                    likeCount: newLiked ? previousDetail.likeCount + 1 : Math.max(0, previousDetail.likeCount - 1),
                 })
             }
 
-            return { previousData }
+            return { previousQueries, previousDetail, postId }
+        },
+        onSuccess: (data) => {
+            // Đồng bộ số like chính xác từ server vào toàn bộ cache
+            const feedQueries = queryClient.getQueryCache().findAll({ queryKey: ['content', 'feed'] })
+            feedQueries.forEach((q) => {
+                const d = q.state.data as VideoFeedResponseDto | undefined
+                if (d?.items) {
+                    queryClient.setQueryData<VideoFeedResponseDto>(q.queryKey, {
+                        ...d,
+                        items: d.items.map((item: VideoPostDto) =>
+                            item.id === data.postId
+                                ? { ...item, isLiked: data.liked, likeCount: data.likeCount }
+                                : item,
+                        ),
+                    })
+                }
+            })
+
+            const detail = queryClient.getQueryData<VideoPostDto>(QUERY_KEY.CONTENT.VIDEO_DETAIL(data.postId))
+            if (detail) {
+                queryClient.setQueryData<VideoPostDto>(QUERY_KEY.CONTENT.VIDEO_DETAIL(data.postId), {
+                    ...detail,
+                    isLiked: data.liked,
+                    likeCount: data.likeCount,
+                })
+            }
         },
         onError: (_err, _postId, context) => {
-            if (context?.previousData) {
-                queryClient.setQueryData(QUERY_KEY.CONTENT.FEED(limit), context.previousData)
+            if (context?.previousQueries) {
+                context.previousQueries.forEach(({ queryKey, data }) => {
+                    if (data) queryClient.setQueryData(queryKey, data)
+                })
+            }
+            if (context?.previousDetail) {
+                queryClient.setQueryData(QUERY_KEY.CONTENT.VIDEO_DETAIL(context.postId), context.previousDetail)
             }
             toast.error('Vui lòng đăng nhập để thích video')
         },
@@ -73,15 +126,44 @@ export function useVideoFeed(options: UseVideoFeedOptions = {}) {
 
     const recordViewMutation = useMutation({
         mutationFn: async (postId: string) => {
-            await apiClient.post<{ id: string; viewCount: number }>(API_ROUTE.CONTENT.VIEW(postId))
+            const res = await apiClient.post<{ id: string; viewCount: number }>(API_ROUTE.CONTENT.VIEW(postId))
+            return res.data
+        },
+        onSuccess: (res) => {
+            if (!res?.id) return
+            // Cập nhật lượt xem thời gian thực vào tất cả cache feed
+            const feedQueries = queryClient.getQueryCache().findAll({ queryKey: ['content', 'feed'] })
+            feedQueries.forEach((q) => {
+                const d = q.state.data as VideoFeedResponseDto | undefined
+                if (d?.items) {
+                    queryClient.setQueryData<VideoFeedResponseDto>(q.queryKey, {
+                        ...d,
+                        items: d.items.map((item: VideoPostDto) =>
+                            item.id === res.id ? { ...item, viewCount: res.viewCount } : item,
+                        ),
+                    })
+                }
+            })
+
+            const detail = queryClient.getQueryData<VideoPostDto>(QUERY_KEY.CONTENT.VIDEO_DETAIL(res.id))
+            if (detail) {
+                queryClient.setQueryData<VideoPostDto>(QUERY_KEY.CONTENT.VIDEO_DETAIL(res.id), {
+                    ...detail,
+                    viewCount: res.viewCount,
+                })
+            }
         },
     })
 
     const toggleLike = useCallback(
         (postId: string) => {
+            if (!isAuthenticated) {
+                toast.error('Vui lòng đăng nhập để thích video')
+                return
+            }
             likeMutation.mutate(postId)
         },
-        [likeMutation],
+        [isAuthenticated, likeMutation],
     )
 
     const recordView = useCallback(

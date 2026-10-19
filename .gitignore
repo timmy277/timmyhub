@@ -40,3 +40,8 @@ Thumbs.db
 # Antigravity local config
 .agents/mcp_config.json
 .mcp.json
+
+# Local uploads & scratch
+uploads/
+**/uploads/
+scratch/
