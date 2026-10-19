@@ -258,7 +258,7 @@ export function formatMessengerTimestamp(value: string | Date | null | undefined
 // Kiểm tra hiển thị mốc thời gian giữa 2 tin nhắn (chênh lệch > 20 phút hoặc khác ngày)
 export function shouldShowMessageDivider(
     currentDateVal: string | Date | null | undefined,
-    prevDateVal: string | Date | null | undefined
+    prevDateVal: string | Date | null | undefined,
 ): boolean {
     if (!currentDateVal) return false
     if (!prevDateVal) return true
@@ -270,4 +270,3 @@ export function shouldShowMessageDivider(
     if (cur.toDateString() !== prev.toDateString()) return true
     return Math.abs(cur.getTime() - prev.getTime()) > 20 * 60 * 1000
 }
-

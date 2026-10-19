@@ -39,13 +39,7 @@ import {
     SelectItem,
     Spinner,
 } from '@/components'
-import {
-    getDistrictsByProvinceCode,
-    getWardsByDistrictCode,
-    PROVINCE_OPTIONS,
-    QUERY_KEY,
-    ROUTE,
-} from '@/constants'
+import { getDistrictsByProvinceCode, getWardsByDistrictCode, PROVINCE_OPTIONS, QUERY_KEY, ROUTE } from '@/constants'
 import { useUploadMedia } from '@/hooks'
 import { resolveMediaUrl } from '@/utils'
 
@@ -141,10 +135,7 @@ export function SellerSettingsView({ initialShop }: SellerSettingsViewProps = {}
     const watchedDistrict = useWatch({ control: form.control, name: 'districtCode' })
     const watchedWard = useWatch({ control: form.control, name: 'wardCode' })
 
-    const districtOptions = useMemo(
-        () => getDistrictsByProvinceCode(watchedProvince),
-        [watchedProvince],
-    )
+    const districtOptions = useMemo(() => getDistrictsByProvinceCode(watchedProvince), [watchedProvince])
     const wardOptions = useMemo(
         () => getWardsByDistrictCode(watchedProvince, watchedDistrict),
         [watchedProvince, watchedDistrict],
@@ -402,7 +393,9 @@ export function SellerSettingsView({ initialShop }: SellerSettingsViewProps = {}
                                                     type="button"
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => form.setValue('shopLogo', '', { shouldValidate: true })}
+                                                    onClick={() =>
+                                                        form.setValue('shopLogo', '', { shouldValidate: true })
+                                                    }
                                                     className="rounded-xl text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 gap-1"
                                                 >
                                                     <Trash2 className="size-3.5" />
@@ -471,14 +464,18 @@ export function SellerSettingsView({ initialShop }: SellerSettingsViewProps = {}
                                                 ) : (
                                                     <Upload className="size-3.5 text-primary" />
                                                 )}
-                                                <span>{resolvedBannerUrl ? t('changeImage') : t('uploadBannerBtn')}</span>
+                                                <span>
+                                                    {resolvedBannerUrl ? t('changeImage') : t('uploadBannerBtn')}
+                                                </span>
                                             </Button>
                                             {resolvedBannerUrl && (
                                                 <Button
                                                     type="button"
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => form.setValue('shopBanner', '', { shouldValidate: true })}
+                                                    onClick={() =>
+                                                        form.setValue('shopBanner', '', { shouldValidate: true })
+                                                    }
                                                     className="rounded-xl text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 gap-1"
                                                 >
                                                     <Trash2 className="size-3.5" />
@@ -486,9 +483,7 @@ export function SellerSettingsView({ initialShop }: SellerSettingsViewProps = {}
                                                 </Button>
                                             )}
                                         </div>
-                                        <p className="text-[11px] text-muted-foreground">
-                                            {t('bannerHint')}
-                                        </p>
+                                        <p className="text-[11px] text-muted-foreground">{t('bannerHint')}</p>
                                     </div>
                                 </div>
 
@@ -615,11 +610,7 @@ export function SellerSettingsView({ initialShop }: SellerSettingsViewProps = {}
                         disabled={updateMutation.isPending}
                         className="rounded-xl px-8 font-bold gap-2 shadow-lg bg-primary text-white hover:bg-primary/90 transition-all hover:scale-[1.01]"
                     >
-                        {updateMutation.isPending ? (
-                            <Spinner className="size-4" />
-                        ) : (
-                            <Save className="size-4" />
-                        )}
+                        {updateMutation.isPending ? <Spinner className="size-4" /> : <Save className="size-4" />}
                         <span>{updateMutation.isPending ? t('savingBtn') : t('saveSettingsBtn')}</span>
                     </Button>
                 </div>

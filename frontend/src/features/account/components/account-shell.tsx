@@ -119,8 +119,7 @@ export function AccountShell({ initialUser }: AccountShellProps = {}) {
     const queryTab = searchParams.get('tab')
     const rawTab: TabKey = isValidAccountTab(queryTab) ? queryTab : 'profile'
     const activeTab: TabKey =
-        isAdmin &&
-        (rawTab === 'orders' || rawTab === 'addresses' || rawTab === 'vouchers' || rawTab === 'wishlist')
+        isAdmin && (rawTab === 'orders' || rawTab === 'addresses' || rawTab === 'vouchers' || rawTab === 'wishlist')
             ? 'profile'
             : rawTab
 

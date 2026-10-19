@@ -116,8 +116,7 @@ export function AccountDialog({ open, onOpenChange, defaultTab = 'profile' }: Ac
     const queryTab = searchParams.get('tab')
     const rawTab: AccountTabKey = isValidAccountTab(queryTab) ? queryTab : defaultTab
     const activeTab: AccountTabKey =
-        isAdmin &&
-        (rawTab === 'orders' || rawTab === 'addresses' || rawTab === 'vouchers' || rawTab === 'wishlist')
+        isAdmin && (rawTab === 'orders' || rawTab === 'addresses' || rawTab === 'vouchers' || rawTab === 'wishlist')
             ? 'profile'
             : rawTab
 

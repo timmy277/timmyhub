@@ -123,7 +123,11 @@ export function WishlistTab({ onCloseDialog }: WishlistTabProps = {}) {
                                 {/* Content Container */}
                                 <CardContent className="p-4 flex-1 flex flex-col justify-between gap-3">
                                     <div className="space-y-1.5">
-                                        <Link href={productUrl} onClick={onCloseDialog} className="block group-hover:text-primary transition-colors">
+                                        <Link
+                                            href={productUrl}
+                                            onClick={onCloseDialog}
+                                            className="block group-hover:text-primary transition-colors"
+                                        >
                                             <h4 className="text-sm font-semibold text-foreground line-clamp-2 leading-snug">
                                                 {item.name}
                                             </h4>

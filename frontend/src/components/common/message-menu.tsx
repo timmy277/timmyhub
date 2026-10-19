@@ -2,12 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import {
-    ExternalLinkIcon,
-    MessageCircleIcon,
-    SearchIcon,
-    StoreIcon,
-} from 'lucide-react'
+import { ExternalLinkIcon, MessageCircleIcon, SearchIcon, StoreIcon } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import type { ConversationDto } from '@timmyhub/contracts'
 
@@ -43,9 +38,7 @@ export function MessageMenu() {
         if (!searchTerm.trim()) return conversations
         const q = searchTerm.toLowerCase()
         return conversations.filter(
-            (c) =>
-                c.peer.name.toLowerCase().includes(q) ||
-                (c.lastMessage && c.lastMessage.toLowerCase().includes(q)),
+            (c) => c.peer.name.toLowerCase().includes(q) || (c.lastMessage && c.lastMessage.toLowerCase().includes(q)),
         )
     }, [conversations, searchTerm])
 
@@ -85,9 +78,7 @@ export function MessageMenu() {
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 pt-3.5 pb-2.5 border-b border-border/50">
                     <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-base tracking-tight text-foreground">
-                            {tChat('dropdownTitle')}
-                        </h3>
+                        <h3 className="font-bold text-base tracking-tight text-foreground">{tChat('dropdownTitle')}</h3>
                         {totalUnreadCount > 0 && (
                             <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-xs font-semibold">
                                 {tChat('newBadge', { count: totalUnreadCount })}
@@ -187,7 +178,9 @@ export function MessageMenu() {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between gap-1 mb-0.5">
                                                 <div className="flex items-center gap-1.5 min-w-0">
-                                                    <span className={`text-sm truncate ${isUnread ? 'font-bold text-foreground' : 'font-medium text-foreground/90'}`}>
+                                                    <span
+                                                        className={`text-sm truncate ${isUnread ? 'font-bold text-foreground' : 'font-medium text-foreground/90'}`}
+                                                    >
                                                         {conv.peer.name}
                                                     </span>
                                                     {conv.peer.isSeller && (
@@ -202,8 +195,12 @@ export function MessageMenu() {
                                             </div>
 
                                             <div className="flex items-center justify-between gap-2 min-w-0">
-                                                <p className={`text-xs truncate min-w-0 flex-1 ${isUnread ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-                                                    {isSelfLast && <span className="text-muted-foreground">{tChat('you')}: </span>}
+                                                <p
+                                                    className={`text-xs truncate min-w-0 flex-1 ${isUnread ? 'text-foreground font-medium' : 'text-muted-foreground'}`}
+                                                >
+                                                    {isSelfLast && (
+                                                        <span className="text-muted-foreground">{tChat('you')}: </span>
+                                                    )}
                                                     {conv.lastMessage || tChat('startConversationPrompt')}
                                                 </p>
                                                 {isUnread && (
