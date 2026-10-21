@@ -425,7 +425,8 @@ export function CartView({ initialData }: CartViewProps) {
                             </div>
                             <div className="col-span-2 text-center">{t('page.colUnitPrice')}</div>
                             <div className="col-span-2 text-center">{t('page.colQuantity')}</div>
-                            <div className="col-span-2 text-right">{t('page.colTotal')}</div>
+                            <div className="col-span-1 text-right">{t('page.colTotal')}</div>
+                            <div className="col-span-1 text-right">{t('page.colAction')}</div>
                         </div>
 
                         {/* Shop Groups */}
@@ -457,7 +458,9 @@ export function CartView({ initialData }: CartViewProps) {
                                                 className="flex items-center gap-2 cursor-pointer text-xs font-bold text-foreground"
                                             >
                                                 <StoreIcon className="size-4 text-primary" />
-                                                <span>{group.shopName}</span>
+                                                <span>
+                                                    {t('page.shopPrefix')} {group.shopName}
+                                                </span>
                                             </label>
                                         </div>
                                     </div>
@@ -623,15 +626,41 @@ export function CartView({ initialData }: CartViewProps) {
                                                                     {formatCurrencyVND(lineTotal)}
                                                                 </span>
                                                             </div>
-                                                            <Button
-                                                                type="button"
-                                                                onClick={() => handleRemoveItem(item.id)}
-                                                                aria-label={`Xoá ${item.productName}`}
-                                                                className="flex size-7 items-center justify-center rounded-lg text-muted-foreground/70 transition-colors hover:bg-destructive/10 hover:text-destructive active:scale-95"
-                                                                variant="ghost"
-                                                            >
-                                                                <Trash2Icon className="size-3.5" />
-                                                            </Button>
+                                                            <AlertDialog>
+                                                                <AlertDialogTrigger asChild>
+                                                                    <Button
+                                                                        type="button"
+                                                                        aria-label={`${t('page.remove')} ${item.productName}`}
+                                                                        className="flex size-7 items-center justify-center rounded-lg text-muted-foreground/70 transition-colors hover:bg-destructive/10 hover:text-destructive active:scale-95"
+                                                                        variant="ghost"
+                                                                    >
+                                                                        <Trash2Icon className="size-3.5" />
+                                                                    </Button>
+                                                                </AlertDialogTrigger>
+                                                                <AlertDialogContent className="rounded-2xl">
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle>
+                                                                            {t('page.removeConfirmTitle')}
+                                                                        </AlertDialogTitle>
+                                                                        <AlertDialogDescription>
+                                                                            {t('page.removeConfirmDesc', {
+                                                                                name: item.productName,
+                                                                            })}
+                                                                        </AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel className="rounded-xl">
+                                                                            Huỷ
+                                                                        </AlertDialogCancel>
+                                                                        <AlertDialogAction
+                                                                            onClick={() => handleRemoveItem(item.id)}
+                                                                            className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                                        >
+                                                                            {t('page.remove')}
+                                                                        </AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
                                                         </div>
                                                     </div>
                                                 </div>

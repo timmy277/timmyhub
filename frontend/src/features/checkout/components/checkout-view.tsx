@@ -725,7 +725,7 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                                 <div className="flex items-center gap-2">
                                                     <StoreIcon className="size-4 text-primary" />
                                                     <span className="text-xs sm:text-sm font-bold text-foreground">
-                                                        {shop.shopName}
+                                                        {t('shopPrefix')} {shop.shopName}
                                                     </span>
                                                     <Badge
                                                         variant="secondary"
@@ -1534,18 +1534,20 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
 
                                                                 <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
                                                                     <span>
-                                                                        Đơn tối thiểu{' '}
-                                                                        <strong className="text-foreground">
-                                                                            {formatCurrencyVND(v.minOrderValue || 0)}
-                                                                        </strong>
+                                                                        {t('voucherMinOrder', {
+                                                                            min: formatCurrencyVND(
+                                                                                v.minOrderValue || 0,
+                                                                            ),
+                                                                        })}
                                                                     </span>
                                                                     <span>•</span>
                                                                     <span>
-                                                                        HSD:{' '}
                                                                         {v.endDate
-                                                                            ? new Date(v.endDate).toLocaleDateString(
-                                                                                  'vi-VN',
-                                                                              )
+                                                                            ? t('voucherExpiry', {
+                                                                                  date: new Date(
+                                                                                      v.endDate,
+                                                                                  ).toLocaleDateString('vi-VN'),
+                                                                              })
                                                                             : ''}
                                                                     </span>
                                                                 </div>
@@ -1585,8 +1587,7 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                         <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
                                             <AlertCircleIcon className="size-3.5 text-amber-500" />
                                             <span>
-                                                {t('voucherIneligibleSection') || 'Chưa đủ điều kiện sử dụng'} (
-                                                {ineligibleVouchers.length})
+                                                {t('voucherIneligibleTitle')} ({ineligibleVouchers.length})
                                             </span>
                                         </div>
 
@@ -1631,8 +1632,9 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                                                                 </p>
 
                                                                 <p className="text-[10px] font-semibold text-rose-500">
-                                                                    Chưa đạt đơn tối thiểu {formatCurrencyVND(minOrder)}{' '}
-                                                                    (Mua thêm {formatCurrencyVND(remaining)})
+                                                                    {t('voucherConditionNotMet')}: Đơn tối thiểu{' '}
+                                                                    {formatCurrencyVND(minOrder)} (Mua thêm{' '}
+                                                                    {formatCurrencyVND(remaining)})
                                                                 </p>
                                                             </div>
                                                         </div>
@@ -1659,7 +1661,9 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
                             Object.keys(selectedModalShopCodes).length > 0 ? (
                                 <div className="space-y-0.5">
                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="text-muted-foreground font-medium">Đã chọn:</span>
+                                        <span className="text-muted-foreground font-medium">
+                                            {t('voucherSelectedLabel')}
+                                        </span>
                                         {selectedModalShippingCode && (
                                             <Badge
                                                 variant="secondary"
