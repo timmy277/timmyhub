@@ -176,13 +176,56 @@
     }
 }
 
+/* Hiệu ứng tia sáng quét sóng (shimmer wave) cao cấp cho Skeleton tương tự Ant Design, MUI, Mantine */
+@keyframes skeleton-shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+[data-slot='skeleton'] {
+    position: relative;
+    overflow: hidden;
+}
+
+[data-slot='skeleton']::after {
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.45) 50%,
+        transparent 100%
+    );
+    animation: skeleton-shimmer 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    content: '';
+    pointer-events: none;
+    will-change: transform;
+}
+
+.dark [data-slot='skeleton']::after {
+    background-image: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.08) 50%,
+        transparent 100%
+    );
+}
+
+
 /*
     Người dùng bật "giảm chuyển động" ở hệ điều hành (WCAG 2.3.3). Tailwind và `tw-animate-css` gắn
     `animation`/`transition` bằng utility class có độ đặc hiệu cao, nên nếu không ép bằng `!important` thì media query
     này không thắng được utility nào và trở thành vô nghĩa.
 
     Hạ thời lượng xuống gần 0 chứ không đặt `animation: none`: animation vẫn chạy tới khung hình cuối ngay lập tức, nên
-    phần tử giữ đúng trạng thái sau animation (spinner, fade-in của dialog…) thay vì kẹt ở khung hình đầu.
+    phần tử giữ đúng trạng thái sau animation (spinner, fade-in của dialog…) thay lý kẹt ở khung hình đầu.
+    Riêng Skeleton là chỉ báo trạng thái tải dữ liệu (loading indicator) thiết yếu: giữ nhịp pulse/shimmer êm dịu,
+    tránh việc skeleton bị tê liệt thành khối xám tĩnh gây hiểu nhầm là giao diện bị treo.
 */
 @media (prefers-reduced-motion: reduce) {
     *,
@@ -193,4 +236,16 @@
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
     }
+
+    /* Skeleton là chỉ báo trạng thái tải dữ liệu thiết yếu: giữ nhịp pulse/shimmer êm dịu, tránh bị đứng hình */
+    [data-slot='skeleton'] {
+        animation-duration: 2s !important;
+        animation-iteration-count: infinite !important;
+    }
+
+    [data-slot='skeleton']::after {
+        animation-duration: 2.2s !important;
+        animation-iteration-count: infinite !important;
+    }
 }
+
