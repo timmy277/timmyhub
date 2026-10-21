@@ -406,6 +406,47 @@ const TimerBlock = memo(function TimerBlock({ val, label }: { val: string; label
     )
 })
 
+/* Flash Sale live countdown timer - tự cô lập state để tránh re-render HomePage mỗi 1000ms */
+const FlashSaleTimer = memo(function FlashSaleTimer() {
+    const [timeLeft, setTimeLeft] = useState({ h: '05', m: '42', s: '18' })
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setTimeLeft((prev) => {
+                let h = parseInt(prev.h, 10)
+                let m = parseInt(prev.m, 10)
+                let s = parseInt(prev.s, 10)
+
+                if (--s < 0) {
+                    s = 59
+                    if (--m < 0) {
+                        m = 59
+                        if (--h < 0) {
+                            h = 12
+                        }
+                    }
+                }
+                return {
+                    h: String(h).padStart(2, '0'),
+                    m: String(m).padStart(2, '0'),
+                    s: String(s).padStart(2, '0'),
+                }
+            })
+        }, 1000)
+        return () => clearInterval(interval)
+    }, [])
+
+    return (
+        <div className="flex items-center gap-1.5">
+            <TimerBlock val={timeLeft.h} label="Giờ" />
+            <span className="font-bold text-foreground">:</span>
+            <TimerBlock val={timeLeft.m} label="Phút" />
+            <span className="font-bold text-foreground">:</span>
+            <TimerBlock val={timeLeft.s} label="Giây" />
+        </div>
+    )
+})
+
 interface HomeProductItem {
     id: string
     name: string
@@ -468,6 +509,7 @@ const Product3DCard = memo(function Product3DCard({ product: p, isLiked, onToggl
         <div className="[perspective:1000px] h-full">
             <Link
                 href={ROUTE.PRODUCT_DETAIL(p.slug || p.id)}
+                prefetch={false}
                 className="block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl"
             >
                 <article
@@ -681,35 +723,7 @@ export function HomePage() {
         return () => clearInterval(timer)
     }, [isPaused])
 
-    // 2. Flash Sale Countdown State
-    const [timeLeft, setTimeLeft] = useState({ h: '05', m: '42', s: '18' })
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setTimeLeft((prev) => {
-                let h = parseInt(prev.h, 10)
-                let m = parseInt(prev.m, 10)
-                let s = parseInt(prev.s, 10)
-
-                if (--s < 0) {
-                    s = 59
-                    if (--m < 0) {
-                        m = 59
-                        if (--h < 0) {
-                            h = 12
-                        }
-                    }
-                }
-                return {
-                    h: String(h).padStart(2, '0'),
-                    m: String(m).padStart(2, '0'),
-                    s: String(s).padStart(2, '0'),
-                }
-            })
-        }, 1000)
-        return () => clearInterval(interval)
-    }, [])
-
-    // 3. Saved Vouchers State & Real Promotion Vouchers
+    // 2. Saved Vouchers State & Real Promotion Vouchers
     const { data: realVouchers = [] } = usePublicAvailableVouchers()
     const { data: mySavedVoucherIds = [] } = useMySavedVoucherIds()
     const saveVoucherMutation = useSaveUserVoucher()
@@ -898,7 +912,7 @@ export function HomePage() {
                                             alt={heroCopy[index]!.title.replace('\n', ' ')}
                                             fill
                                             priority={index === 0}
-                                            loading={index === 0 ? 'eager' : 'lazy'}
+                                            fetchPriority={index === 0 ? 'high' : 'auto'}
                                             sizes="(max-width: 1280px) 100vw, 1280px"
                                             className="object-cover scale-105 transition-transform duration-1000 ease-out"
                                         />
@@ -1251,13 +1265,7 @@ export function HomePage() {
                             </div>
                             <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                                 <span>Kết thúc sau:</span>
-                                <div className="flex items-center gap-1.5">
-                                    <TimerBlock val={timeLeft.h} label="Giờ" />
-                                    <span className="font-bold text-foreground">:</span>
-                                    <TimerBlock val={timeLeft.m} label="Phút" />
-                                    <span className="font-bold text-foreground">:</span>
-                                    <TimerBlock val={timeLeft.s} label="Giây" />
-                                </div>
+                                <FlashSaleTimer />
                             </div>
                         </div>
 
@@ -1580,7 +1588,7 @@ export function HomePage() {
                                     <PlayIcon className="size-4 fill-current text-white" />
                                     Google Play
                                 </Button>
-                                <Link href={sellerRoute}>
+                                <Link href={sellerRoute} prefetch={false}>
                                     <Button
                                         size="lg"
                                         className="rounded-xl font-semibold gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"

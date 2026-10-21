@@ -55,14 +55,14 @@ export function HomeVideoCard({
                         alt={post.title}
                         fill
                         sizes="(max-width: 768px) 100vw, 33vw"
-                        unoptimized
+                        loading="lazy"
                         onError={() => onThumbError(post.id)}
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                 ) : !post.videoUrl.includes('.m3u8') ? (
                     <video
                         src={post.videoUrl.includes('#t=') ? post.videoUrl : `${post.videoUrl}#t=0.001`}
-                        preload="metadata"
+                        preload="none"
                         playsInline
                         muted
                         onError={() => onThumbError(post.id)}

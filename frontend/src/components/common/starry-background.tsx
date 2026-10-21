@@ -67,10 +67,10 @@ const { BACKGROUND_STARS, MICRO_STARS } = (() => {
         },
     ]
 
-    // 28 Gemini 4-point star icons spread along side margins and ambient spaces
-    // (giảm từ 56 → 28 để giảm số lượng DOM + công việc paint trên main thread)
+    // 14 Gemini 4-point star icons spread along side margins and ambient spaces
+    // (tối ưu hóa DOM nodes và paint cost trên main thread)
     const geminiList: BackgroundStar[] = []
-    const totalGemini = 28
+    const totalGemini = 14
     for (let i = 0; i < totalGemini; i++) {
         const pal = colorPalettes[Math.floor(rand() * colorPalettes.length)]
         const size = sizes[Math.floor(rand() * sizes.length)]
@@ -102,9 +102,9 @@ const { BACKGROUND_STARS, MICRO_STARS } = (() => {
         })
     }
 
-    // 60 tiny stardust dots (giảm từ 140 → 60 để giảm DOM nodes)
+    // 28 tiny stardust dots (tối ưu DOM + bỏ animation rác)
     const microList: MicroStar[] = []
-    const totalMicro = 60
+    const totalMicro = 28
     for (let i = 0; i < totalMicro; i++) {
         const top = `${(rand() * 99).toFixed(1)}%`
         const left = `${(rand() * 98 + 1).toFixed(1)}%`
@@ -174,17 +174,17 @@ export const StarryBackground = memo(function StarryBackground() {
             {/* Dot texture */}
             <div className="absolute inset-0 bg-[radial-gradient(var(--color-primary)_1px,transparent_1px)] [background-size:24px_24px] opacity-10" />
 
-            {/* Top radiant bloom — blur 80px (giảm từ 120px để giảm GPU paint cost) */}
+            {/* Top radiant bloom — blur 80px */}
             <div className="absolute -top-32 left-1/2 -translate-x-1/2 h-[650px] w-full max-w-7xl rounded-full bg-gradient-to-b from-primary/30 via-primary/15 to-transparent blur-[80px]" />
 
-            {/* Left orb */}
-            <div className="absolute top-[20%] -left-32 size-[500px] rounded-full bg-primary/20 blur-[80px]" />
+            {/* Left orb — chỉ hiển thị trên sm trở lên để tránh nghẽn GPU mobile */}
+            <div className="hidden sm:block absolute top-[20%] -left-32 size-[500px] rounded-full bg-primary/20 blur-[80px]" />
 
-            {/* Right orb */}
-            <div className="absolute top-[50%] -right-32 size-[550px] rounded-full bg-primary/20 blur-[80px]" />
+            {/* Right orb — chỉ hiển thị trên sm trở lên */}
+            <div className="hidden sm:block absolute top-[50%] -right-32 size-[550px] rounded-full bg-primary/20 blur-[80px]" />
 
             {/* Lower aura */}
-            <div className="absolute top-[75%] left-1/4 size-[600px] rounded-full bg-primary/15 blur-[80px]" />
+            <div className="hidden sm:block absolute top-[75%] left-1/4 size-[600px] rounded-full bg-primary/15 blur-[80px]" />
 
             {/* Bottom aura */}
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[450px] w-full max-w-6xl rounded-full bg-gradient-to-t from-primary/25 to-transparent blur-[80px]" />
@@ -192,7 +192,7 @@ export const StarryBackground = memo(function StarryBackground() {
             {/* Dark mode nebula */}
             <div className="absolute inset-0 bg-transparent dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.22),transparent)]" />
 
-            {/* Micro-stars (stardust) */}
+            {/* Micro-stars (stardust) - tĩnh nhẹ nhàng, không dùng animate-pulse để bảo toàn FPS */}
             {MICRO_STARS.map((s) => (
                 <span
                     key={s.id}
@@ -202,10 +202,8 @@ export const StarryBackground = memo(function StarryBackground() {
                         left: s.left,
                         width: s.size,
                         height: s.size,
-                        animationDuration: s.duration,
-                        animationDelay: s.delay,
                     }}
-                    className="absolute rounded-full bg-foreground/25 dark:bg-white/60 animate-pulse [animation-duration:inherit]"
+                    className="absolute rounded-full bg-foreground/20 dark:bg-white/50"
                 />
             ))}
 

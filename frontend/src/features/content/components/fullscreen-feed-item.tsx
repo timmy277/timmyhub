@@ -125,6 +125,7 @@ export function FullscreenFeedItem({
             <div className="relative size-full flex items-center justify-center">
                 <HlsVideoPlayer
                     src={video.videoUrl}
+                    poster={video.thumbnailUrl}
                     isActive={isActive}
                     muted={isMuted}
                     autoPlay
