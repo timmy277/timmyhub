@@ -37,5 +37,5 @@ import { PrismaModule } from '@timmyhub/prisma'
         ContentModule,
     ],
 })
-// Trigger dev reload for ContentModule - updated
+// Trigger dev reload for RedisModule
 export class AppModule {}
