@@ -24,6 +24,15 @@ export const OUTBOX_EVENT = {
     PRODUCT_SUSPENDED: 'catalog.product.suspended',
     PRODUCT_RESTORED: 'catalog.product.restored',
     PRODUCT_DELETED: 'catalog.product.deleted',
+    // domain order
+    ORDER_CREATED: 'order.created',
+    ORDER_STATUS_UPDATED: 'order.status.updated',
+    ORDER_PAID: 'order.paid',
+    ORDER_CANCELLED: 'order.cancelled',
+    ORDER_DELIVERED: 'order.delivered',
+    // domain payment
+    PAYMENT_COMPLETED: 'payment.completed',
+    PAYMENT_FAILED: 'payment.failed',
 } as const
 
 export type OutboxEventType = (typeof OUTBOX_EVENT)[keyof typeof OUTBOX_EVENT]
@@ -33,6 +42,8 @@ export const OUTBOX_AGGREGATE = {
     IDENTITY: 'identity',
     SELLER: 'seller',
     CATALOG: 'catalog',
+    ORDER: 'order',
+    PAYMENT: 'payment',
 } as const
 
 export type OutboxAggregateType = (typeof OUTBOX_AGGREGATE)[keyof typeof OUTBOX_AGGREGATE]

@@ -21,7 +21,7 @@ import type {
     OrderVoucherDetail,
     UpdateAddressInput,
 } from '@timmyhub/contracts'
-import { ORDER_STATUS } from '@timmyhub/contracts'
+import { ORDER_STATUS, OUTBOX_AGGREGATE, OUTBOX_EVENT } from '@timmyhub/contracts'
 
 import type { OrderWithRelations } from './order.repository'
 import { OrderRepository } from './order.repository'
@@ -728,6 +728,26 @@ export class OrderService implements OnModuleInit, OnModuleDestroy {
                     })
                 }
 
+                // Ghi OutboxEvent cho từng đơn hàng (Transactional Outbox - Luật cứng #3)
+                for (const o of ordersList) {
+                    await tx.outboxEvent.create({
+                        data: {
+                            aggregateType: OUTBOX_AGGREGATE.ORDER,
+                            aggregateId: o.id,
+                            eventType: OUTBOX_EVENT.ORDER_CREATED,
+                            payload: {
+                                orderId: o.id,
+                                orderNumber: o.id.slice(-8).toUpperCase(),
+                                buyerId: o.buyerId,
+                                sellerId: o.sellerId,
+                                totalAmount: o.totalAmount.toString(),
+                                paymentMethod: o.paymentMethod,
+                                itemCount: o.orderItems?.length ?? 1,
+                            },
+                        },
+                    })
+                }
+
                 return ordersList
             },
             {
@@ -903,6 +923,23 @@ export class OrderService implements OnModuleInit, OnModuleDestroy {
                         orderItems: true,
                         address: true,
                         statusHistory: { orderBy: { createdAt: 'desc' } },
+                    },
+                })
+
+                // Ghi OutboxEvent huỷ đơn (Transactional Outbox)
+                await tx.outboxEvent.create({
+                    data: {
+                        aggregateType: OUTBOX_AGGREGATE.ORDER,
+                        aggregateId: order.id,
+                        eventType: OUTBOX_EVENT.ORDER_CANCELLED,
+                        payload: {
+                            orderId: order.id,
+                            orderNumber: order.id.slice(-8).toUpperCase(),
+                            buyerId: order.buyerId,
+                            sellerId: order.sellerId,
+                            cancelledBy: userId,
+                            reason: cancelReason,
+                        },
                     },
                 })
 
@@ -1111,6 +1148,32 @@ export class OrderService implements OnModuleInit, OnModuleDestroy {
                     order.paymentStatus === 'COMPLETED' ||
                     toStatus === 'DELIVERED' ||
                     toStatus === 'COMPLETED'
+
+                // Ghi OutboxEvent cập nhật trạng thái đơn (Transactional Outbox)
+                const outboxEventType =
+                    toStatus === 'DELIVERED' || toStatus === 'COMPLETED'
+                        ? OUTBOX_EVENT.ORDER_DELIVERED
+                        : toStatus === 'CANCELLED'
+                          ? OUTBOX_EVENT.ORDER_CANCELLED
+                          : OUTBOX_EVENT.ORDER_STATUS_UPDATED
+
+                await tx.outboxEvent.create({
+                    data: {
+                        aggregateType: OUTBOX_AGGREGATE.ORDER,
+                        aggregateId: orderId,
+                        eventType: outboxEventType,
+                        payload: {
+                            orderId,
+                            orderNumber: order.id.slice(-8).toUpperCase(),
+                            fromStatus: order.status,
+                            toStatus,
+                            sellerId: order.sellerId,
+                            buyerId: order.buyerId,
+                            updatedBy: userId,
+                            note: note ?? null,
+                        },
+                    },
+                })
 
                 return tx.order.update({
                     where: { id: orderId },
@@ -1441,6 +1504,23 @@ export class OrderService implements OnModuleInit, OnModuleDestroy {
                         await tx.payment.updateMany({
                             where: { orderId: order.id, status: PaymentStatus.PENDING },
                             data: { status: PaymentStatus.FAILED },
+                        })
+
+                        // 5. Ghi OutboxEvent huỷ đơn (Transactional Outbox)
+                        await tx.outboxEvent.create({
+                            data: {
+                                aggregateType: OUTBOX_AGGREGATE.ORDER,
+                                aggregateId: order.id,
+                                eventType: OUTBOX_EVENT.ORDER_CANCELLED,
+                                payload: {
+                                    orderId: order.id,
+                                    orderNumber: order.id.slice(-8).toUpperCase(),
+                                    buyerId: order.buyerId,
+                                    sellerId: order.sellerId,
+                                    cancelledBy: 'SYSTEM',
+                                    reason: 'Hết thời hạn thanh toán VNPay (15 phút)',
+                                },
+                            },
                         })
                     },
                     { maxWait: 10000, timeout: 20000 },

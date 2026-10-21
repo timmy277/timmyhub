@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
+    "@timmyhub/contracts": "workspace:*",
     "@timmyhub/modules": "workspace:*",
     "@timmyhub/prisma": "workspace:*",
     "bullmq": "^5.34.0",

@@ -14,6 +14,7 @@ import {
 } from 'vnpay'
 import type { Prisma } from '@timmyhub/prisma'
 import { OrderStatus, PaymentStatus, PrismaService } from '@timmyhub/prisma'
+import { OUTBOX_AGGREGATE, OUTBOX_EVENT } from '@timmyhub/contracts'
 import type { Request } from 'express'
 
 export interface VnpayReturnParams {
@@ -185,6 +186,19 @@ export class VnpayService {
                         where: { txnRef },
                         data: { status: PaymentStatus.FAILED },
                     })
+                    await tx.outboxEvent.create({
+                        data: {
+                            aggregateType: OUTBOX_AGGREGATE.PAYMENT,
+                            aggregateId: payment.id,
+                            eventType: OUTBOX_EVENT.PAYMENT_FAILED,
+                            payload: {
+                                paymentId: payment.id,
+                                orderId: payment.orderId,
+                                responseCode: responseCode ?? 'UNKNOWN',
+                                txnRef,
+                            },
+                        },
+                    })
                 },
                 { maxWait: 10000, timeout: 20000 },
             )
@@ -282,6 +296,19 @@ export class VnpayService {
                             ipnReceivedAt: new Date(),
                         },
                     })
+                    await tx.outboxEvent.create({
+                        data: {
+                            aggregateType: OUTBOX_AGGREGATE.PAYMENT,
+                            aggregateId: payment.id,
+                            eventType: OUTBOX_EVENT.PAYMENT_FAILED,
+                            payload: {
+                                paymentId: payment.id,
+                                orderId: payment.orderId,
+                                responseCode: responseCode ?? 'UNKNOWN',
+                                txnRef,
+                            },
+                        },
+                    })
                 },
                 { maxWait: 10000, timeout: 20000 },
             )
@@ -348,7 +375,36 @@ export class VnpayService {
                             actorRole: 'SYSTEM',
                         },
                     })
+
+                    // Ghi OutboxEvent cho từng đơn hàng đã thanh toán (Transactional Outbox)
+                    await tx.outboxEvent.create({
+                        data: {
+                            aggregateType: OUTBOX_AGGREGATE.ORDER,
+                            aggregateId: orderId,
+                            eventType: OUTBOX_EVENT.ORDER_PAID,
+                            payload: {
+                                orderId,
+                                paymentId,
+                                vnpayTransNo: transactionNo ?? null,
+                            },
+                        },
+                    })
                 }
+
+                // Ghi OutboxEvent thanh toán thành công (Transactional Outbox)
+                await tx.outboxEvent.create({
+                    data: {
+                        aggregateType: OUTBOX_AGGREGATE.PAYMENT,
+                        aggregateId: paymentId,
+                        eventType: OUTBOX_EVENT.PAYMENT_COMPLETED,
+                        payload: {
+                            paymentId,
+                            orderIds,
+                            vnpayTransNo: transactionNo ?? null,
+                            amount: payment?.amount ? payment.amount.toString() : '0',
+                        },
+                    },
+                })
             },
             { maxWait: 10000, timeout: 20000 },
         )
