@@ -34,6 +34,7 @@ export const QUERY_KEY = {
     SELLER: {
         ALL: ['seller'] as const,
         MY_SHOP: ['seller', 'my-shop'] as const,
+        WALLET: ['seller', 'wallet'] as const,
         APPLICATIONS: ['seller', 'applications'] as const,
         APPLICATION_DETAIL: (id: string) => ['seller', 'applications', id] as const,
     },

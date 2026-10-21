@@ -60,7 +60,10 @@ export const API_ROUTE = {
         APPLICATIONS: 'v1/seller/applications',
         APPLICATIONS_ME: 'v1/seller/applications/me',
         SHOP_ME: 'v1/seller/shop/me',
+        WALLET: 'v1/seller/shop/me/wallet',
+        WALLET_WITHDRAW: 'v1/seller/shop/me/wallet/withdraw',
         PUBLIC_SHOP: (slug: string) => `v1/shops/${encodeURIComponent(slug)}`,
+
         ADMIN_APPLICATIONS: 'v1/admin/seller/applications',
         ADMIN_APPLICATION_DETAIL: (id: string) => `v1/admin/seller/applications/${encodeURIComponent(id)}`,
         ADMIN_APPLICATION_APPROVE: (id: string) => `v1/admin/seller/applications/${encodeURIComponent(id)}/approve`,

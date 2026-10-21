@@ -30,6 +30,7 @@ import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitl
 import { IconPath } from '@/components/icons'
 
 import { getMyShopAction } from '../actions'
+import { SellerWalletPanel } from './seller-wallet-panel'
 
 interface SellerPortalViewProps {
     initialShop?: SellerProfileDetail | null
@@ -345,7 +346,12 @@ export function SellerPortalView({ initialShop }: SellerPortalViewProps = {}) {
             </Card>
 
             {/* ═══════════════════════════════════════════════════════════════════
-             * 5. QUICK NAVIGATION CARDS (Direct routes from sidebar)
+             * 5. SELLER WALLET & SETTLEMENT
+             * ═══════════════════════════════════════════════════════════════════ */}
+            <SellerWalletPanel />
+
+            {/* ═══════════════════════════════════════════════════════════════════
+             * 6. QUICK NAVIGATION CARDS (Direct routes from sidebar)
              * ═══════════════════════════════════════════════════════════════════ */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <Card className="border border-border/70 bg-card/85 shadow-sm rounded-2xl overflow-hidden hover:border-primary/50 transition-all flex flex-col justify-between">

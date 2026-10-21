@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import type {
     ApiErrorCode,
     CreateSellerApplicationInput,
+    CreateWithdrawalInput,
     OrderDetail,
     PublicShopDetail,
     ReviewSellerApplicationInput,
@@ -14,9 +15,12 @@ import type {
     SellerProfileDetail,
     UpdateOrderStatusInput,
     UpdateSellerProfileInput,
+    WalletDetail,
+    WithdrawalDetail,
 } from '@timmyhub/contracts'
 import {
     CreateSellerApplicationSchema,
+    CreateWithdrawalInputSchema,
     ReviewSellerApplicationSchema,
     SellerApplicationQuerySchema,
     UpdateOrderStatusInputSchema,
@@ -241,5 +245,45 @@ export async function updateSellerOrderStatusAction(
     if (!result.ok) return { ok: false, code: result.code }
 
     revalidatePath(ROUTE.SELLER_ORDERS)
+    return { ok: true, data: result.data }
+}
+
+// Lấy thông tin ví và lịch sử giao dịch của Shop (FEAT-WAL-001)
+export async function getSellerWalletAction(): Promise<SellerActionResult<WalletDetail>> {
+    const actor = await getActor()
+    if (!actor) return { ok: false, code: 'UNAUTHORIZED' }
+
+    const result = await fetchBackend<WalletDetail>(API_ROUTE.SELLER.WALLET, {
+        token: actor.accessToken,
+    })
+
+    if (!result.ok) {
+        return {
+            ok: false,
+            code: result.status === 403 ? 'FORBIDDEN' : result.status === 401 ? 'UNAUTHORIZED' : result.code,
+        }
+    }
+    return { ok: true, data: result.data }
+}
+
+// Gửi yêu cầu rút tiền về tài khoản ngân hàng (FEAT-WAL-005)
+export async function requestWithdrawalAction(
+    input: CreateWithdrawalInput,
+): Promise<SellerActionResult<WithdrawalDetail>> {
+    const parsed = CreateWithdrawalInputSchema.safeParse(input)
+    if (!parsed.success) return { ok: false, code: 'VALIDATION_FAILED' }
+
+    const actor = await getActor()
+    if (!actor) return { ok: false, code: 'UNAUTHORIZED' }
+
+    const result = await fetchBackend<WithdrawalDetail>(API_ROUTE.SELLER.WALLET_WITHDRAW, {
+        token: actor.accessToken,
+        method: 'POST',
+        body: parsed.data,
+    })
+
+    if (!result.ok) return { ok: false, code: result.code }
+
+    revalidatePath(ROUTE.SELLER_PORTAL)
     return { ok: true, data: result.data }
 }
