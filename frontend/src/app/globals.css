@@ -195,12 +195,7 @@
     position: absolute;
     inset: 0;
     transform: translateX(-100%);
-    background-image: linear-gradient(
-        90deg,
-        transparent 0%,
-        rgba(255, 255, 255, 0.45) 50%,
-        transparent 100%
-    );
+    background-image: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.45) 50%, transparent 100%);
     animation: skeleton-shimmer 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
     content: '';
     pointer-events: none;
@@ -208,14 +203,8 @@
 }
 
 .dark [data-slot='skeleton']::after {
-    background-image: linear-gradient(
-        90deg,
-        transparent 0%,
-        rgba(255, 255, 255, 0.08) 50%,
-        transparent 100%
-    );
+    background-image: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.08) 50%, transparent 100%);
 }
-
 
 /*
     Người dùng bật "giảm chuyển động" ở hệ điều hành (WCAG 2.3.3). Tailwind và `tw-animate-css` gắn
@@ -248,4 +237,3 @@
         animation-iteration-count: infinite !important;
     }
 }
-
