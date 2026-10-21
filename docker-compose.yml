@@ -1,4 +1,5 @@
 services:
+  # 1. Redis Cache & Task Queue
   redis:
     image: redis:7-alpine
     container_name: timmyhub-redis
@@ -13,6 +14,57 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+
+  # 2. NestJS Backend API
+  api:
+    build:
+      context: .
+      dockerfile: backend/apps/api/Dockerfile
+    container_name: timmyhub-api
+    restart: unless-stopped
+    ports:
+      - '3001:3001'
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      - backend/apps/api/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # 3. Background Worker (BullMQ & Outbox Dispatcher)
+  worker:
+    build:
+      context: .
+      dockerfile: backend/apps/worker/Dockerfile
+    container_name: timmyhub-worker
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      - backend/apps/api/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # 4. Next.js Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: timmyhub-frontend
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - NEXT_PUBLIC_API_URL=http://api:3001
+    depends_on:
+      - api
 
 volumes:
   redis_data:
