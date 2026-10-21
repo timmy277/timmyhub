@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, Optional } from '@nestjs/common'
 import { EventEmitter2 } from '@nestjs/event-emitter'
 
 import { ApiError, apiMessageKey, ResourceStatus } from '@timmyhub/contracts'
@@ -18,6 +18,7 @@ import type {
     UpdateProductInput,
 } from '@timmyhub/contracts'
 import { SellerRepository } from '../seller'
+import { RedisService } from '../redis/index'
 
 import { CATALOG_EVENT } from './catalog.constants'
 import { slugifyString, toCategoryItem, toCategorySummary, toProductDetail } from './catalog.mapper'
@@ -31,6 +32,7 @@ export class CatalogService {
         private readonly catalogRepository: CatalogRepository,
         private readonly sellerRepository: SellerRepository,
         private readonly eventEmitter: EventEmitter2,
+        @Optional() private readonly redisService?: RedisService,
     ) {}
 
     // ===== Infrastructure =====
@@ -48,9 +50,23 @@ export class CatalogService {
     // ===== Public Queries =====
 
     async getCategories(): Promise<CategorySummary[]> {
+        const CACHE_KEY = 'cache:categories:tree'
+        if (this.redisService) {
+            const cached = await this.redisService.get<CategorySummary[]>(CACHE_KEY)
+            if (cached) {
+                return cached
+            }
+        }
+
         // Luật #7: lọc phạm vi TRONG câu truy vấn, không .filter() sau khi lấy
         const rootCategories = await this.catalogRepository.findRootCategories()
-        return rootCategories.map((c) => toCategorySummary(c))
+        const result = rootCategories.map((c) => toCategorySummary(c))
+
+        if (this.redisService) {
+            await this.redisService.set(CACHE_KEY, result, 3600) // TTL 1 giờ
+        }
+
+        return result
     }
 
     async listPublicProducts(query: ProductQuery): Promise<ProductListResult> {
@@ -359,6 +375,10 @@ export class CatalogService {
             isActive: input.isActive ?? true,
         })
 
+        if (this.redisService) {
+            await this.redisService.del('cache:categories:tree')
+        }
+
         return toCategoryItem(created)
     }
 
@@ -399,6 +419,10 @@ export class CatalogService {
             isActive: input.isActive,
         })
 
+        if (this.redisService) {
+            await this.redisService.del('cache:categories:tree')
+        }
+
         return toCategoryItem(updated)
     }
 
@@ -420,6 +444,11 @@ export class CatalogService {
         }
 
         await this.catalogRepository.deleteCategory(id)
+
+        if (this.redisService) {
+            await this.redisService.del('cache:categories:tree')
+        }
+
         return { success: true }
     }
 }

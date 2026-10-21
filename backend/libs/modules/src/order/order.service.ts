@@ -1150,7 +1150,7 @@ export class OrderService implements OnModuleInit, OnModuleDestroy {
                     toStatus === 'COMPLETED'
 
                 // Ghi OutboxEvent cập nhật trạng thái đơn (Transactional Outbox)
-                const outboxEventType =
+                const outboxEventType: string =
                     toStatus === 'DELIVERED' || toStatus === 'COMPLETED'
                         ? OUTBOX_EVENT.ORDER_DELIVERED
                         : toStatus === 'CANCELLED'

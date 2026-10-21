@@ -12,3 +12,4 @@ export { EngagementModule, EngagementService, EngagementRepository } from './eng
 export { NotificationModule, NotificationService, NotificationGateway } from './notification/index'
 export { ChatModule, ChatService, ChatGateway } from './chat/index'
 export { ContentModule, ContentService, ContentRepository, VideoTranscodeService } from './content/index'
+export { RedisModule, RedisService } from './redis/index'

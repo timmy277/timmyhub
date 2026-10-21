@@ -14,6 +14,7 @@ import { EngagementModule } from '@timmyhub/modules/engagement'
 import { NotificationModule } from '@timmyhub/modules/notification'
 import { ChatModule } from '@timmyhub/modules/chat'
 import { ContentModule } from '@timmyhub/modules/content'
+import { RedisModule } from '@timmyhub/modules/redis'
 import { PrismaModule } from '@timmyhub/prisma'
 
 @Module({
@@ -21,6 +22,7 @@ import { PrismaModule } from '@timmyhub/prisma'
         ConfigModule.forRoot({ isGlobal: true }),
         EventEmitterModule.forRoot(),
         PrismaModule,
+        RedisModule,
         PlatformModule,
         IdentityModule,
         CatalogModule,
