@@ -61,7 +61,9 @@ export const API_MESSAGES_EN: ApiMessageCatalog = {
         shopNotFound: 'Shop not found.',
         shopAlreadyExists: 'Shop name or slug already exists, please choose another name.',
         shopSuspended: 'The shop is currently suspended due to policy violations.',
+        insufficientBalance: 'Insufficient available balance to process withdrawal.',
     },
+
     audit: {
         logNotFound: 'The audit log entry does not exist.',
     },

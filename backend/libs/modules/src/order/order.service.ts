@@ -1046,6 +1046,65 @@ export class OrderService implements OnModuleInit, OnModuleDestroy {
                     })
                 }
 
+                // Ghi nhận dòng tiền vào Ví Người Bán (Wallet & Settlement - FEAT-WAL-001..004)
+                if (
+                    (toStatus === 'DELIVERED' || toStatus === 'COMPLETED') &&
+                    order.status !== 'DELIVERED' &&
+                    order.status !== 'COMPLETED'
+                ) {
+                    const shopWallet = await tx.wallet.upsert({
+                        where: { sellerId: order.sellerId },
+                        create: {
+                            sellerId: order.sellerId,
+                            availableBalance: toStatus === 'COMPLETED' ? order.totalAmount : 0,
+                            holdBalance: toStatus === 'DELIVERED' ? order.totalAmount : 0,
+                            currency: 'VND',
+                        },
+                        update: {
+                            ...(toStatus === 'COMPLETED'
+                                ? { availableBalance: { increment: order.totalAmount } }
+                                : { holdBalance: { increment: order.totalAmount } }),
+                        },
+                    })
+
+                    const existingIncomeTx = await tx.walletTransaction.findUnique({
+                        where: {
+                            walletId_referenceKey_type: {
+                                walletId: shopWallet.id,
+                                referenceKey: order.id,
+                                type: 'SALE_INCOME',
+                            },
+                        },
+                    })
+
+                    if (!existingIncomeTx) {
+                        const balanceAfter =
+                            toStatus === 'COMPLETED'
+                                ? shopWallet.availableBalance.add(order.totalAmount)
+                                : shopWallet.holdBalance.add(order.totalAmount)
+
+                        await tx.walletTransaction.create({
+                            data: {
+                                walletId: shopWallet.id,
+                                type: 'SALE_INCOME',
+                                amount: order.totalAmount,
+                                balanceAfter,
+                                referenceKey: order.id,
+                                description: `Doanh thu đơn hàng #${order.id.slice(-8).toUpperCase()}`,
+                            },
+                        })
+                    }
+                } else if (order.status === 'DELIVERED' && toStatus === 'COMPLETED') {
+                    // Chuyển từ số dư chờ đối soát (hold) sang số dư khả dụng (available)
+                    await tx.wallet.updateMany({
+                        where: { sellerId: order.sellerId },
+                        data: {
+                            holdBalance: { decrement: order.totalAmount },
+                            availableBalance: { increment: order.totalAmount },
+                        },
+                    })
+                }
+
                 // Nếu đơn chuyển sang COMPLETED hoặc DELIVERED và đã thanh toán COD
                 const isPaid =
                     order.paymentStatus === 'PAID' ||

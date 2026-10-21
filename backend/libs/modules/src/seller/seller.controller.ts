@@ -3,12 +3,20 @@ import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common'
 import { ZodValidationPipe } from '@timmyhub/common'
 import type {
     CreateSellerApplicationInput,
+    CreateWithdrawalInput,
     PublicShopDetail,
     SellerApplicationDetail,
     SellerProfileDetail,
     UpdateSellerProfileInput,
+    WalletDetail,
+    WithdrawalDetail,
 } from '@timmyhub/contracts'
-import { CreateSellerApplicationSchema, UpdateSellerProfileSchema } from '@timmyhub/contracts'
+import {
+    CreateSellerApplicationSchema,
+    CreateWithdrawalInputSchema,
+    UpdateSellerProfileSchema,
+} from '@timmyhub/contracts'
+
 import { AuthenticatedOnly, CurrentUser, Permissions, Public } from '@timmyhub/modules/platform/auth'
 import type { AuthUser } from '@timmyhub/modules/platform/auth'
 
@@ -59,6 +67,25 @@ export class SellerController {
         @CurrentUser() actor: AuthUser,
     ): Promise<SellerProfileDetail> {
         return this.sellerService.updateMyShop(actor.id, body)
+    }
+
+    // ===== Seller Wallet (FEAT-WAL-001..006) =====
+
+    // Xem thông tin ví và lịch sử giao dịch của shop
+    @Permissions('wallet:balance:read')
+    @Get('shop/me/wallet')
+    getSellerWallet(@CurrentUser() actor: AuthUser): Promise<WalletDetail> {
+        return this.sellerService.getSellerWallet(actor.id)
+    }
+
+    // Yêu cầu rút tiền từ ví shop về ngân hàng
+    @Permissions('wallet:withdrawals:create')
+    @Post('shop/me/wallet/withdraw')
+    requestWithdrawal(
+        @Body(new ZodValidationPipe(CreateWithdrawalInputSchema)) body: CreateWithdrawalInput,
+        @CurrentUser() actor: AuthUser,
+    ): Promise<WithdrawalDetail> {
+        return this.sellerService.requestWithdrawal(actor.id, body)
     }
 }
 

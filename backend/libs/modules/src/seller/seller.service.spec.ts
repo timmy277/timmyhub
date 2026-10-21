@@ -1,6 +1,6 @@
 import { ResourceStatus, UserRole } from '@timmyhub/contracts'
 import type { CreateSellerApplicationInput, ReviewSellerApplicationInput } from '@timmyhub/contracts'
-import type { SellerApplication, SellerProfile } from '@timmyhub/prisma'
+import type { PrismaService, SellerApplication, SellerProfile } from '@timmyhub/prisma'
 
 import type { SellerRepository } from './seller.repository'
 import { SellerService } from './seller.service'
@@ -79,7 +79,14 @@ describe('SellerService', () => {
             restoreShop: jest.fn(),
         }
 
-        service = new SellerService(repository as unknown as SellerRepository)
+        const prismaMock = {
+            wallet: { upsert: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
+            withdrawal: { create: jest.fn() },
+            walletTransaction: { create: jest.fn() },
+            $transaction: jest.fn((cb: (tx: unknown) => Promise<unknown>) => cb(prismaMock)),
+        } as unknown as PrismaService
+
+        service = new SellerService(repository as unknown as SellerRepository, prismaMock)
     })
 
     describe('submitApplication (REQ-SEL-001..005)', () => {

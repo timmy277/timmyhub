@@ -64,7 +64,9 @@ export const API_MESSAGES_VI = {
         shopNotFound: 'Không tìm thấy thông tin shop.',
         shopAlreadyExists: 'Tên shop hoặc đường dẫn (slug) đã tồn tại, vui lòng chọn tên khác.',
         shopSuspended: 'Shop hiện đang bị tạm ngưng hoạt động do vi phạm chính sách.',
+        insufficientBalance: 'Số dư khả dụng trong ví không đủ để thực hiện rút tiền.',
     },
+
     audit: {
         logNotFound: 'Bản ghi kiểm toán không tồn tại.',
     },

@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common'
 import { randomUUID } from 'crypto'
+import { PrismaService } from '@timmyhub/prisma'
 
 import type {
     CreateSellerApplicationInput,
+    CreateWithdrawalInput,
     PublicShopDetail,
     ReviewSellerApplicationInput,
     SellerApplicationDetail,
@@ -10,6 +12,8 @@ import type {
     SellerApplicationQuery,
     SellerProfileDetail,
     UpdateSellerProfileInput,
+    WalletDetail,
+    WithdrawalDetail,
 } from '@timmyhub/contracts'
 import { ApiError, ResourceStatus, UserRole } from '@timmyhub/contracts'
 
@@ -20,7 +24,10 @@ import { SellerRepository } from './seller.repository'
 @Injectable()
 export class SellerService {
     // ===== Dependencies =====
-    constructor(private readonly repository: SellerRepository) {}
+    constructor(
+        private readonly repository: SellerRepository,
+        private readonly prisma: PrismaService,
+    ) {}
 
     // ===== Queries (User / Seller) =====
 
@@ -279,5 +286,121 @@ export class SellerService {
         }
         const updated = await this.repository.restoreShop(profileId)
         return toSellerProfileDetail(updated)
+    }
+
+    // ===== Seller Wallet & Settlement (FEAT-WAL-001..006) =====
+
+    // Lấy thông tin ví và sổ giao dịch của người bán
+    async getSellerWallet(userId: string): Promise<WalletDetail> {
+        const profile = await this.repository.findProfileByUserId(userId)
+        if (!profile) {
+            throw new ApiError('SELLER_SHOP_NOT_FOUND', {
+                messageKey: 'seller.shopNotFound',
+            })
+        }
+
+        const wallet = await this.prisma.wallet.upsert({
+            where: { sellerId: profile.id },
+            create: {
+                sellerId: profile.id,
+                availableBalance: 0,
+                holdBalance: 0,
+                currency: 'VND',
+            },
+            update: {},
+            include: {
+                transactions: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 30,
+                },
+            },
+        })
+
+        return {
+            id: wallet.id,
+            sellerId: wallet.sellerId,
+            buyerId: wallet.buyerId,
+            availableBalance: wallet.availableBalance.toString(),
+            holdBalance: wallet.holdBalance.toString(),
+            currency: wallet.currency,
+            createdAt: wallet.createdAt.toISOString(),
+            updatedAt: wallet.updatedAt.toISOString(),
+            recentTransactions: wallet.transactions.map((tx) => ({
+                id: tx.id,
+                type: tx.type,
+                amount: tx.amount.toString(),
+                balanceAfter: tx.balanceAfter.toString(),
+                description: tx.description,
+                referenceKey: tx.referenceKey,
+                createdAt: tx.createdAt.toISOString(),
+            })),
+        }
+    }
+
+    // Tạo yêu cầu rút tiền về ngân hàng
+    async requestWithdrawal(userId: string, input: CreateWithdrawalInput): Promise<WithdrawalDetail> {
+        const profile = await this.repository.findProfileByUserId(userId)
+        if (!profile) {
+            throw new ApiError('SELLER_SHOP_NOT_FOUND', {
+                messageKey: 'seller.shopNotFound',
+            })
+        }
+
+        const wallet = await this.prisma.wallet.findUnique({
+            where: { sellerId: profile.id },
+        })
+
+        if (!wallet || wallet.availableBalance.lessThan(input.amount)) {
+            throw new ApiError('BAD_REQUEST', {
+                messageKey: 'seller.insufficientBalance',
+            })
+        }
+
+        return this.prisma.$transaction(async (tx) => {
+            // Trừ số dư khả dụng
+            const updatedWallet = await tx.wallet.update({
+                where: { id: wallet.id },
+                data: {
+                    availableBalance: { decrement: input.amount },
+                },
+            })
+
+            // Tạo bản ghi yêu cầu rút tiền
+            const withdrawal = await tx.withdrawal.create({
+                data: {
+                    walletId: wallet.id,
+                    amount: input.amount,
+                    bankName: input.bankName,
+                    bankAccountNumber: input.bankAccountNumber,
+                    bankAccountName: input.bankAccountName,
+                    status: 'REQUESTED',
+                },
+            })
+
+            // Ghi nhận biến động số dư trong sổ cái
+            await tx.walletTransaction.create({
+                data: {
+                    walletId: wallet.id,
+                    type: 'WITHDRAWAL',
+                    amount: input.amount,
+                    balanceAfter: updatedWallet.availableBalance,
+                    referenceKey: withdrawal.id,
+                    description: `Yêu cầu rút tiền về ${input.bankName} - ${input.bankAccountNumber}`,
+                },
+            })
+
+            return {
+                id: withdrawal.id,
+                walletId: withdrawal.walletId,
+                amount: withdrawal.amount.toString(),
+                bankName: withdrawal.bankName,
+                bankAccountNumber: withdrawal.bankAccountNumber,
+                bankAccountName: withdrawal.bankAccountName,
+                status: 'REQUESTED' as const,
+                rejectReason: withdrawal.rejectReason,
+                createdAt: withdrawal.createdAt.toISOString(),
+                updatedAt: withdrawal.updatedAt.toISOString(),
+            }
+        })
     }
 }
