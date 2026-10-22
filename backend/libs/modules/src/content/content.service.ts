@@ -11,6 +11,7 @@ import { PrismaService } from '@timmyhub/prisma'
 
 import { CONTENT_PAGINATION } from './content.constants'
 import { ContentRepository } from './content.repository'
+import { MediaQueueService } from './media-queue.service'
 import { VideoTranscodeService } from './video-transcode.service'
 
 @Injectable()
@@ -21,6 +22,7 @@ export class ContentService {
         private readonly prisma: PrismaService,
         private readonly contentRepo: ContentRepository,
         private readonly transcodeService: VideoTranscodeService,
+        private readonly mediaQueueService: MediaQueueService,
     ) {}
 
     /**
@@ -274,8 +276,12 @@ export class ContentService {
             throw new BadRequestException('Không thể tạo bài đăng video')
         }
 
-        // Kích hoạt pipeline nén & chuyển đổi HLS ngầm (non-blocking) tuân thủ luật cứng #16
-        void this.triggerAsyncVideoTranscode(created.id, input.videoUrl)
+        // Kích hoạt pipeline nén & chuyển đổi HLS ngầm qua BullMQ background job (non-blocking, luật #16)
+        const enqueued = await this.mediaQueueService.addTranscodeJob(created.id, input.videoUrl)
+        if (!enqueued) {
+            // Fallback an toàn: nếu Redis/Queue tạm thời không khả dụng, chạy async in-process
+            void this.triggerAsyncVideoTranscode(created.id, input.videoUrl)
+        }
 
         const feedResult = await this.getVideoFeed(10, undefined, sellerUserId)
         const matched = feedResult.items.find((item) => item.id === created.id)

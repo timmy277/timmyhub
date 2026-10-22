@@ -11,5 +11,11 @@ export { PromotionModule, PromotionService } from './promotion/index'
 export { EngagementModule, EngagementService, EngagementRepository } from './engagement/index'
 export { NotificationModule, NotificationService, NotificationGateway } from './notification/index'
 export { ChatModule, ChatService, ChatGateway } from './chat/index'
-export { ContentModule, ContentService, ContentRepository, VideoTranscodeService } from './content/index'
+export {
+    ContentModule,
+    ContentService,
+    ContentRepository,
+    VideoTranscodeService,
+    MediaQueueService,
+} from './content/index'
 export { RedisModule, RedisService } from './redis/index'

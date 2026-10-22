@@ -1,6 +1,7 @@
 export * from './content.constants'
 export * from './content.repository'
 export * from './video-transcode.service'
+export * from './media-queue.service'
 export * from './content.service'
 export * from './content.controller'
 export * from './content.module'
