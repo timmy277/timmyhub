@@ -82,4 +82,27 @@ export class AdminSellerController {
     restoreShop(@Param('id') id: string): Promise<SellerProfileDetail> {
         return this.sellerService.restoreShop(id)
     }
+
+    // ===== Quản lý rút tiền của Người bán (FEAT-WAL-005) =====
+
+    // Danh sách yêu cầu rút tiền
+    @Permissions('wallet:withdrawals:approve')
+    @Get('withdrawals')
+    listWithdrawals(@Query('status') status?: string, @Query('page') page?: string, @Query('limit') limit?: string) {
+        return this.sellerService.listAdminWithdrawals(status, page ? Number(page) : 1, limit ? Number(limit) : 20)
+    }
+
+    // Duyệt chi yêu cầu rút tiền
+    @Permissions('wallet:withdrawals:approve')
+    @Post('withdrawals/:id/approve')
+    approveWithdrawal(@Param('id') id: string, @CurrentUser() actor: AuthUser) {
+        return this.sellerService.approveWithdrawal(id, actor.id)
+    }
+
+    // Từ chối yêu cầu rút tiền và hoàn tiền ví
+    @Permissions('wallet:withdrawals:reject')
+    @Post('withdrawals/:id/reject')
+    rejectWithdrawal(@Param('id') id: string, @CurrentUser() actor: AuthUser, @Body() body: { reason?: string }) {
+        return this.sellerService.rejectWithdrawal(id, actor.id, body.reason || 'Thông tin ngân hàng không hợp lệ')
+    }
 }

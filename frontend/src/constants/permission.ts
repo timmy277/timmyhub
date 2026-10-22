@@ -180,3 +180,18 @@ export function toAdminPromotionPermissionFlags(permissions: ReadonlySet<string>
         CAMPAIGNS_APPROVE: permissions.has(ADMIN_PROMOTION_PERMISSION.CAMPAIGNS_APPROVE),
     }
 }
+
+export const ADMIN_WITHDRAWAL_PERMISSION = {
+    APPROVE: 'wallet:withdrawals:approve',
+    REJECT: 'wallet:withdrawals:reject',
+} as const satisfies Record<string, PermissionName>
+
+export type AdminWithdrawalPermissionKey = keyof typeof ADMIN_WITHDRAWAL_PERMISSION
+export type AdminWithdrawalPermissionFlags = Record<AdminWithdrawalPermissionKey, boolean>
+
+export function toAdminWithdrawalPermissionFlags(permissions: ReadonlySet<string>): AdminWithdrawalPermissionFlags {
+    return {
+        APPROVE: permissions.has(ADMIN_WITHDRAWAL_PERMISSION.APPROVE),
+        REJECT: permissions.has(ADMIN_WITHDRAWAL_PERMISSION.REJECT),
+    }
+}

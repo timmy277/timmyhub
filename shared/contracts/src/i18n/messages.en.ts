@@ -62,6 +62,8 @@ export const API_MESSAGES_EN: ApiMessageCatalog = {
         shopAlreadyExists: 'Shop name or slug already exists, please choose another name.',
         shopSuspended: 'The shop is currently suspended due to policy violations.',
         insufficientBalance: 'Insufficient available balance to process withdrawal.',
+        withdrawalNotFound: 'Withdrawal request not found.',
+        withdrawalAlreadyProcessed: 'This withdrawal request has already been processed.',
     },
 
     audit: {

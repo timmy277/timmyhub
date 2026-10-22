@@ -403,4 +403,178 @@ export class SellerService {
             }
         })
     }
+
+    // Lấy lịch sử yêu cầu rút tiền của shop
+    async getSellerWithdrawals(userId: string): Promise<WithdrawalDetail[]> {
+        const profile = await this.repository.findProfileByUserId(userId)
+        if (!profile) {
+            return []
+        }
+        const wallet = await this.prisma.wallet.findUnique({
+            where: { sellerId: profile.id },
+        })
+        if (!wallet) {
+            return []
+        }
+        const items = await this.prisma.withdrawal.findMany({
+            where: { walletId: wallet.id },
+            orderBy: { createdAt: 'desc' },
+            take: 50,
+        })
+        return items.map((w) => ({
+            id: w.id,
+            walletId: w.walletId,
+            amount: w.amount.toString(),
+            bankName: w.bankName,
+            bankAccountNumber: w.bankAccountNumber,
+            bankAccountName: w.bankAccountName,
+            status: w.status as 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'PAID',
+            rejectReason: w.rejectReason,
+            createdAt: w.createdAt.toISOString(),
+            updatedAt: w.updatedAt.toISOString(),
+        }))
+    }
+
+    // Admin: Xem danh sách yêu cầu rút tiền
+    async listAdminWithdrawals(
+        status?: string,
+        page = 1,
+        limit = 20,
+    ): Promise<{ items: (WithdrawalDetail & { shopName?: string })[]; total: number }> {
+        const where = status ? { status } : {}
+        const [total, items] = await Promise.all([
+            this.prisma.withdrawal.count({ where }),
+            this.prisma.withdrawal.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                skip: (page - 1) * limit,
+                take: limit,
+                include: {
+                    wallet: true,
+                },
+            }),
+        ])
+
+        const sellerIds = Array.from(new Set(items.map((i) => i.wallet.sellerId).filter(Boolean))) as string[]
+        const shops = await this.prisma.sellerProfile.findMany({
+            where: { id: { in: sellerIds } },
+            select: { id: true, shopName: true },
+        })
+        const shopMap = new Map(shops.map((s) => [s.id, s.shopName]))
+
+        return {
+            total,
+            items: items.map((w) => {
+                const shopName = w.wallet.sellerId ? shopMap.get(w.wallet.sellerId) : undefined
+                return {
+                    id: w.id,
+                    walletId: w.walletId,
+                    amount: w.amount.toString(),
+                    bankName: w.bankName,
+                    bankAccountNumber: w.bankAccountNumber,
+                    bankAccountName: w.bankAccountName,
+                    status: w.status as 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'PAID',
+                    rejectReason: w.rejectReason,
+                    createdAt: w.createdAt.toISOString(),
+                    updatedAt: w.updatedAt.toISOString(),
+                    ...(shopName ? { shopName } : {}),
+                }
+            }),
+        }
+    }
+
+    // Admin: Duyệt chi yêu cầu rút tiền
+    async approveWithdrawal(withdrawalId: string, adminUserId: string): Promise<WithdrawalDetail> {
+        const item = await this.prisma.withdrawal.findUnique({
+            where: { id: withdrawalId },
+        })
+        if (!item) {
+            throw new ApiError('NOT_FOUND', { messageKey: 'seller.withdrawalNotFound' })
+        }
+        if (item.status !== 'REQUESTED') {
+            throw new ApiError('BAD_REQUEST', { messageKey: 'seller.withdrawalAlreadyProcessed' })
+        }
+
+        const updated = await this.prisma.withdrawal.update({
+            where: { id: withdrawalId },
+            data: {
+                status: 'PAID',
+                approvedById: adminUserId,
+                approvedAt: new Date(),
+                paidAt: new Date(),
+            },
+        })
+
+        return {
+            id: updated.id,
+            walletId: updated.walletId,
+            amount: updated.amount.toString(),
+            bankName: updated.bankName,
+            bankAccountNumber: updated.bankAccountNumber,
+            bankAccountName: updated.bankAccountName,
+            status: 'PAID' as const,
+            rejectReason: updated.rejectReason,
+            createdAt: updated.createdAt.toISOString(),
+            updatedAt: updated.updatedAt.toISOString(),
+        }
+    }
+
+    // Admin: Từ chối yêu cầu rút tiền kèm lý do và hoàn trả số dư ví
+    async rejectWithdrawal(withdrawalId: string, adminUserId: string, reason: string): Promise<WithdrawalDetail> {
+        const item = await this.prisma.withdrawal.findUnique({
+            where: { id: withdrawalId },
+            include: { wallet: true },
+        })
+        if (!item) {
+            throw new ApiError('NOT_FOUND', { messageKey: 'seller.withdrawalNotFound' })
+        }
+        if (item.status !== 'REQUESTED') {
+            throw new ApiError('BAD_REQUEST', { messageKey: 'seller.withdrawalAlreadyProcessed' })
+        }
+
+        return this.prisma.$transaction(async (tx) => {
+            // Hoàn lại số dư khả dụng cho ví
+            const updatedWallet = await tx.wallet.update({
+                where: { id: item.walletId },
+                data: {
+                    availableBalance: { increment: item.amount },
+                },
+            })
+
+            const updated = await tx.withdrawal.update({
+                where: { id: withdrawalId },
+                data: {
+                    status: 'REJECTED',
+                    rejectReason: reason,
+                    approvedById: adminUserId,
+                    approvedAt: new Date(),
+                },
+            })
+
+            // Ghi nhận giao dịch hoàn tiền REFUND trong sổ cái
+            await tx.walletTransaction.create({
+                data: {
+                    walletId: item.walletId,
+                    type: 'REFUND',
+                    amount: item.amount,
+                    balanceAfter: updatedWallet.availableBalance,
+                    referenceKey: item.id,
+                    description: `Hoàn tiền yêu cầu rút thất bại: ${reason}`,
+                },
+            })
+
+            return {
+                id: updated.id,
+                walletId: updated.walletId,
+                amount: updated.amount.toString(),
+                bankName: updated.bankName,
+                bankAccountNumber: updated.bankAccountNumber,
+                bankAccountName: updated.bankAccountName,
+                status: 'REJECTED' as const,
+                rejectReason: updated.rejectReason,
+                createdAt: updated.createdAt.toISOString(),
+                updatedAt: updated.updatedAt.toISOString(),
+            }
+        })
+    }
 }

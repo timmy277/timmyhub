@@ -287,3 +287,76 @@ export async function requestWithdrawalAction(
     revalidatePath(ROUTE.SELLER_PORTAL)
     return { ok: true, data: result.data }
 }
+
+// Lấy danh sách yêu cầu rút tiền của shop
+export async function getSellerWithdrawalsAction(): Promise<SellerActionResult<WithdrawalDetail[]>> {
+    const actor = await getActor()
+    if (!actor) return { ok: false, code: 'UNAUTHORIZED' }
+
+    const result = await fetchBackend<WithdrawalDetail[]>(API_ROUTE.SELLER.WALLET_WITHDRAWALS, {
+        token: actor.accessToken,
+    })
+
+    if (!result.ok) return { ok: false, code: result.code }
+    return { ok: true, data: result.data }
+}
+
+// Admin: Xem danh sách yêu cầu rút tiền
+export async function listAdminWithdrawalsAction(
+    status?: string,
+    page = 1,
+    limit = 20,
+): Promise<SellerActionResult<{ items: (WithdrawalDetail & { shopName?: string })[]; total: number }>> {
+    const actor = await getActor()
+    if (!actor) return { ok: false, code: 'UNAUTHORIZED' }
+
+    const params = new URLSearchParams()
+    if (status) params.set('status', status)
+    params.set('page', String(page))
+    params.set('limit', String(limit))
+
+    const endpoint = `${API_ROUTE.SELLER.ADMIN_WITHDRAWALS}?${params.toString()}`
+    const result = await fetchBackend<{ items: (WithdrawalDetail & { shopName?: string })[]; total: number }>(
+        endpoint,
+        {
+            token: actor.accessToken,
+        },
+    )
+
+    if (!result.ok) return { ok: false, code: result.code }
+    return { ok: true, data: result.data }
+}
+
+// Admin: Duyệt chi yêu cầu rút tiền
+export async function approveWithdrawalAction(withdrawalId: string): Promise<SellerActionResult<WithdrawalDetail>> {
+    const actor = await getActor()
+    if (!actor) return { ok: false, code: 'UNAUTHORIZED' }
+
+    const result = await fetchBackend<WithdrawalDetail>(API_ROUTE.SELLER.ADMIN_WITHDRAWAL_APPROVE(withdrawalId), {
+        token: actor.accessToken,
+        method: 'POST',
+    })
+
+    if (!result.ok) return { ok: false, code: result.code }
+    revalidatePath('/withdrawals')
+    return { ok: true, data: result.data }
+}
+
+// Admin: Từ chối yêu cầu rút tiền kèm lý do
+export async function rejectWithdrawalAction(
+    withdrawalId: string,
+    reason: string,
+): Promise<SellerActionResult<WithdrawalDetail>> {
+    const actor = await getActor()
+    if (!actor) return { ok: false, code: 'UNAUTHORIZED' }
+
+    const result = await fetchBackend<WithdrawalDetail>(API_ROUTE.SELLER.ADMIN_WITHDRAWAL_REJECT(withdrawalId), {
+        token: actor.accessToken,
+        method: 'POST',
+        body: { reason },
+    })
+
+    if (!result.ok) return { ok: false, code: result.code }
+    revalidatePath('/withdrawals')
+    return { ok: true, data: result.data }
+}

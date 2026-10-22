@@ -65,6 +65,8 @@ export const API_MESSAGES_VI = {
         shopAlreadyExists: 'Tên shop hoặc đường dẫn (slug) đã tồn tại, vui lòng chọn tên khác.',
         shopSuspended: 'Shop hiện đang bị tạm ngưng hoạt động do vi phạm chính sách.',
         insufficientBalance: 'Số dư khả dụng trong ví không đủ để thực hiện rút tiền.',
+        withdrawalNotFound: 'Không tìm thấy yêu cầu rút tiền.',
+        withdrawalAlreadyProcessed: 'Yêu cầu rút tiền này đã được xử lý trước đó.',
     },
 
     audit: {

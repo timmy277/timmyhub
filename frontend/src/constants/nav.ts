@@ -1,4 +1,5 @@
 import {
+    BanknoteIcon,
     FlameIcon,
     FolderTreeIcon,
     HistoryIcon,
@@ -13,6 +14,7 @@ import {
     TicketIcon,
     UsersIcon,
     VideoIcon,
+    WalletIcon,
 } from 'lucide-react'
 
 import type { BreadcrumbEntry, NavGroup } from '@/types'
@@ -21,6 +23,7 @@ import { AUDIT_PERMISSION } from './audit'
 import {
     ADMIN_CATEGORY_PERMISSION,
     ADMIN_PROMOTION_PERMISSION,
+    ADMIN_WITHDRAWAL_PERMISSION,
     CATALOG_PRODUCTS_ADMIN_PERMISSION,
     DASHBOARD_PERMISSION,
     RBAC_PERMISSION,
@@ -94,6 +97,12 @@ export const NAV_GROUPS: readonly NavGroup[] = [
                 requirePermission: ADMIN_PROMOTION_PERMISSION.CAMPAIGNS_LIST,
             },
             {
+                titleKey: 'withdrawals',
+                url: ROUTE.ADMIN_WITHDRAWALS,
+                icon: BanknoteIcon,
+                requirePermission: ADMIN_WITHDRAWAL_PERMISSION.APPROVE,
+            },
+            {
                 titleKey: 'audit',
                 url: ROUTE.AUDIT,
                 icon: HistoryIcon,
@@ -127,6 +136,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
                 url: ROUTE.SELLER_ORDERS,
                 icon: ShoppingBagIcon,
                 requirePermission: [SELLER_SHOP_PERMISSION, 'orders:orders:list:shop'],
+                excludePermission: DASHBOARD_PERMISSION,
+            },
+            {
+                titleKey: 'sellerWallet',
+                url: ROUTE.SELLER_WALLET,
+                icon: WalletIcon,
+                requirePermission: SELLER_SHOP_PERMISSION,
                 excludePermission: DASHBOARD_PERMISSION,
             },
             {
@@ -193,12 +209,20 @@ export const BREADCRUMB_ROUTES: Readonly<Record<string, readonly BreadcrumbEntry
         { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
         { titleKey: 'campaigns', url: ROUTE.ADMIN_CAMPAIGNS },
     ],
+    [ROUTE.ADMIN_WITHDRAWALS]: [
+        { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
+        { titleKey: 'withdrawals', url: ROUTE.ADMIN_WITHDRAWALS },
+    ],
     [ROUTE.PRODUCTS]: [{ titleKey: 'products', url: ROUTE.PRODUCTS }],
     [ROUTE.AUDIT]: [
         { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
         { titleKey: 'audit', url: ROUTE.AUDIT },
     ],
     [ROUTE.SELLER_PORTAL]: [{ titleKey: 'sellerOverview', url: ROUTE.SELLER_PORTAL }],
+    [ROUTE.SELLER_WALLET]: [
+        { titleKey: 'sellerOverview', url: ROUTE.SELLER_PORTAL },
+        { titleKey: 'sellerWallet', url: ROUTE.SELLER_WALLET },
+    ],
     [ROUTE.SELLER_ORDERS]: [
         { titleKey: 'sellerOverview', url: ROUTE.SELLER_PORTAL },
         { titleKey: 'sellerOrders', url: ROUTE.SELLER_ORDERS },

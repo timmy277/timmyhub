@@ -87,6 +87,13 @@ export class SellerController {
     ): Promise<WithdrawalDetail> {
         return this.sellerService.requestWithdrawal(actor.id, body)
     }
+
+    // Lịch sử yêu cầu rút tiền của shop
+    @Permissions('wallet:balance:read')
+    @Get('shop/me/wallet/withdrawals')
+    getSellerWithdrawals(@CurrentUser() actor: AuthUser): Promise<WithdrawalDetail[]> {
+        return this.sellerService.getSellerWithdrawals(actor.id)
+    }
 }
 
 // Controller xem trang shop công khai (FEAT-SEL-004)

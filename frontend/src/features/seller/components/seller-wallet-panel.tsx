@@ -17,7 +17,12 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import type { CreateWithdrawalInput, WalletDetail, WalletTransactionDetail } from '@timmyhub/contracts'
+import type {
+    CreateWithdrawalInput,
+    WalletDetail,
+    WalletTransactionDetail,
+    WithdrawalDetail,
+} from '@timmyhub/contracts'
 import { CreateWithdrawalInputSchema } from '@timmyhub/contracts'
 
 import {
@@ -38,11 +43,15 @@ import {
     FloatInput,
     Skeleton,
     Spinner,
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
 } from '@/components'
 import { QUERY_KEY } from '@/constants'
 import { formatCurrencyVND } from '@/utils'
 
-import { getSellerWalletAction, requestWithdrawalAction } from '../actions'
+import { getSellerWalletAction, getSellerWithdrawalsAction, requestWithdrawalAction } from '../actions'
 
 const POPULAR_BANKS = [
     'Vietcombank',
@@ -82,6 +91,15 @@ export function SellerWalletPanel() {
         },
     })
 
+    const { data: withdrawals = [], isLoading: isWithdrawalsLoading } = useQuery<WithdrawalDetail[]>({
+        queryKey: QUERY_KEY.SELLER.WITHDRAWALS,
+        queryFn: async () => {
+            const res = await getSellerWithdrawalsAction()
+            if (!res.ok || !res.data) return []
+            return res.data
+        },
+    })
+
     const withdrawMutation = useMutation({
         mutationFn: async (input: CreateWithdrawalInput) => {
             const res = await requestWithdrawalAction(input)
@@ -99,6 +117,7 @@ export function SellerWalletPanel() {
             setBankAccountName('')
             setFormErrors({})
             queryClient.invalidateQueries({ queryKey: QUERY_KEY.SELLER.WALLET })
+            queryClient.invalidateQueries({ queryKey: QUERY_KEY.SELLER.WITHDRAWALS })
         },
         onError: (err: Error) => {
             toast.error(
@@ -366,87 +385,201 @@ export function SellerWalletPanel() {
                 </Card>
             </div>
 
-            {/* Transaction History Table */}
-            <Card className="border border-border/70 bg-card/80 shadow-sm rounded-2xl overflow-hidden">
-                <CardHeader className="p-5 border-b border-border/60">
-                    <CardTitle className="text-base font-bold text-foreground">Lịch sử giao dịch ví</CardTitle>
-                    <CardDescription className="text-xs">
-                        Tất cả các dòng tiền kết chuyển từ đơn hàng hoàn thành và các lệnh rút tiền.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                    {transactions.length === 0 ? (
-                        <div className="py-12 text-center space-y-2">
-                            <Wallet className="size-10 mx-auto text-muted-foreground/40" />
-                            <p className="text-sm font-semibold text-foreground">Chưa có giao dịch phát sinh</p>
-                            <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                                Khi đơn hàng giao thành công hoặc có yêu cầu rút tiền, biến động số dư sẽ được hiển thị
-                                tại đây.
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="divide-y divide-border/60">
-                            {transactions.map((tx: WalletTransactionDetail) => {
-                                const isIncome = tx.type === 'SALE_INCOME'
-                                const isWithdrawal = tx.type === 'WITHDRAWAL'
-                                const formattedDate = new Date(tx.createdAt).toLocaleString('vi-VN')
-                                const txAmount = Number(tx.amount)
+            {/* Tabs for Transactions & Withdrawals */}
+            <Tabs defaultValue="transactions" className="w-full">
+                <div className="flex items-center justify-between pb-2">
+                    <TabsList className="bg-muted/60 p-1 rounded-xl">
+                        <TabsTrigger value="transactions" className="rounded-lg text-xs font-semibold px-4 py-1.5">
+                            Biến động số dư ({transactions.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="withdrawals" className="rounded-lg text-xs font-semibold px-4 py-1.5">
+                            Lịch sử rút tiền ({withdrawals.length})
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
 
-                                return (
-                                    <div
-                                        key={tx.id}
-                                        className="p-4 sm:p-5 flex items-center justify-between hover:bg-muted/30 transition-colors"
-                                    >
-                                        <div className="flex items-center gap-3.5">
+                <TabsContent value="transactions" className="mt-2">
+                    <Card className="border border-border/70 bg-card/80 shadow-sm rounded-2xl overflow-hidden">
+                        <CardHeader className="p-5 border-b border-border/60">
+                            <CardTitle className="text-base font-bold text-foreground">Lịch sử giao dịch ví</CardTitle>
+                            <CardDescription className="text-xs">
+                                Tất cả các dòng tiền kết chuyển từ đơn hàng hoàn thành và các lệnh rút tiền.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            {transactions.length === 0 ? (
+                                <div className="py-12 text-center space-y-2">
+                                    <Wallet className="size-10 mx-auto text-muted-foreground/40" />
+                                    <p className="text-sm font-semibold text-foreground">Chưa có giao dịch phát sinh</p>
+                                    <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                                        Khi đơn hàng giao thành công hoặc có yêu cầu rút tiền, biến động số dư sẽ được
+                                        hiển thị tại đây.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-border/60">
+                                    {transactions.map((tx: WalletTransactionDetail) => {
+                                        const isIncome = tx.type === 'SALE_INCOME'
+                                        const isWithdrawal = tx.type === 'WITHDRAWAL'
+                                        const formattedDate = new Date(tx.createdAt).toLocaleString('vi-VN')
+                                        const txAmount = Number(tx.amount)
+
+                                        return (
                                             <div
-                                                className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${
-                                                    isIncome
-                                                        ? 'bg-emerald-500/15 text-emerald-500'
-                                                        : isWithdrawal
-                                                          ? 'bg-amber-500/15 text-amber-500'
-                                                          : 'bg-muted text-muted-foreground'
-                                                }`}
+                                                key={tx.id}
+                                                className="p-4 sm:p-5 flex items-center justify-between hover:bg-muted/30 transition-colors"
                                             >
-                                                {isIncome ? (
-                                                    <ArrowUpRight className="size-5" />
-                                                ) : (
-                                                    <ArrowDownRight className="size-5" />
-                                                )}
-                                            </div>
-                                            <div className="space-y-0.5">
-                                                <p className="text-sm font-bold text-foreground">
-                                                    {tx.description ||
-                                                        (isIncome ? 'Thu nhập đơn hàng' : 'Rút tiền về ngân hàng')}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">{formattedDate}</p>
-                                            </div>
-                                        </div>
+                                                <div className="flex items-center gap-3.5">
+                                                    <div
+                                                        className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${
+                                                            isIncome
+                                                                ? 'bg-emerald-500/15 text-emerald-500'
+                                                                : isWithdrawal
+                                                                  ? 'bg-amber-500/15 text-amber-500'
+                                                                  : 'bg-muted text-muted-foreground'
+                                                        }`}
+                                                    >
+                                                        {isIncome ? (
+                                                            <ArrowUpRight className="size-5" />
+                                                        ) : (
+                                                            <ArrowDownRight className="size-5" />
+                                                        )}
+                                                    </div>
+                                                    <div className="space-y-0.5">
+                                                        <p className="text-sm font-bold text-foreground">
+                                                            {tx.description ||
+                                                                (isIncome
+                                                                    ? 'Thu nhập đơn hàng'
+                                                                    : 'Rút tiền về ngân hàng')}
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">{formattedDate}</p>
+                                                    </div>
+                                                </div>
 
-                                        <div className="text-right space-y-1">
-                                            <p
-                                                className={`text-sm sm:text-base font-extrabold ${
-                                                    isIncome
-                                                        ? 'text-emerald-600 dark:text-emerald-400'
-                                                        : 'text-amber-600 dark:text-amber-400'
-                                                }`}
+                                                <div className="text-right space-y-1">
+                                                    <p
+                                                        className={`text-sm sm:text-base font-extrabold ${
+                                                            isIncome
+                                                                ? 'text-emerald-600 dark:text-emerald-400'
+                                                                : 'text-amber-600 dark:text-amber-400'
+                                                        }`}
+                                                    >
+                                                        {isIncome ? '+' : '-'}
+                                                        {formatCurrencyVND(txAmount)}
+                                                    </p>
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="text-[10px] font-semibold uppercase tracking-wider"
+                                                    >
+                                                        Thành công
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="withdrawals" className="mt-2">
+                    <Card className="border border-border/70 bg-card/80 shadow-sm rounded-2xl overflow-hidden">
+                        <CardHeader className="p-5 border-b border-border/60">
+                            <CardTitle className="text-base font-bold text-foreground">
+                                Lịch sử yêu cầu rút tiền
+                            </CardTitle>
+                            <CardDescription className="text-xs">
+                                Theo dõi trạng thái giải ngân các khoản tiền rút về tài khoản ngân hàng.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            {isWithdrawalsLoading ? (
+                                <div className="p-5 space-y-3">
+                                    <Skeleton className="h-16 w-full rounded-xl" />
+                                    <Skeleton className="h-16 w-full rounded-xl" />
+                                </div>
+                            ) : withdrawals.length === 0 ? (
+                                <div className="py-12 text-center space-y-2">
+                                    <Building2 className="size-10 mx-auto text-muted-foreground/40" />
+                                    <p className="text-sm font-semibold text-foreground">Chưa có yêu cầu rút tiền</p>
+                                    <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                                        Khi bạn tạo yêu cầu rút tiền về ngân hàng, tiến trình xử lý sẽ xuất hiện tại
+                                        đây.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-border/60">
+                                    {withdrawals.map((w: WithdrawalDetail) => {
+                                        const formattedDate = new Date(w.createdAt).toLocaleString('vi-VN')
+                                        const wAmount = Number(w.amount)
+                                        const isPaid = w.status === 'PAID'
+                                        const isRejected = w.status === 'REJECTED'
+
+                                        return (
+                                            <div
+                                                key={w.id}
+                                                className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-muted/30 transition-colors"
                                             >
-                                                {isIncome ? '+' : '-'}
-                                                {formatCurrencyVND(txAmount)}
-                                            </p>
-                                            <Badge
-                                                variant="outline"
-                                                className="text-[10px] font-semibold uppercase tracking-wider"
-                                            >
-                                                Thành công
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                                                <div className="flex items-center gap-3.5">
+                                                    <div
+                                                        className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${
+                                                            isPaid
+                                                                ? 'bg-emerald-500/15 text-emerald-500'
+                                                                : isRejected
+                                                                  ? 'bg-destructive/15 text-destructive'
+                                                                  : 'bg-amber-500/15 text-amber-500'
+                                                        }`}
+                                                    >
+                                                        <CreditCard className="size-5" />
+                                                    </div>
+                                                    <div className="space-y-0.5">
+                                                        <p className="text-sm font-bold text-foreground flex items-center gap-2">
+                                                            <span>
+                                                                {w.bankName} • {w.bankAccountNumber}
+                                                            </span>
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Chủ TK: {w.bankAccountName} • {formattedDate}
+                                                        </p>
+                                                        {w.rejectReason && (
+                                                            <p className="text-xs text-destructive font-medium">
+                                                                Lý do từ chối: {w.rejectReason}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between sm:flex-col sm:items-end gap-1.5">
+                                                    <p className="text-base font-extrabold text-foreground">
+                                                        {formatCurrencyVND(wAmount)}
+                                                    </p>
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={`text-[10px] font-bold uppercase tracking-wider ${
+                                                            isPaid
+                                                                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                                                : isRejected
+                                                                  ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                                                                  : 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                                        }`}
+                                                    >
+                                                        {isPaid
+                                                            ? 'Đã chuyển tiền'
+                                                            : isRejected
+                                                              ? 'Bị từ chối'
+                                                              : 'Đang xử lý'}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
         </div>
     )
 }

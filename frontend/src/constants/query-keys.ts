@@ -35,6 +35,8 @@ export const QUERY_KEY = {
         ALL: ['seller'] as const,
         MY_SHOP: ['seller', 'my-shop'] as const,
         WALLET: ['seller', 'wallet'] as const,
+        WITHDRAWALS: ['seller', 'withdrawals'] as const,
+        ADMIN_WITHDRAWALS: (filters?: Record<string, unknown>) => ['seller', 'admin-withdrawals', filters] as const,
         APPLICATIONS: ['seller', 'applications'] as const,
         APPLICATION_DETAIL: (id: string) => ['seller', 'applications', id] as const,
     },
