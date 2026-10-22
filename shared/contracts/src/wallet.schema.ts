@@ -57,6 +57,8 @@ export const WithdrawalDetailSchema = z.object({
     bankAccountName: z.string(),
     status: z.enum(['REQUESTED', 'APPROVED', 'REJECTED', 'PAID']),
     rejectReason: z.string().nullable().optional(),
+    shopName: z.string().optional(),
+    processedAt: z.string().nullable().optional(),
     createdAt: z.string(),
     updatedAt: z.string(),
 })

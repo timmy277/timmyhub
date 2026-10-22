@@ -1,20 +1,23 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
+
 import { PageContainer } from '@/components'
 import { SellerWalletPanel } from '@/features/seller'
 
-export const metadata: Metadata = {
-    title: 'Ví & Dòng tiền | Kênh Người Bán TimmyHub',
+export async function generateMetadata(): Promise<Metadata> {
+    const t = await getTranslations('sellerWallet')
+    return { title: t('metaTitle') }
 }
 
-export default function SellerWalletPage() {
+export default async function SellerWalletPage() {
+    const t = await getTranslations('sellerWallet')
+
     return (
         <PageContainer>
             <div className="space-y-6 max-w-6xl mx-auto py-2">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Ví người bán & Doanh thu</h1>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        Theo dõi dòng tiền bán hàng, số dư chờ đối soát và tạo yêu cầu rút tiền về tài khoản ngân hàng.
-                    </p>
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">{t('pageTitle')}</h1>
+                    <p className="text-sm text-muted-foreground mt-1">{t('pageDescription')}</p>
                 </div>
                 <SellerWalletPanel />
             </div>
