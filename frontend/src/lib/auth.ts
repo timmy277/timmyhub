@@ -117,6 +117,7 @@ export const authConfig = {
             }
 
             // 2) Client chủ động update (`unstable_update` hoặc `useSession().update(...)`) —
+            // 2) Client chủ động update (`unstable_update` hoặc `useSession().update(...)`) —
             //    CHỈ cho phép cập nhật thông tin hiển thị an toàn (name, avatar/image).
             //    TUYỆT ĐỐI không merge roles hay permissions từ client để tránh lỗ hổng nâng quyền.
             if (trigger === 'update' && session) {
@@ -133,15 +134,28 @@ export const authConfig = {
                 if (typeof nextImage === 'string' || nextImage === null) {
                     token.picture = nextImage
                 }
+                // KHÔNG return token ở đây: tiếp tục để luồng bên dưới kiểm tra refresh token nếu cần
+            }
+
+            // 3) Refresh access token bằng refresh token trong JWT.
+            //    Chỉ refresh khi token sắp hết hạn hoặc client yêu cầu làm mới phiên (refresh: true).
+            //    ĐẶC BIỆT: Chỉ thực hiện xoay refresh token khi trigger === 'update' (tức request chạy qua Route Handler
+            //    POST /api/auth/session, nơi mà NextAuth đảm bảo phát sinh header Set-Cookie mới cho browser).
+            //    Nếu gọi auth() từ Server Component hoặc Server Action, KHÔNG được tự ý xoay refresh token ở backend
+            //    vì RSC là read-only đối với cookie — token mới sẽ bị rớt lại server, browser vẫn giữ token cũ,
+            //    dẫn đến lần gọi sau backend phát hiện token cũ bị dùng lại (wasRotatedBefore) và kích hoạt
+            //    REQ-IDN-006 thu hồi toàn bộ phiên của người dùng!
+            const expiresAt = token.accessExpiresAt ?? 0
+            const isExpiringSoon = Date.now() >= expiresAt - TOKEN_REFRESH_MARGIN_MS
+            const isForcedRefresh = trigger === 'update' && Boolean((session as { refresh?: boolean })?.refresh)
+
+            if (!token.refreshToken || (!isExpiringSoon && !isForcedRefresh)) {
                 return token
             }
 
-            // 3) Access token sắp hết hạn → refresh server-side bằng refresh token trong JWT.
-            //    `accessExpiresAt` chỉ mang MỘT nghĩa: hạn của access token. Việc chống race đa tab nằm ở
-            //    phía client (`withAuthRefreshLock`) nên hai tab không bao giờ refresh cùng lúc — server
-            //    không phải đoán xem một lần dùng lại token là race hợp lệ hay là token bị đánh cắp.
-            const expiresAt = token.accessExpiresAt ?? 0
-            if (!token.refreshToken || Date.now() < expiresAt - TOKEN_REFRESH_MARGIN_MS) {
+            // Nếu không phải là client trigger update (ví dụ RSC hoặc Server Action gọi auth()):
+            // Giữ nguyên token hiện tại, nhường quyền xoay token cho SessionTokenWatcher / apiClient refresh qua POST /api/auth/session.
+            if (trigger !== 'update') {
                 return token
             }
 
@@ -166,9 +180,8 @@ export const authConfig = {
 
             // Backend đã từ chối refresh token (REQ-IDN-006): REUSED (bị đánh cắp), EXPIRED hoặc INVALID.
             // Phiên hết hiệu lực thật → xoá sạch token để mọi lần đọc session sau trả null và proxy điều
-            // hướng về /login. KHÔNG giữ lại token cũ: `@auth/core` re-issue cookie ở mỗi lần đọc session,
-            // nên giữ lại là ghi đè refresh token (có thể đã bị xoay ở tab khác) vào cookie jar dùng chung.
-            return {}
+            // hướng về /login. Trả về null để @auth/core xoá cookie khỏi browser (sessionStore.clean()).
+            return null
         },
         // session() bóc dữ liệu an toàn ra cho client — refresh token VÀ roles KHÔNG bao giờ qua session
         // client (REQ-IDN-023: client JS không được đọc roles/permissions; UI cần quyền thì render từ
@@ -178,6 +191,7 @@ export const authConfig = {
         session({ session, token }) {
             if (token.sub) session.user.id = token.sub
             if (token.accessToken) session.accessToken = token.accessToken
+            if (token.accessExpiresAt) session.accessExpiresAt = token.accessExpiresAt
             if (token.name !== undefined) session.user.name = token.name
             if (token.email) session.user.email = token.email
             if (token.picture !== undefined) session.user.image = token.picture

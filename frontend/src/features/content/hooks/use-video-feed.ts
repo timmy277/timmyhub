@@ -6,9 +6,10 @@ import type { VideoFeedResponseDto, VideoPostDto } from '@timmyhub/contracts'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 
-import { API_ROUTE, QUERY_KEY } from '@/constants'
-import { apiClient } from '@/services'
+import { QUERY_KEY } from '@/constants'
 import { useAuthModalStore } from '@/stores'
+
+import { getVideoFeedAction, recordVideoViewAction, toggleVideoLikeAction } from '../actions'
 
 interface UseVideoFeedOptions {
     limit?: number
@@ -25,9 +26,10 @@ export function useVideoFeed(options: UseVideoFeedOptions = {}) {
     const query = useQuery<VideoFeedResponseDto>({
         queryKey: QUERY_KEY.CONTENT.FEED(limit),
         queryFn: async () => {
-            const res = await apiClient.get<VideoFeedResponseDto>(API_ROUTE.CONTENT.FEED, {
-                params: { limit },
-            })
+            const res = await getVideoFeedAction({ limit })
+            if (!res.ok) {
+                throw new Error(res.message || 'Không thể tải danh sách video')
+            }
             return res.data
         },
         initialData,
@@ -36,7 +38,10 @@ export function useVideoFeed(options: UseVideoFeedOptions = {}) {
 
     const likeMutation = useMutation({
         mutationFn: async (postId: string) => {
-            const res = await apiClient.post<{ liked: boolean; likeCount: number }>(API_ROUTE.CONTENT.LIKE(postId))
+            const res = await toggleVideoLikeAction(postId)
+            if (!res.ok) {
+                throw new Error(res.message || 'Không thể thực hiện thích video')
+            }
             return { postId, ...res.data }
         },
         onMutate: async (postId: string) => {
@@ -128,7 +133,8 @@ export function useVideoFeed(options: UseVideoFeedOptions = {}) {
 
     const recordViewMutation = useMutation({
         mutationFn: async (postId: string) => {
-            const res = await apiClient.post<{ id: string; viewCount: number }>(API_ROUTE.CONTENT.VIEW(postId))
+            const res = await recordVideoViewAction(postId)
+            if (!res.ok) return null
             return res.data
         },
         onSuccess: (res) => {

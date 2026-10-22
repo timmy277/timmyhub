@@ -18,8 +18,8 @@ import {
     DialogTrigger,
     Skeleton,
 } from '@/components/ui'
-import { API_ROUTE, QUERY_KEY } from '@/constants'
-import { apiClient } from '@/services'
+import { QUERY_KEY } from '@/constants'
+import { listPublicProductsAction } from '@/features/products'
 import { formatCurrencyVND } from '@/utils'
 
 export interface ProductPickerItem {
@@ -46,12 +46,21 @@ export function ProductPickerDialog({
     const t = useTranslations('content.form')
 
     const { data, isLoading } = useQuery<{ items: ProductPickerItem[] }>({
-        queryKey: QUERY_KEY.PRODUCTS.PUBLIC_LIST({ limit: 30 }),
+        queryKey: QUERY_KEY.PRODUCTS.PUBLIC_LIST({ pageSize: 30 }),
         queryFn: async () => {
-            const res = await apiClient.get<{ items: ProductPickerItem[] }>(API_ROUTE.CATALOG.PUBLIC_PRODUCTS, {
-                params: { limit: 30 },
-            })
-            return res.data
+            const res = await listPublicProductsAction({ pageSize: 30 })
+            if (!res.ok) {
+                throw new Error(res.message || 'Không thể tải danh sách sản phẩm')
+            }
+            return {
+                items: (res.data.items ?? []).map((p) => ({
+                    id: p.id,
+                    name: p.name,
+                    slug: p.slug,
+                    thumbnail: p.images?.[0] ?? null,
+                    minPrice: p.minPrice ? Number(p.minPrice) : null,
+                })),
+            }
         },
         enabled: open,
     })

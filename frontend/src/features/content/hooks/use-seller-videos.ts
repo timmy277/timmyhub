@@ -1,24 +1,23 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { CreateVideoPostInput, UpdateVideoPostInput, VideoPostDto } from '@timmyhub/contracts'
+import type { CreateVideoPostInput, UpdateVideoPostInput } from '@timmyhub/contracts'
 import { toast } from 'sonner'
 
-import { API_ROUTE, QUERY_KEY } from '@/constants'
-import { apiClient } from '@/services'
+import { QUERY_KEY } from '@/constants'
+
+import {
+    createSellerVideoAction,
+    deleteSellerVideoAction,
+    getSellerVideosAction,
+    updateSellerVideoAction,
+    type SellerVideosResponse,
+} from '../actions'
 
 interface UseSellerVideosOptions {
     status?: string
     page?: number
     limit?: number
-}
-
-interface SellerVideosResponse {
-    items: VideoPostDto[]
-    total: number
-    page: number
-    limit: number
-    totalPages: number
 }
 
 export function useSellerVideos(options: UseSellerVideosOptions = {}) {
@@ -30,16 +29,20 @@ export function useSellerVideos(options: UseSellerVideosOptions = {}) {
     const query = useQuery<SellerVideosResponse>({
         queryKey,
         queryFn: async () => {
-            const res = await apiClient.get<SellerVideosResponse>(API_ROUTE.CONTENT.SELLER_VIDEOS, {
-                params: { status, page, limit },
-            })
+            const res = await getSellerVideosAction({ status, page, limit })
+            if (!res.ok) {
+                throw new Error(res.message || 'Không thể tải danh sách video của gian hàng')
+            }
             return res.data
         },
     })
 
     const createMutation = useMutation({
         mutationFn: async (data: CreateVideoPostInput) => {
-            const res = await apiClient.post<VideoPostDto>(API_ROUTE.CONTENT.SELLER_VIDEOS, data)
+            const res = await createSellerVideoAction(data)
+            if (!res.ok) {
+                throw new Error(res.message || 'Không thể đăng video bài đăng')
+            }
             return res.data
         },
         onSuccess: () => {
@@ -53,7 +56,10 @@ export function useSellerVideos(options: UseSellerVideosOptions = {}) {
 
     const updateMutation = useMutation({
         mutationFn: async ({ id, data }: { id: string; data: UpdateVideoPostInput }) => {
-            const res = await apiClient.patch<VideoPostDto>(API_ROUTE.CONTENT.SELLER_VIDEO_DETAIL(id), data)
+            const res = await updateSellerVideoAction(id, data)
+            if (!res.ok) {
+                throw new Error(res.message || 'Không thể cập nhật video')
+            }
             return res.data
         },
         onSuccess: () => {
@@ -67,7 +73,10 @@ export function useSellerVideos(options: UseSellerVideosOptions = {}) {
 
     const deleteMutation = useMutation({
         mutationFn: async (id: string) => {
-            const res = await apiClient.delete<{ success: boolean }>(API_ROUTE.CONTENT.SELLER_VIDEO_DETAIL(id))
+            const res = await deleteSellerVideoAction(id)
+            if (!res.ok) {
+                throw new Error(res.message || 'Không thể xóa video')
+            }
             return res.data
         },
         onSuccess: () => {

@@ -6,8 +6,9 @@ import type { PostCommentDto, VideoFeedResponseDto, VideoPostDto } from '@timmyh
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 
-import { API_ROUTE, QUERY_KEY } from '@/constants'
-import { apiClient } from '@/services'
+import { QUERY_KEY } from '@/constants'
+
+import { createVideoCommentAction, getVideoCommentsAction } from '../actions'
 
 interface UseVideoCommentsOptions {
     postId?: string
@@ -23,7 +24,10 @@ export function useVideoComments({ postId, enabled = true }: UseVideoCommentsOpt
         queryKey: postId ? QUERY_KEY.CONTENT.COMMENTS(postId) : ['content', 'comments', 'none'],
         queryFn: async () => {
             if (!postId) return []
-            const res = await apiClient.get<PostCommentDto[]>(API_ROUTE.CONTENT.COMMENTS(postId))
+            const res = await getVideoCommentsAction(postId)
+            if (!res.ok) {
+                throw new Error(res.message || 'Không thể tải bình luận')
+            }
             return res.data
         },
         enabled: Boolean(postId) && enabled,
@@ -31,12 +35,12 @@ export function useVideoComments({ postId, enabled = true }: UseVideoCommentsOpt
     })
 
     const addCommentMutation = useMutation({
-        mutationFn: async ({ content, parentId }: { content: string; parentId?: string }) => {
+        mutationFn: async ({ content }: { content: string; parentId?: string }) => {
             if (!postId) throw new Error('postId is required')
-            const res = await apiClient.post<PostCommentDto>(API_ROUTE.CONTENT.COMMENTS(postId), {
-                content,
-                parentId,
-            })
+            const res = await createVideoCommentAction(postId, content)
+            if (!res.ok) {
+                throw new Error(res.message || 'Không thể gửi bình luận')
+            }
             return res.data
         },
         onMutate: async ({ content, parentId }) => {

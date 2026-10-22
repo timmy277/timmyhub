@@ -31,15 +31,22 @@ export function setMemoryAccessToken(token: string | null): void {
 // promise. Khoá giữa các tab do `withAuthRefreshLock` lo (Web Locks).
 let refreshInFlight: Promise<string | null> | null = null
 
-// Bảo NextAuth tạo phiên mới từ cookie hiện tại: server đọc cookie (HttpOnly), jwt callback thấy access
-// token sắp hết hạn sẽ gọi POST v1/auth/refresh và re-issue cookie. Trả về ACCESS TOKEN MỚI để retry dùng
-// ngay — không chờ SessionTokenWatcher render lại (retry mà gắn lại token cũ thì vẫn 401).
+// Bảo NextAuth tạo phiên mới từ cookie hiện tại: gọi POST /api/auth/session với { refresh: true },
+// route handler kích hoạt jwt callback với trigger === 'update', gọi POST v1/auth/refresh tới backend
+// và re-issue cookie mới vào trình duyệt. Trả về ACCESS TOKEN MỚI để retry dùng ngay.
 async function refreshSession(): Promise<string | null> {
     try {
-        const { getSession } = await import('@/lib/auth-session')
-        // Khoá cross-tab: tab khác đang refresh thì đợi, sau đó đọc session đã có cookie mới của tab thắng.
-        const session = await withAuthRefreshLock(() => getSession())
-        const token = session?.accessToken ?? null
+        // Khoá cross-tab: tab khác đang refresh thì đợi, sau đó tab thắng đã có cookie mới.
+        const token = await withAuthRefreshLock(async () => {
+            const res = await fetch('/api/auth/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh: true }),
+            })
+            if (!res.ok) return null
+            const session = await res.json()
+            return (session?.accessToken as string | undefined) ?? null
+        })
         // Ghi vào RAM ngay: nguồn duy nhất cho interceptor request, kể cả trước khi hook watcher kịp chạy.
         if (token) setMemoryAccessToken(token)
         return token

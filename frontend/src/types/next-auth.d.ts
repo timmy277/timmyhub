@@ -17,6 +17,7 @@ declare module 'next-auth' {
 
     interface Session {
         accessToken?: string
+        accessExpiresAt?: number
         user: {
             id: string
         } & DefaultSession['user']
