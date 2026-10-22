@@ -84,8 +84,8 @@ export function SellerWalletPanel() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-xl font-bold tracking-tight text-foreground">{t('pageTitle')}</h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">{t('pageDescription')}</p>
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">{t('pageTitle')}</h1>
+                    <p className="text-sm text-muted-foreground mt-1">{t('pageDescription')}</p>
                 </div>
                 <Button
                     type="button"

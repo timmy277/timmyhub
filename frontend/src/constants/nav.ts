@@ -121,6 +121,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
                 excludePermission: DASHBOARD_PERMISSION,
             },
             {
+                titleKey: 'sellerWallet',
+                url: ROUTE.SELLER_WALLET,
+                icon: WalletIcon,
+                requirePermission: SELLER_SHOP_PERMISSION,
+                excludePermission: DASHBOARD_PERMISSION,
+            },
+            {
                 titleKey: 'products',
                 url: ROUTE.PRODUCTS,
                 icon: PackageIcon,
@@ -136,13 +143,6 @@ export const NAV_GROUPS: readonly NavGroup[] = [
                 url: ROUTE.SELLER_ORDERS,
                 icon: ShoppingBagIcon,
                 requirePermission: [SELLER_SHOP_PERMISSION, 'orders:orders:list:shop'],
-                excludePermission: DASHBOARD_PERMISSION,
-            },
-            {
-                titleKey: 'sellerWallet',
-                url: ROUTE.SELLER_WALLET,
-                icon: WalletIcon,
-                requirePermission: SELLER_SHOP_PERMISSION,
                 excludePermission: DASHBOARD_PERMISSION,
             },
             {
