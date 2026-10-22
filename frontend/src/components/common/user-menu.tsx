@@ -3,7 +3,7 @@
 import { useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
-import { HeartIcon, LayoutGridIcon, LogOutIcon, PackageIcon, TicketIcon, UserIcon } from 'lucide-react'
+import { HeartIcon, LayoutGridIcon, LogInIcon, LogOutIcon, PackageIcon, TicketIcon, UserIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -18,6 +18,7 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
+    Skeleton,
 } from '@/components/ui'
 import { DASHBOARD_PERMISSION, QUERY_KEY, ROUTE } from '@/constants'
 import { AccountDialog, type AccountTabKey } from '@/features/account'
@@ -37,7 +38,8 @@ export function UserMenu() {
     const pathname = usePathname()
     const searchParams = useSearchParams()
 
-    const { data: session } = useSession()
+    const { data: session, status } = useSession()
+    const isAuthenticated = Boolean(session?.user?.id)
     const { mutate: logout, isPending } = useLogout()
     const profileOverride = useUserProfileStore((state) => state.override)
 
@@ -49,29 +51,8 @@ export function UserMenu() {
         queryKey: QUERY_KEY.USERS.NAVBAR_PROFILE,
         queryFn: () => getCurrentUserProfileAction(),
         staleTime: 30_000,
-        enabled: Boolean(session?.user?.id),
+        enabled: isAuthenticated,
     })
-
-    // ===== Derived =====
-    const email = isMounted ? (session?.user?.email ?? '') : ''
-    const username = isMounted
-        ? profileOverride?.displayName ||
-          backendProfile?.displayName ||
-          session?.user?.name ||
-          (email ? email.split('@')[0] : '') ||
-          t('account')
-        : t('account')
-    const avatar = isMounted
-        ? profileOverride?.avatar !== undefined
-            ? profileOverride.avatar
-            : backendProfile?.avatar !== undefined
-              ? backendProfile.avatar
-              : session?.user?.image
-        : undefined
-    const isAccountOpen = searchParams.get('modal') === 'account'
-    const accountTab = (searchParams.get('tab') as AccountTabKey) || 'profile'
-    const initials = isMounted && username ? getInitials(username) : ''
-    const accountLabel = initials ? `${initials} - ${t('account')}` : t('account')
 
     // ===== Handlers =====
     const handleOpenAccount = useCallback(
@@ -110,6 +91,48 @@ export function UserMenu() {
         },
         [pathname, router, searchParams],
     )
+
+    // Khi chưa mounted hoặc đang nạp session: hiển thị placeholder nhỏ
+    if (!isMounted || status === 'loading') {
+        return <Skeleton className="h-8 w-8 rounded-full" />
+    }
+
+    // Khi CHƯA đăng nhập: Hiển thị Button Đăng nhập điều hướng thẳng tới trang /login
+    if (!isAuthenticated) {
+        const callbackUrl = pathname && pathname !== ROUTE.LOGIN ? `?callbackUrl=${encodeURIComponent(pathname)}` : ''
+        return (
+            <Button
+                asChild
+                variant="default"
+                size="sm"
+                className="h-8 gap-1.5 px-3.5 rounded-full font-bold shadow-sm text-xs transition-transform hover:scale-[1.02]"
+            >
+                <Link href={`${ROUTE.LOGIN}${callbackUrl}`}>
+                    <LogInIcon className="size-3.5" />
+                    <span>{t('login')}</span>
+                </Link>
+            </Button>
+        )
+    }
+
+    // ===== Derived =====
+    const email = session?.user?.email ?? ''
+    const username =
+        profileOverride?.displayName ||
+        backendProfile?.displayName ||
+        session?.user?.name ||
+        (email ? email.split('@')[0] : '') ||
+        t('account')
+    const avatar =
+        profileOverride?.avatar !== undefined
+            ? profileOverride.avatar
+            : backendProfile?.avatar !== undefined
+              ? backendProfile.avatar
+              : session?.user?.image
+    const isAccountOpen = searchParams.get('modal') === 'account'
+    const accountTab = (searchParams.get('tab') as AccountTabKey) || 'profile'
+    const initials = isMounted && username ? getInitials(username) : ''
+    const accountLabel = initials ? `${initials} - ${t('account')}` : t('account')
 
     const handleLogOut = () => {
         useUserProfileStore.getState().clearOverride()

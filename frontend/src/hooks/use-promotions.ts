@@ -2,9 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { UserVoucherItem, VoucherItem } from '@timmyhub/contracts'
+import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 
 import { QUERY_KEY } from '@/constants'
+import { useAuthModalStore } from '@/stores'
 import {
     claimVoucherByCodeAction,
     getAvailableVouchersAction,
@@ -60,9 +62,15 @@ export function useMyUserVouchers(status?: string, options?: { enabled?: boolean
 
 export function useSaveUserVoucher() {
     const queryClient = useQueryClient()
+    const { data: session } = useSession()
+    const openLoginModal = useAuthModalStore((s) => s.openModal)
 
     return useMutation({
         mutationFn: async ({ voucherId, code }: { voucherId: string; code: string }) => {
+            if (!session?.user?.id) {
+                openLoginModal()
+                throw new Error('LOGIN_REQUIRED')
+            }
             const res = await saveUserVoucherAction(voucherId)
             if (!res.ok) {
                 throw new Error(res.message || 'Lưu mã voucher thất bại')
@@ -81,6 +89,7 @@ export function useSaveUserVoucher() {
             }
         },
         onError: (err: Error) => {
+            if (err.message === 'LOGIN_REQUIRED') return
             toast.error(err.message || 'Không thể lưu voucher')
         },
     })
@@ -88,9 +97,15 @@ export function useSaveUserVoucher() {
 
 export function useClaimVoucherByCode() {
     const queryClient = useQueryClient()
+    const { data: session } = useSession()
+    const openLoginModal = useAuthModalStore((s) => s.openModal)
 
     return useMutation({
         mutationFn: async (code: string) => {
+            if (!session?.user?.id) {
+                openLoginModal()
+                throw new Error('LOGIN_REQUIRED')
+            }
             const res = await claimVoucherByCodeAction(code)
             if (!res.ok) {
                 throw new Error(res.message || 'Lưu mã voucher thất bại')
@@ -109,6 +124,7 @@ export function useClaimVoucherByCode() {
             }
         },
         onError: (err: Error) => {
+            if (err.message === 'LOGIN_REQUIRED') return
             toast.error(err.message || 'Không thể lưu mã voucher')
         },
     })

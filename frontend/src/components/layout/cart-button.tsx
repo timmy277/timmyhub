@@ -6,14 +6,20 @@ import Link from 'next/link'
 import { ArrowRightIcon, ShoppingBagIcon, ShoppingCartIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
+import { useSession } from 'next-auth/react'
+
 import { Badge, Button, Popover, PopoverContent, PopoverTrigger, ScrollArea } from '@/components/ui'
 import { ROUTE } from '@/constants'
 import { useCart } from '@/hooks'
+import { useAuthModalStore } from '@/stores'
 import { formatCurrencyVND } from '@/utils'
 
 export function CartButton() {
     const t = useTranslations('cart')
     const [open, setOpen] = useState(false)
+    const { data: session } = useSession()
+    const isAuthenticated = Boolean(session?.user?.id)
+    const openLoginModal = useAuthModalStore((s) => s.openModal)
     const { data: cart } = useCart()
 
     const totalItems = cart?.totalItems ?? 0
@@ -65,9 +71,25 @@ export function CartButton() {
                             <ShoppingBagIcon className="size-7 stroke-[1.5]" />
                         </div>
                         <div className="space-y-1">
-                            <p className="font-bold text-sm text-foreground">{t('dropdown.emptyTitle')}</p>
-                            <p className="text-xs text-muted-foreground">{t('dropdown.emptyDesc')}</p>
+                            <p className="font-bold text-sm text-foreground">
+                                {!isAuthenticated ? t('dropdown.unauthenticatedTitle') : t('dropdown.emptyTitle')}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                {!isAuthenticated ? t('dropdown.unauthenticatedDesc') : t('dropdown.emptyDesc')}
+                            </p>
                         </div>
+                        {!isAuthenticated && (
+                            <Button
+                                size="sm"
+                                className="h-8 rounded-xl font-bold px-4 text-xs"
+                                onClick={() => {
+                                    setOpen(false)
+                                    openLoginModal()
+                                }}
+                            >
+                                {t('dropdown.signInNow')}
+                            </Button>
+                        )}
                     </div>
                 ) : (
                     <ScrollArea className="max-h-72">
@@ -131,17 +153,31 @@ export function CartButton() {
                             </span>
                         </div>
                     )}
-                    <Button
-                        asChild
-                        size="sm"
-                        className="w-full rounded-xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
-                        onClick={() => setOpen(false)}
-                    >
-                        <Link href={ROUTE.CART} className="flex items-center justify-center gap-1.5">
-                            <span>{t('dropdown.viewCart')}</span>
-                            <ArrowRightIcon className="size-3.5" />
-                        </Link>
-                    </Button>
+                    {isAuthenticated ? (
+                        <Button
+                            asChild
+                            size="sm"
+                            className="w-full rounded-xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+                            onClick={() => setOpen(false)}
+                        >
+                            <Link href={ROUTE.CART} className="flex items-center justify-center gap-1.5">
+                                <span>{t('dropdown.viewCart')}</span>
+                                <ArrowRightIcon className="size-3.5" />
+                            </Link>
+                        </Button>
+                    ) : (
+                        <Button
+                            size="sm"
+                            className="w-full rounded-xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+                            onClick={() => {
+                                setOpen(false)
+                                openLoginModal()
+                            }}
+                        >
+                            <span>{t('dropdown.signInToViewCart')}</span>
+                            <ArrowRightIcon className="size-3.5 ml-1.5" />
+                        </Button>
+                    )}
                 </div>
             </PopoverContent>
         </Popover>

@@ -11,7 +11,7 @@ import {
     Toaster,
     TooltipProvider,
 } from '@/components'
-import { FloatingChatDock, StarryBackground } from '@/components/common'
+import { FloatingChatDock, RequireLoginModal, StarryBackground } from '@/components/common'
 import { FONT_VARIABLE_CLASS_NAMES, THEME_INIT_SCRIPT } from '@/constants'
 
 import './globals.css'
@@ -72,6 +72,7 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
                                     <ThemeAttributesSync />
                                     {children}
                                     <FloatingChatDock />
+                                    <RequireLoginModal />
                                     <Toaster />
                                 </TooltipProvider>
                             </QueryProvider>

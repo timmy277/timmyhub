@@ -1,5 +1,6 @@
 'use server'
 
+import { cache } from 'react'
 import { revalidatePath } from 'next/cache'
 
 import type {
@@ -67,10 +68,14 @@ export async function listPublicProductsAction(
     return { ok: true, data: result.data }
 }
 
-export async function getPublicProductDetailAction(idOrSlug: string): Promise<ProductActionResult<ProductDetail>> {
+const getCachedPublicProductDetail = cache(async (idOrSlug: string): Promise<ProductActionResult<ProductDetail>> => {
     const result = await fetchBackend<ProductDetail>(API_ROUTE.CATALOG.PUBLIC_PRODUCT_DETAIL(idOrSlug))
     if (!result.ok) return { ok: false, code: result.code }
     return { ok: true, data: result.data }
+})
+
+export async function getPublicProductDetailAction(idOrSlug: string): Promise<ProductActionResult<ProductDetail>> {
+    return getCachedPublicProductDetail(idOrSlug)
 }
 
 export async function getProductDetailAction(id: string): Promise<ProductActionResult<ProductDetail>> {

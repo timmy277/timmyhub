@@ -340,6 +340,7 @@
     "myVouchers": "Kho Voucher",
     "markAllAsRead": "Đánh dấu tất cả đã đọc",
     "login": "Đăng nhập",
+    "logIn": "Đăng nhập",
     "register": "Đăng ký"
   },
   "theme": {
@@ -1501,7 +1502,11 @@
       "emptyDesc": "Bạn chưa thêm sản phẩm nào vào giỏ.",
       "subtotal": "Tạm tính:",
       "viewCart": "Xem chi tiết giỏ hàng",
-      "qty": "SL: {count}"
+      "qty": "SL: {count}",
+      "unauthenticatedTitle": "Bạn chưa đăng nhập",
+      "unauthenticatedDesc": "Đăng nhập để xem các mặt hàng trong giỏ của bạn.",
+      "signInNow": "Đăng nhập ngay",
+      "signInToViewCart": "Đăng nhập để xem giỏ hàng"
     },
     "page": {
       "title": "Giỏ hàng của bạn",
@@ -2295,5 +2300,28 @@
       "sizeExceeded": "Kích thước video vượt quá giới hạn 100MB",
       "cachedFallback": "Đã tải video vào bộ nhớ đệm sẵn sàng xuất bản."
     }
+  },
+  "authModal": {
+    "defaultTitle": "Yêu cầu đăng nhập",
+    "defaultMessage": "Vui lòng đăng nhập tài khoản để tiếp tục trải nghiệm đầy đủ các tính năng trên TimmyHub.",
+    "loginNow": "Đăng nhập ngay",
+    "later": "Để sau",
+    "benefit1": "Lưu sản phẩm yêu thích và nhận thông báo giảm giá",
+    "benefit2": "Áp dụng voucher độc quyền và miễn phí vận chuyển",
+    "benefit3": "Theo dõi đơn hàng, tích luỹ xu và bảo vệ quyền lợi",
+    "wishlistTitle": "Yêu cầu đăng nhập",
+    "wishlistMessage": "Vui lòng đăng nhập để lưu sản phẩm vào danh sách yêu thích và nhận thông báo khi có ưu đãi.",
+    "cartAddTitle": "Đăng nhập để thêm vào giỏ hàng",
+    "cartAddMessage": "Vui lòng đăng nhập tài khoản để thêm sản phẩm vào giỏ hàng và đồng bộ đơn hàng trên mọi thiết bị.",
+    "buyNowTitle": "Đăng nhập để đặt hàng",
+    "buyNowMessage": "Vui lòng đăng nhập tài khoản để mua hàng nhanh chóng và nhận trọn vẹn ưu đãi vận chuyển.",
+    "voucherTitle": "Đăng nhập để lưu voucher",
+    "voucherMessage": "Vui lòng đăng nhập tài khoản để lưu mã giảm giá vào ví voucher và sử dụng khi đặt hàng.",
+    "claimVoucherTitle": "Đăng nhập để nhận mã ưu đãi",
+    "claimVoucherMessage": "Vui lòng đăng nhập tài khoản để nhận và áp dụng mã ưu đãi cho đơn hàng của bạn.",
+    "videoLikeTitle": "Đăng nhập để tương tác",
+    "videoLikeMessage": "Vui lòng đăng nhập tài khoản để thả tim, tương tác và lưu lại những video bài viết yêu thích của bạn.",
+    "cartViewTitle": "Đăng nhập vào giỏ hàng",
+    "cartViewMessage": "Vui lòng đăng nhập để xem chi tiết giỏ hàng và thanh toán đơn hàng."
   }
 }

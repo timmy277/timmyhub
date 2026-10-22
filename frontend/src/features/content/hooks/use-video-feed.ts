@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 
 import { API_ROUTE, QUERY_KEY } from '@/constants'
 import { apiClient } from '@/services'
+import { useAuthModalStore } from '@/stores'
 
 interface UseVideoFeedOptions {
     limit?: number
@@ -19,6 +20,7 @@ export function useVideoFeed(options: UseVideoFeedOptions = {}) {
     const queryClient = useQueryClient()
     const { data: session } = useSession()
     const isAuthenticated = Boolean(session?.user?.id)
+    const openLoginModal = useAuthModalStore((s) => s.openModal)
 
     const query = useQuery<VideoFeedResponseDto>({
         queryKey: QUERY_KEY.CONTENT.FEED(limit),
@@ -158,12 +160,12 @@ export function useVideoFeed(options: UseVideoFeedOptions = {}) {
     const toggleLike = useCallback(
         (postId: string) => {
             if (!isAuthenticated) {
-                toast.error('Vui lòng đăng nhập để thích video')
+                openLoginModal()
                 return
             }
             likeMutation.mutate(postId)
         },
-        [isAuthenticated, likeMutation],
+        [isAuthenticated, likeMutation, openLoginModal],
     )
 
     const recordView = useCallback(

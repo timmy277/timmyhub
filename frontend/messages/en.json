@@ -340,6 +340,7 @@
     "myVouchers": "My Vouchers",
     "markAllAsRead": "Mark all as read",
     "login": "Sign in",
+    "logIn": "Sign in",
     "register": "Register"
   },
   "theme": {
@@ -1501,7 +1502,11 @@
       "emptyDesc": "You have not added any items yet.",
       "subtotal": "Subtotal:",
       "viewCart": "View Shopping Cart",
-      "qty": "Qty: {count}"
+      "qty": "Qty: {count}",
+      "unauthenticatedTitle": "You are not signed in",
+      "unauthenticatedDesc": "Sign in to view items in your cart.",
+      "signInNow": "Sign in now",
+      "signInToViewCart": "Sign in to view cart"
     },
     "page": {
       "title": "Your Shopping Cart",
@@ -2295,5 +2300,28 @@
       "sizeExceeded": "Video size exceeds 100MB limit",
       "cachedFallback": "Video buffered locally and ready to publish."
     }
+  },
+  "authModal": {
+    "defaultTitle": "Login Required",
+    "defaultMessage": "Please sign in to your account to continue enjoying all features on TimmyHub.",
+    "loginNow": "Sign In Now",
+    "later": "Maybe Later",
+    "benefit1": "Save favorite products and receive price drop alerts",
+    "benefit2": "Apply exclusive vouchers and free shipping codes",
+    "benefit3": "Track orders, collect reward points and protect buyer rights",
+    "wishlistTitle": "Login Required",
+    "wishlistMessage": "Please sign in to save products to your wishlist and receive special offers.",
+    "cartAddTitle": "Sign in to Add to Cart",
+    "cartAddMessage": "Please sign in to add products to your cart and sync across all devices.",
+    "buyNowTitle": "Sign in to Order",
+    "buyNowMessage": "Please sign in to quickly place your order and receive shipping benefits.",
+    "voucherTitle": "Sign in to Save Voucher",
+    "voucherMessage": "Please sign in to save discount vouchers to your wallet for checkout.",
+    "claimVoucherTitle": "Sign in to Claim Voucher",
+    "claimVoucherMessage": "Please sign in to claim and apply exclusive promo codes for your order.",
+    "videoLikeTitle": "Sign in to Interact",
+    "videoLikeMessage": "Please sign in to like, interact, and save your favorite videos and posts.",
+    "cartViewTitle": "Sign in to View Cart",
+    "cartViewMessage": "Please sign in to view your cart items and complete your purchase."
   }
 }

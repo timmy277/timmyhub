@@ -2,22 +2,21 @@
 
 import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 
 import type { ToggleWishlistResponseDto, WishlistListResponseDto } from '@timmyhub/contracts'
 
-import { API_ROUTE, QUERY_KEY, ROUTE } from '@/constants'
+import { API_ROUTE, QUERY_KEY } from '@/constants'
 import { apiClient } from '@/services'
+import { useAuthModalStore } from '@/stores'
 
 export function useWishlist() {
     // ===== Hooks =====
     const t = useTranslations('productDetail')
     const tCommon = useTranslations('common')
     const queryClient = useQueryClient()
-    const router = useRouter()
     const { data: session } = useSession()
 
     const idsQuery = useQuery({
@@ -132,11 +131,12 @@ export function useWishlist() {
     const isAuthenticated = Boolean(session?.user?.id)
     const wishlistIds = useMemo(() => new Set<string>(idsQuery.data ?? []), [idsQuery.data])
 
+    const openLoginModal = useAuthModalStore((s) => s.openModal)
+
     // ===== Handlers =====
     const toggleWishlist = (productId: string, productName?: string) => {
         if (!isAuthenticated) {
-            toast.info(t('wishlistLoginRequired'))
-            router.push(ROUTE.LOGIN)
+            openLoginModal()
             return
         }
         toggleMutation.mutate({ productId, productName })

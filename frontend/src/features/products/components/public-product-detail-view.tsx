@@ -23,6 +23,7 @@ import {
     ZoomInIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import type { ProductDetail, ProductSummary } from '@timmyhub/contracts'
 
@@ -49,6 +50,7 @@ import {
     useSaveUserVoucher,
     useWishlist,
 } from '@/hooks'
+import { useAuthModalStore } from '@/stores'
 import { formatCurrencyVND } from '@/utils'
 
 interface PublicProductDetailViewProps {
@@ -59,6 +61,9 @@ interface PublicProductDetailViewProps {
 export function PublicProductDetailView({ product, relatedProducts = [] }: PublicProductDetailViewProps) {
     const t = useTranslations('productDetail')
     const router = useRouter()
+    const { data: session } = useSession()
+    const isAuthenticated = Boolean(session?.user?.id)
+    const openLoginModal = useAuthModalStore((s) => s.openModal)
     const { isInWishlist, toggleWishlist, isToggling } = useWishlist()
     const isWishlist = isInWishlist(product.id)
 
@@ -260,6 +265,11 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
     }
 
     const handleAddToCart = async () => {
+        if (!isAuthenticated) {
+            openLoginModal()
+            return
+        }
+
         if (!activeVariant) {
             toast.error(t('selectVariant'))
             return
@@ -288,6 +298,11 @@ export function PublicProductDetailView({ product, relatedProducts = [] }: Publi
     }
 
     const handleBuyNow = () => {
+        if (!isAuthenticated) {
+            openLoginModal()
+            return
+        }
+
         if (!activeVariant) {
             toast.error(t('selectVariant'))
             return

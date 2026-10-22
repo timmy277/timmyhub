@@ -4,3 +4,4 @@
 export * from './theme-config.store'
 export * from './user-profile.store'
 export * from './use-chat-store'
+export * from './auth-modal.store'
