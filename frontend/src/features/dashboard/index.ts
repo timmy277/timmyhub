@@ -1,2 +1,11 @@
 // Public API của feature dashboard — nơi khác chỉ import qua `@/features/dashboard`.
+export * from './actions'
 export * from './components/dashboard-page'
+export * from './components/dashboard-kpi-cards'
+export * from './components/dashboard-revenue-chart'
+export * from './components/dashboard-category-chart'
+export * from './components/dashboard-order-status-chart'
+export * from './components/dashboard-payment-chart'
+export * from './components/dashboard-sla-card'
+export * from './components/dashboard-top-products'
+export * from './components/dashboard-recent-orders'

@@ -172,4 +172,7 @@ export const API_ROUTE = {
         STATUS: 'v1/search/status',
         REINDEX: 'v1/search/reindex',
     },
+    ANALYTICS: {
+        DASHBOARD_OVERVIEW: (range = '30d') => `v1/analytics/dashboard/overview?range=${encodeURIComponent(range)}`,
+    },
 } as const

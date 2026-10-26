@@ -112,4 +112,8 @@ export const QUERY_KEY = {
         SUGGEST: (q: string) => ['search', 'suggest', q] as const,
         STATUS: ['search', 'status'] as const,
     },
+    ANALYTICS: {
+        ALL: ['analytics'] as const,
+        DASHBOARD: (range = '30d') => ['analytics', 'dashboard', range] as const,
+    },
 } as const

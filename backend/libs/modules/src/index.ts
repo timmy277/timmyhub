@@ -20,3 +20,4 @@ export {
 } from './content/index'
 export { RedisModule, RedisService } from './redis/index'
 export { SearchModule, SearchService } from './search/index'
+export { AnalyticsModule, AnalyticsService } from './analytics/index'
