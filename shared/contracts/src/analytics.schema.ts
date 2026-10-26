@@ -117,3 +117,59 @@ export const DashboardOverviewResponseSchema = z.object({
     performance: PlatformPerformanceMetricsSchema,
 })
 export type DashboardOverviewResponse = z.infer<typeof DashboardOverviewResponseSchema>
+
+// ===== Seller Action To-Dos =====
+export const SellerActionTodosSchema = z.object({
+    pendingConfirm: z.number(),
+    pendingPickup: z.number(),
+    shipping: z.number(),
+    returnRefund: z.number(),
+    outOfStock: z.number(),
+})
+export type SellerActionTodos = z.infer<typeof SellerActionTodosSchema>
+
+// ===== Seller KPI Metrics =====
+export const SellerDashboardKpisSchema = z.object({
+    todayRevenue: z.number(),
+    todayRevenueChange: z.number(),
+    todayOrders: z.number(),
+    todayOrdersChange: z.number(),
+    periodRevenue: z.number(),
+    periodRevenueChange: z.number(),
+    periodOrders: z.number(),
+    periodOrdersChange: z.number(),
+    avgOrderValue: z.number(),
+    conversionRate: z.number(),
+    activeProducts: z.number(),
+    shopViews: z.number(),
+    sparklines: z.object({
+        revenue: z.array(z.number()),
+        orders: z.array(z.number()),
+    }),
+})
+export type SellerDashboardKpis = z.infer<typeof SellerDashboardKpisSchema>
+
+// ===== Seller Operational Health =====
+export const SellerOperationalHealthSchema = z.object({
+    rating: z.number(),
+    fulfillmentRate: z.number(),
+    cancelRate: z.number(),
+    avgResponseHours: z.number(),
+    returnPolicyDays: z.number(),
+})
+export type SellerOperationalHealth = z.infer<typeof SellerOperationalHealthSchema>
+
+// ===== Full Seller Dashboard Response =====
+export const SellerDashboardOverviewResponseSchema = z.object({
+    range: DashboardRangeSchema,
+    updatedAt: z.string(),
+    shopId: z.string(),
+    shopName: z.string(),
+    todos: SellerActionTodosSchema,
+    kpis: SellerDashboardKpisSchema,
+    revenueChart: z.array(RevenueTimePointSchema),
+    orderStatusChart: z.array(OrderStatusDistributionPointSchema),
+    topProducts: z.array(TopProductItemSchema),
+    operationalHealth: SellerOperationalHealthSchema,
+})
+export type SellerDashboardOverviewResponse = z.infer<typeof SellerDashboardOverviewResponseSchema>

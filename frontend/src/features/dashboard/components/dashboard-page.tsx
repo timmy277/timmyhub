@@ -15,7 +15,6 @@ import { DashboardCategoryChart } from './dashboard-category-chart'
 import { DashboardKpiCards } from './dashboard-kpi-cards'
 import { DashboardOrderStatusChart } from './dashboard-order-status-chart'
 import { DashboardPaymentChart } from './dashboard-payment-chart'
-import { DashboardRecentOrders } from './dashboard-recent-orders'
 import { DashboardRevenueChart } from './dashboard-revenue-chart'
 import { DashboardSlaCard } from './dashboard-sla-card'
 import { DashboardTopProducts } from './dashboard-top-products'
@@ -196,9 +195,6 @@ export function DashboardPage() {
                                 <DashboardTopProducts products={data.topProducts} />
                             </div>
                         </div>
-
-                        {/* 5. Recent Live Orders Table */}
-                        <DashboardRecentOrders orders={data.recentOrders} />
                     </div>
                 )}
             </div>

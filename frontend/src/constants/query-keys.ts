@@ -115,5 +115,6 @@ export const QUERY_KEY = {
     ANALYTICS: {
         ALL: ['analytics'] as const,
         DASHBOARD: (range = '30d') => ['analytics', 'dashboard', range] as const,
+        SELLER_DASHBOARD: (range = '30d') => ['analytics', 'seller-dashboard', range] as const,
     },
 } as const

@@ -6,12 +6,14 @@ import type {
     ApiErrorCode,
     CreateSellerApplicationInput,
     CreateWithdrawalInput,
+    DashboardRange,
     OrderDetail,
     PublicShopDetail,
     ReviewSellerApplicationInput,
     SellerApplicationDetail,
     SellerApplicationListResult,
     SellerApplicationQuery,
+    SellerDashboardOverviewResponse,
     SellerProfileDetail,
     UpdateOrderStatusInput,
     UpdateSellerProfileInput,
@@ -358,5 +360,27 @@ export async function rejectWithdrawalAction(
 
     if (!result.ok) return { ok: false, code: result.code }
     revalidatePath('/withdrawals')
+    return { ok: true, data: result.data }
+}
+
+// Lấy số liệu phân tích tổng quan cho kênh người bán
+export async function getSellerDashboardOverviewAction(
+    range: DashboardRange = '30d',
+): Promise<SellerActionResult<SellerDashboardOverviewResponse>> {
+    const actor = await getActor()
+    if (!actor) return { ok: false, code: 'UNAUTHORIZED' }
+
+    const result = await fetchBackend<SellerDashboardOverviewResponse>(
+        API_ROUTE.ANALYTICS.SELLER_DASHBOARD_OVERVIEW(range),
+        {
+            token: actor.accessToken,
+            method: 'GET',
+        },
+    )
+
+    if (!result.ok) {
+        return { ok: false, code: result.code, message: result.message }
+    }
+
     return { ok: true, data: result.data }
 }

@@ -174,5 +174,6 @@ export const API_ROUTE = {
     },
     ANALYTICS: {
         DASHBOARD_OVERVIEW: (range = '30d') => `v1/analytics/dashboard/overview?range=${encodeURIComponent(range)}`,
+        SELLER_DASHBOARD_OVERVIEW: (range = '30d') => `v1/analytics/seller/overview?range=${encodeURIComponent(range)}`,
     },
 } as const

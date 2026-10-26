@@ -1,8 +1,9 @@
 import { Controller, Get, Query } from '@nestjs/common'
 
-import type { DashboardOverviewResponse, DashboardRange } from '@timmyhub/contracts'
+import type { DashboardOverviewResponse, DashboardRange, SellerDashboardOverviewResponse } from '@timmyhub/contracts'
 import { DashboardRangeSchema } from '@timmyhub/contracts'
-import { Permissions } from '@timmyhub/modules/platform/auth'
+import { AuthenticatedOnly, CurrentUser, Permissions } from '@timmyhub/modules/platform/auth'
+import type { AuthUser } from '@timmyhub/modules/platform/auth'
 
 import { ANALYTICS_ROUTE } from './analytics.constants'
 import { AnalyticsService } from './analytics.service'
@@ -17,5 +18,16 @@ export class AnalyticsController {
         const parsed = DashboardRangeSchema.safeParse(rangeRaw)
         const range: DashboardRange = parsed.success ? parsed.data : '30d'
         return this.analyticsService.getDashboardOverview(range)
+    }
+
+    @AuthenticatedOnly()
+    @Get(ANALYTICS_ROUTE.SELLER_DASHBOARD_OVERVIEW)
+    getSellerDashboardOverview(
+        @CurrentUser() actor: AuthUser,
+        @Query('range') rangeRaw?: string,
+    ): Promise<SellerDashboardOverviewResponse> {
+        const parsed = DashboardRangeSchema.safeParse(rangeRaw)
+        const range: DashboardRange = parsed.success ? parsed.data : '30d'
+        return this.analyticsService.getSellerDashboardOverview(actor.id, range)
     }
 }
