@@ -2500,6 +2500,26 @@
     "method": "Thanh toán",
     "time": "Thời gian",
     "stock": "Tồn kho",
-    "unitsSold": "đã bán"
+    "unitsSold": "đã bán",
+    "totalSales": "Tổng doanh số:",
+    "totalOrdersCount": "Tổng đơn:",
+    "peakSales": "Đỉnh doanh số: {date} ({amount})",
+    "ordersCountUnit": "{count} đơn",
+    "ordersLabel": "Số đơn:",
+    "revenueLabel": "Doanh thu:",
+    "previousPeriodLabel": "Kỳ trước:",
+    "unitOrders": "đơn",
+    "unitCustomers": "khách hàng",
+    "successStatus": "Thành công",
+    "ordersWithPercent": "{count} đơn ({percent}%)",
+    "transactionsCount": "{count} lượt giao dịch",
+    "stockWithCount": "Kho: {count}",
+    "itemCount": "{count} sản phẩm",
+    "realtimeStream": "Luồng trực tiếp",
+    "updatedAt": "Cập nhật lúc {time}",
+    "exportSuccess": "Đã xuất báo cáo số liệu tổng quan thành công!",
+    "exportError": "Có lỗi xảy ra khi xuất báo cáo",
+    "noData": "Không tìm thấy dữ liệu báo cáo",
+    "retry": "Thử lại"
   }
 }

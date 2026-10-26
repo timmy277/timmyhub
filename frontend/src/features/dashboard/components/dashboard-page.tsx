@@ -53,14 +53,14 @@ export function DashboardPage() {
             document.body.appendChild(downloadAnchor)
             downloadAnchor.click()
             downloadAnchor.remove()
-            toast.success('Đã xuất báo cáo số liệu tổng quan thành công!')
+            toast.success(t('exportSuccess'))
         } catch {
-            toast.error('Có lỗi xảy ra khi xuất báo cáo')
+            toast.error(t('exportError'))
         }
     }
 
     return (
-        <PageContainer title={t('pageTitle')} description={t('pageDescription')}>
+        <PageContainer>
             <div className="space-y-6 pb-12">
                 {/* Top Control Bar: Live Status, Range Selector, Refresh, Export */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-2xl border border-border/60 bg-card/60 backdrop-blur-md shadow-xs">
@@ -74,7 +74,7 @@ export function DashboardPage() {
                         <span className="text-foreground">{t('liveSync')}</span>
                         {data?.updatedAt && (
                             <span className="text-[11px] text-muted-foreground opacity-80 hidden md:inline">
-                                (Cập nhật lúc {new Date(data.updatedAt).toLocaleTimeString('vi-VN')})
+                                ({t('updatedAt', { time: new Date(data.updatedAt).toLocaleTimeString() })})
                             </span>
                         )}
                     </div>
@@ -147,9 +147,7 @@ export function DashboardPage() {
                 ) : error || !data ? (
                     /* Error State */
                     <Card className="p-8 text-center rounded-2xl border-destructive/20 bg-destructive/5 space-y-3">
-                        <p className="text-sm font-semibold text-destructive">
-                            {error ? error.message : 'Không tìm thấy dữ liệu báo cáo'}
-                        </p>
+                        <p className="text-sm font-semibold text-destructive">{error ? error.message : t('noData')}</p>
                         <Button
                             type="button"
                             variant="outline"
@@ -157,7 +155,7 @@ export function DashboardPage() {
                             onClick={() => refetch()}
                             className="rounded-xl text-xs font-semibold"
                         >
-                            Thử lại
+                            {t('retry')}
                         </Button>
                     </Card>
                 ) : (

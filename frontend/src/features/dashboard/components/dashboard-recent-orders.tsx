@@ -1,24 +1,12 @@
 'use client'
 
 import { memo } from 'react'
-import Link from 'next/link'
-import { ArrowRightIcon, ReceiptTextIcon } from 'lucide-react'
+import { ReceiptTextIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
 import type { RecentOrderTransaction } from '@timmyhub/contracts'
 
-import {
-    Avatar,
-    AvatarFallback,
-    Badge,
-    Button,
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components'
-import { ROUTE } from '@/constants'
+import { Avatar, AvatarFallback, Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components'
 import { cn, formatCurrencyVND } from '@/utils'
 
 interface DashboardRecentOrdersProps {
@@ -41,6 +29,10 @@ const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
     PROCESSING: {
         label: 'Chuẩn bị hàng',
         class: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+    },
+    CONFIRMED: {
+        label: 'Đã xác nhận',
+        class: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
     },
     PENDING: {
         label: 'Chờ thanh toán',
@@ -72,12 +64,16 @@ export const DashboardRecentOrders = memo(function DashboardRecentOrders({ order
                     </CardDescription>
                 </div>
 
-                <Button asChild variant="ghost" size="sm" className="rounded-xl text-xs gap-1 h-8">
-                    <Link href={ROUTE.SELLER_ORDERS}>
-                        <span>{t('viewAllOrders')}</span>
-                        <ArrowRightIcon className="size-3.5" />
-                    </Link>
-                </Button>
+                <Badge
+                    variant="outline"
+                    className="text-[11px] gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20 px-2.5 py-1 rounded-full shrink-0"
+                >
+                    <span className="relative flex size-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full size-1.5 bg-emerald-500" />
+                    </span>
+                    <span>{t('realtimeStream')}</span>
+                </Badge>
             </CardHeader>
 
             <CardContent className="pt-2 px-2 sm:px-4">
@@ -122,7 +118,7 @@ export const DashboardRecentOrders = memo(function DashboardRecentOrders({ order
                                                         {order.customerName}
                                                     </span>
                                                     <span className="text-[10px] text-muted-foreground">
-                                                        {order.itemCount} sản phẩm
+                                                        {t('itemCount', { count: order.itemCount })}
                                                     </span>
                                                 </div>
                                             </div>

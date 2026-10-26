@@ -72,7 +72,7 @@ export const DashboardKpiCards = memo(function DashboardKpiCards({ kpis }: Dashb
             id: 'orders',
             title: t('kpiOrders'),
             value: formatNumberVND(kpis.orderCount),
-            unit: 'đơn',
+            unit: t('unitOrders'),
             change: kpis.orderCountChange,
             sparkline: kpis.sparklines.orders,
             color: '#3b82f6', // Blue
@@ -84,7 +84,7 @@ export const DashboardKpiCards = memo(function DashboardKpiCards({ kpis }: Dashb
             id: 'users',
             title: t('kpiUsers'),
             value: formatNumberVND(kpis.activeUsers),
-            unit: 'khách hàng',
+            unit: t('unitCustomers'),
             change: kpis.activeUsersChange,
             sparkline: kpis.sparklines.users,
             color: '#8b5cf6', // Violet

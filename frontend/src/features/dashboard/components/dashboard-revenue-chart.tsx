@@ -97,24 +97,22 @@ export const DashboardRevenueChart = memo(function DashboardRevenueChart({ data 
             <div className="px-6 py-2 flex items-center justify-between flex-wrap gap-4 border-b border-border/40 text-xs text-muted-foreground">
                 <div className="flex items-center gap-4 flex-wrap">
                     <div>
-                        <span>Tổng doanh số: </span>
+                        <span>{t('totalSales')} </span>
                         <strong className="font-mono text-foreground font-bold">
                             {formatCurrencyVND(totalRevenue)}
                         </strong>
                     </div>
                     <div>
-                        <span>Tổng đơn: </span>
+                        <span>{t('totalOrdersCount')} </span>
                         <strong className="font-mono text-foreground font-bold">
-                            {totalOrders.toLocaleString()} đơn
+                            {t('ordersCountUnit', { count: totalOrders.toLocaleString() })}
                         </strong>
                     </div>
                 </div>
                 {maxDay.label && (
                     <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
                         <ArrowUpRightIcon className="size-3.5" />
-                        <span>
-                            Đỉnh doanh số: {maxDay.label} ({formatCurrencyVND(maxDay.revenue)})
-                        </span>
+                        <span>{t('peakSales', { date: maxDay.label, amount: formatCurrencyVND(maxDay.revenue) })}</span>
                     </div>
                 )}
             </div>
@@ -166,15 +164,17 @@ export const DashboardRevenueChart = memo(function DashboardRevenueChart({ data 
                                         if (name === 'orders') {
                                             return (
                                                 <div className="flex items-center justify-between gap-4 w-full">
-                                                    <span className="text-muted-foreground">Số đơn:</span>
-                                                    <span className="font-mono font-bold">{String(value)} đơn</span>
+                                                    <span className="text-muted-foreground">{t('ordersLabel')}</span>
+                                                    <span className="font-mono font-bold">
+                                                        {t('ordersCountUnit', { count: String(value) })}
+                                                    </span>
                                                 </div>
                                             )
                                         }
                                         return (
                                             <div className="flex items-center justify-between gap-4 w-full">
                                                 <span className="text-muted-foreground">
-                                                    {name === 'revenue' ? 'Doanh thu:' : 'Kỳ trước:'}
+                                                    {name === 'revenue' ? t('revenueLabel') : t('previousPeriodLabel')}
                                                 </span>
                                                 <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                                                     {formatCurrencyVND(Number(value))}

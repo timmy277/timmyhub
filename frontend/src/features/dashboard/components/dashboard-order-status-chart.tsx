@@ -69,7 +69,10 @@ export const DashboardOrderStatusChart = memo(function DashboardOrderStatusChart
                                                         {point?.label || 'Đơn hàng'}:
                                                     </span>
                                                     <span className="font-mono font-bold text-foreground">
-                                                        {String(value)} đơn ({point?.percentage}%)
+                                                        {t('ordersWithPercent', {
+                                                            count: String(value),
+                                                            percent: point?.percentage ?? 0,
+                                                        })}
                                                     </span>
                                                 </div>
                                             )
@@ -103,7 +106,7 @@ export const DashboardOrderStatusChart = memo(function DashboardOrderStatusChart
                             {successRate}%
                         </span>
                         <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                            Thành công
+                            {t('successStatus')}
                         </span>
                     </div>
                 </div>

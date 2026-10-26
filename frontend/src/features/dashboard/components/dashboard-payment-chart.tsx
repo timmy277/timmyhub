@@ -67,7 +67,7 @@ export const DashboardPaymentChart = memo(function DashboardPaymentChart({ data 
                             </div>
 
                             <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                                <span>{item.count} lượt giao dịch</span>
+                                <span>{t('transactionsCount', { count: item.count })}</span>
                                 <span className="font-mono font-medium text-foreground/80">
                                     {formatCurrencyVND(item.amount)}
                                 </span>

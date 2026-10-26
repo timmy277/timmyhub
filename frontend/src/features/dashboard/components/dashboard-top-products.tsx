@@ -96,7 +96,9 @@ export const DashboardTopProducts = memo(function DashboardTopProducts({ product
                                 <div className="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400">
                                     {formatCurrencyVND(item.revenue)}
                                 </div>
-                                <div className="text-[11px] text-muted-foreground">Kho: {item.stock}</div>
+                                <div className="text-[11px] text-muted-foreground">
+                                    {t('stockWithCount', { count: item.stock })}
+                                </div>
                             </div>
                         </div>
                     )

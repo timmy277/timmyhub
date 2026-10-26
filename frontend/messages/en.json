@@ -2500,6 +2500,26 @@
     "method": "Payment",
     "time": "Time",
     "stock": "Stock",
-    "unitsSold": "sold"
+    "unitsSold": "sold",
+    "totalSales": "Total Sales:",
+    "totalOrdersCount": "Total Orders:",
+    "peakSales": "Peak Sales: {date} ({amount})",
+    "ordersCountUnit": "{count} orders",
+    "ordersLabel": "Orders:",
+    "revenueLabel": "Revenue:",
+    "previousPeriodLabel": "Previous Period:",
+    "unitOrders": "orders",
+    "unitCustomers": "customers",
+    "successStatus": "Success",
+    "ordersWithPercent": "{count} orders ({percent}%)",
+    "transactionsCount": "{count} transactions",
+    "stockWithCount": "Stock: {count}",
+    "itemCount": "{count} items",
+    "realtimeStream": "Live Stream",
+    "updatedAt": "Updated at {time}",
+    "exportSuccess": "Dashboard overview report exported successfully!",
+    "exportError": "An error occurred while exporting the report",
+    "noData": "No reporting data found",
+    "retry": "Try Again"
   }
 }
