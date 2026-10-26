@@ -166,4 +166,10 @@ export const API_ROUTE = {
         SELLER_VIDEOS: 'v1/seller/posts/videos',
         SELLER_VIDEO_DETAIL: (id: string) => `v1/seller/posts/videos/${encodeURIComponent(id)}`,
     },
+    SEARCH: {
+        ROOT: 'v1/search',
+        SUGGEST: 'v1/search/suggest',
+        STATUS: 'v1/search/status',
+        REINDEX: 'v1/search/reindex',
+    },
 } as const

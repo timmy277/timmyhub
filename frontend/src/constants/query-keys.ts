@@ -106,4 +106,10 @@ export const QUERY_KEY = {
         COMMENTS: (postId: string) => ['content', 'comments', postId] as const,
         SELLER_VIDEOS: (filters?: Record<string, unknown>) => ['content', 'seller-videos', filters] as const,
     },
+    SEARCH: {
+        ALL: ['search'] as const,
+        RESULTS: (params?: Record<string, unknown>) => ['search', 'results', params] as const,
+        SUGGEST: (q: string) => ['search', 'suggest', q] as const,
+        STATUS: ['search', 'status'] as const,
+    },
 } as const

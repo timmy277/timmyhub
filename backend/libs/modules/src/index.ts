@@ -19,3 +19,4 @@ export {
     MediaQueueService,
 } from './content/index'
 export { RedisModule, RedisService } from './redis/index'
+export { SearchModule, SearchService } from './search/index'

@@ -15,6 +15,7 @@ import { ROUTE } from '@/constants'
 const PUBLIC_PATHS = [
     ROUTE.LOGIN,
     ROUTE.HOME,
+    ROUTE.SEARCH,
     '/products',
     '/shops',
     '/videos',

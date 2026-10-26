@@ -39,4 +39,5 @@ export const ROUTE = {
     VIDEO_DETAIL: (id: string) => `/videos?id=${encodeURIComponent(id)}`,
     POSTS: '/posts',
     POST_DETAIL: (id: string) => `/posts?id=${encodeURIComponent(id)}`,
+    SEARCH: '/search',
 } as const

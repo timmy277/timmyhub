@@ -41,8 +41,22 @@ export class OrderService implements OnModuleInit, OnModuleDestroy {
 
     onModuleInit(): void {
         // Quét đơn quá hạn sau 10s khởi động, sau đó lặp lại mỗi 60 giây
-        setTimeout(() => void this.cancelExpiredOrders(), 10000)
-        this.cleanupTimer = setInterval(() => void this.cancelExpiredOrders(), 60000)
+        setTimeout(
+            () =>
+                void this.cancelExpiredOrders().catch((err: unknown) => {
+                    const msg = err instanceof Error ? err.message : String(err)
+                    this.logger.warn(`Lỗi quét đơn: ${msg}`)
+                }),
+            10000,
+        )
+        this.cleanupTimer = setInterval(
+            () =>
+                void this.cancelExpiredOrders().catch((err: unknown) => {
+                    const msg = err instanceof Error ? err.message : String(err)
+                    this.logger.warn(`Lỗi quét đơn: ${msg}`)
+                }),
+            60000,
+        )
     }
 
     onModuleDestroy(): void {
@@ -1420,133 +1434,141 @@ export class OrderService implements OnModuleInit, OnModuleDestroy {
      * - Cập nhật trạng thái đơn thành CANCELLED, Payment thành FAILED.
      */
     async cancelExpiredOrders(): Promise<number> {
-        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000)
+        try {
+            const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000)
 
-        // Tìm các đơn hàng VNPAY PENDING đã quá 15 phút
-        const expiredOrders = await this.prisma.order.findMany({
-            where: {
-                status: 'PENDING',
-                paymentStatus: 'PENDING',
-                paymentMethod: 'VNPAY',
-                createdAt: { lt: fifteenMinutesAgo },
-            },
-            include: {
-                orderItems: true,
-            },
-            take: 50,
-        })
+            // Tìm các đơn hàng VNPAY PENDING đã quá 15 phút
+            const expiredOrders = await this.prisma.order.findMany({
+                where: {
+                    status: 'PENDING',
+                    paymentStatus: 'PENDING',
+                    paymentMethod: 'VNPAY',
+                    createdAt: { lt: fifteenMinutesAgo },
+                },
+                include: {
+                    orderItems: true,
+                },
+                take: 50,
+            })
 
-        if (expiredOrders.length === 0) {
-            return 0
-        }
+            if (expiredOrders.length === 0) {
+                return 0
+            }
 
-        this.logger.log(
-            `Tìm thấy ${expiredOrders.length} đơn hàng quá hạn thanh toán, đang tiến hành giải phóng tồn kho...`,
-        )
+            this.logger.log(
+                `Tìm thấy ${expiredOrders.length} đơn hàng quá hạn thanh toán, đang tiến hành giải phóng tồn kho...`,
+            )
 
-        let cancelledCount = 0
+            let cancelledCount = 0
 
-        for (const order of expiredOrders) {
-            try {
-                await this.prisma.$transaction(
-                    async (tx) => {
-                        // 1. Hoàn lại tồn kho đã giữ
-                        for (const item of order.orderItems) {
-                            const variant = await tx.productVariant.findUnique({
-                                where: { id: item.variantId },
-                                include: { inventory: true },
-                            })
+            for (const order of expiredOrders) {
+                try {
+                    await this.prisma.$transaction(
+                        async (tx) => {
+                            // 1. Hoàn lại tồn kho đã giữ
+                            for (const item of order.orderItems) {
+                                const variant = await tx.productVariant.findUnique({
+                                    where: { id: item.variantId },
+                                    include: { inventory: true },
+                                })
 
-                            if (variant?.inventory) {
-                                await tx.inventoryItem.update({
-                                    where: { id: variant.inventory.id },
+                                if (variant?.inventory) {
+                                    await tx.inventoryItem.update({
+                                        where: { id: variant.inventory.id },
+                                        data: {
+                                            reserved: {
+                                                decrement: Math.min(variant.inventory.reserved, item.quantity),
+                                            },
+                                        },
+                                    })
+                                }
+
+                                await tx.product.update({
+                                    where: { id: item.productId },
                                     data: {
-                                        reserved: { decrement: Math.min(variant.inventory.reserved, item.quantity) },
+                                        totalStock: { increment: item.quantity },
+                                        soldCount: { decrement: item.quantity },
                                     },
                                 })
                             }
 
-                            await tx.product.update({
-                                where: { id: item.productId },
-                                data: {
-                                    totalStock: { increment: item.quantity },
-                                    soldCount: { decrement: item.quantity },
-                                },
+                            // 2. Hoàn lại voucher nếu có
+                            await this.refundOrderVouchers(tx, {
+                                id: order.id,
+                                buyerId: order.buyerId,
+                                idempotencyKey: order.idempotencyKey,
                             })
-                        }
 
-                        // 2. Hoàn lại voucher nếu có
-                        await this.refundOrderVouchers(tx, {
-                            id: order.id,
-                            buyerId: order.buyerId,
-                            idempotencyKey: order.idempotencyKey,
-                        })
-
-                        // 3. Đánh dấu đơn hàng CANCELLED
-                        await tx.order.update({
-                            where: { id: order.id },
-                            data: {
-                                status: 'CANCELLED',
-                                cancelReason: 'Hết thời hạn thanh toán VNPay (15 phút)',
-                                statusHistory: {
-                                    create: {
-                                        fromStatus: 'PENDING',
-                                        toStatus: 'CANCELLED',
-                                        reason: 'Hết thời hạn thanh toán đơn hàng (15 phút)',
-                                        actorId: 'SYSTEM',
-                                        actorRole: 'SYSTEM',
+                            // 3. Đánh dấu đơn hàng CANCELLED
+                            await tx.order.update({
+                                where: { id: order.id },
+                                data: {
+                                    status: 'CANCELLED',
+                                    cancelReason: 'Hết thời hạn thanh toán VNPay (15 phút)',
+                                    statusHistory: {
+                                        create: {
+                                            fromStatus: 'PENDING',
+                                            toStatus: 'CANCELLED',
+                                            reason: 'Hết thời hạn thanh toán đơn hàng (15 phút)',
+                                            actorId: 'SYSTEM',
+                                            actorRole: 'SYSTEM',
+                                        },
                                     },
                                 },
-                            },
-                        })
+                            })
 
-                        // 4. Đánh dấu Payment FAILED
-                        await tx.payment.updateMany({
-                            where: { orderId: order.id, status: PaymentStatus.PENDING },
-                            data: { status: PaymentStatus.FAILED },
-                        })
+                            // 4. Đánh dấu Payment FAILED
+                            await tx.payment.updateMany({
+                                where: { orderId: order.id, status: PaymentStatus.PENDING },
+                                data: { status: PaymentStatus.FAILED },
+                            })
 
-                        // 5. Ghi OutboxEvent huỷ đơn (Transactional Outbox)
-                        await tx.outboxEvent.create({
-                            data: {
-                                aggregateType: OUTBOX_AGGREGATE.ORDER,
-                                aggregateId: order.id,
-                                eventType: OUTBOX_EVENT.ORDER_CANCELLED,
-                                payload: {
-                                    orderId: order.id,
-                                    orderNumber: order.id.slice(-8).toUpperCase(),
-                                    buyerId: order.buyerId,
-                                    sellerId: order.sellerId,
-                                    cancelledBy: 'SYSTEM',
-                                    reason: 'Hết thời hạn thanh toán VNPay (15 phút)',
+                            // 5. Ghi OutboxEvent huỷ đơn (Transactional Outbox)
+                            await tx.outboxEvent.create({
+                                data: {
+                                    aggregateType: OUTBOX_AGGREGATE.ORDER,
+                                    aggregateId: order.id,
+                                    eventType: OUTBOX_EVENT.ORDER_CANCELLED,
+                                    payload: {
+                                        orderId: order.id,
+                                        orderNumber: order.id.slice(-8).toUpperCase(),
+                                        buyerId: order.buyerId,
+                                        sellerId: order.sellerId,
+                                        cancelledBy: 'SYSTEM',
+                                        reason: 'Hết thời hạn thanh toán VNPay (15 phút)',
+                                    },
                                 },
-                            },
+                            })
+                        },
+                        { maxWait: 10000, timeout: 20000 },
+                    )
+
+                    cancelledCount++
+
+                    if (this.eventEmitter) {
+                        this.eventEmitter.emit('order.cancelled', {
+                            orderId: order.id,
+                            orderNumber: order.id.slice(-8).toUpperCase(),
+                            userId: order.buyerId,
+                            cancelledBy: 'SYSTEM',
+                            reason: 'Hết thời hạn thanh toán VNPay (15 phút)',
+                            shopId: order.sellerId,
                         })
-                    },
-                    { maxWait: 10000, timeout: 20000 },
-                )
-
-                cancelledCount++
-
-                if (this.eventEmitter) {
-                    this.eventEmitter.emit('order.cancelled', {
-                        orderId: order.id,
-                        orderNumber: order.id.slice(-8).toUpperCase(),
-                        userId: order.buyerId,
-                        cancelledBy: 'SYSTEM',
-                        reason: 'Hết thời hạn thanh toán VNPay (15 phút)',
-                        shopId: order.sellerId,
-                    })
+                    }
+                } catch (err) {
+                    this.logger.error(`Lỗi khi tự động huỷ đơn quá hạn ${order.id}:`, err)
                 }
-            } catch (err) {
-                this.logger.error(`Lỗi khi tự động huỷ đơn quá hạn ${order.id}:`, err)
             }
-        }
 
-        if (cancelledCount > 0) {
-            this.logger.log(`Đã tự động huỷ ${cancelledCount} đơn hàng quá hạn và hoàn trả tồn kho thành công.`)
-        }
+            if (cancelledCount > 0) {
+                this.logger.log(`Đã tự động huỷ ${cancelledCount} đơn hàng quá hạn và hoàn trả tồn kho thành công.`)
+            }
 
-        return cancelledCount
+            return cancelledCount
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error)
+            this.logger.warn(`Lỗi trong chu kỳ quét đơn quá hạn (sẽ thử lại ở chu kỳ sau): ${message}`)
+            return 0
+        }
     }
 }

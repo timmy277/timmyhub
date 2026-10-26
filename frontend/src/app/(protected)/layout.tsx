@@ -21,6 +21,8 @@ export default async function ProtectedLayout({ children }: ProtectedLayoutProps
     const pathname = headerList.get('x-original-path') || ''
     const isPublicStorefront =
         pathname === ROUTE.HOME ||
+        pathname === ROUTE.SEARCH ||
+        pathname.startsWith(`${ROUTE.SEARCH}/`) ||
         pathname.startsWith('/products') ||
         pathname.startsWith('/shops') ||
         pathname.startsWith('/videos') ||

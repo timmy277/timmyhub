@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { LayoutGridIcon, StoreIcon } from 'lucide-react'
+import { LayoutGridIcon, SearchIcon, StoreIcon } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 
 import {
@@ -13,14 +13,13 @@ import {
 } from '@/components/common'
 import { Button, Skeleton } from '@/components/ui'
 import { DASHBOARD_PERMISSION, ROUTE, SELLER_SHOP_PERMISSION } from '@/constants'
+import { SearchBar } from '@/features/search'
 import { getMyShopAction } from '@/features/seller'
 import { getActor } from '@/lib/actor-permissions'
 import { CartButton } from './cart-button'
 
 // AppBar độc lập trên trang chủ — không bị bọc trong sidebar.
-// Hiển thị logo TimmyHub, các công cụ đổi theme/ngôn ngữ, thông báo, menu tài khoản.
-// Luôn hiển thị nút vào Kênh Người Bán / Đăng ký bán hàng cho người dùng,
-// và nếu tài khoản có quyền vào dashboard (ADMIN+), hiển thị thêm nút Dashboard.
+// Hiển thị logo TimmyHub, ô tìm kiếm sản phẩm với Elasticsearch, các công cụ đổi theme/ngôn ngữ, thông báo, giỏ hàng, menu tài khoản.
 export async function HomeHeader() {
     const t = await getTranslations('nav')
     const actor = await getActor()
@@ -37,8 +36,8 @@ export async function HomeHeader() {
     const sellerLabel = isSeller ? t('sellerPortal') : t('becomeSeller')
 
     return (
-        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 px-4 sm:px-6 backdrop-blur-md">
-            <div className="flex items-center gap-4">
+        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-3 border-b bg-background/95 px-4 sm:px-6 backdrop-blur-md">
+            <div className="flex items-center gap-3 shrink-0">
                 <Link
                     href={canAccessDashboard ? ROUTE.DASHBOARD : ROUTE.HOME}
                     className="flex items-center gap-2.5 font-bold text-base sm:text-lg transition-opacity hover:opacity-90"
@@ -50,7 +49,7 @@ export async function HomeHeader() {
                 </Link>
 
                 {!canAccessDashboard && (
-                    <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex gap-1.5 h-8">
+                    <Button asChild variant="ghost" size="sm" className="hidden lg:inline-flex gap-1.5 h-8">
                         <Link href={sellerRoute}>
                             <StoreIcon className="size-3.5 text-muted-foreground" />
                             <span>{sellerLabel}</span>
@@ -59,7 +58,7 @@ export async function HomeHeader() {
                 )}
 
                 {canAccessDashboard && (
-                    <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex gap-1.5 h-8">
+                    <Button asChild variant="outline" size="sm" className="hidden lg:inline-flex gap-1.5 h-8">
                         <Link href={ROUTE.DASHBOARD}>
                             <LayoutGridIcon className="size-3.5" />
                             <span>{t('dashboard')}</span>
@@ -68,7 +67,19 @@ export async function HomeHeader() {
                 )}
             </div>
 
-            <div className="flex items-center gap-1 sm:gap-1.5">
+            {/* Central Search Bar with Autocomplete */}
+            <div className="hidden md:flex flex-1 max-w-xl mx-2">
+                <SearchBar />
+            </div>
+
+            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                {/* Mobile Search Quick Button */}
+                <Button asChild variant="ghost" size="icon" className="md:hidden size-8">
+                    <Link href={ROUTE.SEARCH} aria-label={t('search')}>
+                        <SearchIcon className="size-4 text-muted-foreground" />
+                    </Link>
+                </Button>
+
                 <LocaleSwitcher />
                 <ThemeMenu />
                 <ThemeModeToggle />

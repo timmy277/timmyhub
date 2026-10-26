@@ -28,13 +28,28 @@ services:
       - NODE_ENV=production
       - PORT=3001
       - REDIS_URL=redis://redis:6379
+      - ELASTICSEARCH_NODE=http://elasticsearch:9200
     env_file:
       - backend/apps/api/.env
     depends_on:
       redis:
         condition: service_healthy
 
-  # 3. Background Worker (BullMQ & Outbox Dispatcher)
+  # 3. Elasticsearch Full-text Search Engine
+  elasticsearch:
+    image: elasticsearch:8.12.0
+    container_name: timmyhub-elasticsearch
+    restart: unless-stopped
+    ports:
+      - '9200:9200'
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - 'ES_JAVA_OPTS=-Xms512m -Xmx512m'
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+  # 4. Background Worker (BullMQ & Outbox Dispatcher)
   worker:
     build:
       context: .
@@ -44,13 +59,14 @@ services:
     environment:
       - NODE_ENV=production
       - REDIS_URL=redis://redis:6379
+      - ELASTICSEARCH_NODE=http://elasticsearch:9200
     env_file:
       - backend/apps/api/.env
     depends_on:
       redis:
         condition: service_healthy
 
-  # 4. Next.js Frontend
+  # 5. Next.js Frontend
   frontend:
     build:
       context: .
@@ -68,4 +84,6 @@ services:
 
 volumes:
   redis_data:
+    driver: local
+  es_data:
     driver: local

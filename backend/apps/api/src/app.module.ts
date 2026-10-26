@@ -15,6 +15,7 @@ import { NotificationModule } from '@timmyhub/modules/notification'
 import { ChatModule } from '@timmyhub/modules/chat'
 import { ContentModule } from '@timmyhub/modules/content'
 import { RedisModule } from '@timmyhub/modules/redis'
+import { SearchModule } from '@timmyhub/modules/search'
 import { PrismaModule } from '@timmyhub/prisma'
 
 @Module({
@@ -35,6 +36,7 @@ import { PrismaModule } from '@timmyhub/prisma'
         NotificationModule,
         ChatModule,
         ContentModule,
+        SearchModule,
     ],
 })
 // Trigger dev reload for RedisModule

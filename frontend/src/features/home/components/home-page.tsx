@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -17,7 +17,6 @@ import {
     FlameIcon,
     Gamepad2Icon,
     HeadphonesIcon,
-    HeartIcon,
     HomeIcon,
     LaptopIcon,
     LayoutGridIcon,
@@ -51,6 +50,7 @@ import {
     useWishlist,
 } from '@/hooks'
 import { formatCurrencyVND } from '@/utils'
+import { ProductCard } from '@/features/products'
 
 function formatNumber(num: number): string {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
@@ -468,181 +468,7 @@ interface HomeProductItem {
     isBest?: boolean
 }
 
-interface Product3DCardProps {
-    product: HomeProductItem
-    isLiked: boolean
-    onToggleWishlist: (id: string, name: string) => void
-}
-
-/* Product Card with Interactive 3D Tilt, Dynamic Glare, and Depth Stacking */
-const Product3DCard = memo(function Product3DCard({ product: p, isLiked, onToggleWishlist }: Product3DCardProps) {
-    const router = useRouter()
-    const [tilt, setTilt] = useState({ x: 0, y: 0 })
-    const [glare, setGlare] = useState<{ x: number; y: number; opacity: number }>({ x: 50, y: 50, opacity: 0 })
-    const cardRef = useRef<HTMLDivElement>(null)
-
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!cardRef.current) return
-        const rect = cardRef.current.getBoundingClientRect()
-        const x = e.clientX - rect.left
-        const y = e.clientY - rect.top
-        const centerX = rect.width / 2
-        const centerY = rect.height / 2
-        const rotateX = Number((((y - centerY) / centerY) * -8).toFixed(2))
-        const rotateY = Number((((x - centerX) / centerX) * 8).toFixed(2))
-        setTilt({ x: rotateX, y: rotateY })
-        setGlare({
-            x: Math.round((x / rect.width) * 100),
-            y: Math.round((y / rect.height) * 100),
-            opacity: 0.18,
-        })
-    }
-
-    const handleMouseLeave = () => {
-        setTilt({ x: 0, y: 0 })
-        setGlare((prev) => ({ ...prev, opacity: 0 }))
-    }
-
-    const isHovered = tilt.x !== 0 || tilt.y !== 0
-
-    return (
-        <div className="[perspective:1000px] h-full">
-            <Link
-                href={ROUTE.PRODUCT_DETAIL(p.slug || p.id)}
-                prefetch={false}
-                className="block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl"
-            >
-                <article
-                    ref={cardRef}
-                    onMouseMove={handleMouseMove}
-                    onMouseLeave={handleMouseLeave}
-                    style={{
-                        transform: isHovered
-                            ? `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateY(-6px) scale3d(1.02, 1.02, 1.02)`
-                            : 'rotateX(0deg) rotateY(0deg) translateY(0px) scale3d(1, 1, 1)',
-                        transition: isHovered
-                            ? 'transform 0.1s ease-out'
-                            : 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)',
-                    }}
-                    className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card p-3.5 shadow-sm hover:shadow-xl hover:shadow-primary/15 hover:border-primary/50 [transform-style:preserve-3d] select-none"
-                >
-                    {/* 3D Glare Light Sweep Layer */}
-                    <div
-                        aria-hidden
-                        className="pointer-events-none absolute inset-0 z-20 rounded-2xl transition-opacity duration-300"
-                        style={{
-                            background: `radial-gradient(circle 240px at ${glare.x}% ${glare.y}%, rgba(255, 255, 255, ${glare.opacity}), transparent)`,
-                        }}
-                    />
-
-                    {/* Product Image & Badges with 3D Popout */}
-                    <div className="relative flex h-44 items-center justify-center rounded-xl bg-muted/40 overflow-hidden transition-all duration-300 group-hover:bg-primary/5 [transform:translateZ(20px)]">
-                        {p.image ? (
-                            <Image
-                                src={p.image}
-                                alt={p.name}
-                                fill
-                                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                                className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
-                            />
-                        ) : (
-                            <span className="text-6xl transition-transform duration-500 ease-out group-hover:scale-115 group-hover:rotate-3 select-none drop-shadow-sm">
-                                {p.emoji || '🎁'}
-                            </span>
-                        )}
-                        {p.discount > 0 && (
-                            <span className="absolute top-2 left-2 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-6deg] z-20">
-                                -{p.discount}%
-                            </span>
-                        )}
-                        <Button
-                            type="button"
-                            onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                onToggleWishlist(p.id, p.name)
-                            }}
-                            aria-label="Thêm vào yêu thích"
-                            className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-background/80 text-foreground/80 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-125 active:scale-90 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40 z-30"
-                            variant="ghost"
-                        >
-                            <HeartIcon
-                                className={`size-3.5 transition-colors duration-200 ${isLiked ? 'fill-rose-500 text-rose-500' : ''}`}
-                            />
-                        </Button>
-                    </div>
-
-                    {/* Product Details with 3D Depth */}
-                    <div className="mt-3 flex flex-1 flex-col gap-1.5 [transform:translateZ(14px)]">
-                        <span className="text-[10px] font-semibold text-muted-foreground uppercase">{p.category}</span>
-                        <h3 className="line-clamp-2 text-xs font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
-                            {p.name}
-                        </h3>
-
-                        <div className="mt-auto pt-2 space-y-2">
-                            <div className="flex items-baseline gap-1.5">
-                                <span className="text-sm sm:text-base font-extrabold text-emerald-700 dark:text-emerald-400 transition-transform duration-300 group-hover:scale-105 origin-left inline-block">
-                                    {formatCurrencyVND(p.price)}
-                                </span>
-                                {p.originalPrice && (
-                                    <span className="text-[10px] text-muted-foreground line-through">
-                                        {formatCurrencyVND(p.originalPrice)}
-                                    </span>
-                                )}
-                            </div>
-
-                            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                                <span className="flex items-center gap-0.5">
-                                    <StarIcon className="size-3 fill-amber-400 text-amber-400 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
-                                    <span className="font-semibold text-foreground/90">{p.rating}</span>
-                                    <span>({p.reviews})</span>
-                                </span>
-                                <span suppressHydrationWarning>Đã bán {formatNumber(p.sold)}</span>
-                            </div>
-
-                            {/* Seller Footer */}
-                            <div className="pt-2.5 border-t border-border/60 flex items-center justify-between gap-1.5 text-xs">
-                                <div
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={(e) => {
-                                        const target = p.shopSlug || p.shopId
-                                        if (target) {
-                                            e.preventDefault()
-                                            e.stopPropagation()
-                                            router.push(ROUTE.SHOP_DETAIL(target))
-                                        }
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            const target = p.shopSlug || p.shopId
-                                            if (target) {
-                                                e.preventDefault()
-                                                e.stopPropagation()
-                                                router.push(ROUTE.SHOP_DETAIL(target))
-                                            }
-                                        }
-                                    }}
-                                    className="flex items-center gap-1.5 min-w-0 min-h-[28px] py-1 hover:underline cursor-pointer group/vendor z-30"
-                                >
-                                    <div className="flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-transform duration-300 group-hover/vendor:scale-110 group-hover/vendor:bg-primary group-hover/vendor:text-primary-foreground">
-                                        <StoreIcon className="size-3" />
-                                    </div>
-                                    <span className="truncate text-[11px] font-semibold text-foreground group-hover/vendor:text-primary transition-colors">
-                                        {p.shop}
-                                    </span>
-                                    {p.verified && (
-                                        <CheckCircle2Icon className="size-3.5 text-primary shrink-0 transition-transform duration-300 group-hover/vendor:scale-125" />
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </article>
-            </Link>
-        </div>
-    )
-})
+const Product3DCard = ProductCard
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * MAIN HOMEPAGE COMPONENT
