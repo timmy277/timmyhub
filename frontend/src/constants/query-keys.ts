@@ -101,7 +101,7 @@ export const QUERY_KEY = {
     },
     CONTENT: {
         ALL: ['content'] as const,
-        FEED: (limit?: number) => ['content', 'feed', limit] as const,
+        FEED: (limit?: number, random?: boolean) => ['content', 'feed', limit, random ?? false] as const,
         VIDEO_DETAIL: (id: string) => ['content', 'detail', id] as const,
         COMMENTS: (postId: string) => ['content', 'comments', postId] as const,
         SELLER_VIDEOS: (filters?: Record<string, unknown>) => ['content', 'seller-videos', filters] as const,

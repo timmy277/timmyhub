@@ -30,11 +30,12 @@ export type ContentActionResult<T = undefined> =
 // ===== Public Feed Actions =====
 
 /**
- * Lấy danh sách video cộng đồng cho trang chủ hoặc màn hình feeds
+ * Lấy danh sách video cộng đồng cho trang chủ hoặc màn hình feeds (hỗ trợ random)
  */
 export async function getVideoFeedAction(params?: {
     limit?: number
     excludeId?: string
+    random?: boolean
 }): Promise<ContentActionResult<VideoFeedResponseDto>> {
     const actor = await getActor()
     const result = await fetchBackend<VideoFeedResponseDto>(API_ROUTE.CONTENT.FEED, {
@@ -42,6 +43,7 @@ export async function getVideoFeedAction(params?: {
         query: {
             limit: params?.limit,
             excludeId: params?.excludeId,
+            random: params?.random ? 'true' : undefined,
         },
     })
     if (!result.ok) {

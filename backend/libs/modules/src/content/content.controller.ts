@@ -23,17 +23,19 @@ export class ContentFeedController {
     constructor(private readonly contentService: ContentService) {}
 
     /**
-     * Lấy danh sách video ngẫu nhiên đang hiển thị
+     * Lấy danh sách video feeds công khai (hỗ trợ random cho trang chủ)
      */
     @Public()
     @Get('videos')
     getVideoFeed(
         @Query('limit') limit?: string,
         @Query('excludeId') excludeId?: string,
+        @Query('random') random?: string,
         @CurrentUser() user?: AuthUser,
     ): Promise<VideoFeedResponseDto> {
         const parsedLimit = limit ? Number.parseInt(limit, 10) : CONTENT_PAGINATION.DEFAULT_LIMIT
-        return this.contentService.getVideoFeed(parsedLimit, excludeId, user?.id)
+        const isRandom = random === 'true' || random === '1'
+        return this.contentService.getVideoFeed(parsedLimit, excludeId, user?.id, isRandom)
     }
 
     /**

@@ -39,6 +39,7 @@ import { toast } from 'sonner'
 import { IconPath } from '@/components/icons'
 import { Badge, Button } from '@/components/ui'
 import { ROUTE, SELLER_SHOP_ANY_PERMISSION, SELLER_SHOP_PERMISSION } from '@/constants'
+import type { VideoFeedResponseDto } from '@timmyhub/contracts'
 import { HomeVideoFeed } from '@/features/content'
 import {
     useMyShop,
@@ -473,7 +474,11 @@ const Product3DCard = ProductCard
 /* ─────────────────────────────────────────────────────────────────────────────
  * MAIN HOMEPAGE COMPONENT
  * ───────────────────────────────────────────────────────────────────────────── */
-export function HomePage() {
+interface HomePageProps {
+    initialVideoFeed?: VideoFeedResponseDto
+}
+
+export function HomePage({ initialVideoFeed }: HomePageProps = {}) {
     const router = useRouter()
     const tNav = useTranslations('nav')
     const tHome = useTranslations('home')
@@ -1185,7 +1190,7 @@ export function HomePage() {
                 {/* ═══════════════════════════════════════════════════════════════════
                  * 6. POST FEED SECTION: VIDEO & BÀI VIẾT CỘNG ĐỒNG SÁNG TẠO
                  * ═══════════════════════════════════════════════════════════════════ */}
-                <HomeVideoFeed />
+                <HomeVideoFeed initialData={initialVideoFeed} />
 
                 {/* ═══════════════════════════════════════════════════════════════════
                  * 7. PRODUCTS SECTION: GỢI Ý HÔM NAY (TODAY SUGGESTION TABS + GRID)

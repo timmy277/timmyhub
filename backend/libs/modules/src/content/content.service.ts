@@ -9,7 +9,7 @@ import type {
 } from '@timmyhub/contracts'
 import { PrismaService } from '@timmyhub/prisma'
 
-import { CONTENT_PAGINATION } from './content.constants'
+import { CONTENT_PAGINATION, STATIC_FALLBACK_VIDEO_POSTS } from './content.constants'
 import { ContentRepository } from './content.repository'
 import { MediaQueueService } from './media-queue.service'
 import { VideoTranscodeService } from './video-transcode.service'
@@ -18,6 +18,11 @@ import { VideoTranscodeService } from './video-transcode.service'
 export class ContentService {
     private readonly logger = new Logger(ContentService.name)
 
+    // In-memory feed cache for instant response & high resilience
+    private cachedFeedItems: VideoPostDto[] = []
+    private lastFeedFetchTime = 0
+    private readonly FEED_CACHE_TTL_MS = 60_000
+
     constructor(
         private readonly prisma: PrismaService,
         private readonly contentRepo: ContentRepository,
@@ -25,48 +30,55 @@ export class ContentService {
         private readonly mediaQueueService: MediaQueueService,
     ) {}
 
+    public invalidateFeedCache(): void {
+        this.cachedFeedItems = []
+        this.lastFeedFetchTime = 0
+    }
+
     /**
-     * Lấy feed video cộng đồng ngẫu nhiên cho trang chủ hoặc màn hình xem video
-     * REQ-PST-001, FEAT-PST-001
+     * Tải hoặc làm mới danh sách bài đăng từ cơ sở dữ liệu với cache trong bộ nhớ
      */
-    async getVideoFeed(
-        limit: number = CONTENT_PAGINATION.DEFAULT_LIMIT,
-        excludeId?: string,
-        currentUserId?: string,
-    ): Promise<VideoFeedResponseDto> {
-        const safeLimit = Math.min(Math.max(1, limit), CONTENT_PAGINATION.MAX_LIMIT)
-
-        let posts = await this.contentRepo.findPublishedVideos(safeLimit, excludeId)
-
-        // Nếu DB chưa có video bài đăng nào, tự động seed video mẫu chất lượng cao
-        if (posts.length === 0) {
-            await this.seedInitialVideoPosts()
-            posts = await this.contentRepo.findPublishedVideos(safeLimit, excludeId)
+    private async getOrRefreshPublishedVideos(): Promise<VideoPostDto[]> {
+        const isCacheValid =
+            this.cachedFeedItems.length > 0 && Date.now() - this.lastFeedFetchTime < this.FEED_CACHE_TTL_MS
+        if (isCacheValid) {
+            return this.cachedFeedItems
         }
 
-        // Lấy danh sách ID sản phẩm và seller để làm giàu dữ liệu
-        const productIds = Array.from(
-            new Set(posts.flatMap((p) => p.productTags.map((t) => t.productId)).filter(Boolean)),
-        )
-        const sellerIds = Array.from(new Set(posts.map((p) => p.sellerId).filter(Boolean)))
+        try {
+            let posts = await this.contentRepo.findPublishedVideos(CONTENT_PAGINATION.MAX_LIMIT)
+            if (posts.length === 0) {
+                await this.seedInitialVideoPosts()
+                posts = await this.contentRepo.findPublishedVideos(CONTENT_PAGINATION.MAX_LIMIT)
+            }
 
-        const [products, sellers] = await Promise.all([
-            this.contentRepo.findProductsByIds(productIds),
-            this.contentRepo.findSellerProfiles(sellerIds),
-        ])
+            if (posts.length === 0) {
+                this.cachedFeedItems = [...STATIC_FALLBACK_VIDEO_POSTS]
+                this.lastFeedFetchTime = Date.now()
+                return this.cachedFeedItems
+            }
 
-        const productMap = new Map(products.map((prod) => [prod.id, prod]))
-        const sellerMap = new Map<
-            string,
-            { id: string; shopName: string; shopSlug: string; shopLogo: string | null; isVerified: boolean }
-        >()
-        for (const s of sellers) {
-            sellerMap.set(s.id, s)
-            sellerMap.set(s.userId, s)
-        }
+            const productIds = Array.from(
+                new Set(posts.flatMap((p) => p.productTags.map((t) => t.productId)).filter(Boolean)),
+            )
+            const sellerIds = Array.from(new Set(posts.map((p) => p.sellerId).filter(Boolean)))
 
-        const items: VideoPostDto[] = await Promise.all(
-            posts.map(async (post) => {
+            const [products, sellers] = await Promise.all([
+                this.contentRepo.findProductsByIds(productIds),
+                this.contentRepo.findSellerProfiles(sellerIds),
+            ])
+
+            const productMap = new Map(products.map((prod) => [prod.id, prod]))
+            const sellerMap = new Map<
+                string,
+                { id: string; shopName: string; shopSlug: string; shopLogo: string | null; isVerified: boolean }
+            >()
+            for (const s of sellers) {
+                sellerMap.set(s.id, s)
+                sellerMap.set(s.userId, s)
+            }
+
+            this.cachedFeedItems = posts.map((post) => {
                 const seller = sellerMap.get(post.sellerId)
                 const taggedProducts: PostProductDto[] = []
 
@@ -91,13 +103,16 @@ export class ContentService {
                     }
                 }
 
-                let isLiked = false
-                if (currentUserId) {
-                    isLiked = await this.contentRepo.hasUserLiked(post.id, currentUserId)
-                }
+                // Không bao giờ gán file video vào thumbnailUrl để tránh lỗi next/image
+                const hasValidImageThumbnail =
+                    post.thumbnailUrl &&
+                    !post.thumbnailUrl.endsWith('.mp4') &&
+                    !post.thumbnailUrl.includes('.mp4#') &&
+                    !post.thumbnailUrl.endsWith('.m3u8')
 
-                // Fallback thumbnail nếu chưa có: dùng videoUrl + #t=0.0001
-                const resolvedThumbnail = post.thumbnailUrl || (post.videoUrl ? `${post.videoUrl}#t=0.0001` : null)
+                const resolvedThumbnail = hasValidImageThumbnail
+                    ? post.thumbnailUrl
+                    : (taggedProducts[0]?.product.thumbnailUrl ?? null)
 
                 return {
                     id: post.id,
@@ -114,18 +129,80 @@ export class ContentService {
                     viewCount: post.viewCount,
                     likeCount: post.likeCount,
                     commentCount: post.commentCount,
-                    isLiked,
+                    isLiked: false,
                     productTags: taggedProducts,
                     createdAt: post.createdAt.toISOString(),
                     updatedAt: post.updatedAt.toISOString(),
                 }
-            }),
-        )
+            })
+
+            this.lastFeedFetchTime = Date.now()
+            return this.cachedFeedItems
+        } catch (error) {
+            this.logger.error(`Lỗi tải video feed từ database: ${(error as Error).message}. Sử dụng fallback tĩnh.`)
+            if (this.cachedFeedItems.length > 0) {
+                return this.cachedFeedItems
+            }
+            return STATIC_FALLBACK_VIDEO_POSTS
+        }
+    }
+
+    /**
+     * Lấy feed video cộng đồng ngẫu nhiên cho trang chủ hoặc màn hình xem video
+     * REQ-PST-001, FEAT-PST-001
+     */
+    async getVideoFeed(
+        limit: number = CONTENT_PAGINATION.DEFAULT_LIMIT,
+        excludeId?: string,
+        currentUserId?: string,
+        isRandom = false,
+    ): Promise<VideoFeedResponseDto> {
+        const safeLimit = Math.min(Math.max(1, limit), CONTENT_PAGINATION.MAX_LIMIT)
+
+        const allPosts = await this.getOrRefreshPublishedVideos()
+        const candidates = excludeId ? allPosts.filter((p) => p.id !== excludeId) : [...allPosts]
+
+        if (isRandom) {
+            // Fisher-Yates shuffle để phân phối ngẫu nhiên đều
+            for (let i = candidates.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1))
+                const itemI = candidates[i]
+                const itemJ = candidates[j]
+                if (itemI !== undefined && itemJ !== undefined) {
+                    candidates[i] = itemJ
+                    candidates[j] = itemI
+                }
+            }
+        }
+
+        const selected = candidates.slice(0, safeLimit)
+
+        // Kiểm tra like hiệu quả theo lô nếu có user đang đăng nhập
+        let likedPostIds = new Set<string>()
+        if (currentUserId && selected.length > 0) {
+            try {
+                const likes = await this.prisma.postLike.findMany({
+                    where: {
+                        userId: currentUserId,
+                        postId: { in: selected.map((p) => p.id) },
+                    },
+                    select: { postId: true },
+                })
+                likedPostIds = new Set(likes.map((l) => l.postId))
+            } catch (err) {
+                this.logger.warn(`Không thể lấy danh sách like: ${(err as Error).message}`)
+            }
+        }
+
+        const items = selected.map((p) => ({
+            ...p,
+            isLiked: likedPostIds.has(p.id),
+        }))
 
         return {
             items,
-            total: items.length,
-            hasMore: items.length >= safeLimit,
+            total: allPosts.length,
+            hasMore: allPosts.length > safeLimit,
         }
     }
 
@@ -276,6 +353,8 @@ export class ContentService {
             throw new BadRequestException('Không thể tạo bài đăng video')
         }
 
+        this.invalidateFeedCache()
+
         // Kích hoạt pipeline nén & chuyển đổi HLS ngầm qua BullMQ background job (non-blocking, luật #16)
         const enqueued = await this.mediaQueueService.addTranscodeJob(created.id, input.videoUrl)
         if (!enqueued) {
@@ -340,6 +419,8 @@ export class ContentService {
             productTags,
         )
 
+        this.invalidateFeedCache()
+
         const feedResult = await this.getVideoFeed(20, undefined, sellerUserId)
         const updated = feedResult.items.find((item) => item.id === postId)
         if (!updated) {
@@ -363,6 +444,7 @@ export class ContentService {
         }
 
         await this.contentRepo.deletePost(postId)
+        this.invalidateFeedCache()
         return { success: true }
     }
 
@@ -683,6 +765,7 @@ export class ContentService {
             }
 
             this.logger.log('Đã khởi tạo thành công 4 video bán hàng mẫu.')
+            this.invalidateFeedCache()
         } catch (error) {
             this.logger.error(`Lỗi khi seed video mẫu: ${(error as Error).message}`)
         }

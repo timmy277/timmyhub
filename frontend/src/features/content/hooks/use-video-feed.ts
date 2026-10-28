@@ -13,20 +13,22 @@ import { getVideoFeedAction, recordVideoViewAction, toggleVideoLikeAction } from
 
 interface UseVideoFeedOptions {
     limit?: number
+    excludeId?: string
+    random?: boolean
     initialData?: VideoFeedResponseDto
 }
 
 export function useVideoFeed(options: UseVideoFeedOptions = {}) {
-    const { limit = 10, initialData } = options
+    const { limit = 10, excludeId, random = false, initialData } = options
     const queryClient = useQueryClient()
     const { data: session } = useSession()
     const isAuthenticated = Boolean(session?.user?.id)
     const openLoginModal = useAuthModalStore((s) => s.openModal)
 
     const query = useQuery<VideoFeedResponseDto>({
-        queryKey: QUERY_KEY.CONTENT.FEED(limit),
+        queryKey: QUERY_KEY.CONTENT.FEED(limit, random),
         queryFn: async () => {
-            const res = await getVideoFeedAction({ limit })
+            const res = await getVideoFeedAction({ limit, excludeId, random })
             if (!res.ok) {
                 throw new Error(res.message || 'Không thể tải danh sách video')
             }
@@ -34,6 +36,7 @@ export function useVideoFeed(options: UseVideoFeedOptions = {}) {
         },
         initialData,
         staleTime: 60_000,
+        retry: 1,
     })
 
     const likeMutation = useMutation({

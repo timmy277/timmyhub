@@ -5,16 +5,26 @@ import { useRouter } from 'next/navigation'
 import { ChevronRight, Sparkles, Video } from 'lucide-react'
 import { toast } from 'sonner'
 
+import type { VideoFeedResponseDto } from '@timmyhub/contracts'
+
 import { Button, Card, Skeleton } from '@/components/ui'
 import { ROUTE } from '@/constants'
 
 import { useVideoFeed } from '../hooks/use-video-feed'
 import { HomeVideoCard } from './home-video-card'
 
-export function HomeVideoFeed() {
+interface HomeVideoFeedProps {
+    initialData?: VideoFeedResponseDto
+}
+
+export function HomeVideoFeed({ initialData }: HomeVideoFeedProps = {}) {
     // 1. Hooks & State
     const router = useRouter()
-    const { videos, isLoading, toggleLike } = useVideoFeed({ limit: 3 })
+    const { videos, isLoading, toggleLike } = useVideoFeed({
+        limit: 3,
+        random: true,
+        initialData,
+    })
     const [failedThumbnails, setFailedThumbnails] = useState<Record<string, boolean>>({})
 
     // 2. Handlers

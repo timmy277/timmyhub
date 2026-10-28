@@ -37,6 +37,27 @@ export function HomeVideoCard({
     const primaryProduct = post.productTags[0]?.product
     const accentGradient = ACCENT_GRADIENTS[index % ACCENT_GRADIENTS.length]
 
+    const isVideoUrlAsThumb = Boolean(
+        post.thumbnailUrl &&
+        (post.thumbnailUrl.endsWith('.mp4') ||
+            post.thumbnailUrl.includes('.mp4#') ||
+            post.thumbnailUrl.endsWith('.m3u8')),
+    )
+    const effectiveThumbUrl = isVideoUrlAsThumb
+        ? primaryProduct?.thumbnailUrl || null
+        : post.thumbnailUrl || primaryProduct?.thumbnailUrl || null
+
+    const isStandardPattern = Boolean(
+        effectiveThumbUrl &&
+        (effectiveThumbUrl.startsWith('/') ||
+            effectiveThumbUrl.includes('unsplash.com') ||
+            effectiveThumbUrl.includes('supabase.co') ||
+            effectiveThumbUrl.includes('amazonaws.com') ||
+            effectiveThumbUrl.includes('cloudfront.net') ||
+            effectiveThumbUrl.includes('localhost') ||
+            effectiveThumbUrl.includes('127.0.0.1')),
+    )
+
     return (
         <Card
             onClick={() => onOpen(post.id)}
@@ -49,11 +70,12 @@ export function HomeVideoCard({
                     accentGradient,
                 )}
             >
-                {post.thumbnailUrl && !isThumbFailed ? (
+                {effectiveThumbUrl && !isThumbFailed ? (
                     <Image
-                        src={post.thumbnailUrl}
+                        src={effectiveThumbUrl}
                         alt={post.title}
                         fill
+                        unoptimized={!isStandardPattern}
                         sizes="(max-width: 768px) 100vw, 33vw"
                         loading="lazy"
                         onError={() => onThumbError(post.id)}

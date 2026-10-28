@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 
 import { DASHBOARD_PERMISSION, ROUTE } from '@/constants'
+import { getVideoFeedAction } from '@/features/content'
 import { HomePage } from '@/features/home'
 import { getActor } from '@/lib/actor-permissions'
 
@@ -58,6 +59,9 @@ export default async function Page() {
         redirect(ROUTE.DASHBOARD)
     }
 
+    const videoFeedRes = await getVideoFeedAction({ limit: 3, random: true })
+    const initialVideoFeed = videoFeedRes.ok ? videoFeedRes.data : undefined
+
     const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://timmyhub.com'
     const jsonLd = {
         '@context': 'https://schema.org',
@@ -87,7 +91,7 @@ export default async function Page() {
     return (
         <>
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-            <HomePage />
+            <HomePage initialVideoFeed={initialVideoFeed} />
         </>
     )
 }
