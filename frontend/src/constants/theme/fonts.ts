@@ -14,7 +14,7 @@ import {
     Manrope,
     Plus_Jakarta_Sans,
     Public_Sans,
-    Roboto,
+    Roboto_Flex,
     Sora,
 } from 'next/font/google'
 
@@ -40,9 +40,8 @@ export const geistFont = Geist({
     preload: false,
 })
 
-export const robotoFont = Roboto({
+export const robotoFont = Roboto_Flex({
     subsets: ['latin'],
-    weight: ['400', '500', '700'],
     variable: '--font-roboto',
     display: 'swap',
     preload: false,
