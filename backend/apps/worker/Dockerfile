@@ -16,7 +16,7 @@ COPY backend/libs/prisma/package.json ./backend/libs/prisma/
 COPY backend/libs/modules/package.json ./backend/libs/modules/
 COPY backend/apps/worker/package.json ./backend/apps/worker/
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # Stage 2: Build toàn bộ dependencies & Worker application
 FROM base AS builder

@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'timmyhub-api'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['api:3001']
+        labels:
+          service: 'timmyhub-api'
+          env: 'development'
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

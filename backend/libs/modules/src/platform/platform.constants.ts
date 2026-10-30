@@ -4,6 +4,7 @@
 // nghiệp vụ — đường dẫn phải ổn định qua mọi version API (observability.md, project-plan.md: `GET /health`).
 export const PLATFORM_ROUTE = {
     HEALTH: 'health',
+    METRICS: 'metrics',
 } as const
 
 export const PLATFORM_EVENT = {

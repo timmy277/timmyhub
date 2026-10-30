@@ -13,7 +13,7 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY shared/contracts/package.json ./shared/contracts/
 COPY frontend/package.json ./frontend/
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # Stage 2: Build Next.js
 FROM base AS builder
