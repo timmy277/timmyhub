@@ -3,7 +3,7 @@
 // tiếp trên issue (không qua `params`) nên đọc bằng `Reflect.get`, giống `validation-issue.utils.ts` của backend.
 type MessageLookup = {
     has: (key: string) => boolean
-    (key: string, values?: Record<string, number>): string
+    (key: string, values?: Record<string, number | string>): string
 }
 
 type ValidationIssue = {
@@ -21,7 +21,11 @@ export function toFieldErrors(issues: readonly ValidationIssue[], t: MessageLook
 
         const minimum: unknown = Reflect.get(issue, 'minimum')
         const params =
-            typeof minimum === 'number' || typeof minimum === 'bigint' ? { minimum: Number(minimum) } : undefined
+            typeof minimum === 'number' || typeof minimum === 'bigint'
+                ? { minimum: Number(minimum) }
+                : issue.message.includes('passwordMin')
+                  ? { minimum: 8 }
+                  : undefined
 
         const leafKey = issue.message.startsWith('validation.')
             ? issue.message.slice('validation.'.length)
@@ -36,11 +40,23 @@ export function toFieldErrors(issues: readonly ValidationIssue[], t: MessageLook
     return fieldErrors
 }
 
-export function toFieldErrorMessage(message: string | undefined, t: MessageLookup): string | undefined {
+export function toFieldErrorMessage(
+    message: string | undefined,
+    t: MessageLookup,
+    params?: Record<string, number | string>,
+): string | undefined {
     if (!message) return undefined
-    if (message.startsWith('validation.')) {
-        const leafKey = message.slice('validation.'.length)
-        if (t.has(leafKey)) return t(leafKey)
+
+    const defaultParams = message.includes('passwordMin') ? { minimum: 8 } : undefined
+    const effectiveParams = params ?? defaultParams
+
+    try {
+        if (message.startsWith('validation.')) {
+            const leafKey = message.slice('validation.'.length)
+            if (t.has(leafKey)) return t(leafKey, effectiveParams)
+        }
+        return t.has(message) ? t(message, effectiveParams) : message
+    } catch {
+        return message
     }
-    return t.has(message) ? t(message) : message
 }
