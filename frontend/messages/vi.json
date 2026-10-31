@@ -394,7 +394,7 @@
     "orContinueWith": "hoặc đăng ký bằng",
     "google": "Google",
     "facebook": "Facebook",
-    "registerSuccess": "Đăng ký tài khoản thành công!",
+    "registerSuccess": "Đăng ký tài khoản thành công! Vui lòng đăng nhập.",
     "registerFailed": "Đăng ký thất bại. Vui lòng thử lại.",
     "registerUnavailable": "Không kết nối được máy chủ. Vui lòng thử lại sau."
   },

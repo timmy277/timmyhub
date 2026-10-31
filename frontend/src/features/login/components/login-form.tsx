@@ -28,6 +28,9 @@ export function LoginForm() {
     // Zod message là khoá thông điệp (`validation.*`) — dịch qua catalog `api` gắn sẵn trong i18n/request.ts.
     const tApi = useTranslations('api')
     const login = useLogin()
+    const [emailParam] = useState(() =>
+        typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('email') ?? '') : '',
+    )
 
     const {
         register,
@@ -37,7 +40,7 @@ export function LoginForm() {
         resolver: zodResolver(LoginSchema),
         mode: 'onChange',
         defaultValues: {
-            email: '',
+            email: emailParam,
             password: '',
         },
     })

@@ -394,7 +394,7 @@
     "orContinueWith": "or register with",
     "google": "Google",
     "facebook": "Facebook",
-    "registerSuccess": "Account registered successfully!",
+    "registerSuccess": "Account registered successfully! Please log in.",
     "registerFailed": "Registration failed. Please check your information.",
     "registerUnavailable": "Cannot reach the server. Please try again later."
   },
