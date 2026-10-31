@@ -2,6 +2,7 @@ export const NOTIFICATION_ROUTE = {
     ROOT: 'v1/notifications',
     UNREAD_COUNT: 'unread-count',
     READ_ALL: 'read-all',
+    PREFERENCES: 'preferences',
 } as const
 
 export const NOTIFICATION_EVENT = {

@@ -4,10 +4,16 @@ import type {
     CreateNotificationInput,
     NotificationItemDto,
     NotificationListResponseDto,
+    NotificationPreferencesDto,
     NotificationQueryDto,
     UnreadCountResponseDto,
+    UpdateNotificationPreferencesInput,
 } from '@timmyhub/contracts'
-import { CreateNotificationInputSchema, NotificationQuerySchema } from '@timmyhub/contracts'
+import {
+    CreateNotificationInputSchema,
+    NotificationPreferencesSchema,
+    NotificationQuerySchema,
+} from '@timmyhub/contracts'
 import type { AuthUser } from '@timmyhub/modules/platform/auth'
 import { AuthenticatedOnly, CurrentUser } from '@timmyhub/modules/platform/auth'
 
@@ -36,7 +42,22 @@ export class NotificationController {
         return this.service.getUnreadCount(actor.id)
     }
 
+    @AuthenticatedOnly()
+    @Get(NOTIFICATION_ROUTE.PREFERENCES)
+    getMyPreferences(@CurrentUser() actor: AuthUser): Promise<NotificationPreferencesDto> {
+        return this.service.getMyPreferences(actor.id)
+    }
+
     // ===== Commands =====
+
+    @AuthenticatedOnly()
+    @Patch(NOTIFICATION_ROUTE.PREFERENCES)
+    updateMyPreferences(
+        @CurrentUser() actor: AuthUser,
+        @Body(new ZodValidationPipe(NotificationPreferencesSchema)) body: UpdateNotificationPreferencesInput,
+    ): Promise<NotificationPreferencesDto> {
+        return this.service.updateMyPreferences(actor.id, body)
+    }
 
     @AuthenticatedOnly()
     @Post()

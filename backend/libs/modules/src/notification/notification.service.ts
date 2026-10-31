@@ -6,8 +6,10 @@ import type {
     CreateNotificationInput,
     NotificationItemDto,
     NotificationListResponseDto,
+    NotificationPreferencesDto,
     NotificationQueryDto,
     UnreadCountResponseDto,
+    UpdateNotificationPreferencesInput,
 } from '@timmyhub/contracts'
 import { NOTIFICATION_TYPE } from '@timmyhub/contracts'
 
@@ -82,7 +84,64 @@ export class NotificationService {
         return { count }
     }
 
+    async getMyPreferences(userId: string): Promise<NotificationPreferencesDto> {
+        const records = await this.prisma.notificationPreference.findMany({
+            where: { userId },
+        })
+
+        const findEnabled = (type: string, channel: NotificationChannel, defaultValue: boolean): boolean => {
+            const found = records.find((r) => r.type === type && r.channel === channel)
+            return found ? found.enabled : defaultValue
+        }
+
+        return {
+            orderInApp: findEnabled('ORDER_STATUS', NotificationChannel.IN_APP, true),
+            orderEmail: findEnabled('ORDER_STATUS', NotificationChannel.EMAIL, true),
+            promoInApp: findEnabled('PROMOTION', NotificationChannel.IN_APP, true),
+            promoEmail: findEnabled('PROMOTION', NotificationChannel.EMAIL, false),
+            securityEmail: findEnabled('SECURITY', NotificationChannel.EMAIL, true),
+            chatInApp: findEnabled('CHAT', NotificationChannel.IN_APP, true),
+        }
+    }
+
     // ===== Commands =====
+
+    async updateMyPreferences(
+        userId: string,
+        input: UpdateNotificationPreferencesInput,
+    ): Promise<NotificationPreferencesDto> {
+        const items = [
+            { type: 'ORDER_STATUS', channel: NotificationChannel.IN_APP, enabled: Boolean(input.orderInApp) },
+            { type: 'ORDER_STATUS', channel: NotificationChannel.EMAIL, enabled: Boolean(input.orderEmail) },
+            { type: 'PROMOTION', channel: NotificationChannel.IN_APP, enabled: Boolean(input.promoInApp) },
+            { type: 'PROMOTION', channel: NotificationChannel.EMAIL, enabled: Boolean(input.promoEmail) },
+            { type: 'SECURITY', channel: NotificationChannel.EMAIL, enabled: Boolean(input.securityEmail) },
+            { type: 'CHAT', channel: NotificationChannel.IN_APP, enabled: Boolean(input.chatInApp) },
+        ]
+
+        await this.prisma.$transaction(
+            items.map((item) =>
+                this.prisma.notificationPreference.upsert({
+                    where: {
+                        userId_type_channel: {
+                            userId,
+                            type: item.type,
+                            channel: item.channel,
+                        },
+                    },
+                    update: { enabled: item.enabled },
+                    create: {
+                        userId,
+                        type: item.type,
+                        channel: item.channel,
+                        enabled: item.enabled,
+                    },
+                }),
+            ),
+        )
+
+        return this.getMyPreferences(userId)
+    }
 
     async createNotification(input: CreateNotificationInput): Promise<NotificationItemDto> {
         const channel = (input.channel as NotificationChannel) || NotificationChannel.IN_APP

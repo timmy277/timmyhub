@@ -97,3 +97,14 @@ export const CreateNotificationInputSchema = z.object({
     actionUrl: z.string().trim().nullable().optional(),
 })
 export type CreateNotificationInput = z.input<typeof CreateNotificationInputSchema>
+
+export const NotificationPreferencesSchema = z.object({
+    orderInApp: z.boolean().default(true),
+    orderEmail: z.boolean().default(true),
+    promoInApp: z.boolean().default(true),
+    promoEmail: z.boolean().default(false),
+    securityEmail: z.boolean().default(true),
+    chatInApp: z.boolean().default(true),
+})
+export type NotificationPreferencesDto = z.infer<typeof NotificationPreferencesSchema>
+export type UpdateNotificationPreferencesInput = z.input<typeof NotificationPreferencesSchema>
