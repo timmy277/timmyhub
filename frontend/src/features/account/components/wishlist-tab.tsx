@@ -1,14 +1,14 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
-import { Heart, HeartOff, ShoppingBag, Star, Trash2 } from 'lucide-react'
+import { Heart, HeartOff, ShoppingBag } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
-import { Badge, Button, Card, CardContent, Skeleton } from '@/components'
+import { Button, Skeleton } from '@/components'
 import { ROUTE } from '@/constants'
+import { ProductCard } from '@/features/products'
 import { useWishlist } from '@/hooks'
-import { formatCurrencyVND, resolveMediaUrl } from '@/utils'
+import { resolveMediaUrl } from '@/utils'
 
 export interface WishlistTabProps {
     onCloseDialog?: () => void
@@ -16,7 +16,7 @@ export interface WishlistTabProps {
 
 export function WishlistTab({ onCloseDialog }: WishlistTabProps = {}) {
     const t = useTranslations('account.wishlist')
-    const { items, isLoading, removeFromWishlist, isRemoving } = useWishlist()
+    const { items, isLoading, removeFromWishlist } = useWishlist()
 
     return (
         <section className="space-y-6">
@@ -35,19 +35,16 @@ export function WishlistTab({ onCloseDialog }: WishlistTabProps = {}) {
 
             {/* Loading State */}
             {isLoading && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3.5 sm:gap-4">
                     {Array.from({ length: 6 }).map((_, i) => (
-                        <Card key={i} className="overflow-hidden border border-border/70 rounded-2xl">
-                            <Skeleton className="h-44 w-full" />
-                            <CardContent className="p-4 space-y-2">
-                                <Skeleton className="h-4 w-3/4" />
-                                <Skeleton className="h-4 w-1/2" />
-                                <div className="flex justify-between items-center pt-2">
-                                    <Skeleton className="h-6 w-20" />
-                                    <Skeleton className="h-8 w-8 rounded-lg" />
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <div key={i} className="rounded-2xl border border-border/70 bg-card p-3.5 space-y-3">
+                            <Skeleton className="h-44 w-full rounded-xl" />
+                            <div className="space-y-2">
+                                <Skeleton className="h-3 w-1/3" />
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-5 w-1/2" />
+                            </div>
+                        </div>
                     ))}
                 </div>
             )}
@@ -71,110 +68,28 @@ export function WishlistTab({ onCloseDialog }: WishlistTabProps = {}) {
                 </div>
             )}
 
-            {/* Items Grid */}
+            {/* Items Grid - Reusing shared ProductCard identical to Home page */}
             {!isLoading && items.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {items.map((item) => {
-                        const imageUrl = resolveMediaUrl(item.images[0]) || '/placeholder-product.png'
-                        const productUrl = ROUTE.PRODUCT_DETAIL(item.slug || item.productId)
-
-                        return (
-                            <Card
-                                key={item.id}
-                                className="group relative overflow-hidden border border-border/70 hover:border-primary/50 transition-all duration-300 rounded-2xl bg-card hover:shadow-lg flex flex-col"
-                            >
-                                {/* Image Container */}
-                                <div className="relative aspect-square w-full overflow-hidden bg-muted/30">
-                                    <Link href={productUrl} onClick={onCloseDialog} className="block size-full">
-                                        <Image
-                                            src={imageUrl}
-                                            alt={item.name}
-                                            className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                            width={400}
-                                            height={400}
-                                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                                            unoptimized
-                                        />
-                                    </Link>
-
-                                    {/* Stock Badge */}
-                                    <div className="absolute top-2.5 left-2.5">
-                                        <Badge
-                                            variant={item.inStock ? 'secondary' : 'destructive'}
-                                            className="text-[10px] font-semibold backdrop-blur-xs"
-                                        >
-                                            {item.inStock ? t('inStock') : t('outOfStock')}
-                                        </Badge>
-                                    </div>
-
-                                    {/* Remove Wishlist Button */}
-                                    <Button
-                                        variant="secondary"
-                                        size="icon"
-                                        disabled={isRemoving}
-                                        onClick={() => removeFromWishlist(item.productId, item.name)}
-                                        className="absolute top-2.5 right-2.5 size-8 rounded-full bg-background/80 hover:bg-rose-500 hover:text-white backdrop-blur-xs shadow-md transition-colors text-muted-foreground"
-                                        title={t('remove')}
-                                    >
-                                        <Trash2 className="size-4" />
-                                    </Button>
-                                </div>
-
-                                {/* Content Container */}
-                                <CardContent className="p-4 flex-1 flex flex-col justify-between gap-3">
-                                    <div className="space-y-1.5">
-                                        <Link
-                                            href={productUrl}
-                                            onClick={onCloseDialog}
-                                            className="block group-hover:text-primary transition-colors"
-                                        >
-                                            <h4 className="text-sm font-semibold text-foreground line-clamp-2 leading-snug">
-                                                {item.name}
-                                            </h4>
-                                        </Link>
-
-                                        {/* Rating & reviews */}
-                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                            <div className="flex items-center gap-0.5 text-amber-500">
-                                                <Star className="size-3.5 fill-amber-500" />
-                                                <span className="font-bold text-foreground">
-                                                    {item.ratingAvg > 0 ? item.ratingAvg.toFixed(1) : '5.0'}
-                                                </span>
-                                            </div>
-                                            {item.ratingCount > 0 && (
-                                                <span className="text-[11px]">({item.ratingCount})</span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Price and Action */}
-                                    <div className="pt-2 border-t border-border/50 flex items-center justify-between gap-2">
-                                        <div className="flex flex-col">
-                                            <span className="text-base font-extrabold text-primary">
-                                                {formatCurrencyVND(item.minPrice)}
-                                            </span>
-                                            {item.maxPrice > item.minPrice && (
-                                                <span className="text-[11px] text-muted-foreground line-through">
-                                                    {formatCurrencyVND(item.maxPrice)}
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        <Button
-                                            asChild
-                                            size="sm"
-                                            className="rounded-xl font-bold text-xs gap-1 shadow-xs"
-                                        >
-                                            <Link href={productUrl} onClick={onCloseDialog}>
-                                                <ShoppingBag className="size-3.5" />
-                                                <span>{t('viewDetail')}</span>
-                                            </Link>
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )
-                    })}
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3.5 sm:gap-4">
+                    {items.map((item) => (
+                        <ProductCard
+                            key={item.id}
+                            product={{
+                                id: item.productId,
+                                name: item.name,
+                                slug: item.slug || item.productId,
+                                price: item.minPrice,
+                                originalPrice: item.maxPrice > item.minPrice ? item.maxPrice : undefined,
+                                image: resolveMediaUrl(item.images[0]) || '/placeholder-product.png',
+                                images: item.images,
+                                rating: item.ratingAvg > 0 ? Number(item.ratingAvg.toFixed(1)) : 5.0,
+                                reviews: item.ratingCount,
+                            }}
+                            isLiked={true}
+                            onToggleWishlist={() => removeFromWishlist(item.productId, item.name)}
+                            onCardClick={onCloseDialog}
+                        />
+                    ))}
                 </div>
             )}
         </section>

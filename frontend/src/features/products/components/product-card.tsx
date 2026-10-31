@@ -46,6 +46,7 @@ export interface ProductCardProps {
     onToggleWishlist?: (id: string, name: string) => void
     className?: string
     showFreeshipBadge?: boolean
+    onCardClick?: () => void
 }
 
 /**
@@ -58,6 +59,7 @@ export const ProductCard = memo(function ProductCard({
     onToggleWishlist,
     className,
     showFreeshipBadge = true,
+    onCardClick,
 }: ProductCardProps) {
     const router = useRouter()
     const wishlist = useWishlist()
@@ -151,6 +153,7 @@ export const ProductCard = memo(function ProductCard({
             <Link
                 href={ROUTE.PRODUCT_DETAIL(slug)}
                 prefetch={false}
+                onClick={onCardClick}
                 className="block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl"
             >
                 <article
