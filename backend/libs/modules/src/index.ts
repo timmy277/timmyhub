@@ -21,3 +21,4 @@ export {
 export { RedisModule, RedisService } from './redis/index'
 export { SearchModule, SearchService } from './search/index'
 export { AnalyticsModule, AnalyticsService } from './analytics/index'
+export { MailModule, MailService } from './mail/index'

@@ -17,6 +17,7 @@ import { ContentModule } from '@timmyhub/modules/content'
 import { RedisModule } from '@timmyhub/modules/redis'
 import { SearchModule } from '@timmyhub/modules/search'
 import { AnalyticsModule } from '@timmyhub/modules/analytics'
+import { MailModule } from '@timmyhub/modules/mail'
 import { PrismaModule } from '@timmyhub/prisma'
 
 @Module({
@@ -25,6 +26,7 @@ import { PrismaModule } from '@timmyhub/prisma'
         EventEmitterModule.forRoot(),
         PrismaModule,
         RedisModule,
+        MailModule,
         PlatformModule,
         IdentityModule,
         CatalogModule,
