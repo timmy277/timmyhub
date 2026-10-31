@@ -16,6 +16,8 @@ export const API_ROUTE = {
         REGISTER: 'v1/auth/register',
         LOGIN: 'v1/auth/login',
         SSO: 'v1/auth/sso',
+        FORGOT_PASSWORD: 'v1/auth/forgot-password',
+        RESET_PASSWORD: 'v1/auth/reset-password',
         REFRESH: 'v1/auth/refresh',
         LOGOUT: 'v1/auth/logout',
         LOGOUT_ALL: 'v1/auth/logout-all',

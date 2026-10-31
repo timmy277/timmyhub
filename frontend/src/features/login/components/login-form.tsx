@@ -67,10 +67,6 @@ export function LoginForm() {
     }, [t, tApi])
 
     // ===== Handlers =====
-    const notConnected = () => {
-        toast.info(t('notConnected'))
-    }
-
     const handleSso = async (provider: 'google' | 'facebook') => {
         try {
             setSsoPending(provider)
@@ -130,13 +126,8 @@ export function LoginForm() {
             />
 
             <div className="flex justify-end">
-                <Button
-                    type="button"
-                    variant="link"
-                    className="h-auto min-h-6 p-0 text-xs font-semibold"
-                    onClick={notConnected}
-                >
-                    {t('forgotPassword')}
+                <Button type="button" variant="link" className="h-auto min-h-6 p-0 text-xs font-semibold" asChild>
+                    <Link href={ROUTE.FORGOT_PASSWORD}>{t('forgotPassword')}</Link>
                 </Button>
             </div>
 

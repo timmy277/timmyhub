@@ -15,6 +15,8 @@ import { ROUTE } from '@/constants'
 const PUBLIC_PATHS = [
     ROUTE.LOGIN,
     ROUTE.REGISTER,
+    ROUTE.FORGOT_PASSWORD,
+    ROUTE.RESET_PASSWORD,
     ROUTE.HOME,
     ROUTE.SEARCH,
     '/products',
@@ -36,8 +38,12 @@ export const proxy = auth((request) => {
     const isAuthPage =
         pathname === ROUTE.LOGIN ||
         pathname === ROUTE.REGISTER ||
+        pathname === ROUTE.FORGOT_PASSWORD ||
+        pathname === ROUTE.RESET_PASSWORD ||
         pathname.startsWith(`${ROUTE.LOGIN}/`) ||
-        pathname.startsWith(`${ROUTE.REGISTER}/`)
+        pathname.startsWith(`${ROUTE.REGISTER}/`) ||
+        pathname.startsWith(`${ROUTE.FORGOT_PASSWORD}/`) ||
+        pathname.startsWith(`${ROUTE.RESET_PASSWORD}/`)
     const isAuthenticated = Boolean(request.auth?.user?.id)
 
     // Chưa có phiên hợp lệ mà vào trang protected (ví dụ cart, checkout, dashboard...) → về login kèm callbackUrl (REQ-IDN-032).

@@ -10,6 +10,8 @@ export const ROUTE = {
     ACCOUNT: '/account',
     LOGIN: '/login',
     REGISTER: '/register',
+    FORGOT_PASSWORD: '/forgot-password',
+    RESET_PASSWORD: '/reset-password',
     SELLER_REGISTER: '/seller/register',
     SELLER_PORTAL: '/seller/portal',
     SELLER_ORDERS: '/seller/orders',
