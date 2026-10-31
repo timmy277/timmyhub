@@ -1,7 +1,9 @@
 import NextAuth, { CredentialsSignin, type NextAuthConfig } from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
+import Facebook from 'next-auth/providers/facebook'
+import Google from 'next-auth/providers/google'
 
-import type { AuthResult, LoginInput } from '@timmyhub/contracts'
+import type { AuthResult, LoginInput, SsoLoginInput } from '@timmyhub/contracts'
 import { LoginSchema } from '@timmyhub/contracts'
 
 import {
@@ -72,6 +74,14 @@ export const authConfig = {
         error: '/login',
     },
     providers: [
+        Google({
+            clientId: process.env.AUTH_GOOGLE_ID ?? process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.AUTH_GOOGLE_SECRET ?? process.env.GOOGLE_CLIENT_SECRET,
+        }),
+        Facebook({
+            clientId: process.env.AUTH_FACEBOOK_ID ?? process.env.FACEBOOK_CLIENT_ID,
+            clientSecret: process.env.AUTH_FACEBOOK_SECRET ?? process.env.FACEBOOK_CLIENT_SECRET,
+        }),
         Credentials({
             // Schema validate đến từ @timmyhub/contracts — Zod là nguồn validation duy nhất (luật #15).
             credentials: { email: {}, password: {} },
@@ -101,6 +111,41 @@ export const authConfig = {
         }),
     ],
     callbacks: {
+        async signIn({ user, account, profile }) {
+            if (account?.provider === 'google' || account?.provider === 'facebook') {
+                const email = user.email ?? profile?.email
+                if (!email) {
+                    return '/login?error=EMAIL_REQUIRED'
+                }
+
+                const ssoPayload: SsoLoginInput = {
+                    provider: account.provider,
+                    providerId: account.providerAccountId,
+                    email,
+                    name: user.name ?? profile?.name ?? null,
+                    avatar: user.image ?? (profile as { picture?: string })?.picture ?? null,
+                }
+
+                const result = await callBackend(API_ROUTE.AUTH.SSO, ssoPayload)
+                if (!result.ok) {
+                    const errorCode = result.code ?? 'SSO_LOGIN_FAILED'
+                    return `/login?error=${encodeURIComponent(errorCode)}`
+                }
+
+                const data = result.data
+                user.id = data.user.id
+                user.email = data.user.email
+                user.roles = data.user.roles
+                user.name = data.user.displayName ?? user.name
+                user.image = data.user.avatar ?? user.image
+                user.accessToken = data.accessToken
+                user.refreshToken = data.refreshToken
+
+                return true
+            }
+
+            return true
+        },
         // jwt() chạy lúc đăng nhập (user được cấp), lúc client chủ động update, và mỗi lần đọc phiên.
         // Access/refresh token + roles sống trong JWT này — cookie mã hoá HttpOnly, script không đọc được.
         async jwt({ token, user, trigger, session }) {

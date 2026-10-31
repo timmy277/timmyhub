@@ -11,6 +11,8 @@ export const API_MESSAGES_EN: ApiMessageCatalog = {
         INVALID_CREDENTIALS: 'Incorrect email or password.',
         ACCOUNT_LOCKED: 'Your account is temporarily locked, please try again later.',
         ACCOUNT_BANNED: 'Your account has been permanently banned.',
+        EMAIL_NOT_VERIFIED_FOR_LINK:
+            'This email is already registered but not verified. Please log in with your password first to link your account.',
         REFRESH_TOKEN_REUSED: 'Your session looks compromised, please sign in again.',
         REFRESH_TOKEN_EXPIRED: 'Your session has expired, please sign in again.',
         REFRESH_TOKEN_INVALID: 'The refresh token is invalid.',

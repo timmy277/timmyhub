@@ -39,6 +39,16 @@ export const RefreshSchema = z.object({
 })
 export type RefreshInput = z.infer<typeof RefreshSchema>
 
+export const SsoLoginSchema = z.object({
+    provider: z.enum(['google', 'facebook']),
+    providerId: z.string().min(1, apiMessageKey('validation.required')),
+    email: EmailSchema,
+    name: z.string().optional().nullable(),
+    avatar: z.string().optional().nullable(),
+    deviceName: z.string().optional(),
+})
+export type SsoLoginInput = z.infer<typeof SsoLoginSchema>
+
 export const LogoutSchema = z.object({
     refreshToken: RefreshTokenSchema,
 })

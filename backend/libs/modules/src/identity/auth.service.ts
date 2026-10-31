@@ -5,7 +5,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcryptjs'
 
-import type { AuthResult, LoginInput, RegisterInput, UserRole } from '@timmyhub/contracts'
+import type { AuthResult, LoginInput, RegisterInput, SsoLoginInput, UserRole } from '@timmyhub/contracts'
 import { ApiError } from '@timmyhub/contracts'
 
 import { isCommonPassword } from './common-passwords'
@@ -85,6 +85,89 @@ export class AuthService {
 
         await this.identityRepository.recordSuccessfulLogin(user.id, context.ip)
         const device = await this.identityRepository.upsertDevice(user.id, context.userAgent, context.ip)
+        const tokens = await this.issueTokens(user.id, user.email, user.roles, device.id)
+
+        const displayName =
+            user.profile?.displayName ||
+            (user.profile ? `${user.profile.firstName} ${user.profile.lastName}`.trim() : null) ||
+            null
+        const avatar = user.profile?.avatar ?? null
+
+        return {
+            ...tokens,
+            user: {
+                id: user.id,
+                email: user.email,
+                roles: user.roles,
+                displayName,
+                avatar,
+            },
+        }
+    }
+
+    // REQ-IDN-017 / REQ-IDN-018 / REQ-IDN-019
+    async loginWithSso(
+        input: SsoLoginInput,
+        context: { ip: string | null; userAgent: string | null },
+    ): Promise<AuthResult> {
+        let user =
+            input.provider === 'google'
+                ? await this.identityRepository.findUserByGoogleId(input.providerId)
+                : await this.identityRepository.findUserByFacebookId(input.providerId)
+
+        if (user) {
+            if (user.deletedAt) {
+                throw new ApiError('NOT_FOUND')
+            }
+            if (user.isBanned) {
+                throw new ApiError('ACCOUNT_BANNED')
+            }
+            if (user.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
+                throw new ApiError('ACCOUNT_LOCKED')
+            }
+        } else {
+            const existingUser = await this.identityRepository.findUserByEmail(input.email)
+            if (existingUser) {
+                if (existingUser.deletedAt) {
+                    throw new ApiError('NOT_FOUND')
+                }
+                if (existingUser.isBanned) {
+                    throw new ApiError('ACCOUNT_BANNED')
+                }
+                if (existingUser.lockedUntil && existingUser.lockedUntil.getTime() > Date.now()) {
+                    throw new ApiError('ACCOUNT_LOCKED')
+                }
+                // REQ-IDN-018: Không liên kết tự động nếu email chưa xác minh để tránh chiếm đoạt tài khoản
+                if (!existingUser.isEmailVerified) {
+                    throw new ApiError('EMAIL_NOT_VERIFIED_FOR_LINK')
+                }
+                // REQ-IDN-019: Email đã xác minh -> Liên kết provider
+                user = await this.identityRepository.linkSsoProvider(
+                    existingUser.id,
+                    input.provider,
+                    input.providerId,
+                    existingUser.profile?.avatar ? undefined : input.avatar,
+                )
+            } else {
+                // REQ-IDN-017: Người dùng mới hoàn toàn
+                user = await this.identityRepository.createSsoUser({
+                    email: input.email,
+                    provider: input.provider,
+                    providerId: input.providerId,
+                    name: input.name,
+                    avatar: input.avatar,
+                })
+                this.eventEmitter.emit(IDENTITY_EVENT.USER_REGISTERED, { userId: user.id })
+            }
+        }
+
+        await this.identityRepository.recordSuccessfulLogin(user.id, context.ip)
+        const device = await this.identityRepository.upsertDevice(
+            user.id,
+            context.userAgent,
+            context.ip,
+            input.deviceName,
+        )
         const tokens = await this.issueTokens(user.id, user.email, user.roles, device.id)
 
         const displayName =

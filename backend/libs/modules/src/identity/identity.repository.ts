@@ -18,6 +18,14 @@ export type RegisterUserInput = {
     lastName: string
 }
 
+export type CreateSsoUserInput = {
+    email: string
+    provider: 'google' | 'facebook'
+    providerId: string
+    name?: string | null | undefined
+    avatar?: string | null | undefined
+}
+
 export type RefreshRotationResult =
     | { outcome: 'rotated'; refreshTokenId: string }
     | {
@@ -45,6 +53,20 @@ export class IdentityRepository {
     findUserById(id: string): Promise<UserWithProfile | null> {
         return this.prisma.user.findUnique({
             where: { id },
+            include: { profile: true },
+        })
+    }
+
+    findUserByGoogleId(googleId: string): Promise<UserWithProfile | null> {
+        return this.prisma.user.findUnique({
+            where: { googleId },
+            include: { profile: true },
+        })
+    }
+
+    findUserByFacebookId(facebookId: string): Promise<UserWithProfile | null> {
+        return this.prisma.user.findUnique({
+            where: { facebookId },
             include: { profile: true },
         })
     }
@@ -87,6 +109,66 @@ export class IdentityRepository {
             })
 
             return user
+        })
+    }
+
+    // REQ-IDN-017: tạo User SSO + Profile + outbox event trong cùng transaction
+    async createSsoUser(input: CreateSsoUserInput): Promise<UserWithProfile> {
+        const rawName = input.name?.trim() || ''
+        const parts = rawName ? rawName.split(/\s+/) : []
+        const emailPrefix = input.email.split('@')[0] ?? ''
+        const lastName = (parts.length > 1 ? parts.pop()! : rawName || emailPrefix) || 'User'
+        const firstName = parts.join(' ') || lastName
+        const displayName = rawName || firstName
+
+        const registeredVia = input.provider === 'google' ? REGISTERED_VIA.SSO_GOOGLE : REGISTERED_VIA.SSO_FACEBOOK
+
+        return this.prisma.$transaction(async (tx): Promise<UserWithProfile> => {
+            const user = await tx.user.create({
+                data: {
+                    email: input.email,
+                    passwordHash: null,
+                    googleId: input.provider === 'google' ? input.providerId : null,
+                    facebookId: input.provider === 'facebook' ? input.providerId : null,
+                    roles: [UserRole.USER],
+                    isEmailVerified: true,
+                    profile: {
+                        create: {
+                            firstName,
+                            lastName,
+                            displayName,
+                            avatar: input.avatar ?? null,
+                        },
+                    },
+                },
+                include: { profile: true },
+            })
+
+            await writeOutboxEvent(tx, {
+                aggregateType: OUTBOX_AGGREGATE.IDENTITY,
+                aggregateId: user.id,
+                eventType: OUTBOX_EVENT.USER_REGISTERED,
+                payload: { userId: user.id, email: user.email, registeredVia },
+            })
+
+            return user
+        })
+    }
+
+    // REQ-IDN-019: Liên kết tài khoản SSO với tài khoản hiện có
+    async linkSsoProvider(
+        userId: string,
+        provider: 'google' | 'facebook',
+        providerId: string,
+        avatar?: string | null,
+    ): Promise<UserWithProfile> {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                ...(provider === 'google' ? { googleId: providerId } : { facebookId: providerId }),
+                ...(avatar ? { profile: { update: { avatar } } } : {}),
+            },
+            include: { profile: true },
         })
     }
 

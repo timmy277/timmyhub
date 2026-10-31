@@ -194,3 +194,179 @@ describe('AuthService.refresh — REQ-IDN-005 / REQ-IDN-006', () => {
         await expect(service.refresh(RAW_TOKEN)).rejects.toMatchObject({ code: 'REFRESH_TOKEN_INVALID' })
     })
 })
+
+describe('AuthService.loginWithSso — REQ-IDN-017 / REQ-IDN-018 / REQ-IDN-019', () => {
+    function buildSsoService() {
+        const findUserByGoogleId = jest.fn()
+        const findUserByFacebookId = jest.fn()
+        const findUserByEmail = jest.fn()
+        const linkSsoProvider = jest.fn()
+        const createSsoUser = jest.fn()
+        const recordSuccessfulLogin = jest.fn().mockResolvedValue(undefined)
+        const upsertDevice = jest.fn().mockResolvedValue({ id: 'device-sso' })
+        const createRefreshToken = jest.fn().mockResolvedValue({ id: 'token-sso' })
+
+        const repository = {
+            findUserByGoogleId,
+            findUserByFacebookId,
+            findUserByEmail,
+            linkSsoProvider,
+            createSsoUser,
+            recordSuccessfulLogin,
+            upsertDevice,
+            createRefreshToken,
+        } as unknown as IdentityRepository
+
+        const jwtService = { signAsync: jest.fn().mockResolvedValue('sso-access-token') } as unknown as JwtService
+        const configService = { get: jest.fn().mockReturnValue(TEST_PRIVATE_KEY_PEM) } as unknown as ConfigService
+        const emit = jest.fn()
+        const eventEmitter = { emit } as unknown as ConstructorParameters<typeof AuthService>[3]
+
+        return {
+            service: new AuthService(repository, jwtService, configService, eventEmitter),
+            findUserByGoogleId,
+            findUserByFacebookId,
+            findUserByEmail,
+            linkSsoProvider,
+            createSsoUser,
+            emit,
+        }
+    }
+
+    it('tìm thấy user theo googleId -> đăng nhập thành công', async () => {
+        const { service, findUserByGoogleId } = buildSsoService()
+        findUserByGoogleId.mockResolvedValue({
+            id: 'user-g1',
+            email: 'google@test.com',
+            roles: [UserRole.USER],
+            isBanned: false,
+            deletedAt: null,
+            lockedUntil: null,
+            profile: {
+                displayName: 'Google User',
+                avatar: 'https://avatar.url',
+                firstName: 'Google',
+                lastName: 'User',
+            },
+        })
+
+        const result = await service.loginWithSso(
+            { provider: 'google', providerId: 'gid-123', email: 'google@test.com' },
+            { ip: '127.0.0.1', userAgent: 'test-agent' },
+        )
+
+        expect(result.accessToken).toBe('sso-access-token')
+        expect(result.user.id).toBe('user-g1')
+        expect(result.user.displayName).toBe('Google User')
+    })
+
+    it('user bị banned -> ném lỗi ACCOUNT_BANNED', async () => {
+        const { service, findUserByGoogleId } = buildSsoService()
+        findUserByGoogleId.mockResolvedValue({
+            id: 'user-banned',
+            email: 'banned@test.com',
+            roles: [UserRole.USER],
+            isBanned: true,
+            deletedAt: null,
+            lockedUntil: null,
+        })
+
+        await expect(
+            service.loginWithSso(
+                { provider: 'google', providerId: 'gid-banned', email: 'banned@test.com' },
+                { ip: null, userAgent: null },
+            ),
+        ).rejects.toMatchObject({ code: 'ACCOUNT_BANNED' })
+    })
+
+    it('REQ-IDN-018: email đã tồn tại nhưng chưa xác thực (isEmailVerified=false) -> 409 EMAIL_NOT_VERIFIED_FOR_LINK', async () => {
+        const { service, findUserByGoogleId, findUserByEmail, linkSsoProvider } = buildSsoService()
+        findUserByGoogleId.mockResolvedValue(null)
+        findUserByEmail.mockResolvedValue({
+            id: 'user-unverified',
+            email: 'unverified@test.com',
+            isEmailVerified: false,
+            isBanned: false,
+            deletedAt: null,
+            lockedUntil: null,
+        })
+
+        await expect(
+            service.loginWithSso(
+                { provider: 'google', providerId: 'gid-456', email: 'unverified@test.com' },
+                { ip: null, userAgent: null },
+            ),
+        ).rejects.toMatchObject({ code: 'EMAIL_NOT_VERIFIED_FOR_LINK' })
+
+        expect(linkSsoProvider).not.toHaveBeenCalled()
+    })
+
+    it('REQ-IDN-019: email đã tồn tại và đã xác thực -> liên kết provider thành công', async () => {
+        const { service, findUserByGoogleId, findUserByEmail, linkSsoProvider } = buildSsoService()
+        findUserByGoogleId.mockResolvedValue(null)
+        findUserByEmail.mockResolvedValue({
+            id: 'user-verified',
+            email: 'verified@test.com',
+            isEmailVerified: true,
+            isBanned: false,
+            deletedAt: null,
+            lockedUntil: null,
+            profile: { displayName: 'Verified User', avatar: null, firstName: 'Verified', lastName: 'User' },
+        })
+        linkSsoProvider.mockResolvedValue({
+            id: 'user-verified',
+            email: 'verified@test.com',
+            roles: [UserRole.USER],
+            isBanned: false,
+            deletedAt: null,
+            lockedUntil: null,
+            profile: {
+                displayName: 'Verified User',
+                avatar: 'https://new-avatar.url',
+                firstName: 'Verified',
+                lastName: 'User',
+            },
+        })
+
+        const result = await service.loginWithSso(
+            { provider: 'google', providerId: 'gid-789', email: 'verified@test.com', avatar: 'https://new-avatar.url' },
+            { ip: null, userAgent: null },
+        )
+
+        expect(linkSsoProvider).toHaveBeenCalledWith('user-verified', 'google', 'gid-789', 'https://new-avatar.url')
+        expect(result.user.id).toBe('user-verified')
+    })
+
+    it('REQ-IDN-017: user hoàn toàn mới -> tạo user và profile SSO, phát event USER_REGISTERED', async () => {
+        const { service, findUserByFacebookId, findUserByEmail, createSsoUser, emit } = buildSsoService()
+        findUserByFacebookId.mockResolvedValue(null)
+        findUserByEmail.mockResolvedValue(null)
+        createSsoUser.mockResolvedValue({
+            id: 'user-new-fb',
+            email: 'fb@test.com',
+            roles: [UserRole.USER],
+            profile: { displayName: 'FB User', avatar: 'https://fb-avatar.url', firstName: 'FB', lastName: 'User' },
+        })
+
+        const result = await service.loginWithSso(
+            {
+                provider: 'facebook',
+                providerId: 'fbid-001',
+                email: 'fb@test.com',
+                name: 'FB User',
+                avatar: 'https://fb-avatar.url',
+            },
+            { ip: null, userAgent: null },
+        )
+
+        expect(createSsoUser).toHaveBeenCalledWith({
+            email: 'fb@test.com',
+            provider: 'facebook',
+            providerId: 'fbid-001',
+            name: 'FB User',
+            avatar: 'https://fb-avatar.url',
+        })
+        expect(emit).toHaveBeenCalledWith('identity.user.registered', { userId: 'user-new-fb' })
+        expect(result.user.id).toBe('user-new-fb')
+    })
+})

@@ -1,7 +1,9 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { signIn } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 
@@ -39,9 +41,44 @@ export function LoginForm() {
         },
     })
 
+    const [ssoPending, setSsoPending] = useState<'google' | 'facebook' | null>(null)
+
+    // ===== Effects =====
+    // Hiển thị toast lỗi nếu được redirect từ OAuth/SSO callback về kèm ?error=...
+    useEffect(() => {
+        const errorParam = new URLSearchParams(window.location.search).get('error')
+        if (!errorParam) return
+
+        if (errorParam === BACKEND_UNAVAILABLE_CODE) {
+            toast.error(t('loginUnavailable'))
+            return
+        }
+
+        const key = `error.${errorParam}`
+        if (tApi.has(key)) {
+            toast.error(tApi(key as 'error.ACCOUNT_LOCKED'))
+        } else {
+            toast.error(t('loginFailed'))
+        }
+    }, [t, tApi])
+
     // ===== Handlers =====
     const notConnected = () => {
         toast.info(t('notConnected'))
+    }
+
+    const handleSso = async (provider: 'google' | 'facebook') => {
+        try {
+            setSsoPending(provider)
+            const callbackUrlParam = new URLSearchParams(window.location.search).get('callbackUrl')
+            const callbackUrl = callbackUrlParam
+                ? `/api/auth/redirect?callbackUrl=${encodeURIComponent(callbackUrlParam)}`
+                : '/api/auth/redirect'
+            await signIn(provider, { callbackUrl })
+        } catch {
+            setSsoPending(null)
+            toast.error(t('loginFailed'))
+        }
     }
 
     // Mã lỗi trả về từ NextAuth/BE → thông điệp: mã của BE dịch qua catalog `api` (chung với BE), mã riêng
@@ -113,13 +150,25 @@ export function LoginForm() {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-                <Button type="button" variant="outline" className="h-11 w-full" onClick={notConnected}>
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 w-full"
+                    disabled={login.isPending || ssoPending !== null}
+                    onClick={() => handleSso('google')}
+                >
                     <IconPath name="google" className="size-4.5" />
-                    {t('google')}
+                    {ssoPending === 'google' ? t('loggingIn') : t('google')}
                 </Button>
-                <Button type="button" variant="outline" className="h-11 w-full" onClick={notConnected}>
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 w-full"
+                    disabled={login.isPending || ssoPending !== null}
+                    onClick={() => handleSso('facebook')}
+                >
                     <IconPath name="facebook" className="size-4.5" />
-                    {t('facebook')}
+                    {ssoPending === 'facebook' ? t('loggingIn') : t('facebook')}
                 </Button>
             </div>
         </form>

@@ -33,6 +33,8 @@ export const REGISTERED_VIA = {
     PASSWORD: 'password',
     // Tài khoản do admin tạo ở màn quản trị người dùng (FEAT-USR-004) — phân biệt được nguồn tạo trong outbox event.
     ADMIN: 'admin',
+    SSO_GOOGLE: 'sso:google',
+    SSO_FACEBOOK: 'sso:facebook',
 } as const
 
 // ===== Quản trị người dùng (FEAT-USR-004/005) =====
@@ -77,6 +79,7 @@ export const AUTH_ROUTE = {
     ROOT: 'v1/auth',
     REGISTER: 'register',
     LOGIN: 'login',
+    SSO: 'sso',
     REFRESH: 'refresh',
     LOGOUT: 'logout',
     LOGOUT_ALL: 'logout-all',

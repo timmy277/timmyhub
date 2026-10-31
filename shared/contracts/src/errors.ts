@@ -13,6 +13,7 @@ export const API_ERROR_CODES = {
     INVALID_CREDENTIALS: { status: 401 },
     ACCOUNT_LOCKED: { status: 423 },
     ACCOUNT_BANNED: { status: 403 },
+    EMAIL_NOT_VERIFIED_FOR_LINK: { status: 409 },
     REFRESH_TOKEN_REUSED: { status: 401 },
     REFRESH_TOKEN_EXPIRED: { status: 401 },
     REFRESH_TOKEN_INVALID: { status: 401 },

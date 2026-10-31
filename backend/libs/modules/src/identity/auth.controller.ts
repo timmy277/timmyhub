@@ -2,8 +2,8 @@ import { Body, Controller, Post, Req } from '@nestjs/common'
 import type { Request } from 'express'
 
 import { ZodValidationPipe } from '@timmyhub/common'
-import type { LoginInput, LogoutInput, RefreshInput, RegisterInput } from '@timmyhub/contracts'
-import { LoginSchema, LogoutSchema, RefreshSchema, RegisterSchema } from '@timmyhub/contracts'
+import type { LoginInput, LogoutInput, RefreshInput, RegisterInput, SsoLoginInput } from '@timmyhub/contracts'
+import { LoginSchema, LogoutSchema, RefreshSchema, RegisterSchema, SsoLoginSchema } from '@timmyhub/contracts'
 import { Public } from '@timmyhub/modules/platform/auth'
 
 import { AuthService } from './auth.service'
@@ -26,6 +26,15 @@ export class AuthController {
     @Post(AUTH_ROUTE.LOGIN)
     login(@Body(new ZodValidationPipe(LoginSchema)) body: LoginInput, @Req() req: Request) {
         return this.authService.login(body, {
+            ip: req.ip ?? null,
+            userAgent: req.headers['user-agent'] ?? null,
+        })
+    }
+
+    @Public()
+    @Post(AUTH_ROUTE.SSO)
+    ssoLogin(@Body(new ZodValidationPipe(SsoLoginSchema)) body: SsoLoginInput, @Req() req: Request) {
+        return this.authService.loginWithSso(body, {
             ip: req.ip ?? null,
             userAgent: req.headers['user-agent'] ?? null,
         })

@@ -14,6 +14,8 @@ export const API_MESSAGES_VI = {
         INVALID_CREDENTIALS: 'Email hoặc mật khẩu không đúng.',
         ACCOUNT_LOCKED: 'Tài khoản đang bị tạm khoá, vui lòng thử lại sau.',
         ACCOUNT_BANNED: 'Tài khoản đã bị khoá vĩnh viễn.',
+        EMAIL_NOT_VERIFIED_FOR_LINK:
+            'Email này đã tồn tại nhưng chưa được xác minh. Vui lòng đăng nhập bằng mật khẩu trước để liên kết.',
         REFRESH_TOKEN_REUSED: 'Phiên đăng nhập có dấu hiệu bị đánh cắp, vui lòng đăng nhập lại.',
         REFRESH_TOKEN_EXPIRED: 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.',
         REFRESH_TOKEN_INVALID: 'Refresh token không hợp lệ.',
