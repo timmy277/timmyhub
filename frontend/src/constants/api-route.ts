@@ -145,6 +145,7 @@ export const API_ROUTE = {
         UNREAD_COUNT: 'v1/notifications/unread-count',
         MARK_READ: (id: string) => `v1/notifications/${encodeURIComponent(id)}/read`,
         MARK_ALL_READ: 'v1/notifications/read-all',
+        PREFERENCES: 'v1/notifications/preferences',
     },
     CHAT: {
         CONVERSATIONS: 'v1/chat/conversations',

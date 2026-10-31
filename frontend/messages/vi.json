@@ -406,7 +406,10 @@
     "markAllAsRead": "Đánh dấu tất cả đã đọc",
     "login": "Đăng nhập",
     "logIn": "Đăng nhập",
-    "register": "Đăng ký"
+    "register": "Đăng ký",
+    "mySecurity": "Bảo mật & Mật khẩu",
+    "myAddresses": "Sổ địa chỉ",
+    "notificationSettings": "Cài đặt thông báo"
   },
   "theme": {
     "triggerLabel": "Mở tuỳ chỉnh giao diện",
@@ -752,7 +755,8 @@
       "inApp": "Thông báo trong ứng dụng",
       "email": "Email",
       "save": "Lưu cài đặt",
-      "saveSuccess": "Đã lưu tuỳ chọn thông báo thành công!"
+      "saveSuccess": "Đã lưu tuỳ chọn thông báo thành công!",
+      "saveError": "Không thể lưu cài đặt thông báo. Vui lòng thử lại sau."
     },
     "orders": {
       "title": "Đơn hàng của tôi",

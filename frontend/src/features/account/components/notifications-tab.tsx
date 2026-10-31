@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { BellIcon, SaveIcon, ShieldAlertIcon, ShoppingBagIcon, TagIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
@@ -15,18 +16,18 @@ import {
     CardHeader,
     CardTitle,
     Label,
+    Skeleton,
     Switch,
 } from '@/components/ui'
+import { useNotificationPreferences, useUpdateNotificationPreferences } from '@/hooks'
 import { NotificationPreferencesSchema, type NotificationPreferencesValues } from '@/schemas'
 
 export function NotificationsTab() {
     const t = useTranslations('account.notifications')
+    const { data: preferences, isLoading } = useNotificationPreferences()
+    const updateMutation = useUpdateNotificationPreferences()
 
-    const {
-        control,
-        handleSubmit,
-        formState: { isSubmitting },
-    } = useForm<NotificationPreferencesValues>({
+    const { control, handleSubmit, reset } = useForm<NotificationPreferencesValues>({
         resolver: zodResolver(NotificationPreferencesSchema),
         mode: 'onChange',
         defaultValues: {
@@ -39,9 +40,37 @@ export function NotificationsTab() {
         },
     })
 
-    const onSubmit = async () => {
-        await new Promise((resolve) => setTimeout(resolve, 400))
-        toast.success(t('saveSuccess'))
+    useEffect(() => {
+        if (preferences) {
+            reset(preferences)
+        }
+    }, [preferences, reset])
+
+    const onSubmit = (data: NotificationPreferencesValues) => {
+        updateMutation.mutate(data, {
+            onSuccess: () => {
+                toast.success(t('saveSuccess'))
+            },
+            onError: () => {
+                toast.error(t('saveError'))
+            },
+        })
+    }
+
+    if (isLoading) {
+        return (
+            <Card className="border border-border/80 shadow-xs">
+                <CardHeader>
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-4 w-72" />
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <Skeleton className="h-24 w-full rounded-lg" />
+                    <Skeleton className="h-24 w-full rounded-lg" />
+                    <Skeleton className="h-24 w-full rounded-lg" />
+                </CardContent>
+            </Card>
+        )
     }
 
     return (
@@ -205,7 +234,7 @@ export function NotificationsTab() {
                 </CardContent>
 
                 <CardFooter className="flex justify-end border-t border-border/50 bg-muted/20 px-6 py-4">
-                    <Button type="submit" size="sm" disabled={isSubmitting} className="gap-1.5">
+                    <Button type="submit" size="sm" disabled={updateMutation.isPending} className="gap-1.5">
                         <SaveIcon className="h-4 w-4" />
                         {t('save')}
                     </Button>

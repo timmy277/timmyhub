@@ -406,7 +406,10 @@
     "markAllAsRead": "Mark all as read",
     "login": "Sign in",
     "logIn": "Sign in",
-    "register": "Register"
+    "register": "Register",
+    "mySecurity": "Security & Password",
+    "myAddresses": "Address Book",
+    "notificationSettings": "Notification Settings"
   },
   "theme": {
     "triggerLabel": "Open theme customizer",
@@ -752,7 +755,8 @@
       "inApp": "In-app Notifications",
       "email": "Email",
       "save": "Save Preferences",
-      "saveSuccess": "Notification preferences saved successfully!"
+      "saveSuccess": "Notification preferences saved successfully!",
+      "saveError": "Failed to save notification preferences. Please try again."
     },
     "orders": {
       "title": "My Orders",

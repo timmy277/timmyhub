@@ -87,6 +87,7 @@ export const QUERY_KEY = {
         ALL: ['notification'] as const,
         LIST: ['notification', 'list'] as const,
         UNREAD_COUNT: ['notification', 'unread-count'] as const,
+        PREFERENCES: ['notification', 'preferences'] as const,
     },
     CHAT: {
         ALL: ['chat'] as const,

@@ -3,7 +3,18 @@
 import { useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
-import { HeartIcon, LayoutGridIcon, LogInIcon, LogOutIcon, PackageIcon, TicketIcon, UserIcon } from 'lucide-react'
+import {
+    BellIcon,
+    HeartIcon,
+    LayoutGridIcon,
+    LogInIcon,
+    LogOutIcon,
+    MapPinIcon,
+    PackageIcon,
+    ShieldCheckIcon,
+    TicketIcon,
+    UserIcon,
+} from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -45,6 +56,8 @@ export function UserMenu() {
 
     const { hasPermission } = usePermissions()
     const canAccessDashboard = hasPermission(DASHBOARD_PERMISSION)
+    const roles = (session?.user as { roles?: string[] } | undefined)?.roles ?? []
+    const isAdmin = canAccessDashboard || roles.includes('ADMIN') || roles.includes('SUPER_ADMIN')
 
     // Tự động tải profile thực tế từ backend; query key 'users' sẽ tự invalidate khi có mutation sửa user
     const { data: backendProfile } = useQuery({
@@ -172,17 +185,33 @@ export function UserMenu() {
                             <UserIcon aria-hidden />
                             {t('myProfile')}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleOpenAccount('orders')}>
-                            <PackageIcon aria-hidden />
-                            {t('myOrders')}
+                        {!isAdmin && (
+                            <>
+                                <DropdownMenuItem onSelect={() => handleOpenAccount('orders')}>
+                                    <PackageIcon aria-hidden />
+                                    {t('myOrders')}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => handleOpenAccount('vouchers')}>
+                                    <TicketIcon aria-hidden />
+                                    {t('myVouchers')}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => handleOpenAccount('wishlist')}>
+                                    <HeartIcon aria-hidden />
+                                    {t('myWishlist')}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => handleOpenAccount('addresses')}>
+                                    <MapPinIcon aria-hidden />
+                                    {t('myAddresses')}
+                                </DropdownMenuItem>
+                            </>
+                        )}
+                        <DropdownMenuItem onSelect={() => handleOpenAccount('security')}>
+                            <ShieldCheckIcon aria-hidden />
+                            {t('mySecurity')}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleOpenAccount('vouchers')}>
-                            <TicketIcon aria-hidden />
-                            {t('myVouchers')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleOpenAccount('wishlist')}>
-                            <HeartIcon aria-hidden />
-                            {t('myWishlist')}
+                        <DropdownMenuItem onSelect={() => handleOpenAccount('notifications')}>
+                            <BellIcon aria-hidden />
+                            {t('notificationSettings')}
                         </DropdownMenuItem>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
