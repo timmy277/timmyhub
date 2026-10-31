@@ -113,6 +113,7 @@ export const API_MESSAGES_EN: ApiMessageCatalog = {
         passwordMin: 'Password must be at least {minimum} characters.',
         passwordLetter: 'Password must contain at least one letter.',
         passwordDigit: 'Password must contain at least one digit.',
+        passwordMismatch: 'Passwords do not match.',
         firstNameRequired: 'First name is required.',
         lastNameRequired: 'Last name is required.',
         phoneInvalid: 'The phone number is invalid (10 digits, starting with 0).',

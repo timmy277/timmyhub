@@ -14,6 +14,7 @@ import { ROUTE } from '@/constants'
 // Route công khai cho phép xem catalog không cần đăng nhập (khách và bot tìm kiếm)
 const PUBLIC_PATHS = [
     ROUTE.LOGIN,
+    ROUTE.REGISTER,
     ROUTE.HOME,
     ROUTE.SEARCH,
     '/products',
@@ -32,7 +33,11 @@ const REQUEST_PATH_HEADER = 'x-original-path'
 export const proxy = auth((request) => {
     const { pathname } = request.nextUrl
     const isPublic = PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))
-    const isLoginPage = pathname === ROUTE.LOGIN || pathname.startsWith(`${ROUTE.LOGIN}/`)
+    const isAuthPage =
+        pathname === ROUTE.LOGIN ||
+        pathname === ROUTE.REGISTER ||
+        pathname.startsWith(`${ROUTE.LOGIN}/`) ||
+        pathname.startsWith(`${ROUTE.REGISTER}/`)
     const isAuthenticated = Boolean(request.auth?.user?.id)
 
     // Chưa có phiên hợp lệ mà vào trang protected (ví dụ cart, checkout, dashboard...) → về login kèm callbackUrl (REQ-IDN-032).
@@ -44,9 +49,9 @@ export const proxy = auth((request) => {
         return NextResponse.redirect(loginUrl)
     }
 
-    // Đã có phiên hợp lệ mà vào trang đăng nhập (/login) → proxy chuyển hướng ngay qua /api/auth/redirect
-    // để đến thẳng đích theo role (dashboard cho admin, home cho user), không cần render trang login.
-    if (isLoginPage && isAuthenticated) {
+    // Đã có phiên hợp lệ mà vào trang đăng nhập/đăng ký → proxy chuyển hướng ngay qua /api/auth/redirect
+    // để đến thẳng đích theo role (dashboard cho admin, home cho user), không cần render trang login/register.
+    if (isAuthPage && isAuthenticated) {
         const rawCallback = request.nextUrl.searchParams.get('callbackUrl')
         const redirectUrl = new URL('/api/auth/redirect', request.url)
         if (rawCallback && rawCallback !== ROUTE.HOME) {

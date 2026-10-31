@@ -116,6 +116,7 @@ export const API_MESSAGES_VI = {
         passwordMin: 'Mật khẩu phải có ít nhất {minimum} ký tự.',
         passwordLetter: 'Mật khẩu phải có ít nhất một chữ cái.',
         passwordDigit: 'Mật khẩu phải có ít nhất một số.',
+        passwordMismatch: 'Mật khẩu xác nhận không khớp.',
         firstNameRequired: 'Tên không được để trống.',
         lastNameRequired: 'Họ không được để trống.',
         phoneInvalid: 'Số điện thoại không hợp lệ (10 chữ số, bắt đầu bằng 0).',

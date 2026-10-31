@@ -374,7 +374,29 @@
     "notConnected": "Tính năng đăng nhập chưa được kết nối.",
     "loginFailed": "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.",
     "loginUnavailable": "Không kết nối được máy chủ. Vui lòng thử lại sau.",
-    "loggingIn": "Đang đăng nhập…"
+    "loggingIn": "Đang đăng nhập…",
+    "noAccount": "Chưa có tài khoản?",
+    "registerNow": "Đăng ký ngay"
+  },
+  "register": {
+    "metaTitle": "Đăng ký",
+    "title": "Tạo tài khoản mới",
+    "description": "Đăng ký ngay để khám phá hàng ngàn sản phẩm ưu đãi tại TimmyHub.",
+    "firstName": "Tên",
+    "lastName": "Họ",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "confirmPassword": "Xác nhận mật khẩu",
+    "submit": "Đăng ký",
+    "submitting": "Đang đăng ký…",
+    "hasAccount": "Đã có tài khoản?",
+    "loginNow": "Đăng nhập ngay",
+    "orContinueWith": "hoặc đăng ký bằng",
+    "google": "Google",
+    "facebook": "Facebook",
+    "registerSuccess": "Đăng ký tài khoản thành công!",
+    "registerFailed": "Đăng ký thất bại. Vui lòng thử lại.",
+    "registerUnavailable": "Không kết nối được máy chủ. Vui lòng thử lại sau."
   },
   "rbac": {
     "rolesPageTitle": "Vai trò",

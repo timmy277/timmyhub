@@ -27,6 +27,14 @@ export const RegisterSchema = z.object({
 })
 export type RegisterInput = z.infer<typeof RegisterSchema>
 
+export const RegisterFormSchema = RegisterSchema.extend({
+    confirmPassword: z.string().min(1, apiMessageKey('validation.passwordRequired')),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: apiMessageKey('validation.passwordMismatch'),
+    path: ['confirmPassword'],
+})
+export type RegisterFormInput = z.infer<typeof RegisterFormSchema>
+
 export const LoginSchema = z.object({
     email: EmailSchema,
     password: z.string().min(1, apiMessageKey('validation.passwordRequired')),

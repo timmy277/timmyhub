@@ -374,7 +374,29 @@
     "notConnected": "Login is not connected yet.",
     "loginFailed": "Login failed. Please check your credentials.",
     "loginUnavailable": "Cannot reach the server. Please try again later.",
-    "loggingIn": "Logging in…"
+    "loggingIn": "Logging in…",
+    "noAccount": "Don't have an account?",
+    "registerNow": "Register now"
+  },
+  "register": {
+    "metaTitle": "Register",
+    "title": "Create an account",
+    "description": "Sign up now to explore thousands of exclusive deals on TimmyHub.",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "submit": "Sign up",
+    "submitting": "Signing up…",
+    "hasAccount": "Already have an account?",
+    "loginNow": "Log in",
+    "orContinueWith": "or register with",
+    "google": "Google",
+    "facebook": "Facebook",
+    "registerSuccess": "Account registered successfully!",
+    "registerFailed": "Registration failed. Please check your information.",
+    "registerUnavailable": "Cannot reach the server. Please try again later."
   },
   "rbac": {
     "rolesPageTitle": "Roles",

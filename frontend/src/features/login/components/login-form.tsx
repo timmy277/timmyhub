@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import Link from 'next/link'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { signIn } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
@@ -11,7 +12,7 @@ import type { LoginInput } from '@timmyhub/contracts'
 import { LoginSchema } from '@timmyhub/contracts'
 
 import { Button, FloatInput, IconPath } from '@/components'
-import { BACKEND_UNAVAILABLE_CODE } from '@/constants'
+import { BACKEND_UNAVAILABLE_CODE, ROUTE } from '@/constants'
 import { useLogin } from '@/hooks'
 import { toFieldErrorMessage } from '@/utils'
 
@@ -171,6 +172,13 @@ export function LoginForm() {
                     {ssoPending === 'facebook' ? t('loggingIn') : t('facebook')}
                 </Button>
             </div>
+
+            <p className="text-center text-xs text-muted-foreground pt-3">
+                {t('noAccount')}{' '}
+                <Link href={ROUTE.REGISTER} className="font-semibold text-primary hover:underline">
+                    {t('registerNow')}
+                </Link>
+            </p>
         </form>
     )
 }
