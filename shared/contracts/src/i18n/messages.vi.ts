@@ -19,6 +19,8 @@ export const API_MESSAGES_VI = {
         REFRESH_TOKEN_REUSED: 'Phiên đăng nhập có dấu hiệu bị đánh cắp, vui lòng đăng nhập lại.',
         REFRESH_TOKEN_EXPIRED: 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.',
         REFRESH_TOKEN_INVALID: 'Refresh token không hợp lệ.',
+        RESET_TOKEN_INVALID: 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.',
+        PASSWORD_REUSED: 'Mật khẩu mới không được trùng với mật khẩu gần đây.',
         UNAUTHORIZED: 'Chưa xác thực.',
         FORBIDDEN: 'Không có quyền truy cập tài nguyên này.',
         NOT_FOUND: 'Không tìm thấy tài nguyên.',

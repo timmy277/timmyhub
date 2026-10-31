@@ -62,6 +62,23 @@ export const LogoutSchema = z.object({
 })
 export type LogoutInput = z.infer<typeof LogoutSchema>
 
+export const ForgotPasswordSchema = z.object({
+    email: EmailSchema,
+})
+export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>
+
+export const ResetPasswordSchema = z
+    .object({
+        token: z.string().min(1, apiMessageKey('validation.required')),
+        newPassword: PasswordSchema,
+        confirmPassword: z.string().min(1, apiMessageKey('validation.passwordRequired')),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+        message: apiMessageKey('validation.passwordMismatch'),
+        path: ['confirmPassword'],
+    })
+export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>
+
 export type AuthTokens = {
     accessToken: string
     refreshToken: string

@@ -303,4 +303,47 @@ export class IdentityRepository {
             data: { isRevoked: true, revokedAt: new Date() },
         })
     }
+
+    // REQ-IDN-011: Lưu PasswordResetToken (hash)
+    createPasswordResetToken(input: { userId: string; token: string; expiresAt: Date }) {
+        return this.prisma.passwordResetToken.create({
+            data: {
+                userId: input.userId,
+                token: input.token,
+                expiresAt: input.expiresAt,
+            },
+        })
+    }
+
+    // REQ-IDN-013/014: Tìm PasswordResetToken
+    findPasswordResetToken(token: string) {
+        return this.prisma.passwordResetToken.findUnique({
+            where: { token },
+            include: { user: true },
+        })
+    }
+
+    // REQ-IDN-013: Cập nhật mật khẩu mới, đánh dấu token đã dùng, thu hồi toàn bộ session đang active
+    async resetPasswordWithToken(input: { tokenId: string; userId: string; passwordHash: string }): Promise<void> {
+        await this.prisma.$transaction(async (tx) => {
+            await tx.passwordResetToken.update({
+                where: { id: input.tokenId },
+                data: { used: true },
+            })
+
+            await tx.user.update({
+                where: { id: input.userId },
+                data: {
+                    passwordHash: input.passwordHash,
+                    failedLoginCount: 0,
+                    lockedUntil: null,
+                },
+            })
+
+            await tx.refreshToken.updateMany({
+                where: { userId: input.userId, isRevoked: false },
+                data: { isRevoked: true, revokedAt: new Date() },
+            })
+        })
+    }
 }

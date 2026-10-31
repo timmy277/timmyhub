@@ -24,6 +24,9 @@ export const ACCESS_TOKEN_ALGORITHM = 'RS256'
 export const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000
 // REQ-IDN-003: refresh token là chuỗi ngẫu nhiên 256 bit (32 byte), không phải JWT.
 export const REFRESH_TOKEN_BYTES = 32
+export const PASSWORD_RESET_TOKEN_BYTES = 32
+// REQ-IDN-011: TTL của password reset token là 15 phút
+export const PASSWORD_RESET_TOKEN_TTL_MS = 15 * 60 * 1000
 
 // Hash giả để so sánh khi email không tồn tại — giữ thời gian phản hồi ổn định (security.md §4). Tính một lần lúc
 // nạp module (như trước khi tách file), cùng BCRYPT_COST để thời gian compare khớp với hash thật.
@@ -80,6 +83,8 @@ export const AUTH_ROUTE = {
     REGISTER: 'register',
     LOGIN: 'login',
     SSO: 'sso',
+    FORGOT_PASSWORD: 'forgot-password',
+    RESET_PASSWORD: 'reset-password',
     REFRESH: 'refresh',
     LOGOUT: 'logout',
     LOGOUT_ALL: 'logout-all',

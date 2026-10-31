@@ -16,6 +16,8 @@ export const API_MESSAGES_EN: ApiMessageCatalog = {
         REFRESH_TOKEN_REUSED: 'Your session looks compromised, please sign in again.',
         REFRESH_TOKEN_EXPIRED: 'Your session has expired, please sign in again.',
         REFRESH_TOKEN_INVALID: 'The refresh token is invalid.',
+        RESET_TOKEN_INVALID: 'The password reset link is invalid or has expired.',
+        PASSWORD_REUSED: 'The new password cannot be the same as your recent passwords.',
         UNAUTHORIZED: 'You are not signed in.',
         FORBIDDEN: 'You do not have access to this resource.',
         NOT_FOUND: 'The resource was not found.',

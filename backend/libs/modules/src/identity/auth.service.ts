@@ -1,11 +1,19 @@
-import { createPrivateKey } from 'node:crypto'
+import { createHash, createPrivateKey, randomBytes } from 'node:crypto'
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { EventEmitter2 } from '@nestjs/event-emitter'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcryptjs'
 
-import type { AuthResult, LoginInput, RegisterInput, SsoLoginInput, UserRole } from '@timmyhub/contracts'
+import type {
+    AuthResult,
+    ForgotPasswordInput,
+    LoginInput,
+    RegisterInput,
+    ResetPasswordInput,
+    SsoLoginInput,
+    UserRole,
+} from '@timmyhub/contracts'
 import { ApiError } from '@timmyhub/contracts'
 
 import { isCommonPassword } from './common-passwords'
@@ -19,6 +27,8 @@ import {
     IDENTITY_CONFIG_ERROR,
     IDENTITY_EVENT,
     LOCK_DURATION_MS,
+    PASSWORD_RESET_TOKEN_BYTES,
+    PASSWORD_RESET_TOKEN_TTL_MS,
     REFRESH_TOKEN_TTL_MS,
 } from './identity.constants'
 import { IdentityRepository } from './identity.repository'
@@ -262,6 +272,69 @@ export class AuthService {
             throw new ApiError('REFRESH_TOKEN_INVALID')
         }
         await this.identityRepository.revokeAllUserRefreshTokens(token.userId)
+    }
+
+    // REQ-IDN-011 / REQ-IDN-012: Yêu cầu quên mật khẩu
+    async forgotPassword(input: ForgotPasswordInput): Promise<{ message: string }> {
+        const user = await this.identityRepository.findUserByEmail(input.email)
+
+        // REQ-IDN-011 kịch bản 2: Email không tồn tại hoặc đã bị xoá -> luôn trả thành công để chống dò email
+        if (!user || user.deletedAt) {
+            return { message: 'If the email exists, a reset link will be sent.' }
+        }
+
+        const rawToken = randomBytes(PASSWORD_RESET_TOKEN_BYTES).toString('hex')
+        const tokenHash = createHash('sha256').update(rawToken).digest('hex')
+        const expiresAt = new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MS)
+
+        await this.identityRepository.createPasswordResetToken({
+            userId: user.id,
+            token: tokenHash,
+            expiresAt,
+        })
+
+        this.eventEmitter.emit('identity.user.password_reset_requested', {
+            userId: user.id,
+            email: user.email,
+            token: rawToken,
+        })
+
+        return { message: 'If the email exists, a reset link will be sent.' }
+    }
+
+    // REQ-IDN-013 / REQ-IDN-014: Đặt lại mật khẩu bằng token
+    async resetPassword(input: ResetPasswordInput): Promise<{ success: boolean }> {
+        if (isCommonPassword(input.newPassword)) {
+            throw new ApiError('WEAK_PASSWORD')
+        }
+
+        const tokenHash = createHash('sha256').update(input.token).digest('hex')
+        const resetToken = await this.identityRepository.findPasswordResetToken(tokenHash)
+
+        if (!resetToken || resetToken.used || resetToken.expiresAt.getTime() <= Date.now()) {
+            throw new ApiError('RESET_TOKEN_INVALID')
+        }
+
+        const user = resetToken.user
+        if (!user || user.deletedAt) {
+            throw new ApiError('RESET_TOKEN_INVALID')
+        }
+
+        if (user.passwordHash) {
+            const isSamePassword = await bcrypt.compare(input.newPassword, user.passwordHash)
+            if (isSamePassword) {
+                throw new ApiError('PASSWORD_REUSED')
+            }
+        }
+
+        const newPasswordHash = await bcrypt.hash(input.newPassword, BCRYPT_COST)
+        await this.identityRepository.resetPasswordWithToken({
+            tokenId: resetToken.id,
+            userId: user.id,
+            passwordHash: newPasswordHash,
+        })
+
+        return { success: true }
     }
 
     // ===== Private helpers =====

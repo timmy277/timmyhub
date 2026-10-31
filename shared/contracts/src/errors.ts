@@ -17,6 +17,8 @@ export const API_ERROR_CODES = {
     REFRESH_TOKEN_REUSED: { status: 401 },
     REFRESH_TOKEN_EXPIRED: { status: 401 },
     REFRESH_TOKEN_INVALID: { status: 401 },
+    RESET_TOKEN_INVALID: { status: 400 },
+    PASSWORD_REUSED: { status: 422 },
     UNAUTHORIZED: { status: 401 },
     FORBIDDEN: { status: 403 },
     NOT_FOUND: { status: 404 },

@@ -2,8 +2,24 @@ import { Body, Controller, Post, Req } from '@nestjs/common'
 import type { Request } from 'express'
 
 import { ZodValidationPipe } from '@timmyhub/common'
-import type { LoginInput, LogoutInput, RefreshInput, RegisterInput, SsoLoginInput } from '@timmyhub/contracts'
-import { LoginSchema, LogoutSchema, RefreshSchema, RegisterSchema, SsoLoginSchema } from '@timmyhub/contracts'
+import type {
+    ForgotPasswordInput,
+    LoginInput,
+    LogoutInput,
+    RefreshInput,
+    RegisterInput,
+    ResetPasswordInput,
+    SsoLoginInput,
+} from '@timmyhub/contracts'
+import {
+    ForgotPasswordSchema,
+    LoginSchema,
+    LogoutSchema,
+    RefreshSchema,
+    RegisterSchema,
+    ResetPasswordSchema,
+    SsoLoginSchema,
+} from '@timmyhub/contracts'
 import { Public } from '@timmyhub/modules/platform/auth'
 
 import { AuthService } from './auth.service'
@@ -56,5 +72,17 @@ export class AuthController {
     @Post(AUTH_ROUTE.LOGOUT_ALL)
     logoutAll(@Body(new ZodValidationPipe(LogoutSchema)) body: LogoutInput) {
         return this.authService.logoutAll(body.refreshToken)
+    }
+
+    @Public()
+    @Post(AUTH_ROUTE.FORGOT_PASSWORD)
+    forgotPassword(@Body(new ZodValidationPipe(ForgotPasswordSchema)) body: ForgotPasswordInput) {
+        return this.authService.forgotPassword(body)
+    }
+
+    @Public()
+    @Post(AUTH_ROUTE.RESET_PASSWORD)
+    resetPassword(@Body(new ZodValidationPipe(ResetPasswordSchema)) body: ResetPasswordInput) {
+        return this.authService.resetPassword(body)
     }
 }
