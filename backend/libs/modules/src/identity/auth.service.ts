@@ -1,5 +1,5 @@
 import { createHash, createPrivateKey, randomBytes } from 'node:crypto'
-import { Injectable } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { EventEmitter2 } from '@nestjs/event-emitter'
 import { JwtService } from '@nestjs/jwt'
@@ -37,6 +37,8 @@ import { generateRawRefreshToken, hashRefreshToken } from './utils/index'
 @Injectable()
 export class AuthService {
     // ===== Dependencies =====
+    private readonly logger = new Logger(AuthService.name)
+
     constructor(
         private readonly identityRepository: IdentityRepository,
         private readonly jwtService: JwtService,
@@ -293,10 +295,16 @@ export class AuthService {
             expiresAt,
         })
 
+        const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000'
+        const resetLink = `${frontendUrl}/reset-password?token=${rawToken}`
+
+        this.logger.log(`[PASSWORD RESET] Email: ${user.email} | Reset Link: ${resetLink}`)
+
         this.eventEmitter.emit('identity.user.password_reset_requested', {
             userId: user.id,
             email: user.email,
             token: rawToken,
+            resetLink,
         })
 
         return { message: 'If the email exists, a reset link will be sent.' }
