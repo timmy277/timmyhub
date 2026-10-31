@@ -19,16 +19,12 @@ import { toFieldErrorMessage } from '@/utils'
 
 const ON_CARD_LABEL = 'bg-card peer-focus:bg-card peer-autofill:bg-card'
 
-export function ResetPasswordForm() {
+export function ResetPasswordForm({ token = '' }: { token?: string }) {
     const t = useTranslations('resetPassword')
     const tApi = useTranslations('api')
     const router = useRouter()
     const resetMutation = useResetPassword()
     const [isSuccess, setIsSuccess] = useState(false)
-
-    const [token] = useState(() =>
-        typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('token') ?? '') : '',
-    )
 
     const {
         register,
