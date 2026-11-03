@@ -49,6 +49,9 @@ export function MessageMenu() {
     }, [conversations, searchTerm])
 
     const handleSelectConversation = (conversation: ConversationDto) => {
+        if (conversation.unreadCount > 0) {
+            markConversationRead(conversation.id)
+        }
         if (pathname.startsWith('/chat')) {
             router.push(ROUTE.ADMIN_CHAT_CONVERSATION(conversation.id))
             setIsOpen(false)
@@ -61,9 +64,6 @@ export function MessageMenu() {
         }
         openChat(conversation)
         setIsOpen(false)
-        if (conversation.unreadCount > 0) {
-            markConversationRead(conversation.id)
-        }
     }
 
     return (
@@ -251,6 +251,9 @@ export function MessageMenu() {
                                                         onClick={(e) => {
                                                             e.stopPropagation()
                                                             setIsOpen(false)
+                                                            if (conv.unreadCount > 0) {
+                                                                markConversationRead(conv.id)
+                                                            }
                                                             router.push(
                                                                 isAdmin
                                                                     ? ROUTE.ADMIN_CHAT_CONVERSATION(conv.id)

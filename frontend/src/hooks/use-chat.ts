@@ -56,6 +56,7 @@ export function useChat() {
     const isAuthenticated = Boolean(userId)
     const socketRef = useRef<Socket | null>(null)
     const onlineUsers = useChatStore((s) => s.onlineUsers)
+    const processedMessageIdsRef = useRef<Set<string>>(new Set())
 
     // Đăng ký và quản lý WebSocket realtime
     useEffect(() => {
@@ -67,7 +68,17 @@ export function useChat() {
 
         // 1. Khi có tin nhắn mới (do đối tác gửi hoặc do mình gửi ở tab khác)
         const handleMessageCreated = (message: ChatMessageDto) => {
-            if (!message?.conversationId) return
+            if (!message?.conversationId || !message?.id) return
+
+            // Chống xử lý trùng lặp nếu nhận cùng lúc MESSAGE_CREATED và CONVERSATION_UPDATED
+            if (processedMessageIdsRef.current.has(message.id)) {
+                return
+            }
+            processedMessageIdsRef.current.add(message.id)
+            if (processedMessageIdsRef.current.size > 200) {
+                const first = processedMessageIdsRef.current.values().next().value
+                if (first) processedMessageIdsRef.current.delete(first)
+            }
 
             const { isChatOpenAndActive } = useChatStore.getState()
             const isCurrentlyActive = isChatOpenAndActive(message.conversationId)
@@ -76,16 +87,19 @@ export function useChat() {
             queryClient.setQueryData<ConversationListResponseDto>(QUERY_KEY.CHAT.CONVERSATIONS, (old) => {
                 if (!old) return old
 
-                let totalDelta = 0
+                // Nếu hội thoại này chưa có trong danh sách (hội thoại mới tạo gửi đến)
+                const exists = old.items.some((conv) => conv.id === message.conversationId)
+                if (!exists) {
+                    void queryClient.invalidateQueries({ queryKey: QUERY_KEY.CHAT.CONVERSATIONS })
+                    return old
+                }
+
                 const items = old.items.map((conv) => {
                     if (conv.id !== message.conversationId) return conv
 
                     // Nếu tin do người khác gửi và hội thoại không đang mở trước mắt -> unread + 1
                     const isFromPeer = message.senderId !== userId
                     const shouldIncreaseUnread = isFromPeer && !isCurrentlyActive
-                    if (shouldIncreaseUnread) {
-                        totalDelta += 1
-                    }
 
                     return {
                         ...conv,
@@ -103,9 +117,12 @@ export function useChat() {
                         new Date(a.lastMessageAt || a.createdAt).getTime(),
                 )
 
+                // Luôn tính toán totalUnreadCount đồng bộ chính xác 100% theo tổng unreadCount của các hội thoại
+                const totalUnreadCount = items.reduce((sum, c) => sum + (c.unreadCount || 0), 0)
+
                 return {
                     items,
-                    totalUnreadCount: Math.max(0, old.totalUnreadCount + totalDelta),
+                    totalUnreadCount,
                 }
             })
 
@@ -151,13 +168,12 @@ export function useChat() {
                 // -> Xoá unread count của hội thoại đó trên tab này về 0 ngay lập tức!
                 queryClient.setQueryData<ConversationListResponseDto>(QUERY_KEY.CHAT.CONVERSATIONS, (old) => {
                     if (!old) return old
-                    const conv = old.items.find((c) => c.id === payload.conversationId)
-                    const unreadToSubtract = conv?.unreadCount ?? 0
-                    if (unreadToSubtract === 0) return old
+                    const items = old.items.map((c) => (c.id === payload.conversationId ? { ...c, unreadCount: 0 } : c))
+                    const totalUnreadCount = items.reduce((sum, c) => sum + (c.unreadCount || 0), 0)
 
                     return {
-                        items: old.items.map((c) => (c.id === payload.conversationId ? { ...c, unreadCount: 0 } : c)),
-                        totalUnreadCount: Math.max(0, old.totalUnreadCount - unreadToSubtract),
+                        items,
+                        totalUnreadCount,
                     }
                 })
             } else {
@@ -269,16 +285,15 @@ export function useChat() {
                 QUERY_KEY.CHAT.CONVERSATIONS,
             )
 
-            // Optimistic update: đặt unreadCount = 0 và trừ totalUnreadCount ngay lập tức
+            // Optimistic update: đặt unreadCount = 0 và tính toán lại totalUnreadCount ngay lập tức
             queryClient.setQueryData<ConversationListResponseDto>(QUERY_KEY.CHAT.CONVERSATIONS, (old) => {
                 if (!old) return old
-                const targetConv = old.items.find((c) => c.id === conversationId)
-                const countToRemove = targetConv?.unreadCount ?? 0
-                if (countToRemove === 0) return old
+                const items = old.items.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c))
+                const totalUnreadCount = items.reduce((sum, c) => sum + (c.unreadCount || 0), 0)
 
                 return {
-                    items: old.items.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)),
-                    totalUnreadCount: Math.max(0, old.totalUnreadCount - countToRemove),
+                    items,
+                    totalUnreadCount,
                 }
             })
 

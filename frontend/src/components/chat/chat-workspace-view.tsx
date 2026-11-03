@@ -167,13 +167,10 @@ export function ChatWorkspaceView({ mode = 'seller' }: ChatWorkspaceViewProps) {
         }
     }, [effectiveSelectedConvId])
 
-    const hasMarkedReadRef = useRef<string | null>(null)
-
     useEffect(() => {
         const convId = activeConversation?.id
         const unread = activeConversation?.unreadCount ?? 0
-        if (convId && unread > 0 && hasMarkedReadRef.current !== convId) {
-            hasMarkedReadRef.current = convId
+        if (convId && unread > 0) {
             markConversationRead(convId)
         }
     }, [activeConversation?.id, activeConversation?.unreadCount, markConversationRead])
