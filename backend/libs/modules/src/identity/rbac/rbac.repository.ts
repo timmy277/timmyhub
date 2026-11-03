@@ -121,6 +121,7 @@ export class RbacRepository {
         actorId: string,
     ): Promise<SystemRole> {
         return this.prisma.$transaction(async (tx) => {
+            const existing = await tx.systemRole.findUniqueOrThrow({ where: { id } })
             const role = await tx.systemRole.update({
                 where: { id },
                 data: {
@@ -128,13 +129,26 @@ export class RbacRepository {
                     ...(input.description !== undefined ? { description: input.description } : {}),
                 },
             })
+
+            const beforeChanges: Record<string, unknown> = {}
+            const afterChanges: Record<string, unknown> = {}
+            if (input.displayName !== undefined && input.displayName !== existing.displayName) {
+                beforeChanges.displayName = existing.displayName
+                afterChanges.displayName = input.displayName
+            }
+            if (input.description !== undefined && input.description !== existing.description) {
+                beforeChanges.description = existing.description
+                afterChanges.description = input.description
+            }
+
             await writeAuditLog(tx, {
                 action: 'identity.role.update',
                 entityType: 'SystemRole',
                 entityId: id,
                 actorId,
                 actorType: 'ADMIN',
-                after: { changedFields: Object.keys(input) },
+                before: beforeChanges,
+                after: afterChanges,
             })
             return role
         })
@@ -142,6 +156,7 @@ export class RbacRepository {
 
     async deleteRole(id: string, actorId: string): Promise<void> {
         await this.prisma.$transaction(async (tx) => {
+            const existing = await tx.systemRole.findUniqueOrThrow({ where: { id } })
             await tx.systemRole.delete({ where: { id } })
             await writeAuditLog(tx, {
                 action: 'identity.role.delete',
@@ -149,6 +164,11 @@ export class RbacRepository {
                 entityId: id,
                 actorId,
                 actorType: 'ADMIN',
+                before: {
+                    name: existing.name,
+                    displayName: existing.displayName,
+                    description: existing.description,
+                },
                 after: { deleted: true },
             })
         })
@@ -180,6 +200,10 @@ export class RbacRepository {
 
     async deletePermission(id: string, actorId: string): Promise<void> {
         await this.prisma.$transaction(async (tx) => {
+            const existing = await tx.permission.findUnique({
+                where: { id },
+                select: { name: true, displayName: true, module: true, resource: true, action: true },
+            })
             await tx.permission.delete({ where: { id } })
             await writeAuditLog(tx, {
                 action: 'identity.permission.delete',
@@ -187,6 +211,15 @@ export class RbacRepository {
                 entityId: id,
                 actorId,
                 actorType: 'ADMIN',
+                before: existing
+                    ? {
+                          name: existing.name,
+                          displayName: existing.displayName,
+                          module: existing.module,
+                          resource: existing.resource,
+                          action: existing.action,
+                      }
+                    : undefined,
                 after: { deleted: true },
             })
         })
@@ -196,6 +229,12 @@ export class RbacRepository {
     // Trả về danh sách userId đang giữ role này — để tầng service invalidate cache đúng người bị ảnh hưởng.
     async replaceRolePermissions(roleId: string, permissionIds: string[], actorId: string): Promise<string[]> {
         return this.prisma.$transaction(async (tx) => {
+            const existing = await tx.rolePermission.findMany({
+                where: { roleId },
+                select: { permissionId: true },
+            })
+            const existingPermissionIds = existing.map((p) => p.permissionId)
+
             await tx.rolePermission.deleteMany({ where: { roleId } })
             if (permissionIds.length > 0) {
                 await tx.rolePermission.createMany({
@@ -220,6 +259,7 @@ export class RbacRepository {
                 entityId: roleId,
                 actorId,
                 actorType: 'ADMIN',
+                before: { permissionIds: existingPermissionIds },
                 after: { permissionIds },
             })
 
@@ -250,6 +290,7 @@ export class RbacRepository {
                 entityId: userId,
                 actorId: grantedBy,
                 actorType: 'ADMIN',
+                before: { roleName: null },
                 after: { roleName },
             })
         })
@@ -273,7 +314,8 @@ export class RbacRepository {
                 entityId: userId,
                 actorId: revokedBy,
                 actorType: 'ADMIN',
-                after: { roleName },
+                before: { roleName },
+                after: { roleName: null },
             })
         })
     }
@@ -303,6 +345,11 @@ export class RbacRepository {
         actorId: string,
     ): Promise<void> {
         await this.prisma.$transaction(async (tx) => {
+            const existing = await tx.userPermission.findUnique({
+                where: { userId_permissionId: { userId, permissionId } },
+                select: { isGranted: true },
+            })
+
             await tx.userPermission.upsert({
                 where: { userId_permissionId: { userId, permissionId } },
                 update: { isGranted },
@@ -321,6 +368,7 @@ export class RbacRepository {
                 entityId: userId,
                 actorId,
                 actorType: 'ADMIN',
+                before: { permissionId, isGranted: existing ? existing.isGranted : null },
                 after: { permissionId, isGranted },
             })
         })

@@ -1,11 +1,20 @@
 'use client'
 
-import { CalendarDaysIcon, CodeIcon, FingerprintIcon, GlobeIcon, InfoIcon, UserRoundIcon } from 'lucide-react'
+import { useState } from 'react'
+import {
+    CodeIcon,
+    FingerprintIcon,
+    GitCompareArrowsIcon,
+    GlobeIcon,
+    InfoIcon,
+    TableIcon,
+    UserRoundIcon,
+} from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
 import type { AuditLogDetail } from '@timmyhub/contracts'
 
-import { StatusBadge } from '@/components'
+import { Button, StatusBadge } from '@/components'
 import {
     AUDIT_ACTION_LABEL_KEY,
     AUDIT_ACTOR_TYPE_LABEL_KEY,
@@ -22,6 +31,9 @@ interface AuditDetailViewProps {
 // Nội dung tab "Chi tiết" của một bản ghi audit. Client component vì phần thay đổi dữ liệu tô màu theo diff; dữ liệu
 // thì Server Component đã tải sẵn và truyền xuống — client không tự gọi backend.
 export function AuditDetailView({ log }: AuditDetailViewProps) {
+    // ===== States =====
+    const [viewMode, setViewMode] = useState<'diff' | 'raw'>('diff')
+
     // ===== Hooks =====
     const t = useTranslations('auditLog')
 
@@ -127,12 +139,46 @@ export function AuditDetailView({ log }: AuditDetailViewProps) {
                     </dl>
                 </DetailSection>
 
-                <DetailSection icon={<CalendarDaysIcon />} title={t('detailSectionChange')} className="lg:col-span-2">
+                <DetailSection
+                    icon={<GitCompareArrowsIcon />}
+                    title={t('detailSectionChange')}
+                    className="lg:col-span-2"
+                    headerAction={
+                        hasChange ? (
+                            <div className="flex items-center gap-1">
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={viewMode === 'diff' ? 'default' : 'ghost'}
+                                    onClick={() => setViewMode('diff')}
+                                    className="h-8 gap-1.5 px-2.5 text-xs"
+                                >
+                                    <TableIcon className="size-3.5" />
+                                    {t('detailDiffTable')}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={viewMode === 'raw' ? 'default' : 'ghost'}
+                                    onClick={() => setViewMode('raw')}
+                                    className="h-8 gap-1.5 px-2.5 text-xs"
+                                >
+                                    <CodeIcon className="size-3.5" />
+                                    {t('detailDiffRaw')}
+                                </Button>
+                            </div>
+                        ) : undefined
+                    }
+                >
                     {hasChange ? (
-                        <div className="grid gap-5 lg:grid-cols-2">
-                            <JsonPanel title={t('detailBefore')} value={log.before} tone="remove" />
-                            <JsonPanel title={t('detailAfter')} value={log.after} tone="add" />
-                        </div>
+                        viewMode === 'diff' ? (
+                            <DiffTable before={log.before} after={log.after} t={t} />
+                        ) : (
+                            <div className="grid gap-5 lg:grid-cols-2">
+                                <JsonPanel title={t('detailBefore')} value={log.before} tone="remove" />
+                                <JsonPanel title={t('detailAfter')} value={log.after} tone="add" />
+                            </div>
+                        )
                     ) : (
                         <p className="text-sm italic text-muted-foreground">{t('detailNoChange')}</p>
                     )}
@@ -160,22 +206,102 @@ function JsonPanel({ title, value, tone }: { title: string; value: unknown; tone
     )
 }
 
+function DiffTable({ before, after, t }: { before: unknown; after: unknown; t: (key: string) => string }) {
+    const isObject = (val: unknown): val is Record<string, unknown> =>
+        val !== null && typeof val === 'object' && !Array.isArray(val)
+
+    const beforeObj = isObject(before) ? before : {}
+    const afterObj = isObject(after) ? after : {}
+
+    const allKeys = Array.from(new Set([...Object.keys(beforeObj), ...Object.keys(afterObj)]))
+
+    if (allKeys.length === 0) {
+        return (
+            <div className="grid gap-5 lg:grid-cols-2">
+                <JsonPanel title={t('detailBefore')} value={before} tone="remove" />
+                <JsonPanel title={t('detailAfter')} value={after} tone="add" />
+            </div>
+        )
+    }
+
+    const formatValue = (val: unknown) => {
+        if (val === undefined || val === null) {
+            return <span className="italic text-muted-foreground">—</span>
+        }
+        if (typeof val === 'boolean') {
+            return (
+                <span
+                    className={`inline-flex rounded px-1.5 py-0.5 font-mono text-xs font-semibold ${
+                        val
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                    }`}
+                >
+                    {String(val)}
+                </span>
+            )
+        }
+        if (typeof val === 'object') {
+            return <pre className="whitespace-pre-wrap font-mono text-xs">{JSON.stringify(val, null, 2)}</pre>
+        }
+        return <span className="font-mono text-xs">{String(val)}</span>
+    }
+
+    return (
+        <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-left text-xs">
+                <thead className="border-b bg-muted/40 font-semibold text-muted-foreground">
+                    <tr>
+                        <th className="w-1/4 px-4 py-2.5">{t('detailField')}</th>
+                        <th className="w-3/8 px-4 py-2.5 text-destructive">{t('detailBefore')}</th>
+                        <th className="w-3/8 px-4 py-2.5 text-emerald-600 dark:text-emerald-400">{t('detailAfter')}</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                    {allKeys.map((key) => {
+                        const beforeVal = beforeObj[key]
+                        const afterVal = afterObj[key]
+                        const isChanged = JSON.stringify(beforeVal) !== JSON.stringify(afterVal)
+
+                        return (
+                            <tr key={key} className={isChanged ? 'bg-muted/10' : undefined}>
+                                <td className="px-4 py-3 font-mono font-medium text-foreground">{key}</td>
+                                <td className="break-all px-4 py-3 bg-rose-500/5 text-foreground">
+                                    {formatValue(beforeVal)}
+                                </td>
+                                <td className="break-all px-4 py-3 bg-emerald-500/5 text-foreground">
+                                    {formatValue(afterVal)}
+                                </td>
+                            </tr>
+                        )
+                    })}
+                </tbody>
+            </table>
+        </div>
+    )
+}
+
 function DetailSection({
     icon,
     title,
     children,
     className,
+    headerAction,
 }: {
     icon: React.ReactNode
     title: string
     children: React.ReactNode
     className?: string
+    headerAction?: React.ReactNode
 }) {
     return (
         <section className={`rounded-xl border p-5 ${className ?? ''}`}>
-            <div className="mb-5 flex items-center gap-2">
-                <span className="text-primary [&_svg]:size-4">{icon}</span>
-                <h2 className="text-sm font-semibold">{title}</h2>
+            <div className="mb-5 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                    <span className="text-primary [&_svg]:size-4">{icon}</span>
+                    <h2 className="text-sm font-semibold">{title}</h2>
+                </div>
+                {headerAction}
             </div>
             {children}
         </section>

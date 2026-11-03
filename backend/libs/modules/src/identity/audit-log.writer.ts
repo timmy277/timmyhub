@@ -8,8 +8,8 @@ export type AuditLogEntry = {
     entityId: string
     actorId: string
     actorType: 'ADMIN' | 'USER' | 'SYSTEM'
-    before?: Prisma.InputJsonValue | undefined
-    after?: Prisma.InputJsonValue | undefined
+    before?: Prisma.InputJsonValue | Record<string, unknown> | null | undefined
+    after?: Prisma.InputJsonValue | Record<string, unknown> | null | undefined
 }
 
 // Keep the audit entry in the same database transaction as the mutation. Never pass credentials, tokens, or secrets in snapshots.
@@ -30,8 +30,8 @@ export async function writeAuditLog(tx: Prisma.TransactionClient, entry: AuditLo
             actorType: entry.actorType,
             actorIp: context?.actorIp ?? null,
             userAgent: context?.userAgent ?? null,
-            ...(entry.before !== undefined ? { before: entry.before } : {}),
-            ...(entry.after !== undefined ? { after: entry.after } : {}),
+            ...(entry.before !== undefined ? { before: entry.before as Prisma.InputJsonValue } : {}),
+            ...(entry.after !== undefined ? { after: entry.after as Prisma.InputJsonValue } : {}),
         },
     })
 }

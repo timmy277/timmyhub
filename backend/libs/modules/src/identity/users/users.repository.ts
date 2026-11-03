@@ -130,7 +130,14 @@ export class UsersRepository {
                 entityId: user.id,
                 actorId: input.createdBy,
                 actorType: 'ADMIN',
-                after: { fields: ['roles', 'firstName', 'lastName', 'phone'], isEmailVerified: true },
+                before: null,
+                after: {
+                    email: user.email,
+                    phone: user.phone,
+                    roles: user.roles,
+                    firstName: input.firstName,
+                    lastName: input.lastName,
+                },
             })
 
             return user
@@ -140,6 +147,8 @@ export class UsersRepository {
     // PATCH hồ sơ thay người dùng (hỗ trợ). `phone: null` là xoá số; field không gửi thì giữ nguyên.
     async updateUser(userId: string, input: UpdateUserRecordInput, actorId: string): Promise<UserWithProfile> {
         return this.prisma.$transaction(async (tx) => {
+            const existing = await tx.user.findUniqueOrThrow({ where: { id: userId }, include: { profile: true } })
+
             const profileData: Prisma.ProfileUpdateInput = {}
             if (input.firstName !== undefined) profileData.firstName = input.firstName
             if (input.lastName !== undefined) profileData.lastName = input.lastName
@@ -218,6 +227,7 @@ export class UsersRepository {
                     entityId: userId,
                     actorId,
                     actorType: 'ADMIN',
+                    before: { roleName: null },
                     after: { roleName },
                 })
             }
@@ -234,7 +244,8 @@ export class UsersRepository {
                     entityId: userId,
                     actorId,
                     actorType: 'ADMIN',
-                    after: { roleName },
+                    before: { roleName },
+                    after: { roleName: null },
                 })
             }
 
@@ -250,18 +261,37 @@ export class UsersRepository {
                 },
             })
 
+            const beforeChanges: Record<string, unknown> = {}
+            const afterChanges: Record<string, unknown> = {}
+            if (input.firstName !== undefined && input.firstName !== existing.profile?.firstName) {
+                beforeChanges.firstName = existing.profile?.firstName ?? null
+                afterChanges.firstName = input.firstName
+            }
+            if (input.lastName !== undefined && input.lastName !== existing.profile?.lastName) {
+                beforeChanges.lastName = existing.profile?.lastName ?? null
+                afterChanges.lastName = input.lastName
+            }
+            if (input.displayName !== undefined && input.displayName !== existing.profile?.displayName) {
+                beforeChanges.displayName = existing.profile?.displayName ?? null
+                afterChanges.displayName = input.displayName
+            }
+            if (input.phone !== undefined && input.phone !== existing.phone) {
+                beforeChanges.phone = existing.phone
+                afterChanges.phone = input.phone
+            }
+            if (input.roles !== undefined) {
+                beforeChanges.roles = existing.roles
+                afterChanges.roles = input.roles
+            }
+
             await writeAuditLog(tx, {
                 action: 'identity.user.update',
                 entityType: 'User',
                 entityId: userId,
                 actorId,
                 actorType: 'ADMIN',
-                after: {
-                    changedFields: Object.keys(input).filter(
-                        (field) => input[field as keyof UpdateUserRecordInput] !== undefined,
-                    ),
-                    ...(input.roles !== undefined ? { roles: input.roles } : {}),
-                },
+                before: beforeChanges,
+                after: afterChanges,
             })
 
             const user = await tx.user.findUniqueOrThrow({ where: { id: userId }, include: { profile: true } })
@@ -276,6 +306,11 @@ export class UsersRepository {
         input: { locked: boolean; reason?: string | undefined; actorId: string },
     ): Promise<UserWithProfile> {
         return this.prisma.$transaction(async (tx) => {
+            const existing = await tx.user.findUniqueOrThrow({
+                where: { id: userId },
+                select: { isBanned: true, banReason: true },
+            })
+
             const user = await tx.user.update({
                 where: { id: userId },
                 data: {
@@ -305,6 +340,7 @@ export class UsersRepository {
                 entityId: userId,
                 actorId: input.actorId,
                 actorType: 'ADMIN',
+                before: { isBanned: existing.isBanned, reason: existing.banReason },
                 after: { isBanned: input.locked, reason: input.locked ? (input.reason ?? null) : null },
             })
 
@@ -316,6 +352,11 @@ export class UsersRepository {
     // `deletedAt` và thu hồi mọi phiên. Không xoá cứng vì `User` là chủ thể của nhiều domain khác.
     async softDeleteUser(userId: string, actorId: string): Promise<void> {
         await this.prisma.$transaction(async (tx) => {
+            const existing = await tx.user.findUniqueOrThrow({
+                where: { id: userId },
+                select: { email: true, roles: true, isActive: true, isBanned: true },
+            })
+
             await tx.user.update({
                 where: { id: userId },
                 data: { deletedAt: new Date(), isActive: false },
@@ -342,7 +383,13 @@ export class UsersRepository {
                 entityId: userId,
                 actorId,
                 actorType: 'ADMIN',
-                after: { deleted: true },
+                before: {
+                    email: existing.email,
+                    roles: existing.roles,
+                    isActive: existing.isActive,
+                    isBanned: existing.isBanned,
+                },
+                after: { deleted: true, isActive: false },
             })
         })
     }
