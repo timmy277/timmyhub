@@ -60,7 +60,7 @@ function SingleFloatingChatBox({
     const { isPeerTyping, startTyping, stopTyping } = useTypingIndicator(conversation.id)
 
     // 3. Derived
-    const isPeerOnline = isUserOnline(conversation.peer.id) || Boolean(conversation.peer.isOnline)
+    const isPeerOnline = isUserOnline(conversation.peer.id, conversation.peer.isOnline)
     const peerLastSeen = getUserLastSeen(conversation.peer.id)
 
     // 4. Handlers
@@ -642,7 +642,7 @@ export function FloatingChatDock() {
 
                     {/* Danh sách các Chat Head avatar (tối đa 5 item) xếp theo hàng dọc */}
                     {visibleHeads.map((liveConv) => {
-                        const isHeadOnline = isUserOnline(liveConv.peer.id) || Boolean(liveConv.peer.isOnline)
+                        const isHeadOnline = isUserOnline(liveConv.peer.id, liveConv.peer.isOnline)
                         return (
                             <div
                                 key={liveConv.id}

@@ -22,7 +22,7 @@ import {
     USER_TABLE_ROW_HEIGHT_PX,
     USER_TAB,
 } from '@/constants'
-import { useDebouncedValue, useDeleteUser, useUserListQuery } from '@/hooks'
+import { useChat, useDebouncedValue, useDeleteUser, useUserListQuery } from '@/hooks'
 
 import { buildUserListHref } from '../user-list-href'
 import { userColumnFilterParams } from '../user-list-query'
@@ -58,6 +58,7 @@ export function UserTable({ rows, pagination, query, permissions, error }: UserT
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
+    const { isUserOnline } = useChat()
     const { isPending, setPageSize, setSearch, setRole, setStatus, setAuthType, setSort, setFilters, resetList } =
         useUserListQuery()
     const debouncedSearch = useDebouncedValue(searchInput, SEARCH_DEBOUNCE_MS)
@@ -92,8 +93,9 @@ export function UserTable({ rows, pagination, query, permissions, error }: UserT
                     onToggleStatus: setPendingLock,
                     onDelete: setPendingDelete,
                 },
+                isUserOnline,
             }),
-        [t, tRole, permissions, router, hrefFor],
+        [t, tRole, permissions, router, hrefFor, isUserOnline],
     )
 
     const roleOptions = useMemo(

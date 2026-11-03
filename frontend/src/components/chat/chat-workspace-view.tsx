@@ -118,7 +118,7 @@ export function ChatWorkspaceView({ mode = 'seller' }: ChatWorkspaceViewProps) {
     }, [conversations, effectiveSelectedConvId])
 
     const isActivePeerOnline = activeConversation
-        ? isUserOnline(activeConversation.peer.id) || Boolean(activeConversation.peer.isOnline)
+        ? isUserOnline(activeConversation.peer.id, activeConversation.peer.isOnline)
         : false
     const activePeerLastSeen = activeConversation ? getUserLastSeen(activeConversation.peer.id) : undefined
 
@@ -408,18 +408,17 @@ export function ChatWorkspaceView({ mode = 'seller' }: ChatWorkspaceViewProps) {
                                                     {conv.peer.name.slice(0, 2).toUpperCase()}
                                                 </AvatarFallback>
                                             </Avatar>
-                                            <span
-                                                className={`absolute bottom-0 right-0 size-3 rounded-full ring-2 ring-background transition-colors ${
-                                                    isUserOnline(conv.peer.id) || Boolean(conv.peer.isOnline)
-                                                        ? 'bg-emerald-500'
-                                                        : 'bg-muted-foreground/30'
-                                                }`}
-                                                title={
-                                                    isUserOnline(conv.peer.id) || Boolean(conv.peer.isOnline)
-                                                        ? t('online')
-                                                        : t('offline')
-                                                }
-                                            />
+                                            {(() => {
+                                                const isConvOnline = isUserOnline(conv.peer.id, conv.peer.isOnline)
+                                                return (
+                                                    <span
+                                                        className={`absolute bottom-0 right-0 size-3 rounded-full ring-2 ring-background transition-colors ${
+                                                            isConvOnline ? 'bg-emerald-500' : 'bg-muted-foreground/30'
+                                                        }`}
+                                                        title={isConvOnline ? t('online') : t('offline')}
+                                                    />
+                                                )
+                                            })()}
                                         </div>
 
                                         {/* Info */}

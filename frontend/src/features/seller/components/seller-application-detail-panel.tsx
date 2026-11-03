@@ -59,7 +59,7 @@ export function SellerApplicationDetailPanel({ id, initialData }: SellerApplicat
     const pathname = usePathname()
     const searchParams = useSearchParams()
     const queryClient = useQueryClient()
-    const { openChatWithUser } = useChat()
+    const { openChatWithUser, isUserOnline } = useChat()
 
     // Action dialogs
     const [isApproveOpen, setIsApproveOpen] = useState(false)
@@ -289,6 +289,7 @@ export function SellerApplicationDetailPanel({ id, initialData }: SellerApplicat
                                     <UserAvatar
                                         name={application.user?.name ?? application.user?.email ?? 'User'}
                                         className="size-11 rounded-xl text-sm"
+                                        isOnline={isUserOnline(application.userId)}
                                     />
                                     <div className="min-w-0">
                                         <h4 className="text-sm font-bold text-foreground truncate">

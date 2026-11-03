@@ -32,7 +32,7 @@ export function SellerApplicationTable({ rows, totalItems, query, error }: Selle
     const pathname = usePathname()
     const searchParams = useSearchParams()
     const { isPending, setPageSize, setSearch, setStatus, resetList } = useSellerApplicationListQuery()
-    const { openChatWithUser } = useChat()
+    const { openChatWithUser, isUserOnline } = useChat()
 
     // ===== State =====
     const [searchInput, setSearchInput] = useState(query.q ?? '')
@@ -79,8 +79,9 @@ export function SellerApplicationTable({ rows, totalItems, query, error }: Selle
                     onApprove: (app) => setApprovingApp(app),
                     onReject: (app) => setRejectingApp(app),
                 },
+                isUserOnline,
             }),
-        [t, router, hrefFor, openChatWithUser],
+        [t, router, hrefFor, openChatWithUser, isUserOnline],
     )
 
     const statusOptions = useMemo(

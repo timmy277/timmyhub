@@ -1179,6 +1179,7 @@
       "metaDescription": "Mua sắm các sản phẩm chính hãng, chất lượng từ gian hàng {name} trên sàn thương mại điện tử TimmyHub. Cam kết hoàn tiền và đổi trả linh hoạt.",
       "verifiedBadge": "Gian hàng chính hãng",
       "activeStatus": "Đang hoạt động",
+      "offlineStatus": "Ngoại tuyến",
       "joinedDate": "Tham gia từ {date}",
       "follow": "Theo dõi",
       "following": "Đang theo dõi",

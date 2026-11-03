@@ -10,14 +10,16 @@ interface UserAvatarProps {
     size?: ComponentProps<typeof Avatar>['size']
     className?: string
     fallbackClassName?: string
+    // Trạng thái online realtime (tuỳ chọn)
+    isOnline?: boolean | null
 }
 
 // Ảnh đại diện người dùng, rơi về chữ viết tắt (`getInitials`). Ảnh để `alt=""` vì luôn đi kèm tên hiển thị bên
 // cạnh — đọc lại tên là thừa. 7 trạng thái: mặc định (ảnh) · đang tải (Radix hiện fallback tới khi ảnh tải xong) ·
 // rỗng (không có ảnh → chữ viết tắt) · lỗi (ảnh hỏng → chữ viết tắt) · không có quyền / vô hiệu hoá / thành công (N/A
 // — chỉ hiển thị).
-export function UserAvatar({ name, imageUrl, size, className, fallbackClassName }: UserAvatarProps) {
-    return (
+export function UserAvatar({ name, imageUrl, size, className, fallbackClassName, isOnline }: UserAvatarProps) {
+    const avatar = (
         <Avatar size={size} className={className}>
             {imageUrl && <AvatarImage src={imageUrl} alt="" />}
             <AvatarFallback
@@ -31,5 +33,22 @@ export function UserAvatar({ name, imageUrl, size, className, fallbackClassName 
                 {getInitials(name)}
             </AvatarFallback>
         </Avatar>
+    )
+
+    if (isOnline === undefined || isOnline === null) {
+        return avatar
+    }
+
+    return (
+        <div className="relative inline-flex shrink-0">
+            {avatar}
+            <span
+                className={cn(
+                    'absolute bottom-0 right-0 size-2.5 rounded-full ring-2 ring-background transition-colors shadow-xs',
+                    isOnline ? 'bg-emerald-500' : 'bg-muted-foreground/30',
+                )}
+                title={isOnline ? 'Online' : 'Offline'}
+            />
+        </div>
     )
 }

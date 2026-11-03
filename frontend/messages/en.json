@@ -1179,6 +1179,7 @@
       "metaDescription": "Shop genuine, high-quality products from {name} on TimmyHub e-commerce marketplace. Safe shopping and flexible return policies.",
       "verifiedBadge": "Official Store",
       "activeStatus": "Active Now",
+      "offlineStatus": "Offline",
       "joinedDate": "Joined {date}",
       "follow": "Follow",
       "following": "Following",

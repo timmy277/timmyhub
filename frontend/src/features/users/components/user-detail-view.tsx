@@ -22,7 +22,7 @@ import { UserStatus } from '@timmyhub/contracts'
 import { Button, ConfirmDialog, IconPath, RoleBadges, StatusBadge, UserAvatar } from '@/components'
 import type { UserPermissionFlags } from '@/constants'
 import { USER_STATUS_LABEL_KEY, USER_STATUS_TONE, USER_TAB } from '@/constants'
-import { useDeleteUser } from '@/hooks'
+import { useChat, useDeleteUser } from '@/hooks'
 import { formatTimestamp, getUserDisplayName } from '@/utils'
 
 import { buildUserTabsHref } from '../user-tab-query'
@@ -42,6 +42,8 @@ export function UserDetailView({ user, permissions }: UserDetailViewProps) {
     // ===== State =====
     const [pendingLock, setPendingLock] = useState(false)
     const [pendingDelete, setPendingDelete] = useState(false)
+    const { isUserOnline } = useChat()
+    const isOnline = isUserOnline(user.id)
 
     // ===== Hooks =====
     const t = useTranslations('userManagement')
@@ -66,6 +68,7 @@ export function UserDetailView({ user, permissions }: UserDetailViewProps) {
                         imageUrl={user.profile?.avatar}
                         className="size-14 shrink-0 rounded-2xl"
                         fallbackClassName="rounded-2xl text-lg font-semibold"
+                        isOnline={isOnline}
                     />
                     <div className="min-w-0">
                         <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -78,6 +81,20 @@ export function UserDetailView({ user, permissions }: UserDetailViewProps) {
                                 tone={USER_STATUS_TONE[user.status]}
                                 label={t(USER_STATUS_LABEL_KEY[user.status])}
                             />
+                            <span
+                                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors ${
+                                    isOnline
+                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                        : 'bg-muted/50 text-muted-foreground border-border/40'
+                                }`}
+                            >
+                                <span
+                                    className={`size-1.5 rounded-full ${
+                                        isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground/40'
+                                    }`}
+                                />
+                                {isOnline ? 'Online' : 'Offline'}
+                            </span>
                             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                                 <FingerprintIcon className="size-3.5" />
                                 {t('detailAccountId', { id: user.id })}

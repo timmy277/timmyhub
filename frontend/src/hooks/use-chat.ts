@@ -202,22 +202,31 @@ export function useChat() {
                     ...old,
                     items: old.items.map((c) => {
                         const presence = state[c.peer.id]
-                        return presence ? { ...c, peer: { ...c.peer, isOnline: presence.isOnline } } : c
+                        const isOnline = presence !== undefined ? Boolean(presence.isOnline) : false
+                        return { ...c, peer: { ...c.peer, isOnline } }
                     }),
                 }
             })
         }
 
+        const queryPresence = () => {
+            socket.emit(CHAT_REALTIME_EVENT.PRESENCE_QUERY, {})
+        }
+
+        socket.on('connect', queryPresence)
         socket.on(CHAT_REALTIME_EVENT.MESSAGE_CREATED, handleMessageCreated)
         socket.on(CHAT_REALTIME_EVENT.CONVERSATION_UPDATED, handleConversationUpdated)
         socket.on(CHAT_REALTIME_EVENT.READ_CHANGED, handleReadChanged)
         socket.on(CHAT_REALTIME_EVENT.PRESENCE_CHANGED, handlePresenceChanged)
         socket.on(CHAT_REALTIME_EVENT.PRESENCE_STATE, handlePresenceState)
 
-        // Gửi yêu cầu lấy trạng thái online ban đầu
-        socket.emit(CHAT_REALTIME_EVENT.PRESENCE_QUERY, {})
+        // Gửi yêu cầu lấy trạng thái online ngay nếu socket đã sẵn sàng kết nối
+        if (socket.connected) {
+            queryPresence()
+        }
 
         return () => {
+            socket.off('connect', queryPresence)
             socket.off(CHAT_REALTIME_EVENT.MESSAGE_CREATED, handleMessageCreated)
             socket.off(CHAT_REALTIME_EVENT.CONVERSATION_UPDATED, handleConversationUpdated)
             socket.off(CHAT_REALTIME_EVENT.READ_CHANGED, handleReadChanged)
@@ -372,10 +381,25 @@ export function useChat() {
         [conversationsQuery.data?.items, createConversationMutation],
     )
 
+    // Khi danh sách hội thoại có dữ liệu, query presence cho danh sách peer để có snapshot presence và lastSeenAt đầy đủ
+    useEffect(() => {
+        if (!isAuthenticated || !userId || !conversationsQuery.data?.items?.length) return
+        const peerIds = Array.from(new Set(conversationsQuery.data.items.map((c) => c.peer.id)))
+        if (peerIds.length === 0) return
+        const socket = getOrCreateChatSocket(userId)
+        if (socket.connected) {
+            socket.emit(CHAT_REALTIME_EVENT.PRESENCE_QUERY, { userIds: peerIds })
+        }
+    }, [isAuthenticated, userId, conversationsQuery.data?.items])
+
     const isUserOnline = useCallback(
-        (targetUserId?: string | null) => {
+        (targetUserId?: string | null, fallback?: boolean) => {
             if (!targetUserId) return false
-            return Boolean(onlineUsers[targetUserId]?.isOnline)
+            const presence = onlineUsers[targetUserId]
+            if (presence !== undefined) {
+                return Boolean(presence.isOnline)
+            }
+            return Boolean(fallback)
         },
         [onlineUsers],
     )

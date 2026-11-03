@@ -60,6 +60,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             }
         }
 
+        // Gửi ngay snapshot toàn bộ các user đang online cho client vừa kết nối
+        const currentPresence: Record<string, { isOnline: boolean; lastSeenAt?: string }> = {}
+        for (const [onlineId, sockets] of this.onlineUsers.entries()) {
+            if (sockets.size > 0) {
+                currentPresence[onlineId] = { isOnline: true }
+            }
+        }
+        client.emit(CHAT_REALTIME_EVENT.PRESENCE_STATE, currentPresence)
+
         client.emit('connection:ready', {
             socketId: client.id,
             serverTime: new Date().toISOString(),

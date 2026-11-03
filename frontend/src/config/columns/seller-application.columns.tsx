@@ -23,12 +23,14 @@ interface CreateSellerApplicationColumnsOptions {
     t: SellerTranslator
     actions: SellerApplicationColumnActions
     renderDocument: (application: SellerApplicationDetail) => ReactNode
+    isUserOnline?: (userId?: string | null) => boolean
 }
 
 export function createSellerApplicationColumns({
     t,
     actions,
     renderDocument,
+    isUserOnline,
 }: CreateSellerApplicationColumnsOptions): ColDef<SellerApplicationDetail>[] {
     const buildRowActions = (app: SellerApplicationDetail): RowAction[] => {
         const rowActions: RowAction[] = [
@@ -119,7 +121,11 @@ export function createSellerApplicationColumns({
                 const name = user?.name || t('unnamed')
                 return (
                     <div className="flex items-center gap-2.5 py-1 min-w-0">
-                        <UserAvatar name={name} className="size-7 shrink-0 text-xs" />
+                        <UserAvatar
+                            name={name}
+                            className="size-7 shrink-0 text-xs"
+                            isOnline={isUserOnline?.(params.data.userId)}
+                        />
                         <span className="text-xs font-medium text-foreground truncate">{name}</span>
                     </div>
                 )

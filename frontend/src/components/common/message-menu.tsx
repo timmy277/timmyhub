@@ -33,7 +33,8 @@ export function MessageMenu() {
     const { isSeller } = useIsSeller()
     const { hasPermission } = usePermissions()
     const isAdmin = hasPermission(DASHBOARD_PERMISSION)
-    const { isAuthenticated, userId, conversations, totalUnreadCount, isLoading, markConversationRead } = useChat()
+    const { isAuthenticated, userId, conversations, totalUnreadCount, isLoading, markConversationRead, isUserOnline } =
+        useChat()
     const openChat = useChatStore((s) => s.openChat)
     const [searchTerm, setSearchTerm] = useState('')
     const [isOpen, setIsOpen] = useState(false)
@@ -172,6 +173,7 @@ export function MessageMenu() {
                             {filteredConversations.map((conv) => {
                                 const isUnread = conv.unreadCount > 0
                                 const isSelfLast = conv.lastSenderId === userId
+                                const isPeerOnline = isUserOnline(conv.peer.id, conv.peer.isOnline)
 
                                 return (
                                     <DropdownMenuItem
@@ -195,7 +197,12 @@ export function MessageMenu() {
                                                     )}
                                                 </AvatarFallback>
                                             </Avatar>
-                                            <span className="absolute bottom-0 right-0 size-3 rounded-full bg-emerald-500 ring-2 ring-background shadow-xs" />
+                                            <span
+                                                className={`absolute bottom-0 right-0 size-3 rounded-full ring-2 ring-background shadow-xs transition-colors ${
+                                                    isPeerOnline ? 'bg-emerald-500' : 'bg-muted-foreground/30'
+                                                }`}
+                                                title={isPeerOnline ? tChat('online') : tChat('offline')}
+                                            />
                                         </div>
 
                                         {/* Content info */}

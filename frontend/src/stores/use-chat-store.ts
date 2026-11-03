@@ -26,7 +26,7 @@ interface ChatStoreState {
     isChatOpenAndActive: (conversationId: string) => boolean
     setUserPresence: (userId: string, isOnline: boolean, lastSeenAt?: string) => void
     setPresenceState: (state: Record<string, { isOnline: boolean; lastSeenAt?: string }>) => void
-    isUserOnline: (userId?: string | null) => boolean
+    isUserOnline: (userId?: string | null, fallback?: boolean) => boolean
     getUserLastSeen: (userId?: string | null) => string | undefined
 }
 
@@ -120,21 +120,43 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         set((state) => ({
             onlineUsers: {
                 ...state.onlineUsers,
-                [userId]: { isOnline, lastSeenAt },
+                [userId]: {
+                    isOnline,
+                    lastSeenAt:
+                        lastSeenAt ??
+                        (isOnline ? undefined : (state.onlineUsers[userId]?.lastSeenAt ?? new Date().toISOString())),
+                },
             },
         })),
 
     setPresenceState: (newState) =>
-        set((state) => ({
-            onlineUsers: {
-                ...state.onlineUsers,
-                ...newState,
-            },
-        })),
+        set((state) => {
+            const updated: Record<string, { isOnline: boolean; lastSeenAt?: string }> = {}
+            // Cập nhật trạng thái cho các user đã có trong store: nếu không còn trong snapshot online thì chuyển thành offline
+            for (const [id, prev] of Object.entries(state.onlineUsers)) {
+                if (newState[id]) {
+                    updated[id] = newState[id]
+                } else {
+                    updated[id] = {
+                        isOnline: false,
+                        lastSeenAt: prev.lastSeenAt,
+                    }
+                }
+            }
+            // Bổ sung các user mới trong newState
+            for (const [id, current] of Object.entries(newState)) {
+                updated[id] = current
+            }
+            return { onlineUsers: updated }
+        }),
 
-    isUserOnline: (userId) => {
+    isUserOnline: (userId, fallback) => {
         if (!userId) return false
-        return Boolean(get().onlineUsers[userId]?.isOnline)
+        const presence = get().onlineUsers[userId]
+        if (presence !== undefined) {
+            return Boolean(presence.isOnline)
+        }
+        return Boolean(fallback)
     },
 
     getUserLastSeen: (userId) => {

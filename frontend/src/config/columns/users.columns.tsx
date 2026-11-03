@@ -110,11 +110,18 @@ interface CreateUserColumnsOptions {
     // Quyền hiệu lực của người đang xem — cột thao tác chỉ dựng nút người đó thật sự bấm được.
     permissions: UserPermissionFlags
     actions: UserColumnActions
+    isUserOnline?: (userId?: string | null) => boolean
 }
 
 // Cột bảng người dùng theo `createUserColumns` của TimmyHub gốc, nhưng dữ liệu là `UserSummary` thật từ
 // `/v1/identity/users`. Hàm thuần, không hook — trang gọi trong `useMemo` với translator đã có (luật #22).
-export function createUserColumns({ t, tRole, permissions, actions }: CreateUserColumnsOptions): ColDef<UserSummary>[] {
+export function createUserColumns({
+    t,
+    tRole,
+    permissions,
+    actions,
+    isUserOnline,
+}: CreateUserColumnsOptions): ColDef<UserSummary>[] {
     const roleLabel = (role: UserRole) => tRole(ROLE_LABEL_KEY[role])
     const statusLabel = (status: UserStatus) => t(USER_STATUS_LABEL_KEY[status])
 
@@ -191,7 +198,13 @@ export function createUserColumns({ t, tRole, permissions, actions }: CreateUser
             cellRenderer: (params: ICellRendererParams<UserSummary>) => {
                 const user = params.data
                 if (!user) return null
-                return <UserAvatar name={getUserDisplayName(user) ?? user.email} imageUrl={user.profile?.avatar} />
+                return (
+                    <UserAvatar
+                        name={getUserDisplayName(user) ?? user.email}
+                        imageUrl={user.profile?.avatar}
+                        isOnline={isUserOnline?.(user.id)}
+                    />
+                )
             },
         },
         {

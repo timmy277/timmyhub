@@ -58,8 +58,11 @@ export function PublicShopView({ shop, initialProducts, categories = [] }: Publi
     const t = useTranslations('seller.publicShop')
     const searchInputId = useId()
     const router = useRouter()
-    const { openChatWithUser, isAuthenticated, userId } = useChat()
+    const { openChatWithUser, isAuthenticated, userId, isUserOnline } = useChat()
     const [isOpeningChat, setIsOpeningChat] = useState(false)
+
+    // Trạng thái online realtime của chủ shop
+    const isSellerOnline = isUserOnline(shop.sellerId || shop.id)
 
     // Kiểm tra xem người dùng hiện tại có phải là chủ shop hay không
     const isOwnShop = Boolean(userId && (shop.sellerId === userId || shop.id === userId))
@@ -266,9 +269,21 @@ export function PublicShopView({ shop, initialProducts, categories = [] }: Publi
                                         <IconPath name="gemini-star" className="size-2.5 text-primary animate-pulse" />
                                         {t('verifiedBadge')}
                                     </Badge>
-                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                        <span className="size-1.5 rounded-full bg-emerald-500 animate-ping" />
-                                        {t('activeStatus')}
+                                    <span
+                                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold border transition-colors ${
+                                            isSellerOnline
+                                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                                : 'bg-muted/50 text-muted-foreground border-border/40'
+                                        }`}
+                                    >
+                                        <span
+                                            className={`size-1.5 rounded-full ${
+                                                isSellerOnline
+                                                    ? 'bg-emerald-500 animate-pulse'
+                                                    : 'bg-muted-foreground/50'
+                                            }`}
+                                        />
+                                        {isSellerOnline ? t('activeStatus') : t('offlineStatus')}
                                     </span>
                                 </div>
 
