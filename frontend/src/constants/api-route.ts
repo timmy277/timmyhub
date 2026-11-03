@@ -3,7 +3,12 @@
 // chuỗi tay ở nơi gọi.
 
 // Base URL backend — apps/api chạy cổng 3001 (project-plan.md bảng cổng dịch vụ; FE dev chiếm 3000).
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+// Khi chạy phía server trong Docker (SSR, Server Action, NextAuth), gọi qua mạng Docker (INTERNAL_API_URL, mặc định http://api:3001).
+// Khi chạy phía browser client hoặc dev local, gọi qua cổng máy host (NEXT_PUBLIC_API_URL, mặc định http://localhost:3001).
+export const API_BASE_URL =
+    typeof window === 'undefined'
+        ? process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+        : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 export const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
 // Trần thời gian chờ một lượt gọi backend. Không có nó thì một backend treo sẽ giữ request của Server Component/

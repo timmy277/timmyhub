@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { NestFactory } from '@nestjs/core'
@@ -21,7 +22,10 @@ async function bootstrap(): Promise<void> {
     app.enableCors({ origin: corsOrigins, credentials: true })
 
     // Serve static uploads folder for local development (fallback khi không dùng Supabase/R2)
-    app.useStaticAssets(resolve(process.cwd(), 'uploads'), { prefix: '/uploads' })
+    const uploadsDir = resolve(process.cwd(), 'uploads')
+    if (existsSync(uploadsDir)) {
+        app.useStaticAssets(uploadsDir, { prefix: '/uploads' })
+    }
 
     // Chỉ bật Swagger UI ngoài production — /docs không nên lộ ra môi trường thật.
     if (process.env.NODE_ENV !== 'production') {

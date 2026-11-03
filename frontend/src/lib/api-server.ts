@@ -29,7 +29,8 @@ type FetchBackendOptions = {
 const BACKEND_UNAVAILABLE_CODE = 'BACKEND_UNAVAILABLE' as const
 
 export async function fetchBackend<T>(path: string, options: FetchBackendOptions = {}): Promise<BackendResult<T>> {
-    const url = new URL(`${API_BASE_URL}/${path}`)
+    const baseUrl = process.env.INTERNAL_API_URL || API_BASE_URL
+    const url = new URL(`${baseUrl}/${path}`)
     for (const [key, value] of Object.entries(options.query ?? {})) {
         if (value !== undefined) url.searchParams.set(key, String(value))
     }

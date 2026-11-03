@@ -30,7 +30,8 @@ export async function revokeSessionAction(): Promise<void> {
         if (typeof refreshToken !== 'string') return
 
         // Thu hồi phiên ở BE — lỗi (token đã hết hạn, BE sập…) không chặn việc xoá cookie phía client.
-        await fetch(`${API_BASE_URL}/${API_ROUTE.AUTH.LOGOUT}`, {
+        const baseUrl = process.env.INTERNAL_API_URL || API_BASE_URL
+        await fetch(`${baseUrl}/${API_ROUTE.AUTH.LOGOUT}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ refreshToken }),

@@ -2,7 +2,7 @@
 FROM node:22-alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@10.5.2 --activate
+RUN corepack enable && corepack prepare pnpm@11.22.0 --activate
 RUN apk add --no-cache libc6-compat openssl ffmpeg
 
 WORKDIR /app
@@ -19,14 +19,7 @@ COPY backend/apps/worker/package.json ./backend/apps/worker/
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # Stage 2: Build toàn bộ dependencies & Worker application
-FROM base AS builder
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/shared/contracts/node_modules ./shared/contracts/node_modules
-COPY --from=deps /app/shared/common/node_modules ./shared/common/node_modules
-COPY --from=deps /app/backend/libs/prisma/node_modules ./backend/libs/prisma/node_modules
-COPY --from=deps /app/backend/libs/modules/node_modules ./backend/libs/modules/node_modules
-COPY --from=deps /app/backend/apps/worker/node_modules ./backend/apps/worker/node_modules
-
+FROM deps AS builder
 COPY . .
 
 # Sinh Prisma Client và build các thư viện liên quan

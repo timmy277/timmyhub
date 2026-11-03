@@ -51,9 +51,6 @@ export class StorageService {
 
         // Local storage fallback directory
         this.localStorageDir = path.resolve(process.cwd(), 'uploads')
-        if (!fs.existsSync(this.localStorageDir)) {
-            fs.mkdirSync(this.localStorageDir, { recursive: true })
-        }
 
         if (accessKeyId && secretAccessKey) {
             const s3Config: Record<string, unknown> = {

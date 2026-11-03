@@ -26,9 +26,10 @@ type BackendAuthResult = { ok: true; data: AuthResult } | { ok: false; status: n
 
 // Gọi backend bằng fetch thuần (không axios) để file gọn nhẹ khi bundle vào edge runtime của proxy.
 async function callBackend<B>(path: string, body: B): Promise<BackendAuthResult> {
+    const baseUrl = process.env.INTERNAL_API_URL || API_BASE_URL
     let response: Response
     try {
-        response = await fetch(`${API_BASE_URL}/${path}`, {
+        response = await fetch(`${baseUrl}/${path}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
