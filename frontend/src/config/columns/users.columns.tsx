@@ -1,12 +1,12 @@
 import type { ColDef, ICellRendererParams } from 'ag-grid-community'
 import { parseISO } from 'date-fns'
-import { EyeIcon, LockIcon, LockOpenIcon, PencilIcon, Trash2Icon } from 'lucide-react'
+import { EyeIcon, LockIcon, LockOpenIcon, MailIcon, PencilIcon, Trash2Icon } from 'lucide-react'
 import type { useTranslations } from 'next-intl'
 
 import type { UserRole, UserSummary } from '@timmyhub/contracts'
 import { isSuperAdmin, USER_LIST_SORT, UserStatus } from '@timmyhub/contracts'
 
-import { RoleBadges, RowActions, StatusBadge, UserAvatar, type RowAction } from '@/components'
+import { IconPath, RoleBadges, RowActions, StatusBadge, UserAvatar, type RowAction } from '@/components'
 import type { UserPermissionFlags, UserPermissionKey } from '@/constants'
 import {
     AG_GRID_FILTER_KEY,
@@ -229,6 +229,62 @@ export function createUserColumns({ t, tRole, permissions, actions }: CreateUser
             context: {
                 [AG_GRID_SORT_KEY]: SORT_VALUES.email,
                 [AG_GRID_FILTER_KEY]: { kind: 'text', param: USER_QUERY_PARAM.EMAIL },
+            },
+        },
+        {
+            headerName: t('columnAuthType'),
+            colId: 'authType',
+            width: USER_COLUMN_WIDTH_PX.AUTH_TYPE,
+            flex: 0,
+            sortable: false,
+            filter: 'agTextColumnFilter',
+            valueGetter: (params) => (params.data?.authTypes ?? ['email']).join(', '),
+            cellRenderer: (params: ICellRendererParams<UserSummary>) => {
+                const types =
+                    params.data?.authTypes && params.data.authTypes.length > 0
+                        ? params.data.authTypes
+                        : (['email'] as const)
+
+                return (
+                    <div className="flex h-full items-center gap-1.5">
+                        {types.map((type) => {
+                            if (type === 'google') {
+                                return (
+                                    <span
+                                        key="google"
+                                        className="inline-flex size-6.5 items-center justify-center rounded-lg border border-border/60 bg-muted/50 hover:bg-muted transition-colors shadow-2xs"
+                                        title={t('authTypeGoogle')}
+                                        aria-label={t('authTypeGoogle')}
+                                    >
+                                        <IconPath name="google" className="size-3.5" />
+                                    </span>
+                                )
+                            }
+                            if (type === 'facebook') {
+                                return (
+                                    <span
+                                        key="facebook"
+                                        className="inline-flex size-6.5 items-center justify-center rounded-lg border border-border/60 bg-muted/50 hover:bg-muted transition-colors shadow-2xs"
+                                        title={t('authTypeFacebook')}
+                                        aria-label={t('authTypeFacebook')}
+                                    >
+                                        <IconPath name="facebook" className="size-3.5" />
+                                    </span>
+                                )
+                            }
+                            return (
+                                <span
+                                    key="email"
+                                    className="inline-flex size-6.5 items-center justify-center rounded-lg border border-border/60 bg-muted/50 text-muted-foreground hover:bg-muted transition-colors shadow-2xs"
+                                    title={t('authTypeEmail')}
+                                    aria-label={t('authTypeEmail')}
+                                >
+                                    <MailIcon className="size-3.5" />
+                                </span>
+                            )
+                        })}
+                    </div>
+                )
             },
         },
         {

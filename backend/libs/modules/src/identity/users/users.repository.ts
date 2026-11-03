@@ -49,7 +49,10 @@ export class UsersRepository {
     // lọc theo cột, lọc role/trạng thái, loại bản ghi đã xoá mềm) nằm trong `where` — `totalItems` cũng đếm trên
     // cùng `where` đó nên phân trang không rò rỉ số bản ghi ngoài phạm vi.
     async listUsers(params: {
-        filters: Pick<UserListQuery, 'q' | 'role' | 'status' | 'name' | 'email' | 'createdFrom' | 'createdTo'>
+        filters: Pick<
+            UserListQuery,
+            'q' | 'role' | 'status' | 'name' | 'email' | 'createdFrom' | 'createdTo' | 'authType'
+        >
         page: number
         pageSize: number
         sort: UserListQuery['sort']

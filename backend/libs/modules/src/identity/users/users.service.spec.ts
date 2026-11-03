@@ -174,6 +174,7 @@ describe('UsersService — danh sách và chi tiết', () => {
             email: 'timmyhub.dev',
             createdFrom: '2026-08-31T17:00:00.000Z',
             createdTo: '2026-09-30T16:59:59.999Z',
+            authType: undefined,
         })
     })
 })
@@ -228,6 +229,12 @@ describe('buildUserListWhere — phạm vi nằm trong truy vấn (luật cứng
         expect(buildUserListWhere({ createdFrom: from, createdTo: to })).toMatchObject({
             createdAt: { gte: new Date(from), lte: new Date(to) },
         })
+    })
+
+    it('lọc theo phương thức đăng nhập (authType)', () => {
+        expect(buildUserListWhere({ authType: 'google' })).toMatchObject({ googleId: { not: null } })
+        expect(buildUserListWhere({ authType: 'facebook' })).toMatchObject({ facebookId: { not: null } })
+        expect(buildUserListWhere({ authType: 'email' })).toMatchObject({ passwordHash: { not: null } })
     })
 
     it('bộ lọc theo cột SIẾT THÊM chứ không thay thế ô tìm kiếm chung', () => {

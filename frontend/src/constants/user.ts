@@ -21,6 +21,7 @@ export const USER_QUERY_PARAM = {
     SEARCH: 'q',
     ROLE: 'role',
     STATUS: 'status',
+    AUTH_TYPE: 'authType',
     SORT: 'sort',
     // Bốn tham số của **bộ lọc theo cột** (menu lọc ở tiêu đề bảng). Tên phải trùng tên trường trong
     // `UserListQuerySchema` — cùng một chuỗi đi từ ô nhập ở tiêu đề, qua URL, tới `where` của Prisma.
@@ -57,6 +58,7 @@ export const USER_TAB_ID_LABEL_LENGTH = 8
 // Trạng thái người dùng dùng cho bộ lọc "tất cả" — giá trị rỗng nghĩa là không lọc.
 export const USER_STATUS_FILTER_ALL = '' as const
 export const USER_ROLE_FILTER_ALL = '' as const
+export const USER_AUTH_TYPE_FILTER_ALL = '' as const
 
 // Đúng bốn tham số URL của bộ lọc theo cột, theo thứ tự khai trong `UserListQuerySchema`. Cần danh sách này để
 // `useUserListQuery` biết phải xoá những khoá nào khi bộ lọc trên lưới rỗng — "xoá hết" mà chỉ ghi đè khoá đang có

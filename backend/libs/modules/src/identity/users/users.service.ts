@@ -55,6 +55,7 @@ export class UsersService {
                 email: query.email,
                 createdFrom: query.createdFrom,
                 createdTo: query.createdTo,
+                authType: query.authType,
             },
             page: query.page,
             pageSize: query.pageSize,

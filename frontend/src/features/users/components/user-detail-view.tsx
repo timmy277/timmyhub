@@ -7,6 +7,7 @@ import {
     CalendarDaysIcon,
     CheckIcon,
     FingerprintIcon,
+    MailIcon,
     PencilIcon,
     ShieldCheckIcon,
     Trash2Icon,
@@ -18,7 +19,7 @@ import { useTranslations } from 'next-intl'
 import type { UserDetail } from '@timmyhub/contracts'
 import { UserStatus } from '@timmyhub/contracts'
 
-import { Button, ConfirmDialog, RoleBadges, StatusBadge, UserAvatar } from '@/components'
+import { Button, ConfirmDialog, IconPath, RoleBadges, StatusBadge, UserAvatar } from '@/components'
 import type { UserPermissionFlags } from '@/constants'
 import { USER_STATUS_LABEL_KEY, USER_STATUS_TONE, USER_TAB } from '@/constants'
 import { useDeleteUser } from '@/hooks'
@@ -146,6 +147,45 @@ export function UserDetailView({ user, permissions }: UserDetailViewProps) {
                         </DetailItem>
                         <DetailItem label={t('detailTwoFactor')}>
                             <BooleanValue value={user.twoFactorEnabled} yes={t('yes')} no={t('no')} />
+                        </DetailItem>
+                        <DetailItem label={t('columnAuthType')}>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                                {(user.authTypes && user.authTypes.length > 0 ? user.authTypes : ['email']).map(
+                                    (type) => {
+                                        if (type === 'google') {
+                                            return (
+                                                <span
+                                                    key="google"
+                                                    className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/50 px-2 py-0.5 text-xs font-medium"
+                                                >
+                                                    <IconPath name="google" className="size-3.5" />
+                                                    Google
+                                                </span>
+                                            )
+                                        }
+                                        if (type === 'facebook') {
+                                            return (
+                                                <span
+                                                    key="facebook"
+                                                    className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/50 px-2 py-0.5 text-xs font-medium"
+                                                >
+                                                    <IconPath name="facebook" className="size-3.5" />
+                                                    Facebook
+                                                </span>
+                                            )
+                                        }
+                                        return (
+                                            <span
+                                                key="email"
+                                                className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/50 px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                                            >
+                                                <MailIcon className="size-3.5" />
+                                                Email
+                                            </span>
+                                        )
+                                    },
+                                )}
+                            </div>
                         </DetailItem>
                         {user.banReason && (
                             <DetailItem label={t('detailBanReason')} className="sm:col-span-2">

@@ -12,6 +12,15 @@ export const USER_LIST_DEFAULT_PAGE_SIZE = 20
 export const USER_LIST_MAX_PAGE_SIZE = 100
 export const USER_LIST_MAX_QUERY_LENGTH = 100
 
+// Phương thức xác thực / loại tài khoản của người dùng (Email/mật khẩu, Google SSO, Facebook SSO).
+export const UserAuthType = {
+    EMAIL: 'email',
+    GOOGLE: 'google',
+    FACEBOOK: 'facebook',
+} as const
+export type UserAuthType = (typeof UserAuthType)[keyof typeof UserAuthType]
+export const UserAuthTypeSchema = z.enum(['email', 'google', 'facebook'])
+
 // Trạng thái quản trị của một tài khoản. Không dùng `isActive` (cột đó chưa được tầng xác thực đọc) — khoá/mở khoá
 // thật sự nằm ở `isBanned` (AuthService.login chặn bằng mã ACCOUNT_BANNED) và `lockedUntil` (tạm khoá tự hết hạn).
 export const UserStatus = {
@@ -69,6 +78,7 @@ export const UserListQuerySchema = z.object({
     q: z.string().trim().max(USER_LIST_MAX_QUERY_LENGTH).optional(),
     role: UserRoleSchema.optional(),
     status: UserStatusSchema.optional(),
+    authType: UserAuthTypeSchema.optional(),
     // Khớp họ tên đang HIỂN THỊ ở cột "Tên" — mà cột đó lấy `displayName`, thiếu thì ghép `lastName + firstName`
     // (xem `getUserDisplayName`), nên phải dò cả ba trường. Giới hạn đã biết: gõ một đoạn vắt qua ranh giới hai
     // trường (vd họ "Nguyễn Văn" + tên "An", gõ "Văn An") sẽ không khớp vì Prisma không nối chuỗi trong `where`.
@@ -130,6 +140,7 @@ export type UserSummary = {
     email: string
     phone: string | null
     roles: UserRole[]
+    authTypes: UserAuthType[]
     status: UserStatus
     isEmailVerified: boolean
     isPhoneVerified: boolean

@@ -49,6 +49,7 @@ export function useUserListQuery() {
         setSearch: (search: string) => apply({ [USER_QUERY_PARAM.SEARCH]: search }, { resetPage: true, replace: true }),
         setRole: (role: string) => apply({ [USER_QUERY_PARAM.ROLE]: role }, { resetPage: true }),
         setStatus: (status: string) => apply({ [USER_QUERY_PARAM.STATUS]: status }, { resetPage: true }),
+        setAuthType: (authType: string) => apply({ [USER_QUERY_PARAM.AUTH_TYPE]: authType }, { resetPage: true }),
         // Đổi thứ tự sắp xếp là đổi toàn bộ dãy dữ liệu, nên về trang 1: giữ nguyên số trang cũ chỉ khiến người dùng
         // nhìn thấy một lát cắt vô nghĩa của thứ tự mới. Đi bằng `push` để nút Back trả lại đúng thứ tự vừa xem.
         setSort: (sort: string) => apply({ [USER_QUERY_PARAM.SORT]: sort }, { resetPage: true }),

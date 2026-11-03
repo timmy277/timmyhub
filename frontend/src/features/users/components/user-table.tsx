@@ -15,6 +15,7 @@ import {
     ROLE_LABEL_KEY,
     SEARCH_DEBOUNCE_MS,
     TOAST_ID,
+    USER_AUTH_TYPE_FILTER_ALL,
     USER_ROLE_FILTER_ALL,
     USER_STATUS_FILTER_ALL,
     USER_STATUS_LABEL_KEY,
@@ -57,7 +58,8 @@ export function UserTable({ rows, pagination, query, permissions, error }: UserT
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
-    const { isPending, setPageSize, setSearch, setRole, setStatus, setSort, setFilters, resetList } = useUserListQuery()
+    const { isPending, setPageSize, setSearch, setRole, setStatus, setAuthType, setSort, setFilters, resetList } =
+        useUserListQuery()
     const debouncedSearch = useDebouncedValue(searchInput, SEARCH_DEBOUNCE_MS)
 
     const removeUser = useDeleteUser({ onSucceeded: () => setPendingDelete(null) })
@@ -109,6 +111,16 @@ export function UserTable({ rows, pagination, query, permissions, error }: UserT
                 value: status,
                 label: t(USER_STATUS_LABEL_KEY[status]),
             })),
+        ],
+        [t],
+    )
+
+    const authTypeOptions = useMemo(
+        () => [
+            { value: USER_AUTH_TYPE_FILTER_ALL, label: t('filterAllAuthTypes') },
+            { value: 'email', label: t('authTypeEmail') },
+            { value: 'google', label: t('authTypeGoogle') },
+            { value: 'facebook', label: t('authTypeFacebook') },
         ],
         [t],
     )
@@ -216,6 +228,14 @@ export function UserTable({ rows, pagination, query, permissions, error }: UserT
                                 onValueChange={(value) => setStatus(value ?? USER_STATUS_FILTER_ALL)}
                                 size="sm"
                                 className="w-full sm:w-36"
+                            />
+                            <FloatCombobox
+                                label={t('filterAuthType')}
+                                options={authTypeOptions}
+                                value={query.authType ?? USER_AUTH_TYPE_FILTER_ALL}
+                                onValueChange={(value) => setAuthType(value ?? USER_AUTH_TYPE_FILTER_ALL)}
+                                size="sm"
+                                className="w-full sm:w-40"
                             />
                         </>
                     }

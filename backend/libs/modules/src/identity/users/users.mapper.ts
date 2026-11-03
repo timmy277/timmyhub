@@ -1,10 +1,24 @@
-import type { UserDetail, UserPagination, UserSummary } from '@timmyhub/contracts'
+import type { UserAuthType, UserDetail, UserPagination, UserSummary } from '@timmyhub/contracts'
 import { UserStatus } from '@timmyhub/contracts'
 
 import type { UserWithProfile } from './users.repository'
 
 // Chuyển bản ghi Prisma sang DTO của `@timmyhub/contracts`. Hàm thuần, không phụ thuộc request — nhờ vậy test khẳng
 // định được "không trường nhạy cảm nào lọt ra" (REQ-USR-010) mà không cần dựng HTTP.
+
+// Xác định các phương thức đăng nhập hợp lệ của tài khoản (email/mật khẩu, Google SSO, Facebook SSO).
+export function toUserAuthTypes(user: {
+    passwordHash: string | null
+    googleId: string | null
+    facebookId: string | null
+}): UserAuthType[] {
+    const types: UserAuthType[] = []
+    if (user.passwordHash) types.push('email')
+    if (user.googleId) types.push('google')
+    if (user.facebookId) types.push('facebook')
+    if (types.length === 0) types.push('email')
+    return types
+}
 
 // Trạng thái quản trị: LOCKED là bị admin khoá (`isBanned` — thứ AuthService.login chặn). `lockedUntil` (tạm khoá do
 // đăng nhập sai, REQ-IDN-029) trả riêng, không gộp vào trạng thái này.
@@ -18,6 +32,7 @@ export function toUserSummary(user: UserWithProfile): UserSummary {
         email: user.email,
         phone: user.phone,
         roles: user.roles,
+        authTypes: toUserAuthTypes(user),
         status: toUserStatus(user.isBanned),
         isEmailVerified: user.isEmailVerified,
         isPhoneVerified: user.isPhoneVerified,

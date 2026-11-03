@@ -5,10 +5,20 @@ import type { Prisma } from '@timmyhub/prisma'
 // để kiểm chứng được "phạm vi nằm trong câu truy vấn" (luật cứng #7: lọc trong `where`, không `.filter()` sau khi đã
 // lấy dữ liệu — lọc sau sẽ rò rỉ tổng số bản ghi qua phân trang).
 export function buildUserListWhere(
-    filters: Pick<UserListQuery, 'q' | 'role' | 'status' | 'name' | 'email' | 'createdFrom' | 'createdTo'>,
+    filters: Pick<UserListQuery, 'q' | 'role' | 'status' | 'name' | 'email' | 'createdFrom' | 'createdTo' | 'authType'>,
 ): Prisma.UserWhereInput {
     // Bản ghi đã xoá mềm không bao giờ thuộc danh sách, kể cả với SUPER_ADMIN.
     const where: Prisma.UserWhereInput = { deletedAt: null }
+
+    if (filters.authType) {
+        if (filters.authType === 'google') {
+            where.googleId = { not: null }
+        } else if (filters.authType === 'facebook') {
+            where.facebookId = { not: null }
+        } else if (filters.authType === 'email') {
+            where.passwordHash = { not: null }
+        }
+    }
 
     if (filters.status) {
         // `status` là trạng thái quản trị (khoá bởi admin) → ánh xạ sang cột `isBanned`, thứ AuthService.login chặn.

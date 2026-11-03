@@ -82,6 +82,7 @@ export const AVATAR_COLUMN_WIDTH_PX = 80
 export const USER_COLUMN_WIDTH_PX = {
     MIN_NAME: 170,
     MIN_EMAIL: 240,
+    AUTH_TYPE: 120,
     MIN_ROLES: 190,
     STATUS: 150,
     MEMBER_SINCE: 195,
