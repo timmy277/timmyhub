@@ -10,6 +10,7 @@ import {
     FileText,
     Fingerprint,
     Mail,
+    MessageSquare,
     Phone,
     RefreshCw,
     ShieldAlert,
@@ -40,6 +41,8 @@ import {
 import { QUERY_KEY, SELLER_APPLICATION_STATUS_TONE, SELLER_APPLICATION_TAB, StatusTone } from '@/constants'
 import { formatTimestamp } from '@/utils'
 
+import { useChat } from '@/hooks'
+
 import { getSellerApplicationDetailAdminAction } from '../actions'
 import { buildSellerTabsHref } from '../seller-tab-query'
 import { DocumentPreview } from './document-preview'
@@ -56,6 +59,7 @@ export function SellerApplicationDetailPanel({ id, initialData }: SellerApplicat
     const pathname = usePathname()
     const searchParams = useSearchParams()
     const queryClient = useQueryClient()
+    const { openChatWithUser } = useChat()
 
     // Action dialogs
     const [isApproveOpen, setIsApproveOpen] = useState(false)
@@ -173,6 +177,18 @@ export function SellerApplicationDetailPanel({ id, initialData }: SellerApplicat
                 </div>
 
                 <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="gap-1.5 rounded-xl text-sm"
+                        onClick={() => {
+                            void openChatWithUser(application.userId)
+                        }}
+                    >
+                        <MessageSquare className="size-4 text-primary" />
+                        {t('chatWithSeller')}
+                    </Button>
+
                     {isPending ? (
                         <>
                             <Button

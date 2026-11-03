@@ -1,6 +1,6 @@
 import type { ColDef, ICellRendererParams } from 'ag-grid-community'
 import type { ReactNode } from 'react'
-import { CheckCircle2Icon, EyeIcon, StoreIcon, XCircleIcon } from 'lucide-react'
+import { CheckCircle2Icon, EyeIcon, MessageSquareIcon, StoreIcon, XCircleIcon } from 'lucide-react'
 import type { useTranslations } from 'next-intl'
 
 import type { SellerApplicationDetail } from '@timmyhub/contracts'
@@ -12,6 +12,7 @@ import { formatTimestamp, rowActionsColumnWidth } from '@/utils'
 
 export interface SellerApplicationColumnActions {
     onDetail: (app: SellerApplicationDetail) => void
+    onChat?: (app: SellerApplicationDetail) => void
     onApprove: (app: SellerApplicationDetail) => void
     onReject: (app: SellerApplicationDetail) => void
 }
@@ -39,6 +40,16 @@ export function createSellerApplicationColumns({
                 onClick: () => actions.onDetail(app),
             },
         ]
+
+        if (actions.onChat) {
+            rowActions.push({
+                key: 'chat',
+                label: t('chatWithSeller'),
+                ariaLabel: `${t('chatWithSeller')} ${app.shopName}`,
+                icon: MessageSquareIcon,
+                onClick: () => actions.onChat?.(app),
+            })
+        }
 
         if (app.status === ResourceStatus.PENDING) {
             rowActions.push(

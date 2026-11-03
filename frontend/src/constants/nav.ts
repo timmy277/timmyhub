@@ -79,8 +79,8 @@ export const NAV_GROUPS: readonly NavGroup[] = [
                 requirePermission: RBAC_PERMISSION.PERMISSIONS_LIST,
             },
             {
-                titleKey: 'sellerApplications',
-                url: ROUTE.ADMIN_SELLER_APPLICATIONS,
+                titleKey: 'sellerManagement',
+                url: ROUTE.ADMIN_SELLER_MANAGEMENT,
                 icon: StoreIcon,
                 requirePermission: SELLER_APPLICATIONS_PERMISSION,
             },
@@ -107,6 +107,12 @@ export const NAV_GROUPS: readonly NavGroup[] = [
                 url: ROUTE.AUDIT,
                 icon: HistoryIcon,
                 requirePermission: AUDIT_PERMISSION.LIST,
+            },
+            {
+                titleKey: 'adminChat',
+                url: ROUTE.ADMIN_CHAT,
+                icon: MessageSquareIcon,
+                requirePermission: DASHBOARD_PERMISSION,
             },
         ],
     },
@@ -193,9 +199,9 @@ export const BREADCRUMB_ROUTES: Readonly<Record<string, readonly BreadcrumbEntry
         { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
         { titleKey: 'permissions', url: ROUTE.PERMISSIONS },
     ],
-    [ROUTE.ADMIN_SELLER_APPLICATIONS]: [
+    [ROUTE.ADMIN_SELLER_MANAGEMENT]: [
         { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
-        { titleKey: 'sellerApplications', url: ROUTE.ADMIN_SELLER_APPLICATIONS },
+        { titleKey: 'sellerManagement', url: ROUTE.ADMIN_SELLER_MANAGEMENT },
     ],
     [ROUTE.ADMIN_CATEGORIES]: [
         { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
@@ -217,6 +223,10 @@ export const BREADCRUMB_ROUTES: Readonly<Record<string, readonly BreadcrumbEntry
     [ROUTE.AUDIT]: [
         { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
         { titleKey: 'audit', url: ROUTE.AUDIT },
+    ],
+    [ROUTE.ADMIN_CHAT]: [
+        { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
+        { titleKey: 'adminChat', url: ROUTE.ADMIN_CHAT },
     ],
     [ROUTE.SELLER_PORTAL]: [{ titleKey: 'sellerOverview', url: ROUTE.SELLER_PORTAL }],
     [ROUTE.SELLER_WALLET]: [

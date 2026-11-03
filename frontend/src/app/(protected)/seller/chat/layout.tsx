@@ -19,7 +19,7 @@ export default async function SellerChatLayout({ children }: SellerChatLayoutPro
     }
 
     if (actor.permissions.has(DASHBOARD_PERMISSION)) {
-        redirect(ROUTE.DASHBOARD)
+        redirect(ROUTE.ADMIN_CHAT)
     }
 
     const isSellerByPermission =

@@ -19,8 +19,15 @@ import { useLocale, useTranslations } from 'next-intl'
 import type { ConversationDto } from '@timmyhub/contracts'
 
 import { Avatar, AvatarFallback, AvatarImage, Button, Input, ScrollArea, TypingIndicator } from '@/components'
-import { CHAT_CONFIG, ROUTE } from '@/constants'
-import { useChat, useConversationMessages, useIsSeller, useTypingIndicator, useUploadMedia } from '@/hooks'
+import { CHAT_CONFIG, DASHBOARD_PERMISSION, ROUTE } from '@/constants'
+import {
+    useChat,
+    useConversationMessages,
+    useIsSeller,
+    usePermissions,
+    useTypingIndicator,
+    useUploadMedia,
+} from '@/hooks'
 import { useChatStore } from '@/stores'
 import { formatCurrencyVND, formatMessengerTimestamp, formatRelativeTime, shouldShowMessageDivider } from '@/utils'
 
@@ -45,6 +52,8 @@ function SingleFloatingChatBox({
     const t = useTranslations('chat')
     const locale = useLocale() as 'vi' | 'en'
     const { isSeller } = useIsSeller()
+    const { hasPermission } = usePermissions()
+    const isAdmin = hasPermission(DASHBOARD_PERMISSION)
     const { userId, sendMessage, isSending, markConversationRead, isUserOnline, getUserLastSeen } = useChat()
     const { messages, isLoading } = useConversationMessages(conversation.id)
     const { mutateAsync: uploadMedia, isPending: isUploading } = useUploadMedia()
@@ -207,19 +216,27 @@ function SingleFloatingChatBox({
                     >
                         <MinusIcon className="size-3.5" />
                     </Button>
-                    {isSeller && (
-                        <Button
-                            asChild
-                            variant="ghost"
-                            size="icon"
-                            className="size-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
-                            title={t('openFullScreen')}
-                        >
-                            <Link href={ROUTE.SELLER_CHAT_CONVERSATION(conversation.id)}>
-                                <Maximize2Icon className="size-3.5" />
-                            </Link>
-                        </Button>
-                    )}
+                    {(() => {
+                        const fullScreenHref = isAdmin
+                            ? ROUTE.ADMIN_CHAT_CONVERSATION(conversation.id)
+                            : isSeller
+                              ? ROUTE.SELLER_CHAT_CONVERSATION(conversation.id)
+                              : null
+                        if (!fullScreenHref) return null
+                        return (
+                            <Button
+                                asChild
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
+                                title={t('openFullScreen')}
+                            >
+                                <Link href={fullScreenHref} onClick={onClose}>
+                                    <Maximize2Icon className="size-3.5" />
+                                </Link>
+                            </Button>
+                        )
+                    })()}
                     <Button
                         variant="ghost"
                         size="icon"

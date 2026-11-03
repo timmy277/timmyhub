@@ -1,3 +1,4 @@
+export * from './chat'
 export * from './common'
 export * from './icons'
 export * from './providers'

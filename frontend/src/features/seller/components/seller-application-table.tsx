@@ -11,7 +11,7 @@ import { ResourceStatus } from '@timmyhub/contracts'
 import { AgGridTable, FloatCombobox, ServerPagination } from '@/components'
 import { createSellerApplicationColumns } from '@/config'
 import { SELLER_APPLICATION_STATUS_ALL, SELLER_APPLICATION_TAB, USER_TABLE_ROW_HEIGHT_PX } from '@/constants'
-import { useDebouncedValue } from '@/hooks'
+import { useDebouncedValue, useChat } from '@/hooks'
 
 import { useSellerApplicationListQuery } from '../hooks/use-seller-application-list-query'
 import { buildSellerTabsHref, type SellerTabState } from '../seller-tab-query'
@@ -32,6 +32,7 @@ export function SellerApplicationTable({ rows, totalItems, query, error }: Selle
     const pathname = usePathname()
     const searchParams = useSearchParams()
     const { isPending, setPageSize, setSearch, setStatus, resetList } = useSellerApplicationListQuery()
+    const { openChatWithUser } = useChat()
 
     // ===== State =====
     const [searchInput, setSearchInput] = useState(query.q ?? '')
@@ -72,11 +73,14 @@ export function SellerApplicationTable({ rows, totalItems, query, error }: Selle
                 actions: {
                     onDetail: (app) =>
                         router.push(hrefFor({ tab: SELLER_APPLICATION_TAB.DETAIL, id: app.id, label: app.shopName })),
+                    onChat: (app) => {
+                        void openChatWithUser(app.userId)
+                    },
                     onApprove: (app) => setApprovingApp(app),
                     onReject: (app) => setRejectingApp(app),
                 },
             }),
-        [t, router, hrefFor],
+        [t, router, hrefFor, openChatWithUser],
     )
 
     const statusOptions = useMemo(

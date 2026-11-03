@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ExternalLinkIcon, MessageCircleIcon, SearchIcon, StoreIcon } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { ExternalLinkIcon, Maximize2Icon, MessageCircleIcon, SearchIcon, StoreIcon } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import type { ConversationDto } from '@timmyhub/contracts'
 
@@ -18,16 +19,20 @@ import {
     Input,
     ScrollArea,
 } from '@/components'
-import { ROUTE } from '@/constants'
-import { useChat, useIsSeller } from '@/hooks'
+import { DASHBOARD_PERMISSION, ROUTE } from '@/constants'
+import { useChat, useIsSeller, usePermissions } from '@/hooks'
 import { useChatStore } from '@/stores'
 import { formatRelativeTime } from '@/utils'
 
 export function MessageMenu() {
     const locale = useLocale() as 'vi' | 'en'
+    const router = useRouter()
+    const pathname = usePathname()
     const tNav = useTranslations('nav')
     const tChat = useTranslations('chat')
     const { isSeller } = useIsSeller()
+    const { hasPermission } = usePermissions()
+    const isAdmin = hasPermission(DASHBOARD_PERMISSION)
     const { isAuthenticated, userId, conversations, totalUnreadCount, isLoading, markConversationRead } = useChat()
     const openChat = useChatStore((s) => s.openChat)
     const [searchTerm, setSearchTerm] = useState('')
@@ -43,6 +48,16 @@ export function MessageMenu() {
     }, [conversations, searchTerm])
 
     const handleSelectConversation = (conversation: ConversationDto) => {
+        if (pathname.startsWith('/chat')) {
+            router.push(ROUTE.ADMIN_CHAT_CONVERSATION(conversation.id))
+            setIsOpen(false)
+            return
+        }
+        if (pathname.startsWith('/seller/chat')) {
+            router.push(ROUTE.SELLER_CHAT_CONVERSATION(conversation.id))
+            setIsOpen(false)
+            return
+        }
         openChat(conversation)
         setIsOpen(false)
         if (conversation.unreadCount > 0) {
@@ -86,7 +101,16 @@ export function MessageMenu() {
                         )}
                     </div>
 
-                    {isSeller && (
+                    {isAdmin ? (
+                        <Link
+                            href={ROUTE.ADMIN_CHAT}
+                            onClick={() => setIsOpen(false)}
+                            className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 font-medium group"
+                        >
+                            <span>{tChat('adminChannel')}</span>
+                            <ExternalLinkIcon className="size-3 transition-transform group-hover:translate-x-0.5" />
+                        </Link>
+                    ) : isSeller ? (
                         <Link
                             href={ROUTE.SELLER_CHAT}
                             onClick={() => setIsOpen(false)}
@@ -95,7 +119,7 @@ export function MessageMenu() {
                             <span>{tChat('sellerChannel')}</span>
                             <ExternalLinkIcon className="size-3 transition-transform group-hover:translate-x-0.5" />
                         </Link>
-                    )}
+                    ) : null}
                 </div>
 
                 {/* Search Box */}
@@ -153,7 +177,7 @@ export function MessageMenu() {
                                     <DropdownMenuItem
                                         key={conv.id}
                                         onClick={() => handleSelectConversation(conv)}
-                                        className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-colors ${
+                                        className={`group flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-colors ${
                                             isUnread
                                                 ? 'bg-primary/5 hover:bg-primary/10 font-semibold'
                                                 : 'hover:bg-accent/60'
@@ -204,7 +228,31 @@ export function MessageMenu() {
                                                     {conv.lastMessage || tChat('startConversationPrompt')}
                                                 </p>
                                                 {isUnread && (
-                                                    <span className="size-2 rounded-full bg-primary shrink-0 animate-pulse" />
+                                                    <span
+                                                        className={`size-2 rounded-full bg-primary shrink-0 animate-pulse ${
+                                                            isAdmin || isSeller ? 'group-hover:hidden' : ''
+                                                        }`}
+                                                    />
+                                                )}
+                                                {(isAdmin || isSeller) && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0 p-0"
+                                                        title={tChat('openFullScreen')}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            setIsOpen(false)
+                                                            router.push(
+                                                                isAdmin
+                                                                    ? ROUTE.ADMIN_CHAT_CONVERSATION(conv.id)
+                                                                    : ROUTE.SELLER_CHAT_CONVERSATION(conv.id),
+                                                            )
+                                                        }}
+                                                    >
+                                                        <Maximize2Icon className="size-3" />
+                                                    </Button>
                                                 )}
                                             </div>
                                         </div>
@@ -216,7 +264,7 @@ export function MessageMenu() {
                 </ScrollArea>
 
                 {/* Footer */}
-                {isSeller && (
+                {(isAdmin || isSeller) && (
                     <div className="p-2 border-t border-border/40 bg-muted/30 text-center">
                         <Button
                             asChild
@@ -224,8 +272,11 @@ export function MessageMenu() {
                             size="sm"
                             className="w-full text-xs font-medium h-8 rounded-lg hover:bg-background/80"
                         >
-                            <Link href={ROUTE.SELLER_CHAT} onClick={() => setIsOpen(false)}>
-                                {tChat('openFullScreenInSeller')}
+                            <Link
+                                href={isAdmin ? ROUTE.ADMIN_CHAT : ROUTE.SELLER_CHAT}
+                                onClick={() => setIsOpen(false)}
+                            >
+                                {tChat(isAdmin ? 'openFullScreenInAdmin' : 'openFullScreenInSeller')}
                             </Link>
                         </Button>
                     </div>
