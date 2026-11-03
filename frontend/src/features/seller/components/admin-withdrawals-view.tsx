@@ -1,48 +1,63 @@
 'use client'
 
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CreditCard, RefreshCw, Search, X } from 'lucide-react'
+import { useCallback, useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 
-import type { WithdrawalDetail } from '@timmyhub/contracts'
-import { Button, Card, CardContent, Input, Skeleton } from '@/components'
-import { QUERY_KEY } from '@/constants'
-import { approveWithdrawalAction, listAdminWithdrawalsAction, rejectWithdrawalAction } from '../actions'
+import type { AdminWithdrawalRow } from '@/config'
+import { WITHDRAWAL_TAB } from '@/constants'
+import { approveWithdrawalAction, rejectWithdrawalAction } from '../actions'
+import { buildWithdrawalTabsHref, type WithdrawalTabState, type WithdrawalTabsState } from '../withdrawal-tab-query'
 import { AdminWithdrawalsTable } from './admin-withdrawals-table'
 import { WithdrawalApproveDialog } from './withdrawal-approve-dialog'
+import { WithdrawalDetailPanel } from './withdrawal-detail-panel'
 import { WithdrawalRejectDialog } from './withdrawal-reject-dialog'
+import { WithdrawalTabs } from './withdrawal-tabs'
 
 interface AdminWithdrawalsViewProps {
-    initialItems: WithdrawalDetail[]
-    initialTotal: number
+    rows: AdminWithdrawalRow[]
+    totalItems: number
+    page: number
+    pageSize: number
+    status?: string
+    search?: string
+    tabs: WithdrawalTabsState
+    currentUserId: string
+    initialDetail?: AdminWithdrawalRow | null
 }
 
-export function AdminWithdrawalsView({ initialItems, initialTotal }: AdminWithdrawalsViewProps) {
+export function AdminWithdrawalsView({
+    rows,
+    totalItems,
+    page,
+    pageSize,
+    status,
+    search,
+    tabs,
+    currentUserId,
+    initialDetail,
+}: AdminWithdrawalsViewProps) {
+    // ===== State =====
+    const [approveItem, setApproveItem] = useState<AdminWithdrawalRow | null>(null)
+    const [rejectItem, setRejectItem] = useState<AdminWithdrawalRow | null>(null)
+
+    // ===== Hooks =====
     const t = useTranslations('adminWithdrawals')
-    const queryClient = useQueryClient()
+    const router = useRouter()
+    const pathname = usePathname()
+    const searchParams = useSearchParams()
 
-    const [statusFilter, setStatusFilter] = useState<string>('ALL')
-    const [searchTerm, setSearchTerm] = useState('')
-    const [page] = useState(1)
+    const { active } = tabs
 
-    const [approveItem, setApproveItem] = useState<WithdrawalDetail | null>(null)
-    const [rejectItem, setRejectItem] = useState<WithdrawalDetail | null>(null)
-
-    const { data, isLoading, isFetching, refetch } = useQuery<{ items: WithdrawalDetail[]; total: number }>({
-        queryKey: QUERY_KEY.SELLER.ADMIN_WITHDRAWALS({ status: statusFilter, page }),
-        queryFn: async () => {
-            const statusParam = statusFilter === 'ALL' ? undefined : statusFilter
-            const res = await listAdminWithdrawalsAction(statusParam, page, 50)
-            if (!res.ok || !res.data) return { items: [], total: 0 }
-            return res.data
-        },
-        initialData: statusFilter === 'ALL' && page === 1 ? { items: initialItems, total: initialTotal } : undefined,
-    })
+    const hrefFor = useCallback(
+        (target: WithdrawalTabState) => buildWithdrawalTabsHref(pathname, searchParams, target),
+        [pathname, searchParams],
+    )
 
     const approveMutation = useMutation({
-        mutationFn: async (item: WithdrawalDetail) => {
+        mutationFn: async (item: AdminWithdrawalRow) => {
             const res = await approveWithdrawalAction(item.id)
             if (!res.ok) throw new Error(res.code || 'APPROVE_FAILED')
             return res.data
@@ -50,7 +65,7 @@ export function AdminWithdrawalsView({ initialItems, initialTotal }: AdminWithdr
         onSuccess: () => {
             toast.success(t('approveSuccess'))
             setApproveItem(null)
-            void queryClient.invalidateQueries({ queryKey: QUERY_KEY.SELLER.ADMIN_WITHDRAWALS() })
+            router.refresh()
         },
         onError: (err: Error) => {
             toast.error(t('approveError', { error: err.message }))
@@ -58,7 +73,7 @@ export function AdminWithdrawalsView({ initialItems, initialTotal }: AdminWithdr
     })
 
     const rejectMutation = useMutation({
-        mutationFn: async ({ item, reason }: { item: WithdrawalDetail; reason: string }) => {
+        mutationFn: async ({ item, reason }: { item: AdminWithdrawalRow; reason: string }) => {
             const res = await rejectWithdrawalAction(item.id, reason)
             if (!res.ok) throw new Error(res.code || 'REJECT_FAILED')
             return res.data
@@ -66,113 +81,64 @@ export function AdminWithdrawalsView({ initialItems, initialTotal }: AdminWithdr
         onSuccess: () => {
             toast.success(t('rejectSuccess'))
             setRejectItem(null)
-            void queryClient.invalidateQueries({ queryKey: QUERY_KEY.SELLER.ADMIN_WITHDRAWALS() })
+            router.refresh()
         },
         onError: (err: Error) => {
             toast.error(t('rejectError', { error: err.message }))
         },
     })
 
-    const items = data?.items ?? []
-    const filteredItems = items.filter((item) => {
-        if (!searchTerm.trim()) return true
-        const term = searchTerm.toLowerCase()
-        const shop = (item.shopName || '').toLowerCase()
-        const account = item.bankAccountNumber.toLowerCase()
-        const holder = item.bankAccountName.toLowerCase()
-        return shop.includes(term) || account.includes(term) || holder.includes(term)
-    })
+    // Active detail item
+    const currentDetail =
+        active.tab === WITHDRAWAL_TAB.DETAIL
+            ? initialDetail?.id === active.id
+                ? initialDetail
+                : (rows.find((r) => r.id === active.id) ?? null)
+            : null
+
+    const activeLabel = currentDetail ? currentDetail.shopName || currentDetail.bankAccountName : undefined
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">{t('pageTitle')}</h1>
-                    <p className="text-sm text-muted-foreground mt-1">{t('pageDescription')}</p>
-                </div>
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => refetch()}
-                    disabled={isFetching}
-                    className="self-start sm:self-auto rounded-xl gap-2 text-xs"
-                >
-                    <RefreshCw className={`size-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-                    <span>Làm mới</span>
-                </Button>
-            </div>
+        <section className="rounded-xl border bg-card p-4 text-card-foreground shadow-sm">
+            {/* Folder Tab Strip */}
+            <WithdrawalTabs active={active} userId={currentUserId} activeLabel={activeLabel} />
 
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-                <div className="flex items-center gap-1.5 p-1 bg-muted/60 rounded-xl border border-border/60 overflow-x-auto">
-                    {[
-                        { key: 'ALL', label: t('filterAll') },
-                        { key: 'REQUESTED', label: t('filterRequested') },
-                        { key: 'PAID', label: t('filterPaid') },
-                        { key: 'REJECTED', label: t('filterRejected') },
-                    ].map((tab) => (
-                        <Button
-                            key={tab.key}
-                            type="button"
-                            variant={statusFilter === tab.key ? 'secondary' : 'ghost'}
-                            size="sm"
-                            onClick={() => setStatusFilter(tab.key)}
-                            className={`h-7 px-3 rounded-lg text-xs font-semibold whitespace-nowrap ${
-                                statusFilter === tab.key
-                                    ? 'bg-background text-foreground shadow-sm'
-                                    : 'text-muted-foreground'
-                            }`}
-                        >
-                            {tab.label}
-                        </Button>
-                    ))}
-                </div>
-
-                <div className="relative w-full sm:w-72">
-                    <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground z-10" />
-                    <Input
-                        placeholder={t('searchPlaceholder')}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-8 h-8 text-xs rounded-xl bg-card border-border/70"
-                    />
-                    {searchTerm && (
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setSearchTerm('')}
-                            className="size-6 absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-                        >
-                            <X className="size-3.5" />
-                        </Button>
-                    )}
-                </div>
-            </div>
-
-            <Card className="border border-border/70 bg-card/85 shadow-sm rounded-2xl overflow-hidden">
-                <CardContent className="p-0">
-                    {isLoading ? (
-                        <div className="p-6 space-y-4">
-                            <Skeleton className="h-12 w-full rounded-xl" />
-                            <Skeleton className="h-12 w-full rounded-xl" />
-                            <Skeleton className="h-12 w-full rounded-xl" />
-                        </div>
-                    ) : filteredItems.length === 0 ? (
-                        <div className="py-16 text-center space-y-3">
-                            <CreditCard className="size-12 mx-auto text-muted-foreground/30" />
-                            <p className="text-base font-semibold text-foreground">{t('emptyTitle')}</p>
-                            <p className="text-xs text-muted-foreground max-w-sm mx-auto">{t('emptyDesc')}</p>
-                        </div>
-                    ) : (
-                        <AdminWithdrawalsTable
-                            items={filteredItems}
-                            onApproveClick={(item) => setApproveItem(item)}
-                            onRejectClick={(item) => setRejectItem(item)}
+            {/* Active Tab Panel */}
+            <div className="mt-4">
+                {active.tab === WITHDRAWAL_TAB.DETAIL ? (
+                    currentDetail ? (
+                        <WithdrawalDetailPanel
+                            withdrawal={currentDetail}
+                            onApprove={(item) => setApproveItem(item)}
+                            onReject={(item) => setRejectItem(item)}
                         />
-                    )}
-                </CardContent>
-            </Card>
+                    ) : (
+                        <div className="py-12 text-center text-sm text-muted-foreground">
+                            Không tìm thấy dữ liệu yêu cầu rút tiền.
+                        </div>
+                    )
+                ) : (
+                    <AdminWithdrawalsTable
+                        rows={rows}
+                        totalItems={totalItems}
+                        page={page}
+                        pageSize={pageSize}
+                        status={status}
+                        search={search}
+                        onDetailClick={(item) =>
+                            router.push(
+                                hrefFor({
+                                    tab: WITHDRAWAL_TAB.DETAIL,
+                                    id: item.id,
+                                    label: item.shopName || item.bankAccountName,
+                                }),
+                            )
+                        }
+                        onApproveClick={(item) => setApproveItem(item)}
+                        onRejectClick={(item) => setRejectItem(item)}
+                    />
+                )}
+            </div>
 
             <WithdrawalApproveDialog
                 item={approveItem}
@@ -189,6 +155,6 @@ export function AdminWithdrawalsView({ initialItems, initialTotal }: AdminWithdr
                 onClose={() => setRejectItem(null)}
                 onConfirm={(item, reason) => rejectMutation.mutate({ item, reason })}
             />
-        </div>
+        </section>
     )
 }

@@ -88,8 +88,13 @@ export class AdminSellerController {
     // Danh sách yêu cầu rút tiền
     @Permissions('wallet:withdrawals:approve')
     @Get('withdrawals')
-    listWithdrawals(@Query('status') status?: string, @Query('page') page?: string, @Query('limit') limit?: string) {
-        return this.sellerService.listAdminWithdrawals(status, page ? Number(page) : 1, limit ? Number(limit) : 20)
+    listWithdrawals(
+        @Query('status') status?: string,
+        @Query('page') page?: string,
+        @Query('limit') limit?: string,
+        @Query('q') q?: string,
+    ) {
+        return this.sellerService.listAdminWithdrawals(status, page ? Number(page) : 1, limit ? Number(limit) : 20, q)
     }
 
     // Duyệt chi yêu cầu rút tiền

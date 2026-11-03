@@ -308,12 +308,14 @@ export async function listAdminWithdrawalsAction(
     status?: string,
     page = 1,
     limit = 20,
+    q?: string,
 ): Promise<SellerActionResult<{ items: (WithdrawalDetail & { shopName?: string })[]; total: number }>> {
     const actor = await getActor()
     if (!actor) return { ok: false, code: 'UNAUTHORIZED' }
 
     const params = new URLSearchParams()
     if (status) params.set('status', status)
+    if (q && q.trim()) params.set('q', q.trim())
     params.set('page', String(page))
     params.set('limit', String(limit))
 

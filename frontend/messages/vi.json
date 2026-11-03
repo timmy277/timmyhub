@@ -2541,7 +2541,20 @@
     "quickReason4": "Tài khoản shop có dấu hiệu vi phạm",
     "accountHolder": "Chủ TK: {name}",
     "submitting": "Đang xử lý...",
-    "pageInfo": "Hiển thị trang {page}"
+    "pageInfo": "Hiển thị trang {page}",
+    "searchLabel": "Tìm kiếm yêu cầu rút tiền",
+    "filterStatus": "Trạng thái",
+    "filterAllStatuses": "Tất cả trạng thái",
+    "statusRequested": "Chờ duyệt",
+    "statusApproved": "Đã duyệt",
+    "statusPaid": "Đã chi trả",
+    "statusRejected": "Từ chối",
+    "exportFileName": "yeu-cau-rut-tien",
+    "refreshing": "Đang làm mới dữ liệu...",
+    "tabList": "Danh sách",
+    "tabDetail": "Chi tiết yêu cầu",
+    "viewDetail": "Xem chi tiết",
+    "closeTab": "Đóng tab"
   },
   "search": {
     "pageTitle": "Tìm kiếm sản phẩm",

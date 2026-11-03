@@ -55,3 +55,40 @@ export type SellerOrderTab = (typeof SELLER_ORDER_TAB)[keyof typeof SELLER_ORDER
 export const SELLER_ORDER_TAB_ID_SEPARATOR = ':'
 export const SELLER_ORDER_TAB_ID_LABEL_LENGTH = 8
 export const SELLER_ORDER_STATUS_ALL = 'ALL'
+
+// Tham số URL của danh sách yêu cầu rút tiền (Admin)
+export const WITHDRAWAL_QUERY_PARAM = {
+    PAGE: 'page',
+    PAGE_SIZE: 'pageSize',
+    STATUS: 'status',
+    Q: 'q',
+    TABS: 'tabs',
+} as const
+
+// Tab của màn quản lý rút tiền (Admin)
+export const WITHDRAWAL_TAB = {
+    LIST: 'list',
+    DETAIL: 'detail',
+} as const
+export type WithdrawalTab = (typeof WITHDRAWAL_TAB)[keyof typeof WITHDRAWAL_TAB]
+
+export const WITHDRAWAL_TAB_ID_SEPARATOR = ':'
+export const WITHDRAWAL_TAB_ID_LABEL_LENGTH = 8
+
+export const WITHDRAWAL_STATUS_ALL = 'ALL'
+
+export const WITHDRAWAL_STATUS = {
+    REQUESTED: 'REQUESTED',
+    APPROVED: 'APPROVED',
+    PAID: 'PAID',
+    REJECTED: 'REJECTED',
+} as const
+
+export type WithdrawalStatus = (typeof WITHDRAWAL_STATUS)[keyof typeof WITHDRAWAL_STATUS]
+
+export const WITHDRAWAL_STATUS_TONE: Record<string, StatusTone> = {
+    [WITHDRAWAL_STATUS.REQUESTED]: StatusTone.NEUTRAL,
+    [WITHDRAWAL_STATUS.APPROVED]: StatusTone.NEUTRAL,
+    [WITHDRAWAL_STATUS.PAID]: StatusTone.SUCCESS,
+    [WITHDRAWAL_STATUS.REJECTED]: StatusTone.DANGER,
+}

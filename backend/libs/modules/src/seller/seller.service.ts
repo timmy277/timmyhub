@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { randomUUID } from 'crypto'
-import { PrismaService } from '@timmyhub/prisma'
+import { Prisma, PrismaService } from '@timmyhub/prisma'
 
 import type {
     CreateSellerApplicationInput,
@@ -440,8 +440,31 @@ export class SellerService {
         status?: string,
         page = 1,
         limit = 20,
+        q?: string,
     ): Promise<{ items: (WithdrawalDetail & { shopName?: string })[]; total: number }> {
-        const where = status ? { status } : {}
+        const where: Prisma.WithdrawalWhereInput = {}
+        if (status) {
+            where.status = status
+        }
+        if (q && q.trim()) {
+            const term = q.trim()
+            // Tìm theo tên ngân hàng, số TK, tên TK, hoặc tên Shop
+            const matchedShops = await this.prisma.sellerProfile.findMany({
+                where: {
+                    shopName: { contains: term, mode: 'insensitive' },
+                },
+                select: { id: true },
+            })
+            const matchedSellerIds = matchedShops.map((s) => s.id)
+
+            where.OR = [
+                { bankName: { contains: term, mode: 'insensitive' } },
+                { bankAccountNumber: { contains: term, mode: 'insensitive' } },
+                { bankAccountName: { contains: term, mode: 'insensitive' } },
+                ...(matchedSellerIds.length > 0 ? [{ wallet: { sellerId: { in: matchedSellerIds } } }] : []),
+            ]
+        }
+
         const [total, items] = await Promise.all([
             this.prisma.withdrawal.count({ where }),
             this.prisma.withdrawal.findMany({

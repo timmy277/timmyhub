@@ -2541,7 +2541,20 @@
     "quickReason4": "Seller account flagged for violations",
     "accountHolder": "Account Holder: {name}",
     "submitting": "Processing...",
-    "pageInfo": "Showing page {page}"
+    "pageInfo": "Showing page {page}",
+    "searchLabel": "Search payout requests",
+    "filterStatus": "Status",
+    "filterAllStatuses": "All statuses",
+    "statusRequested": "Pending Review",
+    "statusApproved": "Approved",
+    "statusPaid": "Paid Out",
+    "statusRejected": "Rejected",
+    "exportFileName": "payout-requests",
+    "refreshing": "Refreshing data...",
+    "tabList": "List",
+    "tabDetail": "Payout Detail",
+    "viewDetail": "View Detail",
+    "closeTab": "Close tab"
   },
   "search": {
     "pageTitle": "Search Products",
