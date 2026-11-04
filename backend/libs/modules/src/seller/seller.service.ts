@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, Optional } from '@nestjs/common'
+import { EventEmitter2 } from '@nestjs/event-emitter'
 import { randomUUID } from 'crypto'
 import { Prisma, PrismaService } from '@timmyhub/prisma'
 
@@ -27,6 +28,7 @@ export class SellerService {
     constructor(
         private readonly repository: SellerRepository,
         private readonly prisma: PrismaService,
+        @Optional() private readonly eventEmitter?: EventEmitter2,
     ) {}
 
     // ===== Queries (User / Seller) =====
@@ -144,7 +146,15 @@ export class SellerService {
 
         // 4. Tạo đơn mới
         const application = await this.repository.createApplication(userId, input)
-        return toSellerApplicationDetail(application)
+        const detail = toSellerApplicationDetail(application)
+        if (this.eventEmitter) {
+            this.eventEmitter.emit('seller.application.submitted', {
+                applicationId: application.id,
+                userId,
+                shopName: input.shopName,
+            })
+        }
+        return detail
     }
 
     // REQ-SEL-009: Cập nhật thông tin shop của mình
@@ -203,10 +213,20 @@ export class SellerService {
             })
         }
 
-        return toSellerApplicationDetail({
+        const detail = toSellerApplicationDetail({
             ...result.application,
             user: app.user ?? null,
         })
+
+        if (this.eventEmitter) {
+            this.eventEmitter.emit('seller.application.approved', {
+                applicationId,
+                userId: app.userId,
+                shopName: app.shopName,
+            })
+        }
+
+        return detail
     }
 
     // REQ-SEL-007: Admin từ chối đơn đăng ký bán hàng kèm lý do
@@ -246,10 +266,20 @@ export class SellerService {
             })
         }
 
-        return toSellerApplicationDetail({
+        const detail = toSellerApplicationDetail({
             ...result,
             user: app.user ?? null,
         })
+
+        if (this.eventEmitter) {
+            this.eventEmitter.emit('seller.application.rejected', {
+                applicationId,
+                userId: app.userId,
+                reason: input.reviewNote.trim(),
+            })
+        }
+
+        return detail
     }
 
     // REQ-SEL-015: Cấp huy hiệu xác minh shop

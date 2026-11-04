@@ -11,7 +11,7 @@ import type {
     UnreadCountResponseDto,
     UpdateNotificationPreferencesInput,
 } from '@timmyhub/contracts'
-import { NOTIFICATION_TYPE } from '@timmyhub/contracts'
+import { NOTIFICATION_TYPE, UserRole } from '@timmyhub/contracts'
 
 import { DOMAIN_EVENT } from './notification.constants'
 import { NotificationGateway } from './notification.gateway'
@@ -101,6 +101,8 @@ export class NotificationService {
             promoEmail: findEnabled('PROMOTION', NotificationChannel.EMAIL, false),
             securityEmail: findEnabled('SECURITY', NotificationChannel.EMAIL, true),
             chatInApp: findEnabled('CHAT', NotificationChannel.IN_APP, true),
+            sellerInApp: findEnabled('SELLER', NotificationChannel.IN_APP, true),
+            systemInApp: findEnabled('SYSTEM', NotificationChannel.IN_APP, true),
         }
     }
 
@@ -117,6 +119,16 @@ export class NotificationService {
             { type: 'PROMOTION', channel: NotificationChannel.EMAIL, enabled: Boolean(input.promoEmail) },
             { type: 'SECURITY', channel: NotificationChannel.EMAIL, enabled: Boolean(input.securityEmail) },
             { type: 'CHAT', channel: NotificationChannel.IN_APP, enabled: Boolean(input.chatInApp) },
+            {
+                type: 'SELLER',
+                channel: NotificationChannel.IN_APP,
+                enabled: input.sellerInApp !== undefined ? Boolean(input.sellerInApp) : true,
+            },
+            {
+                type: 'SYSTEM',
+                channel: NotificationChannel.IN_APP,
+                enabled: input.systemInApp !== undefined ? Boolean(input.systemInApp) : true,
+            },
         ]
 
         await this.prisma.$transaction(
@@ -143,8 +155,28 @@ export class NotificationService {
         return this.getMyPreferences(userId)
     }
 
-    async createNotification(input: CreateNotificationInput): Promise<NotificationItemDto> {
+    async createNotification(input: CreateNotificationInput): Promise<NotificationItemDto | null> {
         const channel = (input.channel as NotificationChannel) || NotificationChannel.IN_APP
+        const targetType = input.type ?? NOTIFICATION_TYPE.SYSTEM
+
+        // Kiểm tra cài đặt bật/tắt thông báo của người nhận
+        const pref = await this.prisma.notificationPreference.findUnique({
+            where: {
+                userId_type_channel: {
+                    userId: input.userId,
+                    type: targetType,
+                    channel,
+                },
+            },
+        })
+
+        if (pref && !pref.enabled) {
+            this.logger.debug(
+                `Skipped notification for user ${input.userId} because preference ${targetType}/${channel} is disabled`,
+            )
+            return null
+        }
+
         const mergedParams: Record<string, unknown> = {
             ...((input.params as Record<string, unknown>) ?? {}),
             ...(input.title ? { title: input.title } : {}),
@@ -153,7 +185,7 @@ export class NotificationService {
         const record = await this.prisma.notification.create({
             data: {
                 userId: input.userId,
-                type: input.type ?? NOTIFICATION_TYPE.SYSTEM,
+                type: targetType,
                 templateKey: input.templateKey,
                 params: mergedParams as Prisma.InputJsonValue,
                 channel,
@@ -310,6 +342,42 @@ export class NotificationService {
         }
     }
 
+    @OnEvent(DOMAIN_EVENT.SELLER_APPLICATION_SUBMITTED)
+    async handleSellerApplicationSubmitted(payload: {
+        applicationId: string
+        userId: string
+        shopName: string
+    }): Promise<void> {
+        try {
+            // Tìm tất cả admin/super_admin để thông báo có đơn xét duyệt mở shop mới
+            const admins = await this.prisma.user.findMany({
+                where: {
+                    roles: {
+                        hasSome: [UserRole.ADMIN, UserRole.SUPER_ADMIN],
+                    },
+                },
+                select: { id: true },
+            })
+
+            for (const admin of admins) {
+                await this.createNotification({
+                    userId: admin.id,
+                    type: NOTIFICATION_TYPE.SYSTEM,
+                    templateKey: 'seller.application_submitted',
+                    title: 'Hồ sơ Người bán mới cần duyệt',
+                    message: `Shop "${payload.shopName}" vừa nộp hồ sơ đăng ký mở gian hàng.`,
+                    params: {
+                        applicationId: payload.applicationId,
+                        shopName: payload.shopName,
+                    },
+                    actionUrl: '/seller-management',
+                })
+            }
+        } catch (error) {
+            this.logger.error(`Failed to handle seller.application.submitted: ${(error as Error).message}`)
+        }
+    }
+
     @OnEvent(DOMAIN_EVENT.SELLER_APPLICATION_APPROVED)
     async handleSellerApplicationApproved(payload: { userId: string; shopName?: string }): Promise<void> {
         try {
@@ -317,6 +385,8 @@ export class NotificationService {
                 userId: payload.userId,
                 type: NOTIFICATION_TYPE.SELLER,
                 templateKey: 'seller.application_approved',
+                title: 'Hồ sơ Người bán đã được duyệt',
+                message: `Chúc mừng! Hồ sơ shop "${payload.shopName ?? ''}" đã được phê duyệt thành công.`,
                 params: { shopName: payload.shopName ?? '' },
                 actionUrl: '/seller',
             })
@@ -332,6 +402,8 @@ export class NotificationService {
                 userId: payload.userId,
                 type: NOTIFICATION_TYPE.SELLER,
                 templateKey: 'seller.application_rejected',
+                title: 'Hồ sơ Người bán bị từ chối',
+                message: `Hồ sơ đăng ký Người bán chưa được duyệt.${payload.reason ? ` Lý do: ${payload.reason}` : ''}`,
                 params: { reason: payload.reason ?? '' },
                 actionUrl: '/seller/register',
             })

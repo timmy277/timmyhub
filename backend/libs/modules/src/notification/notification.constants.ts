@@ -15,6 +15,7 @@ export const DOMAIN_EVENT = {
     ORDER_CREATED: 'order.created',
     ORDER_STATUS_UPDATED: 'order.status_updated',
     ORDER_CANCELLED: 'order.cancelled',
+    SELLER_APPLICATION_SUBMITTED: 'seller.application.submitted',
     SELLER_APPLICATION_APPROVED: 'seller.application.approved',
     SELLER_APPLICATION_REJECTED: 'seller.application.rejected',
     PRODUCT_APPROVED: 'catalog.product.approved',

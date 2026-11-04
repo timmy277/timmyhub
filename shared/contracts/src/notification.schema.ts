@@ -31,6 +31,7 @@ export const NOTIFICATION_TEMPLATE = {
     ORDER_STATUS_UPDATED: 'order.status_updated',
     ORDER_CANCELLED: 'order.cancelled',
     ORDER_NEW_ORDER_SELLER: 'order.new_order_seller',
+    SELLER_APPLICATION_SUBMITTED: 'seller.application_submitted',
     SELLER_APPLICATION_APPROVED: 'seller.application_approved',
     SELLER_APPLICATION_REJECTED: 'seller.application_rejected',
     PROMOTION_NEW: 'promotion.new',
@@ -105,6 +106,8 @@ export const NotificationPreferencesSchema = z.object({
     promoEmail: z.boolean().default(false),
     securityEmail: z.boolean().default(true),
     chatInApp: z.boolean().default(true),
+    sellerInApp: z.boolean().default(true),
+    systemInApp: z.boolean().default(true),
 })
 export type NotificationPreferencesDto = z.infer<typeof NotificationPreferencesSchema>
 export type UpdateNotificationPreferencesInput = z.input<typeof NotificationPreferencesSchema>

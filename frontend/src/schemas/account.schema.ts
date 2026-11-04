@@ -70,6 +70,8 @@ export const NotificationPreferencesSchema = z.object({
     promoEmail: z.boolean(),
     securityEmail: z.boolean(),
     chatInApp: z.boolean(),
+    sellerInApp: z.boolean(),
+    systemInApp: z.boolean(),
 })
 
 export type NotificationPreferencesValues = z.infer<typeof NotificationPreferencesSchema>

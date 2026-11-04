@@ -114,6 +114,12 @@ export const NAV_GROUPS: readonly NavGroup[] = [
                 icon: MessageSquareIcon,
                 requirePermission: DASHBOARD_PERMISSION,
             },
+            {
+                titleKey: 'adminSettings',
+                url: ROUTE.ADMIN_SETTINGS,
+                icon: SettingsIcon,
+                requirePermission: DASHBOARD_PERMISSION,
+            },
         ],
     },
     {
@@ -227,6 +233,10 @@ export const BREADCRUMB_ROUTES: Readonly<Record<string, readonly BreadcrumbEntry
     [ROUTE.ADMIN_CHAT]: [
         { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
         { titleKey: 'adminChat', url: ROUTE.ADMIN_CHAT },
+    ],
+    [ROUTE.ADMIN_SETTINGS]: [
+        { titleKey: 'dashboard', url: ROUTE.DASHBOARD },
+        { titleKey: 'adminSettings', url: ROUTE.ADMIN_SETTINGS },
     ],
     [ROUTE.SELLER_PORTAL]: [{ titleKey: 'sellerOverview', url: ROUTE.SELLER_PORTAL }],
     [ROUTE.SELLER_WALLET]: [

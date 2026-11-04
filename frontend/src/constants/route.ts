@@ -24,6 +24,7 @@ export const ROUTE = {
     ADMIN_SELLER_MANAGEMENT: '/seller-management',
     ADMIN_SELLER_APPLICATIONS: '/seller-management',
     ADMIN_WITHDRAWALS: '/withdrawals',
+    ADMIN_SETTINGS: '/settings',
     ADMIN_CHAT: '/chat',
     ADMIN_CHAT_CONVERSATION: (id: string) => `/chat/${encodeURIComponent(id)}`,
     PRODUCT_DETAIL: (idOrSlug: string) => `/products/${idOrSlug}`,

@@ -63,7 +63,7 @@ export class NotificationController {
     @Post()
     createNotification(
         @Body(new ZodValidationPipe(CreateNotificationInputSchema)) body: CreateNotificationInput,
-    ): Promise<NotificationItemDto> {
+    ): Promise<NotificationItemDto | null> {
         return this.service.createNotification(body)
     }
 

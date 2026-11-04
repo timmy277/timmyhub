@@ -2,6 +2,11 @@ import { ResourceStatus, UserRole } from '@timmyhub/contracts'
 import type { CreateSellerApplicationInput, ReviewSellerApplicationInput } from '@timmyhub/contracts'
 import type { PrismaService, SellerApplication, SellerProfile } from '@timmyhub/prisma'
 
+jest.mock('@nestjs/event-emitter', () => ({
+    EventEmitter2: class EventEmitter2 {},
+    OnEvent: () => () => undefined,
+}))
+
 import type { SellerRepository } from './seller.repository'
 import { SellerService } from './seller.service'
 
