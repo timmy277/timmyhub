@@ -144,12 +144,10 @@ export function AddressFormDialog({ open, onOpenChange, initialData, onSuccess }
                 <DialogHeader>
                     <DialogTitle className="text-lg font-bold flex items-center gap-2">
                         <MapPinIcon className="size-5 text-primary" />
-                        <span>{isEditMode ? 'Cập nhật địa chỉ nhận hàng' : t('newAddressModalTitle')}</span>
+                        <span>{isEditMode ? t('editAddressModalTitle') : t('newAddressModalTitle')}</span>
                     </DialogTitle>
                     <DialogDescription className="text-xs">
-                        {isEditMode
-                            ? 'Chỉnh sửa thông tin địa chỉ giao nhận hàng của bạn.'
-                            : 'Nhập thông tin giao hàng chi tiết để nhận hàng thuận tiện và nhanh chóng.'}
+                        {isEditMode ? t('editAddressModalDesc') : t('newAddressModalDesc')}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -339,10 +337,10 @@ export function AddressFormDialog({ open, onOpenChange, initialData, onSuccess }
                             {isPending ? (
                                 <>
                                     <Loader2Icon className="size-3.5 animate-spin" />
-                                    <span>Đang lưu...</span>
+                                    <span>{t('saving')}</span>
                                 </>
                             ) : (
-                                <span>{isEditMode ? 'Cập nhật' : t('save')}</span>
+                                <span>{isEditMode ? t('update') : t('save')}</span>
                             )}
                         </Button>
                     </DialogFooter>

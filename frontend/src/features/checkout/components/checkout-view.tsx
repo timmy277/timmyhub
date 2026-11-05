@@ -488,7 +488,7 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
             delete next[shopId]
             return next
         })
-        toast.info('Đã gỡ mã giảm giá của Shop')
+        toast.info(t('removeShopVoucherSuccess'))
     }
 
     // 6. Đặt hàng Mutation
@@ -496,13 +496,13 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
 
     const handlePlaceOrder = async () => {
         if (!activeAddress) {
-            toast.error('Vui lòng cung cấp địa chỉ nhận hàng')
+            toast.error(t('addressRequired'))
             setIsAddressModalOpen(true)
             return
         }
 
         if (checkoutItems.length === 0) {
-            toast.error('Không có sản phẩm nào để đặt hàng')
+            toast.error(t('emptyCheckoutItems'))
             return
         }
 
@@ -531,11 +531,11 @@ export function CheckoutView({ initialAddresses = [], initialCart = null }: Chec
         try {
             const result = await checkoutMutation.mutateAsync(payload)
             if (result.paymentUrl) {
-                toast.success('Đang chuyển hướng tới cổng thanh toán VNPay...')
+                toast.success(t('redirectingVnpay'))
                 window.location.href = result.paymentUrl
                 return
             }
-            toast.success('Đặt hàng thành công!')
+            toast.success(t('placeOrderSuccess'))
             if (result.orders && result.orders.length > 0) {
                 const firstOrderId = result.orders[0]!.id
                 router.push(ROUTE.CHECKOUT_SUCCESS(firstOrderId))

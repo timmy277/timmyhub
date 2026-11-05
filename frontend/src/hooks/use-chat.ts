@@ -229,7 +229,12 @@ export function useChat() {
             socket.emit(CHAT_REALTIME_EVENT.PRESENCE_QUERY, {})
         }
 
-        socket.on('connect', queryPresence)
+        const handleConnect = () => {
+            queryPresence()
+            void queryClient.invalidateQueries({ queryKey: QUERY_KEY.CHAT.CONVERSATIONS })
+        }
+
+        socket.on('connect', handleConnect)
         socket.on(CHAT_REALTIME_EVENT.MESSAGE_CREATED, handleMessageCreated)
         socket.on(CHAT_REALTIME_EVENT.CONVERSATION_UPDATED, handleConversationUpdated)
         socket.on(CHAT_REALTIME_EVENT.READ_CHANGED, handleReadChanged)
@@ -238,11 +243,11 @@ export function useChat() {
 
         // Gửi yêu cầu lấy trạng thái online ngay nếu socket đã sẵn sàng kết nối
         if (socket.connected) {
-            queryPresence()
+            handleConnect()
         }
 
         return () => {
-            socket.off('connect', queryPresence)
+            socket.off('connect', handleConnect)
             socket.off(CHAT_REALTIME_EVENT.MESSAGE_CREATED, handleMessageCreated)
             socket.off(CHAT_REALTIME_EVENT.CONVERSATION_UPDATED, handleConversationUpdated)
             socket.off(CHAT_REALTIME_EVENT.READ_CHANGED, handleReadChanged)
@@ -258,7 +263,7 @@ export function useChat() {
         }
     }, [isAuthenticated, userId, queryClient])
 
-    // Danh sách các cuộc trò chuyện
+    // Danh sách các cuộc trò chuyện — realtime đẩy qua socket, chỉ polling khi mất kết nối socket
     const conversationsQuery = useQuery({
         queryKey: QUERY_KEY.CHAT.CONVERSATIONS,
         queryFn: async () => {
@@ -266,8 +271,8 @@ export function useChat() {
             return res.data
         },
         enabled: isAuthenticated,
-        refetchInterval: 30_000,
-        staleTime: 10_000,
+        refetchInterval: () => (sharedChatSocket?.connected ? false : 60_000),
+        staleTime: 30_000,
     })
 
     // Đánh dấu hội thoại đã đọc với Optimistic Update tức thì (0ms lag)
@@ -461,8 +466,8 @@ export function useConversationMessages(conversationId: string | null | undefine
             return res.data
         },
         enabled: isAuthenticated && Boolean(conversationId),
-        refetchInterval: 15_000,
-        staleTime: 5_000,
+        refetchInterval: () => (sharedChatSocket?.connected ? false : 30_000),
+        staleTime: 30_000,
     })
 
     // Subscribe vào socket room của cuộc trò chuyện bằng shared socket (tránh mở kết nối mới)

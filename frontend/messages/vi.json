@@ -1684,6 +1684,9 @@
       "updateQtySuccess": "Đã cập nhật số lượng",
       "removeItemSuccess": "Đã xóa sản phẩm khỏi giỏ hàng",
       "clearCartSuccess": "Đã làm trống giỏ hàng thành công",
+      "updateQtyFailed": "Không thể cập nhật số lượng",
+      "removeItemFailed": "Không thể xoá sản phẩm",
+      "clearCartFailed": "Không thể làm trống giỏ hàng",
       "freeShippingBanner": "Đơn hàng của bạn đủ điều kiện nhận Freeship 0Đ toàn quốc!",
       "qtyMinWarning": "Số lượng phải lớn hơn hoặc bằng 1",
       "qtyMaxWarning": "Số lượng vượt quá tồn kho khả dụng ({max})"
@@ -1770,6 +1773,16 @@
     "totalPayment": "Tổng thanh toán",
     "placeOrderBtn": "Đặt hàng ngay",
     "placingOrder": "Đang xử lý đặt hàng...",
+    "placeOrderSuccess": "Đặt hàng thành công!",
+    "addressRequired": "Vui lòng cung cấp địa chỉ nhận hàng",
+    "emptyCheckoutItems": "Không có sản phẩm nào để đặt hàng",
+    "redirectingVnpay": "Đang chuyển hướng tới cổng thanh toán VNPay...",
+    "removeShopVoucherSuccess": "Đã gỡ mã giảm giá của Shop",
+    "editAddressModalTitle": "Cập nhật địa chỉ nhận hàng",
+    "editAddressModalDesc": "Chỉnh sửa thông tin địa chỉ giao nhận hàng của bạn.",
+    "newAddressModalDesc": "Nhập thông tin giao hàng chi tiết để nhận hàng thuận tiện và nhanh chóng.",
+    "saving": "Đang lưu...",
+    "update": "Cập nhật",
     "successTitle": "Đặt hàng thành công!",
     "successDesc": "Cảm ơn bạn đã mua sắm tại TimmyHub. Đơn hàng của bạn đã được tiếp nhận và người bán đang chuẩn bị hàng.",
     "orderCode": "Mã đơn hàng",
@@ -2246,14 +2259,17 @@
     },
     "messages": {
       "createSuccess": "Cảm ơn bạn đã đánh giá sản phẩm!",
-      "replySuccess": "Đã gửi phản hồi thành công!"
+      "replySuccess": "Đã gửi phản hồi thành công!",
+      "loginToChat": "Vui lòng đăng nhập để nhắn tin với người đánh giá",
+      "loginToChatGeneral": "Vui lòng đăng nhập để nhắn tin"
     },
     "errors": {
       "createFailed": "Không thể gửi đánh giá. Vui lòng thử lại sau.",
       "replyFailed": "Không thể gửi phản hồi. Vui lòng thử lại sau.",
       "voteFailed": "Không thể cập nhật bình chọn. Vui lòng thử lại.",
       "loadTitle": "Không thể tải danh sách đánh giá",
-      "loadDescription": "Đã có lỗi xảy ra khi kết nối máy chủ. Vui lòng bấm thử lại."
+      "loadDescription": "Đã có lỗi xảy ra khi kết nối máy chủ. Vui lòng bấm thử lại.",
+      "openChatFailed": "Không thể mở cuộc trò chuyện lúc này. Vui lòng thử lại."
     },
     "empty": {
       "title": "Chưa có đánh giá nào",

@@ -127,6 +127,12 @@ export const StarryBackground = memo(function StarryBackground() {
     const [hoveredStarId, setHoveredStarId] = useState<number | null>(null)
 
     useEffect(() => {
+        // Chỉ kích hoạt hit-test di chuột trên thiết bị có chuột (pointer: fine) — tắt trên mobile/touch
+        // để tiết kiệm pin và tránh nghẽn main thread khi người dùng cuộn trang.
+        if (typeof window === 'undefined' || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+            return
+        }
+
         let mouseX = 0
         let mouseY = 0
         let rafId: number | null = null

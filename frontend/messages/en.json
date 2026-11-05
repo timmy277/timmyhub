@@ -1684,6 +1684,9 @@
       "updateQtySuccess": "Updated quantity",
       "removeItemSuccess": "Removed item from cart",
       "clearCartSuccess": "Cleared shopping cart successfully",
+      "updateQtyFailed": "Failed to update quantity",
+      "removeItemFailed": "Failed to remove product",
+      "clearCartFailed": "Failed to clear cart",
       "freeShippingBanner": "Your order qualifies for 0đ Nationwide Free Shipping!",
       "qtyMinWarning": "Quantity must be at least 1",
       "qtyMaxWarning": "Quantity exceeds available stock ({max})"
@@ -1770,6 +1773,16 @@
     "totalPayment": "Total Payment",
     "placeOrderBtn": "Place Order Now",
     "placingOrder": "Placing order...",
+    "placeOrderSuccess": "Order placed successfully!",
+    "addressRequired": "Please provide a delivery address",
+    "emptyCheckoutItems": "No products selected for checkout",
+    "redirectingVnpay": "Redirecting to VNPay payment gateway...",
+    "removeShopVoucherSuccess": "Shop voucher removed",
+    "editAddressModalTitle": "Update delivery address",
+    "editAddressModalDesc": "Edit your delivery address details.",
+    "newAddressModalDesc": "Enter detailed shipping information for convenient and fast delivery.",
+    "saving": "Saving...",
+    "update": "Update",
     "successTitle": "Order Placed Successfully!",
     "successDesc": "Thank you for shopping at TimmyHub. Your order has been placed and is being prepared by sellers.",
     "orderCode": "Order Code",
@@ -2246,14 +2259,17 @@
     },
     "messages": {
       "createSuccess": "Thank you for reviewing this product!",
-      "replySuccess": "Reply submitted successfully!"
+      "replySuccess": "Reply submitted successfully!",
+      "loginToChat": "Please login to chat with the reviewer",
+      "loginToChatGeneral": "Please login to chat"
     },
     "errors": {
       "createFailed": "Failed to submit review. Please try again.",
       "replyFailed": "Failed to submit reply. Please try again.",
       "voteFailed": "Failed to update vote. Please try again.",
       "loadTitle": "Could not load reviews",
-      "loadDescription": "An error occurred while connecting to the server. Please click to retry."
+      "loadDescription": "An error occurred while connecting to the server. Please click to retry.",
+      "openChatFailed": "Cannot open conversation right now. Please try again."
     },
     "empty": {
       "title": "No reviews yet",

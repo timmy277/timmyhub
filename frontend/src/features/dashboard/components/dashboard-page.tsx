@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useQuery } from '@tanstack/react-query'
 import { ActivityIcon, DownloadIcon, RefreshCwIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
@@ -11,13 +12,31 @@ import type { DashboardOverviewResponse, DashboardRange } from '@timmyhub/contra
 import { Button, Card, PageContainer, Skeleton } from '@/components'
 import { QUERY_KEY } from '@/constants'
 import { getDashboardOverviewAction } from '../actions'
-import { DashboardCategoryChart } from './dashboard-category-chart'
 import { DashboardKpiCards } from './dashboard-kpi-cards'
-import { DashboardOrderStatusChart } from './dashboard-order-status-chart'
 import { DashboardPaymentChart } from './dashboard-payment-chart'
-import { DashboardRevenueChart } from './dashboard-revenue-chart'
 import { DashboardSlaCard } from './dashboard-sla-card'
 import { DashboardTopProducts } from './dashboard-top-products'
+
+const DashboardRevenueChart = dynamic(() => import('./dashboard-revenue-chart').then((m) => m.DashboardRevenueChart), {
+    ssr: false,
+    loading: () => <Skeleton className="h-[360px] w-full rounded-2xl" />,
+})
+
+const DashboardCategoryChart = dynamic(
+    () => import('./dashboard-category-chart').then((m) => m.DashboardCategoryChart),
+    {
+        ssr: false,
+        loading: () => <Skeleton className="h-[360px] w-full rounded-2xl" />,
+    },
+)
+
+const DashboardOrderStatusChart = dynamic(
+    () => import('./dashboard-order-status-chart').then((m) => m.DashboardOrderStatusChart),
+    {
+        ssr: false,
+        loading: () => <Skeleton className="h-[360px] w-full rounded-2xl" />,
+    },
+)
 
 const DATE_RANGES: { key: DashboardRange; labelKey: 'range7d' | 'range30d' | 'range90d' | 'range1y' }[] = [
     { key: '7d', labelKey: 'range7d' },

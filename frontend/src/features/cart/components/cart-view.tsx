@@ -170,7 +170,7 @@ export function CartView({ initialData }: CartViewProps) {
             })
             toast.success(t('page.updateQtySuccess'))
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Không thể cập nhật số lượng'
+            const message = error instanceof Error ? error.message : t('page.updateQtyFailed')
             toast.error(message)
         } finally {
             setUpdatingItemId(null)
@@ -263,7 +263,7 @@ export function CartView({ initialData }: CartViewProps) {
             })
             toast.success(t('page.removeItemSuccess'))
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Không thể xoá sản phẩm'
+            const message = error instanceof Error ? error.message : t('page.removeItemFailed')
             toast.error(message)
         }
     }
@@ -275,7 +275,7 @@ export function CartView({ initialData }: CartViewProps) {
             setSelectedItemIds(new Set())
             toast.success(t('page.clearCartSuccess'))
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Không thể làm trống giỏ hàng'
+            const message = error instanceof Error ? error.message : t('page.clearCartFailed')
             toast.error(message)
         }
     }

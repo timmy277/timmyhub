@@ -373,7 +373,7 @@ function ReviewCardItem({ review, productId, onOpenLightbox }: ReviewCardItemPro
 
     const handleChatWithReviewer = async () => {
         if (!isAuthenticated) {
-            toast.info('Vui lòng đăng nhập để nhắn tin với người đánh giá')
+            toast.info(t('messages.loginToChat'))
             return
         }
         if (isSelf) return
@@ -383,7 +383,7 @@ function ReviewCardItem({ review, productId, onOpenLightbox }: ReviewCardItemPro
             await openChatWithUser(review.userId)
         } catch (err) {
             console.error('Lỗi khi mở cuộc trò chuyện:', err)
-            toast.error('Không thể mở cuộc trò chuyện lúc này. Vui lòng thử lại.')
+            toast.error(t('errors.openChatFailed'))
         } finally {
             setIsStartingChat(false)
         }
@@ -814,7 +814,7 @@ function CommentItemCard({ comment, reviewId, productId, depth = 0 }: CommentIte
 
     const handleChatWithCommenter = async () => {
         if (!isAuthenticated) {
-            toast.info('Vui lòng đăng nhập để nhắn tin')
+            toast.info(t('messages.loginToChatGeneral'))
             return
         }
         if (isCommentSelf) return
@@ -824,7 +824,7 @@ function CommentItemCard({ comment, reviewId, productId, depth = 0 }: CommentIte
             await openChatWithUser(comment.userId)
         } catch (err) {
             console.error('Lỗi khi mở cuộc trò chuyện:', err)
-            toast.error('Không thể mở cuộc trò chuyện lúc này. Vui lòng thử lại.')
+            toast.error(t('errors.openChatFailed'))
         } finally {
             setIsStartingChat(false)
         }

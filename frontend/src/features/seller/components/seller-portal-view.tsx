@@ -29,13 +29,26 @@ import { Badge, Button, Card, CardContent, Skeleton } from '@/components'
 import { IconPath } from '@/components/icons'
 import { QUERY_KEY, ROUTE } from '@/constants'
 
+import dynamic from 'next/dynamic'
+
 import { getMyShopAction, getSellerDashboardOverviewAction } from '../actions'
 import { SellerKpiCards } from './seller-kpi-cards'
-import { SellerOrderStatusChart } from './seller-order-status-chart'
-import { SellerRevenueChart } from './seller-revenue-chart'
 import { SellerTodoBar } from './seller-todo-bar'
 import { SellerTopProducts } from './seller-top-products'
 import { SellerWalletPanel } from './seller-wallet-panel'
+
+const SellerOrderStatusChart = dynamic(
+    () => import('./seller-order-status-chart').then((m) => m.SellerOrderStatusChart),
+    {
+        ssr: false,
+        loading: () => <Skeleton className="h-[360px] w-full rounded-2xl" />,
+    },
+)
+
+const SellerRevenueChart = dynamic(() => import('./seller-revenue-chart').then((m) => m.SellerRevenueChart), {
+    ssr: false,
+    loading: () => <Skeleton className="h-[360px] w-full rounded-2xl" />,
+})
 
 interface SellerPortalViewProps {
     initialShop?: SellerProfileDetail | null
